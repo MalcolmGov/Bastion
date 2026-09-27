@@ -1,0 +1,140 @@
+[
+  {
+    "id": "decarb-2030",
+    "pillar": "Decarbonization",
+    "title": "Scope 1 & 2 Net Emission Reduction",
+    "targetYear": 2030,
+    "baseline": {
+      "year": 2016,
+      "value": "1.74",
+      "unit": "Mt CO2e"
+    },
+    "latestActual": {
+      "period": "FY 2025 / H1 2026",
+      "value": "1.28 (-26.4% net reduction vs baseline)",
+      "unit": "Mt CO2e",
+      "status": "On Track"
+    },
+    "description": "Targeting a 30% net reduction in absolute Scope 1 and 2 carbon emissions by 2030 (vs 2016 baseline), transitioning toward net zero by 2050 through wind, solar, and microgrid investments.",
+    "sourceDocument": {
+      "title": "Gold Fields Climate Change and Environment Report",
+      "url": "https://www.goldfields.com/energy-and-climate-change.php",
+      "section": "2030 ESG Decarbonization Targets"
+    }
+  },
+  {
+    "id": "water-2030",
+    "pillar": "Water Stewardship",
+    "title": "Recycled & Reused Water Proportion",
+    "targetYear": 2030,
+    "baseline": {
+      "year": 2018,
+      "value": "66%",
+      "unit": "% of total water consumed"
+    },
+    "latestActual": {
+      "period": "H1 2026",
+      "value": "78%",
+      "unit": "% recycled/reused",
+      "status": "On Track"
+    },
+    "description": "Achieving and maintaining a minimum of 80% recycled or reused water across all global operations, alongside zero untreated discharges into host catchment systems.",
+    "sourceDocument": {
+      "title": "Water Stewardship Overview & Performance Data",
+      "url": "https://www.goldfields.com/water-stewardship.php",
+      "section": "Catchment Management"
+    }
+  },
+  {
+    "id": "tailings-gistm",
+    "pillar": "Tailings Safety (GISTM)",
+    "title": "Global Industry Standard Tailings Conformance",
+    "targetYear": 2026,
+    "baseline": {
+      "year": 2020,
+      "value": "Initiated GISTM Audit",
+      "unit": "Standards gap analysis"
+    },
+    "latestActual": {
+      "period": "2025/2026",
+      "value": "100% Extreme/Very High Conformance",
+      "unit": "Audited TSF facilities",
+      "status": "Achieved"
+    },
+    "description": "Full compliance across all Tailings Storage Facilities (TSFs) with the Global Industry Standard on Tailings Management (GISTM), verified through independent Dam Safety Review panels.",
+    "sourceDocument": {
+      "title": "Tailings Management & TSF Inventory Portal",
+      "url": "https://www.goldfields.com/our-tsfs.php",
+      "section": "Governance & Independent Review"
+    }
+  },
+  {
+    "id": "safety-zero-harm",
+    "pillar": "Safety & Health",
+    "title": "Zero Fatalities and Serious Injuries Elimination",
+    "targetYear": 2030,
+    "baseline": {
+      "year": 2019,
+      "value": "1.82",
+      "unit": "TRIFR per million hours"
+    },
+    "latestActual": {
+      "period": "H1 2026",
+      "value": "Zero Fatalities, TRIFR 1.15",
+      "unit": "per million hours worked",
+      "status": "On Track"
+    },
+    "description": "Core value: 'If we cannot mine safely, we will not mine.' Continuous modernization, underground remote tele-remote operations, and psychosocial risk management.",
+    "sourceDocument": {
+      "title": "Safety & Health Framework",
+      "url": "https://www.goldfields.com/safety.php",
+      "section": "Courageous Safety Leadership"
+    }
+  },
+  {
+    "id": "community-value",
+    "pillar": "Community Shared Value",
+    "title": "Host Community Value Creation & Procurement",
+    "targetYear": 2030,
+    "baseline": {
+      "year": 2018,
+      "value": "28%",
+      "unit": "Host community procurement %"
+    },
+    "latestActual": {
+      "period": "FY 2025 / H1 2026",
+      "value": "34% Host Community Spend ($914M Total Value)",
+      "unit": "% of in-country procurement",
+      "status": "On Track"
+    },
+    "description": "Committing at least 30% of total procurement spend to host community enterprises, combined with skills development, youth employment, and local economic development programs.",
+    "sourceDocument": {
+      "title": "Stakeholder Shared Value Creation",
+      "url": "https://www.goldfields.com/shared-value-creation.php",
+      "section": "Host Community Procurement"
+    }
+  },
+  {
+    "id": "gender-diversity",
+    "pillar": "Gender Diversity",
+    "title": "Female Representation in Total Workforce",
+    "targetYear": 2030,
+    "baseline": {
+      "year": 2016,
+      "value": "15%",
+      "unit": "% women in mining"
+    },
+    "latestActual": {
+      "period": "H1 2026",
+      "value": "26.2%",
+      "unit": "% women in workforce",
+      "status": "On Track"
+    },
+    "description": "Driving equal opportunity and inclusive leadership to achieve at least 30% female representation across professional, technical, and managerial bands by 2030.",
+    "sourceDocument": {
+      "title": "People and Workplace Culture Disclosures",
+      "url": "https://www.goldfields.com/working-at-goldfields.php",
+      "section": "Diversity, Equity & Inclusion"
+    }
+  }
+]

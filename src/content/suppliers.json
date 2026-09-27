@@ -1,0 +1,97 @@
+[
+  {
+    "countryCode": "ZA",
+    "country": "South Africa",
+    "title": "South Africa Supplier Guidelines (South Deep & Corporate)",
+    "overview": "Gold Fields South Africa procures goods and services through structured, transparent, and ethical tender processes. Preference is given to suppliers based in the direct host communities of South Deep (West Rand District) that comply with statutory mining safety and B-BBEE requirements.",
+    "officialPortalName": "Coupa Supplier Portal & South Africa E-Procurement",
+    "officialPortalUrl": "https://www.goldfields.com/south-africa.php",
+    "preQualificationChecklist": [
+      "Valid South African Company Registration (CIPC documentation)",
+      "Valid SARS Tax Compliance PIN / Status",
+      "Broad-Based Black Economic Empowerment (B-BBEE) verification certificate or sworn affidavit",
+      "Valid Letter of Good Standing with the Compensation Commissioner (COIDA)",
+      "Proof of business address (Host community proof of residence within West Rand / Westonaria / Rand West City if claiming local status)",
+      "Bank Account Confirmation Letter (stamped within last 3 months)",
+      "Acceptance of Gold Fields Group Code of Conduct & Supplier Code of Business Conduct"
+    ],
+    "complianceRequirements": [
+      "Mandatory MHSA (Mine Health and Safety Act) compliance for onsite contractors",
+      "Baseline medical fitness certifications for personnel visiting operational surface or underground works",
+      "Anti-bribery and corruption vetting via third-party compliance screening"
+    ],
+    "localContentPolicy": "Priority spend is directed to enterprises 51%+ owned by historically disadvantaged South Africans and host community entrepreneurs resident in South Deep's nine host communities.",
+    "contactEmail": "southafricasuppliers@goldfields.com",
+    "speakUpUrl": "https://secure.ethicspoint.eu/domain/media/en/gui/114521/index.html"
+  },
+  {
+    "countryCode": "GH",
+    "country": "Ghana",
+    "title": "Ghana Supplier Guidelines (Tarkwa & Regional)",
+    "overview": "Gold Fields Ghana strictly adheres to the Minerals Commission's Local Content Regulations (L.I. 2431) to foster domestic industrial capacity and promote Ghanaian-owned enterprises across mining value chains.",
+    "officialPortalName": "Gold Fields Ghana Vendor Registration System",
+    "officialPortalUrl": "https://www.goldfields.com/ghana.php",
+    "preQualificationChecklist": [
+      "Minerals Commission of Ghana Supplier Registration Certificate",
+      "Registrar General's Department Certificate of Incorporation and Commencement of Business",
+      "Ghana Revenue Authority (GRA) Tax Clearance Certificate",
+      "Social Security and National Insurance Trust (SSNIT) Clearance Certificate",
+      "Environmental Protection Agency (EPA) permit (for hazardous materials or technical services)",
+      "Host Community status verification by local Traditional Council (Tarkwa / Apinto / Bosomtwe)",
+      "Adherence to Gold Fields Anti-Corruption and Modern Slavery Policies"
+    ],
+    "complianceRequirements": [
+      "Strict compliance with Minerals Commission Procurement List mandates",
+      "Contractor safety management plan aligned with Ghana Inspectorate Division regulations"
+    ],
+    "localContentPolicy": "Goods and services listed on the Minerals Commission Procurement List must be procured exclusively from registered Ghanaian entities with minimum local equity thresholds.",
+    "contactEmail": "ghanasuppliers@goldfields.com",
+    "speakUpUrl": "https://secure.ethicspoint.eu/domain/media/en/gui/114521/index.html"
+  },
+  {
+    "countryCode": "AU",
+    "country": "Australia",
+    "title": "Australia Supplier Guidelines (Agnew, Granny Smith, Gruyere, St Ives)",
+    "overview": "Gold Fields Australia engages vendors committed to safety, environmental excellence, fair workplace relations, and economic participation of Aboriginal and Torres Strait Islander peoples and regional communities in Western Australia.",
+    "officialPortalName": "Gold Fields Australia Vendor Prequalification",
+    "officialPortalUrl": "https://www.goldfields.com/australia.php",
+    "preQualificationChecklist": [
+      "Valid Australian Business Number (ABN) and Australian Company Number (ACN)",
+      "Public & Products Liability Insurance ($20M minimum for operational site work)",
+      "Workers' Compensation Insurance complying with Western Australia statutory requirements",
+      "Modern Slavery Act self-assessment and supply chain transparency declaration",
+      "Safety Management System documentation certified to AS/NZS ISO 45001 or equivalent",
+      "Aboriginal business participation declaration (e.g. Supply Nation registration if applicable)"
+    ],
+    "complianceRequirements": [
+      "Comprehensive site induction and health surveillance for fly-in-fly-out (FIFO) contractor staff",
+      "Vehicle safety specifications matching Gold Fields Australia surface/underground mobile plant standards"
+    ],
+    "localContentPolicy": "Active preference for indigenous businesses operating in the Goldfields and Pilbara regions, and supplier partnerships registered with Supply Nation.",
+    "contactEmail": "australiasuppliers@goldfields.com",
+    "speakUpUrl": "https://secure.ethicspoint.eu/domain/media/en/gui/114521/index.html"
+  },
+  {
+    "countryCode": "AM",
+    "country": "Americas (Chile & Peru)",
+    "title": "Americas Supplier Guidelines (Salares Norte & Cerro Corona)",
+    "overview": "Gold Fields Americas upholds rigorous safety, high-altitude operational standards, environmental care, and community procurement agreements with local Colla communities in Chile and Hualgayoc communities in Peru.",
+    "officialPortalName": "Gold Fields Americas Registro de Proveedores",
+    "officialPortalUrl": "https://www.goldfields.com/americas.php",
+    "preQualificationChecklist": [
+      "National Tax Identification (RUT in Chile, RUC in Peru)",
+      "Certificate of Good Standing with labor authorities (Certificado de Antecedentes Laborales)",
+      "High-altitude medical fitness protocols for personnel working above 3,500m (Salares Norte)",
+      "Civil liability and occupational risk insurance policies",
+      "Acceptance of Human Rights and Anti-Bribery Compliance Codes",
+      "Local community commercial register confirmation (Diego de Almagro / Cajamarca)"
+    ],
+    "complianceRequirements": [
+      "Zero tolerance for hazardous chemical handling non-compliance",
+      "Mandatory high-altitude driving and survival equipment for transport contractors"
+    ],
+    "localContentPolicy": "Priority procurement from local suppliers and micro-enterprises registered in Diego de Almagro and Inca de Oro (Chile), and Hualgayoc district (Peru).",
+    "contactEmail": "americassuppliers@goldfields.com",
+    "speakUpUrl": "https://secure.ethicspoint.eu/domain/media/en/gui/114521/index.html"
+  }
+]

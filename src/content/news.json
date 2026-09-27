@@ -1,0 +1,68 @@
+[
+  {
+    "id": "south-deep-wage-agreement-2026",
+    "slug": "south-deep-concludes-five-year-wage-agreement",
+    "title": "South Deep Concludes Historic Five-Year Wage Agreement with Organised Labour",
+    "category": "Media Release",
+    "date": "2026-07-28",
+    "readTime": "3 min read",
+    "summary": "Gold Fields' South Deep operation has signed a benchmark five-year wage agreement with representative trade unions, securing long-term operational predictability and employee wellbeing through 2031.",
+    "content": [
+      "Gold Fields Limited is pleased to announce that its South Deep mine in South Africa has concluded a five-year wage agreement with the National Union of Mineworkers (NUM) and UASA, representing the majority of the workforce.",
+      "The agreement covers the period from 1 July 2026 to 30 June 2031 and provides for average annual wage increases that balance fair employee compensation with the sustainable operating economics of the mechanized deep-level asset.",
+      "Benford Mokoatle, Executive Vice President: South Africa, commented: 'This five-year agreement reflects the mature, collaborative relationship between South Deep management and organized labour. It establishes five years of stability and predictability as we advance our productivity and safety improvement initiatives.'",
+      "Key elements of the agreement include basic wage adjustments, enhanced medical aid contributions, living-out allowances, and continuing commitments to skills training and community recruitment."
+    ],
+    "image": "/assets/south-africa-ops-image.png",
+    "sourceUrl": "https://www.goldfields.com/media-releases.php"
+  },
+  {
+    "id": "h1-2026-financial-results",
+    "slug": "gold-fields-releases-h1-2026-results",
+    "title": "Gold Fields Releases H1 2026 Operational and Financial Results",
+    "category": "SENS Announcement",
+    "date": "2026-08-25",
+    "readTime": "4 min read",
+    "summary": "Gold Fields announces solid first-half performance for 2026 with 1.06Moz attributable gold production, steady delivery at South Deep, and ongoing ramp-up progress at Salares Norte in Chile.",
+    "content": [
+      "Gold Fields Limited has published its operational and financial results for the six months ended 30 June 2026.",
+      "Group attributable gold-equivalent production was 1,062,000 ounces, in line with company guidance. Strong cash generation enabled the declaration of an interim dividend in accordance with the group's capital allocation framework.",
+      "South Deep maintained steady performance with 151,000 ounces produced, while the Australia region delivered dependable low-cost cash flow across its four operations.",
+      "At Salares Norte in Chile, plant ramp-up progressed with ongoing debottlenecking, positioning the asset for significant contribution during the second half of the year."
+    ],
+    "image": "/assets/gold-fields-releases-h1-2026.jpg",
+    "sourceUrl": "https://www.goldfields.com/reports/q2-2026/index.php"
+  },
+  {
+    "id": "south-deep-iso-55001-certification",
+    "slug": "south-deep-achieves-iso-55001-certification",
+    "title": "South Deep Achieves ISO 55001 Certification, Setting a New Benchmark for Asset Management",
+    "category": "Achievement",
+    "date": "2026-06-14",
+    "readTime": "3 min read",
+    "summary": "South Deep has become one of the first underground deep-level gold mines globally to receive ISO 55001 accreditation for asset management excellence.",
+    "content": [
+      "South Deep has achieved full accreditation under ISO 55001, the international standard for physical asset lifecycle management.",
+      "The certification validates the mine's rigorous maintenance engineering, computerized predictive condition monitoring, and mechanized fleet governance systems.",
+      "This milestone directly underpins South Deep's ongoing operational turnaround, reducing unscheduled machine downtime across the underground drill rig, LHD, and haul truck fleets."
+    ],
+    "image": "/assets/nav2.jpg",
+    "sourceUrl": "https://www.goldfields.com/in-the-news.php"
+  },
+  {
+    "id": "khanyisa-solar-renewable-milestone",
+    "slug": "khanyisa-solar-plant-surpasses-100k-tons-carbon-abatement",
+    "title": "50MW Khanyisa Solar Plant Surpasses 110,000 Tonnes Annual Carbon Abatement",
+    "category": "Our Stories",
+    "date": "2026-05-19",
+    "readTime": "3 min read",
+    "summary": "The flagship 50MW solar photovoltaic plant at South Deep achieves outstanding generation performance, providing over 24% of the mine's electricity needs and saving hundreds of millions in power tariffs.",
+    "content": [
+      "The Khanyisa solar facility at South Deep continues to set new milestones for renewable self-generation in South African industrial mining.",
+      "Comprising over 100,000 solar panels connected directly to the mine's electrical grid, the plant generates over 120 GWh of clean energy annually.",
+      "In addition to abating more than 110,000 tonnes of CO2e each year, the installation shields the operation from escalating national grid tariffs, delivering enduring commercial and environmental value."
+    ],
+    "image": "/assets/home-climate.png",
+    "sourceUrl": "https://www.goldfields.com/internal-news.php"
+  }
+]

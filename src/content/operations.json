@@ -1,0 +1,498 @@
+[
+  {
+    "id": "south-deep",
+    "slug": "south-deep",
+    "name": "South Deep",
+    "country": "South Africa",
+    "region": "South Africa",
+    "type": "Underground",
+    "status": "Active",
+    "ownership": "100% Gold Fields",
+    "attributableProductionH1_2026": "151,000 oz",
+    "overview": "South Deep is a world-class, bulk mechanized underground gold mine located in the Witwatersrand Basin near Westonaria, Gauteng. It possesses one of the world's largest gold mineral reserves and operates at depths between 2,400m and 3,000m below surface.",
+    "locationDetails": "West Rand District, Gauteng Province, South Africa (~45 km south-west of Johannesburg)",
+    "coordinates": {
+      "lat": -26.4239,
+      "lng": 27.6975,
+      "svgX": 540,
+      "svgY": 340
+    },
+    "image": "/assets/south-africa-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Attributable Production (H1 2026)",
+        "value": "151.0",
+        "unit": "koz",
+        "period": "Six months ended 30 June 2026",
+        "source": "Gold Fields H1 2026 Operational Results (25 August 2026)",
+        "scope": "Gold attributable"
+      },
+      {
+        "label": "Mining Method",
+        "value": "Fully Mechanised Long-Hole",
+        "unit": "Bulk underground",
+        "period": "Current",
+        "source": "Operational Specifications",
+        "scope": "Sub-surface"
+      },
+      {
+        "label": "Workforce Stability",
+        "value": "5-Year Wage Agreement",
+        "unit": "Concluded July 2026",
+        "period": "2026 - 2031",
+        "source": "Organised Labour Agreement Announcement",
+        "scope": "Operations"
+      },
+      {
+        "label": "Renewable Energy Onsite",
+        "value": "50 MW Khanyisa Solar Plant",
+        "unit": "Capacity",
+        "period": "Active operational",
+        "source": "Sustainability Report 2024/2025",
+        "scope": "Scope 2 Decarbonisation"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "Khanyisa 50MW solar plant reduces carbon footprint by ~110,000 tonnes CO2e annually",
+      "9 Host Community Trusts funded for education, youth employment and health programs",
+      "Over 80% water recycled and reused in closed-circuit operations"
+    ],
+    "operationalHighlights": [
+      "Steady grade improvements through optimized destress mining and development rates",
+      "Advanced 'South of Wrench' exploration drilling program underway",
+      "Zero fatalities achieved in H1 2026 reporting period"
+    ],
+    "officialUrl": "https://www.goldfields.com/south-africa-operations.php"
+  },
+  {
+    "id": "tarkwa",
+    "slug": "tarkwa",
+    "name": "Tarkwa",
+    "country": "Ghana",
+    "region": "Ghana",
+    "type": "Open Pit",
+    "status": "Active",
+    "ownership": "90% Gold Fields, 10% Government of Ghana",
+    "attributableProductionH1_2026": "242,000 oz",
+    "overview": "Tarkwa is a premier open-pit gold mine located in south-western Ghana. It is one of the largest single gold producers in West Africa, operating multiple open pits across the Tarkwaian paleoplacer formation.",
+    "locationDetails": "Tarkwa, Western Region, Ghana (~300 km west of Accra)",
+    "coordinates": {
+      "lat": 5.302,
+      "lng": -1.993,
+      "svgX": 470,
+      "svgY": 240
+    },
+    "image": "/assets/ghana-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Attributable Production (H1 2026)",
+        "value": "242.0",
+        "unit": "koz",
+        "period": "Six months ended 30 June 2026",
+        "source": "H1 2026 Results Review of Operations",
+        "scope": "Attributable"
+      },
+      {
+        "label": "Processing Capacity",
+        "value": "13.5",
+        "unit": "Mtpa",
+        "period": "Carbon-in-Leach (CIL)",
+        "source": "Operational Report Suite",
+        "scope": "Annual throughput"
+      },
+      {
+        "label": "Host Community Procurement",
+        "value": "73%",
+        "unit": "Local spend share",
+        "period": "H1 2026",
+        "source": "Supply Chain Stewardship Disclosure",
+        "scope": "In-country procurement"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "Gold Fields Ghana Foundation investments exceeding $100M into local infrastructure and education",
+      "Certified ISO 14001 and ISO 45001 across processing and pit facilities",
+      "Comprehensive progressive land rehabilitation and reforestation"
+    ],
+    "operationalHighlights": [
+      "Consistent throughput delivery across Pepe and Teberebie pits",
+      "High plant availability (>94%) across the CIL circuit",
+      "Excellence in environmental safety management"
+    ],
+    "officialUrl": "https://www.goldfields.com/ghana-operations.php"
+  },
+  {
+    "id": "salares-norte",
+    "slug": "salares-norte",
+    "name": "Salares Norte",
+    "country": "Chile",
+    "region": "Americas",
+    "type": "Open Pit",
+    "status": "Active",
+    "ownership": "100% Gold Fields",
+    "attributableProductionH1_2026": "Ramping up",
+    "overview": "Salares Norte is a newly commissioned, high-grade open-pit gold-silver mine situated in the High Andes of the Atacama region at elevations between 3,900m and 4,700m. It represents a key growth asset in Gold Fields' global portfolio.",
+    "locationDetails": "Diego de Almagro, Atacama Region, Chile",
+    "coordinates": {
+      "lat": -26.02,
+      "lng": -69.25,
+      "svgX": 290,
+      "svgY": 340
+    },
+    "image": "/assets/chile-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Asset Stage",
+        "value": "Commercial Production Ramp-up",
+        "unit": "Operational",
+        "period": "2026",
+        "source": "Q2 2026 Executive Review",
+        "scope": "Mine & Plant"
+      },
+      {
+        "label": "Average Annual Production Target",
+        "value": "~350",
+        "unit": "koz Gold Eq",
+        "period": "Full ramp capacity",
+        "source": "Technical Feasibility Disclosures",
+        "scope": "Gold-equivalent"
+      },
+      {
+        "label": "Filtered Tailings Technology",
+        "value": "Dry Stack Tailings",
+        "unit": "Zero liquid discharge",
+        "period": "Continuous",
+        "source": "TSF Stewardship Inventory",
+        "scope": "Water conservation"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "State-of-the-art dry stack filtered tailings ensuring maximum water conservation and seismic safety",
+      "Rigorous Short-Tailed Chinchilla protection and habitat preservation protocols",
+      "Local community engagement with indigenous Colla communities"
+    ],
+    "operationalHighlights": [
+      "First gold poured and ramp-up trajectory progressing toward design capacity",
+      "Advanced cold-weather operational protocols for high-altitude Andean conditions"
+    ],
+    "officialUrl": "https://www.goldfields.com/chile-operations.php"
+  },
+  {
+    "id": "cerro-corona",
+    "slug": "cerro-corona",
+    "name": "Cerro Corona",
+    "country": "Peru",
+    "region": "Americas",
+    "type": "Open Pit",
+    "status": "Active",
+    "ownership": "99.53% Gold Fields",
+    "attributableProductionH1_2026": "108,000 oz Eq",
+    "overview": "Cerro Corona is an established open-pit copper-gold porphyry operation located in the Hualgayoc district in northern Peru, producing high-grade copper concentrate with gold content.",
+    "locationDetails": "Cajamarca Department, Northern Peru (~600 km north of Lima)",
+    "coordinates": {
+      "lat": -6.75,
+      "lng": -78.65,
+      "svgX": 265,
+      "svgY": 260
+    },
+    "image": "/assets/peru-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Attributable Production (H1 2026)",
+        "value": "108.0",
+        "unit": "koz Au-Eq",
+        "period": "Six months ended 30 June 2026",
+        "source": "Gold Fields H1 2026 Results",
+        "scope": "Gold-equivalent"
+      },
+      {
+        "label": "Tailings Compliance",
+        "value": "GISTM Certified",
+        "unit": "Global Industry Standard",
+        "period": "2025/2026",
+        "source": "Independent TSF Assurance",
+        "scope": "In-pit & TSF"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "Over 90% workforce recruited from Peru and surrounding Cajamarca communities",
+      "Pioneering water stewardship providing clean community water supply to Hualgayoc"
+    ],
+    "operationalHighlights": [
+      "Stable copper-gold metallurgical recoveries exceeding 85%",
+      "In-pit tailings transition planning advancing safely"
+    ],
+    "officialUrl": "https://www.goldfields.com/peru-operations.php"
+  },
+  {
+    "id": "st-ives",
+    "slug": "st-ives",
+    "name": "St Ives",
+    "country": "Australia",
+    "region": "Australia",
+    "type": "Underground",
+    "status": "Active",
+    "ownership": "100% Gold Fields",
+    "attributableProductionH1_2026": "165,000 oz",
+    "overview": "St Ives is a foundational Australian gold mining complex located in the Eastern Goldfields of Western Australia, operating both underground and open pit mines across Lake Lefroy.",
+    "locationDetails": "Eastern Goldfields, Western Australia (~80 km south of Kalgoorlie)",
+    "coordinates": {
+      "lat": -31.25,
+      "lng": 121.65,
+      "svgX": 790,
+      "svgY": 330
+    },
+    "image": "/assets/australia-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Attributable Production (H1 2026)",
+        "value": "165.0",
+        "unit": "koz",
+        "period": "Six months ended 30 June 2026",
+        "source": "H1 2026 Operations Review",
+        "scope": "Gold attributable"
+      },
+      {
+        "label": "Renewables Microgrid",
+        "value": "Solar & Wind Expansion",
+        "unit": "In construction",
+        "period": "2026",
+        "source": "Australia Region Decarbonization Plan",
+        "scope": "Scope 1 & 2"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "Multi-megawatt renewables microgrid deployment to power Lefroy operations",
+      "Strong reconciliation partnerships with Traditional Owners (Ngadju People)"
+    ],
+    "operationalHighlights": [
+      "Invincible underground mine producing high-grade ore consistently",
+      "Exploration drill successes expanding life-of-mine extensions"
+    ],
+    "officialUrl": "https://www.goldfields.com/australia-operations.php"
+  },
+  {
+    "id": "granny-smith",
+    "slug": "granny-smith",
+    "name": "Granny Smith",
+    "country": "Australia",
+    "region": "Australia",
+    "type": "Underground",
+    "status": "Active",
+    "ownership": "100% Gold Fields",
+    "attributableProductionH1_2026": "135,000 oz",
+    "overview": "Granny Smith is an underground gold mine located near Laverton in Western Australia, known for its deep Wallaby ore body and pioneering gas-solar-battery microgrid.",
+    "locationDetails": "Laverton, Western Australia (~740 km north-east of Perth)",
+    "coordinates": {
+      "lat": -28.62,
+      "lng": 122.42,
+      "svgX": 800,
+      "svgY": 315
+    },
+    "image": "/assets/australia-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Attributable Production (H1 2026)",
+        "value": "135.0",
+        "unit": "koz",
+        "period": "Six months ended 30 June 2026",
+        "source": "H1 2026 Operations Review",
+        "scope": "Gold attributable"
+      },
+      {
+        "label": "Microgrid Innovation",
+        "value": "Solar + Gas + Battery",
+        "unit": "World-first mining hybrid",
+        "period": "Active",
+        "source": "Clean Energy Council Awards",
+        "scope": "Energy"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "Award-winning hybrid microgrid integrating solar PV, reciprocating gas engines, and lithium-ion batteries",
+      "Progressive rehabilitation on legacy historical waste landforms"
+    ],
+    "operationalHighlights": [
+      "Zone 110 and Zone 120 development at Wallaby maintaining steady grade output",
+      "Underground autonomous drilling technologies increasing safety and drill rate"
+    ],
+    "officialUrl": "https://www.goldfields.com/australia-operations.php"
+  },
+  {
+    "id": "agnew",
+    "slug": "agnew",
+    "name": "Agnew",
+    "country": "Australia",
+    "region": "Australia",
+    "type": "Underground",
+    "status": "Active",
+    "ownership": "100% Gold Fields",
+    "attributableProductionH1_2026": "115,000 oz",
+    "overview": "Agnew is an underground gold mine near Leinster, Western Australia, celebrated as a global mining benchmark for renewable energy integration with a landmark wind-solar-battery microgrid.",
+    "locationDetails": "Northern Goldfields, Western Australia (~23 km west of Leinster)",
+    "coordinates": {
+      "lat": -27.91,
+      "lng": 120.50,
+      "svgX": 780,
+      "svgY": 305
+    },
+    "image": "/assets/australia-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Attributable Production (H1 2026)",
+        "value": "115.0",
+        "unit": "koz",
+        "period": "Six months ended 30 June 2026",
+        "source": "H1 2026 Operations Review",
+        "scope": "Gold attributable"
+      },
+      {
+        "label": "Renewable Energy Penetration",
+        "value": "Up to 70%+",
+        "unit": "Wind, Solar & Battery",
+        "period": "Continuous average",
+        "source": "Energy & Climate Change Disclosure",
+        "scope": "Microgrid"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "Agnew Microgrid features 5 wind turbines (18MW), 10,000 solar panels (4MW), and a 13MW/4MWh battery",
+      "Benchmark for zero-emission underground mining studies"
+    ],
+    "operationalHighlights": [
+      "Waranga and New Holland underground extraction delivering high metallurgical recovery",
+      "Active sub-surface exploration identifying extensions at Barren Lands"
+    ],
+    "officialUrl": "https://www.goldfields.com/australia-operations.php"
+  },
+  {
+    "id": "gruyere",
+    "slug": "gruyere",
+    "name": "Gruyere",
+    "country": "Australia",
+    "region": "Australia",
+    "type": "Joint Venture",
+    "status": "Active",
+    "ownership": "50% Gold Fields, 50% Gold Road Resources (Manager: Gold Fields)",
+    "attributableProductionH1_2026": "130,000 oz (attributable)",
+    "overview": "Gruyere is a Tier 1, low-cost, long-life open-pit gold mine located in the Dorothy Hills Greenstone Belt of Western Australia, operated by Gold Fields in a 50/50 joint venture.",
+    "locationDetails": "Yamarna, Western Australia (~200 km east of Laverton)",
+    "coordinates": {
+      "lat": -27.98,
+      "lng": 123.85,
+      "svgX": 815,
+      "svgY": 310
+    },
+    "image": "/assets/australia-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Attributable Production (H1 2026)",
+        "value": "130.0",
+        "unit": "koz",
+        "period": "Six months ended 30 June 2026",
+        "source": "H1 2026 Operations Review",
+        "scope": "50% attributable"
+      },
+      {
+        "label": "Plant Nameplate Capacity",
+        "value": "10.0",
+        "unit": "Mtpa",
+        "period": "Crushing & Milling circuit",
+        "source": "Joint Venture Operational Update",
+        "scope": "Total throughput"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "13MW solar farm and battery installed supplying green power to remote Yamarna region",
+      "Close ongoing collaboration with the Yilka native title holders"
+    ],
+    "operationalHighlights": [
+      "Deep open pit mining optimization with improved excavator and haul truck productivity",
+      "Process plant optimizations achieving sustained 1,100 tph throughput"
+    ],
+    "officialUrl": "https://www.goldfields.com/australia-operations.php"
+  },
+  {
+    "id": "windfall",
+    "slug": "windfall",
+    "name": "Windfall Project",
+    "country": "Canada",
+    "region": "Canada",
+    "type": "Development",
+    "status": "Project",
+    "ownership": "50% Gold Fields, 50% Osisko Mining (Gold Fields Joint Venture)",
+    "attributableProductionH1_2026": "Advanced Development",
+    "overview": "The Windfall Project is an advanced, high-grade underground gold development project located in the Abitibi greenstone belt of Quebec, Canada, operated in a joint venture with Osisko Mining.",
+    "locationDetails": "Urban-Barry greenstone belt, Eeyou Istchee James Bay, Quebec, Canada",
+    "coordinates": {
+      "lat": 49.08,
+      "lng": -75.63,
+      "svgX": 270,
+      "svgY": 120
+    },
+    "image": "/assets/canada-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Project Stage",
+        "value": "Feasibility & Permitting",
+        "unit": "Advanced Development",
+        "period": "2026",
+        "source": "Gold Fields Canada Development Brief",
+        "scope": "Joint Venture"
+      },
+      {
+        "label": "Deposit Grade",
+        "value": "High-Grade Gold System",
+        "unit": "Lynx, Underdog, Triple 8 zones",
+        "period": "Mineral Reserve Statement",
+        "scope": "Underground reserve"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "Collaborative Impact Benefit Agreement planning with the Cree First Nation of Waswanipi",
+      "Designed for low-carbon hydroelectric power from the Quebec grid"
+    ],
+    "operationalHighlights": [
+      "Extensive underground exploration decline excavated exceeding 12 km",
+      "Bulk sampling programs validating metallurgical recovery projections (>95%)"
+    ],
+    "officialUrl": "https://www.goldfields.com/canada-operations.php"
+  },
+  {
+    "id": "damang-archive",
+    "slug": "damang",
+    "name": "Damang (Transferred)",
+    "country": "Ghana",
+    "region": "Ghana",
+    "type": "Open Pit",
+    "status": "Transferred",
+    "ownership": "Transferred to Government of Ghana (18 April 2026)",
+    "attributableProductionH1_2026": "Transferred 18 April 2026",
+    "overview": "Damang was historically operated by Gold Fields in south-western Ghana. As disclosed in the official H1 2026 Review of Operations, ownership of the Damang mine was formally transferred to the Government of Ghana on 18 April 2026. It is no longer an active Gold Fields operating asset.",
+    "locationDetails": "South-western Ghana (~30 km north of Tarkwa)",
+    "coordinates": {
+      "lat": 5.51,
+      "lng": -1.94,
+      "svgX": 472,
+      "svgY": 235
+    },
+    "image": "/assets/ghana-ops-image.png",
+    "keyMetrics": [
+      {
+        "label": "Asset Status",
+        "value": "Transferred to Gov of Ghana",
+        "unit": "18 April 2026",
+        "period": "H1 2026",
+        "source": "Gold Fields H1 2026 Review of Operations",
+        "scope": "Corporate portfolio"
+      }
+    ],
+    "sustainabilityHighlights": [
+      "Orderly and compliant environmental and socio-economic transition to national stewardship"
+    ],
+    "operationalHighlights": [
+      "Included in this digital prototype strictly for historical transparency and reporting integrity"
+    ],
+    "officialUrl": "https://www.goldfields.com/reports/q2-2026/review-of-operations.php"
+  }
+]

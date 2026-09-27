@@ -1,0 +1,99 @@
+[
+  {
+    "id": "job-ug-mine-engineer-sa",
+    "title": "Senior Underground Mining Engineer (Mechanised Long-Hole)",
+    "discipline": "Mining Engineering",
+    "country": "South Africa",
+    "location": "South Deep Mine, Westonaria, Gauteng",
+    "employmentType": "Full-Time",
+    "isDemonstrationListing": true,
+    "summary": "Lead stope design, destress mining sequences, and ventilation integration for deep underground mechanized stopes at South Deep.",
+    "keyResponsibilities": [
+      "Develop long-term and short-term extraction schedules using Deswik and Vulcan software",
+      "Optimize ground support regimes and backfill sequence coordination",
+      "Ensure uncompromising adherence to zero-harm geotechnical and ventilation safety codes",
+      "Collaborate with mobile maintenance and drill-and-blast teams"
+    ],
+    "officialPortalUrl": "https://careers.goldfields.com/utm_source=corpsite"
+  },
+  {
+    "id": "job-geologist-windfall-ca",
+    "title": "Senior Exploration & Resource Geologist",
+    "discipline": "Geology & Exploration",
+    "country": "Canada",
+    "location": "Windfall Project, Eeyou Istchee James Bay, Quebec",
+    "employmentType": "Full-Time",
+    "isDemonstrationListing": true,
+    "summary": "Coordinate underground and surface diamond drill programs targeting high-grade gold mineralization in the Urban-Barry greenstone belt.",
+    "keyResponsibilities": [
+      "Manage geological logging, QA/QC assay validation, and 3D structural wireframe modeling",
+      "Lead resource estimation updates in compliance with NI 43-101 and JORC reporting standards",
+      "Supervise core yard technical staff and junior geologists with high safety rigor"
+    ],
+    "officialPortalUrl": "https://careers.goldfields.com/utm_source=corpsite"
+  },
+  {
+    "id": "job-metallurgist-tarkwa-gh",
+    "title": "Process Metallurgist (CIL Plant)",
+    "discipline": "Metallurgy & Processing",
+    "country": "Ghana",
+    "location": "Tarkwa Mine, Western Region, Ghana",
+    "employmentType": "Full-Time",
+    "isDemonstrationListing": true,
+    "summary": "Optimize gold extraction, reagent consumption, and carbon-in-leach recovery kinetics across the 13.5 Mtpa milling circuits.",
+    "keyResponsibilities": [
+      "Conduct continuous metallurgical diagnostic audits on grind size, cyanidation rates, and eluate chemistry",
+      "Manage cyanide destruction and effluent neutralization to meet international ICMC guidelines",
+      "Implement predictive metallurgical AI control loops to maximize plant throughput"
+    ],
+    "officialPortalUrl": "https://careers.goldfields.com/utm_source=corpsite"
+  },
+  {
+    "id": "job-microgrid-electrical-au",
+    "title": "Renewable Microgrid Electrical Engineer",
+    "discipline": "Digital & Automation",
+    "country": "Australia",
+    "location": "Agnew Mine, Northern Goldfields, Western Australia",
+    "employmentType": "Full-Time",
+    "isDemonstrationListing": true,
+    "summary": "Supervise operational control, battery storage synchronization, and wind/solar generation across the Agnew hybrid microgrid.",
+    "keyResponsibilities": [
+      "Monitor high-voltage integration of 18MW wind turbines, solar PV, and battery energy storage (BESS)",
+      "Maintain grid frequency stability during high renewable penetration cycles (>70%)",
+      "Lead predictive diagnostic maintenance on inverters, transformers, and gas engine synchronizers"
+    ],
+    "officialPortalUrl": "https://careers.goldfields.com/utm_source=corpsite"
+  },
+  {
+    "id": "job-esg-coordinator-cl",
+    "title": "Environmental Compliance & Biodiversity Coordinator",
+    "discipline": "Health, Safety & Environment",
+    "country": "Chile",
+    "location": "Salares Norte Mine, Atacama Region, Chile",
+    "employmentType": "Full-Time",
+    "isDemonstrationListing": true,
+    "summary": "Lead environmental monitoring programs, high-Andean biodiversity conservation protocols, and water management in the Atacama region.",
+    "keyResponsibilities": [
+      "Manage environmental permits and compliance reporting to the Chilean environmental authority (SMA)",
+      "Oversee dry-stack tailings moisture monitoring and groundwater monitoring wells",
+      "Execute habitat preservation and monitoring programs for protected Andean fauna"
+    ],
+    "officialPortalUrl": "https://careers.goldfields.com/utm_source=corpsite"
+  },
+  {
+    "id": "job-supply-chain-specialist-sa",
+    "title": "Host Community Procurement Specialist",
+    "discipline": "Finance & Supply Chain",
+    "country": "South Africa",
+    "location": "Sandton Corporate Office / South Deep Mine",
+    "employmentType": "Full-Time",
+    "isDemonstrationListing": true,
+    "summary": "Drive host community enterprise onboarding, tender incubation, and local supplier compliance frameworks across the West Rand.",
+    "keyResponsibilities": [
+      "Screen and evaluate local suppliers for Broad-Based Black Economic Empowerment (B-BBEE) and mine safety compliance",
+      "Track host community procurement spend targets against the Mining Charter and Gold Fields ESG 2030 goals",
+      "Run supplier development workshops on invoicing, procurement standards, and code of conduct"
+    ],
+    "officialPortalUrl": "https://careers.goldfields.com/utm_source=corpsite"
+  }
+]
