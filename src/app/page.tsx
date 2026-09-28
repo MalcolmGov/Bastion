@@ -33,14 +33,14 @@ export default function HomePage() {
         {/* Authentic Background Hero Image */}
         <div className="absolute inset-0">
           <Image
-            src="/assets/gold-fields-releases-h1-2026.jpg"
-            alt="Gold Fields Global Mining Landscape"
+            src="/assets/goldfields-3d-mining-hero.jpg"
+            alt="Gold Fields 3D Sustainable Mining Flagship Landscape"
             fill
             priority
-            className="object-cover object-center opacity-90"
+            className="object-cover object-center opacity-95"
           />
           {/* Controlled Navy Gradient Overlay (protects text on left, leaves landscape clear on right) */}
-          <div className="absolute inset-0 bg-gradient-to-r from-navy-dark via-navy-dark/85 via-45% to-transparent lg:w-3/5" />
+          <div className="absolute inset-0 bg-gradient-to-r from-navy-dark via-navy-dark/80 via-40% to-transparent lg:w-3/5" />
           <div className="absolute inset-0 bg-gradient-to-t from-navy-dark/90 via-transparent to-black/20" />
         </div>
 
