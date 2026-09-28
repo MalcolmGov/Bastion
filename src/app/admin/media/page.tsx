@@ -26,6 +26,14 @@ export default function AdminMediaPage() {
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
+  // Upload state
+  const [showUpload, setShowUpload] = useState(false);
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [uploadAlt, setUploadAlt] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+
   // Edit state
   const [editAlt, setEditAlt] = useState('');
   const [editCaption, setEditCaption] = useState('');
@@ -94,6 +102,41 @@ export default function AdminMediaPage() {
     }
   };
 
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fileToUpload) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
+      if (uploadAlt) formData.append('alt_text', uploadAlt);
+
+      const res = await fetch('/api/admin/media/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+      setUploadSuccess(true);
+      setFileToUpload(null);
+      setUploadAlt('');
+      loadAssets();
+      setTimeout(() => {
+        setUploadSuccess(false);
+        setShowUpload(false);
+      }, 2500);
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -117,10 +160,92 @@ export default function AdminMediaPage() {
           </p>
         </div>
 
-        <div className="text-xs font-mono text-gray-400 bg-[#080D14] border border-[#1E2B3E] px-3.5 py-2 rounded-xl">
-          Cataloged Assets: <span className="text-[#C99700] font-bold">{assets.length}</span>
+        <div className="flex items-center space-x-3">
+          <div className="text-xs font-mono text-gray-400 bg-[#080D14] border border-[#1E2B3E] px-3.5 py-2 rounded-xl">
+            Cataloged Assets: <span className="text-[#C99700] font-bold">{assets.length}</span>
+          </div>
+
+          <button
+            onClick={() => setShowUpload(!showUpload)}
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition shadow-md shadow-[#C99700]/20"
+          >
+            <UploadCloud className="w-4 h-4" />
+            <span>{showUpload ? 'Close Upload' : 'Upload Asset'}</span>
+          </button>
         </div>
       </div>
+
+      {/* Upload Panel */}
+      {showUpload && (
+        <form
+          onSubmit={handleUploadSubmit}
+          className="p-6 rounded-2xl bg-[#0E1524] border border-[#243754] space-y-4 animate-fadeIn shadow-2xl"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <UploadCloud className="w-4 h-4 text-[#C99700]" />
+              <span className="font-bold text-sm text-white">Upload New Asset (Cloud &amp; Local Auto-Sync)</span>
+            </div>
+            <span className="text-[11px] text-gray-400 font-mono">Vercel Blob / Local Storage</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                Select File (Images, Vectors, or PDF Reports)
+              </label>
+              <input
+                type="file"
+                required
+                onChange={(e) => setFileToUpload(e.target.files?.[0] || null)}
+                className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl p-2 text-xs text-gray-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#142033] file:text-[#E6C657] hover:file:bg-[#1E2E48]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                Initial WCAG Alt Text (Accessibility)
+              </label>
+              <input
+                type="text"
+                value={uploadAlt}
+                onChange={(e) => setUploadAlt(e.target.value)}
+                placeholder="Describe image or document purpose..."
+                className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#C99700]"
+              />
+            </div>
+          </div>
+
+          {uploadError && (
+            <div className="p-3 rounded-xl bg-red-950/80 border border-red-800 text-red-300 text-xs">
+              {uploadError}
+            </div>
+          )}
+
+          {uploadSuccess && (
+            <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs">
+              Asset uploaded and cataloged in Gold Fields Media Library!
+            </div>
+          )}
+
+          <div className="flex items-center justify-end space-x-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowUpload(false)}
+              className="px-4 py-2 rounded-xl text-xs text-gray-400 hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isUploading || !fileToUpload}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition disabled:opacity-50"
+            >
+              {isUploading ? 'Uploading & Processing...' : 'Upload Asset'}
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Filter / Search Bar */}
       <div className="p-4 rounded-2xl bg-[#0B1019] border border-[#1C2638] flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">

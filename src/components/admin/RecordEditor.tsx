@@ -226,6 +226,19 @@ export function RecordEditor({ collection, id, collectionTitle }: RecordEditorPr
               <span>Publish Live</span>
             </button>
           )}
+
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/api/preview?secret=gf_preview_secret_token_2026&collection=${collection}&slug=${slug}`;
+              navigator.clipboard.writeText(url);
+              setNotification({ type: 'success', msg: 'Secret Executive Preview link copied to clipboard!' });
+              setTimeout(() => setNotification(null), 3500);
+            }}
+            title="Generate shareable secret preview link"
+            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-[#142033] hover:bg-[#1E2E48] border border-[#243754] text-xs font-medium text-[#E6C657] transition"
+          >
+            <span>Share Preview</span>
+          </button>
         </div>
       </div>
 

@@ -366,6 +366,20 @@ export default function AdminPageBuilder() {
             </button>
           )}
 
+          {/* Shareable Secret Preview Link */}
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/api/preview?secret=gf_preview_secret_token_2026&collection=pages&slug=${pageSlug}`;
+              navigator.clipboard.writeText(url);
+              setNotification({ type: 'success', msg: 'Secret Executive Preview link copied to clipboard!' });
+              setTimeout(() => setNotification(null), 3500);
+            }}
+            title="Generate shareable secret preview link"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#142033] hover:bg-[#1E2E48] border border-[#243754] text-xs font-medium text-[#E6C657] transition"
+          >
+            <span>Share Preview</span>
+          </button>
+
           {/* Preview Public Link */}
           <Link
             href={pageSlug === 'home' ? '/' : `/${pageSlug}`}

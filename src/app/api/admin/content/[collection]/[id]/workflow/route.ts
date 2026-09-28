@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser, hasPermission } from '@/lib/auth/auth';
+import { sendReviewNotification } from '@/lib/notifications/notifier';
 import crypto from 'crypto';
 
 export async function POST(
@@ -52,6 +53,16 @@ export async function POST(
         await db.execute({
           sql: `UPDATE revisions SET status = 'in_review', review_comments = ? WHERE id = ?`,
           args: [comments || null, draftRevId]
+        });
+
+        // Trigger outbound compliance notification alert
+        await sendReviewNotification({
+          recordTitle: String(record.title),
+          collection,
+          recordId: id,
+          authorName: user.name,
+          authorRole: user.role,
+          comments
         });
         break;
       }

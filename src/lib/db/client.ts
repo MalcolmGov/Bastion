@@ -1,4 +1,4 @@
-import { createClient, Client, InStatement } from '@libsql/client';
+import { createClient, Client } from '@libsql/client';
 import fs from 'fs';
 import path from 'path';
 
@@ -7,8 +7,12 @@ let client: Client | null = null;
 
 export function getDb(): Client {
   if (!client) {
-    const url = process.env.DATABASE_URL || 'file:studio.db';
-    client = createClient({ url });
+    const url = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || 'file:studio.db';
+    const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN;
+    client = createClient({
+      url,
+      authToken: authToken || undefined
+    });
   }
   return client;
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AppShell } from '@/components/layout/AppShell';
+import { DraftPreviewBanner } from '@/components/brand/DraftPreviewBanner';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.goldfields.com'),
@@ -32,6 +33,7 @@ export default function RootLayout({
         <link rel="icon" type="image/svg+xml" href="/assets/gold-fields-logo.svg" />
       </head>
       <body className="antialiased font-sans">
+        <DraftPreviewBanner />
         <AppShell>{children}</AppShell>
       </body>
     </html>

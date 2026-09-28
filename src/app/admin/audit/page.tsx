@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
-import { History, Search, Shield, Filter, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { History, Search, Shield, Filter, FileText, CheckCircle2, AlertCircle, Download } from 'lucide-react';
 
 export default function AdminAuditPage() {
   const { user } = useAdminAuth();
@@ -61,8 +61,19 @@ export default function AdminAuditPage() {
           </p>
         </div>
 
-        <div className="text-xs font-mono text-gray-400 bg-[#080D14] border border-[#1E2B3E] px-3.5 py-2 rounded-xl">
-          Total Logged Events: <span className="text-[#C99700] font-bold">{logs.length}</span>
+        <div className="flex items-center space-x-3">
+          <div className="text-xs font-mono text-gray-400 bg-[#080D14] border border-[#1E2B3E] px-3.5 py-2 rounded-xl">
+            Total Logged Events: <span className="text-[#C99700] font-bold">{logs.length}</span>
+          </div>
+
+          <a
+            href="/api/admin/audit/export"
+            download
+            className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-[#142033] hover:bg-[#1E2E48] border border-[#243754] text-xs font-semibold text-[#E6C657] transition shadow-sm"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Auditor CSV</span>
+          </a>
         </div>
       </div>
 
