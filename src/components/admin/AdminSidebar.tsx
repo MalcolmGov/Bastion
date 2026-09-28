@@ -27,7 +27,8 @@ import {
   ExternalLink,
   PlusCircle,
   Building,
-  Check
+  Check,
+  CreditCard
 } from 'lucide-react';
 
 export function AdminSidebar() {
@@ -181,6 +182,17 @@ export function AdminSidebar() {
                 <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-indigo-950 text-indigo-300 border border-indigo-800">
                   New
                 </span>
+              </Link>
+              <Link
+                href="/admin/billing"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/billing')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <CreditCard className="w-4 h-4 text-emerald-400" />
+                <span>Commercial & Billing</span>
               </Link>
             </div>
           </div>

@@ -246,3 +246,40 @@ CREATE TABLE IF NOT EXISTS site_releases (
 
 CREATE INDEX IF NOT EXISTS idx_releases_site ON site_releases(site_id);
 
+CREATE TABLE IF NOT EXISTS billing_docs (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  site_id TEXT REFERENCES websites(id),
+  type TEXT NOT NULL, -- quote, invoice, receipt, credit-note
+  status TEXT NOT NULL, -- draft, sent, accepted, declined, paid, overdue, cancelled, expired
+  doc_number TEXT NOT NULL,
+  issue_date TEXT NOT NULL,
+  due_date TEXT NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'R',
+  items_json TEXT NOT NULL,
+  notes TEXT,
+  bank_name TEXT,
+  account_no TEXT,
+  branch_code TEXT,
+  payment_ref TEXT,
+  company_name TEXT,
+  company_address TEXT,
+  company_email TEXT,
+  company_phone TEXT,
+  company_vat TEXT,
+  acceptance_token TEXT UNIQUE,
+  signature_data TEXT,
+  signer_name TEXT,
+  signer_role TEXT,
+  accepted_at TEXT,
+  declined_at TEXT,
+  decline_reason TEXT,
+  converted_from_quote_id TEXT,
+  converted_to_invoice_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_billing_docs_client ON billing_docs(client_id);
+CREATE INDEX IF NOT EXISTS idx_billing_docs_token ON billing_docs(acceptance_token);
+
