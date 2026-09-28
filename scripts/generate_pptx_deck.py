@@ -7,6 +7,7 @@ Refined for zero clipping, uniform corner radius, mock browser frames, high read
 
 import os
 import shutil
+import subprocess
 from PIL import Image
 import pptx
 from pptx.util import Inches, Pt
@@ -46,6 +47,7 @@ OG_SHARE_CARD = os.path.join(ASSETS_DIR, 'goldfields-og-share.png')
 DESIGN_TOKENS_CARD = os.path.join(ASSETS_DIR, 'design-system-tokens.png')
 GOVERNANCE_CARD = os.path.join(ASSETS_DIR, 'governance-audit-card.png')
 CLEAN_LOGIN_CARD = os.path.join(ASSETS_DIR, 'clean_admin_login.png')
+CHAT_SCREENSHOT = os.path.join(ASSETS_DIR, 'chat_crop_q_and_a.png')
 
 SCREENSHOT_HERO = '/Users/malcolmgovender/.gemini/antigravity/brain/8d5736b7-122d-4e9c-95b8-96b414fb7dfa/.user_uploaded/media_1790576282836.png'
 SCREENSHOT_GLOBE = '/Users/malcolmgovender/.gemini/antigravity/brain/8d5736b7-122d-4e9c-95b8-96b414fb7dfa/.user_uploaded/media_1790528693970.png'
@@ -656,63 +658,52 @@ def create_deck():
         ap2.font.color.rgb = TEXT_WHITE
         ap2.space_before = Pt(1)
 
-    add_card(slide5, Inches(6.78), Inches(1.50), Inches(5.75), Inches(5.0), bg=NAVY_SURFACE, border=TURQUOISE, border_width=1.5, radius_inches=0.15)
-    tx_r5 = slide5.shapes.add_textbox(Inches(7.05), Inches(1.70), Inches(5.2), Inches(4.55))
+    # Right Card: Live Copilot Chat Interface + Key Grounding Highlights
+    add_card(slide5, Inches(6.78), Inches(1.50), Inches(5.75), Inches(5.0), bg=NAVY_CARD, border=TURQUOISE, border_width=1.5, radius_inches=0.15)
+    
+    tx_r5 = slide5.shapes.add_textbox(Inches(7.00), Inches(1.65), Inches(5.3), Inches(0.40))
     tr5 = tx_r5.text_frame
     tr5.word_wrap = True
     tr5.margin_left = tr5.margin_top = tr5.margin_bottom = tr5.margin_right = 0
-
     rp1 = tr5.paragraphs[0]
-    rp1.text = "COPILOT INTERACTION SIMULATION"
+    rp1.text = "REAL COPILOT INTERACTION: LIVE VERIFIED RESPONSE"
     rp1.font.name = "Arial"
     rp1.font.size = Pt(9.5)
     rp1.font.bold = True
     rp1.font.color.rgb = GOLD_ACCENT
 
-    rp2 = tr5.add_paragraph()
-    rp2.text = "Investor Query:"
-    rp2.font.name = "Arial"
-    rp2.font.size = Pt(8.5)
-    rp2.font.bold = True
-    rp2.font.color.rgb = TURQUOISE
-    rp2.space_before = Pt(6)
+    # Chat screenshot on the left half of right card
+    if os.path.exists(CHAT_SCREENSHOT):
+        slide5.shapes.add_picture(CHAT_SCREENSHOT, Inches(7.00), Inches(2.12), height=Inches(4.18))
 
-    rp3 = tr5.add_paragraph()
-    rp3.text = "\"What is Gold Fields' progress on 2030 decarbonization and what is South Deep's solar plant contribution?\""
-    rp3.font.name = "Georgia"
-    rp3.font.size = Pt(9.5)
-    rp3.font.italic = True
-    rp3.font.color.rgb = TEXT_WHITE
-    rp3.space_before = Pt(2)
-
-    rp4 = tr5.add_paragraph()
-    rp4.text = "Copilot Verified Response:"
-    rp4.font.name = "Arial"
-    rp4.font.size = Pt(8.5)
-    rp4.font.bold = True
-    rp4.font.color.rgb = GOLD_ACCENT
-    rp4.space_before = Pt(8)
-
-    responses = [
-        "1. Decarbonization Roadmap: Gold Fields is tracking toward a 30% absolute reduction in Scope 1 & 2 emissions by 2030 (from 2016 baseline) and net-zero by 2050.",
-        "2. Khanyisa Solar Plant: South Deep's 50MW solar facility generates ~100GWh/year, supplying 24% of the mine's electricity and offsetting 110,000 tonnes of CO2e annually.",
-        "3. Australian Microgrids: Agnew (hybrid wind/solar/battery) and Granny Smith solar microgrids pushed group renewable electricity generation to 54% in H1 2026."
+    # Callout badges on the right half of right card
+    callouts = [
+        ("DETERMINISTIC LLM GROUNDING", "Constrained strictly to audited annual reports; zero generative drift or hallucination.", TURQUOISE),
+        ("PAGE-LEVEL CITATIONS", "Clickable citations link directly to primary PDF source pages for regulatory verification.", GOLD_ACCENT),
+        ("DYNAMIC ACTION DEEP-LINKS", "One-click routing to the relevant asset profile and live operational telemetry drawer.", TURQUOISE),
+        ("ENTERPRISE AUDIT TRAIL", "Every query, citation, and session token is cryptographically logged for compliance.", TEXT_WHITE)
     ]
-    for resp in responses:
-        rp_item = tr5.add_paragraph()
-        rp_item.text = resp
-        rp_item.font.name = "Arial"
-        rp_item.font.size = Pt(7.5)
-        rp_item.font.color.rgb = TEXT_WHITE
-        rp_item.space_before = Pt(3)
 
-    rcite = tr5.add_paragraph()
-    rcite.text = "Verified Citations: [Climate Change Report 2025, pp. 24-28] • [H1 2026 Disclosures, p. 12] • [South Deep Technical Bulletin 2026]"
-    rcite.font.name = "Arial"
-    rcite.font.size = Pt(7)
-    rcite.font.bold = True
-    rcite.font.color.rgb = TURQUOISE
-    rcite.space_before = Pt(6)
+    for idx, (title, desc, accent) in enumerate(callouts):
+        cy = Inches(2.12) + (idx * Inches(1.04))
+        add_card(slide5, Inches(9.95), cy, Inches(2.38), Inches(0.96), bg=NAVY_SURFACE, border=BORDER_BLUE, radius_inches=0.10)
+        tx_c = slide5.shapes.add_textbox(Inches(10.08), cy + Inches(0.08), Inches(2.12), Inches(0.80))
+        ctf = tx_c.text_frame
+        ctf.word_wrap = True
+        ctf.margin_left = ctf.margin_top = ctf.margin_bottom = ctf.margin_right = 0
+        cp1 = ctf.paragraphs[0]
+        cp1.text = title
+        cp1.font.name = "Arial"
+        cp1.font.size = Pt(7.5)
+        cp1.font.bold = True
+        cp1.font.color.rgb = accent
+        
+        cp2 = ctf.add_paragraph()
+        cp2.text = desc
+        cp2.font.name = "Arial"
+        cp2.font.size = Pt(7)
+        cp2.font.color.rgb = TEXT_MUTED
+        cp2.space_before = Pt(1)
 
     add_footer(slide5, 5)
 
@@ -1367,5 +1358,26 @@ def create_deck():
         except Exception as e:
             print(f"⚠️ Error copying to {dst}: {e}")
 
+    # Generate PDF export using LibreOffice
+    soffice_bin = "/opt/homebrew/bin/soffice"
+    if os.path.exists(soffice_bin):
+        pdf_path = os.path.join(OUTPUT_DIR, "Goldfields-BastionGroup-Executive-Deck.pdf")
+        subprocess.run([soffice_bin, "--headless", "--convert-to", "pdf", "--outdir", OUTPUT_DIR, pptx_path], check=False)
+        if os.path.exists(pdf_path):
+            print(f"✅ Generated PDF presentation at: {pdf_path} ({os.path.getsize(pdf_path)} bytes)")
+            pdf_dests = [
+                os.path.join(DOCUMENTS_DIR, "Goldfields-BastionGroup-Executive-Deck.pdf"),
+                os.path.join(DOCUMENTS_DIR, "Goldfields-Proposal.pdf"),
+                os.path.join(DOCS_ARTIFACTS_DIR, "Goldfields-BastionGroup-Executive-Deck.pdf"),
+                "/Users/malcolmgovender/Desktop/Goldfields-Proposal.pdf"
+            ]
+            for pdst in pdf_dests:
+                try:
+                    shutil.copyfile(pdf_path, pdst)
+                    print(f"✅ Copied PDF to: {pdst}")
+                except Exception as e:
+                    print(f"⚠️ Error copying PDF to {pdst}: {e}")
+
 if __name__ == "__main__":
     create_deck()
+
