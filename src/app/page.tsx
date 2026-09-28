@@ -70,16 +70,33 @@ export default async function HomePage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 sm:py-28 relative z-10 w-full">
           <div className="max-w-2xl lg:max-w-3xl space-y-5 sm:space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-navy/80 border border-turquoise/40 text-turquoise-bright text-[11px] sm:text-xs font-semibold uppercase tracking-widest backdrop-blur-xs shadow-[0_0_15px_rgba(0,229,192,0.2)]">
-              <span className="w-2 h-2 rounded-full bg-turquoise-bright animate-pulse shrink-0" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#061D32]/85 border border-turquoise/40 text-turquoise-bright text-[11px] sm:text-xs font-bold uppercase tracking-[0.16em] backdrop-blur-md shadow-[0_0_15px_-3px_rgba(0,229,192,0.35)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-turquoise-bright animate-pulse shrink-0" />
               <span className="truncate">{heroBadge}</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.14] sm:leading-[1.12] max-w-2xl font-display">
-              {heroTitle}
+            <h1 className="text-4xl sm:text-6xl lg:text-[68px] font-extrabold text-white tracking-tight leading-[1.08] sm:leading-[1.06] max-w-3xl font-display">
+              {(() => {
+                const match = heroTitle.match(/^(.*?)(beyond mining\.?)(.*)$/i);
+                if (match) {
+                  const before = match[1].trim();
+                  const highlight = match[2];
+                  const after = match[3];
+                  return (
+                    <>
+                      {before && <span className="block text-white">{before}</span>}
+                      <span className="block text-turquoise-bright italic font-normal tracking-tight drop-shadow-[0_0_24px_rgba(0,229,192,0.4)] mt-1 sm:mt-1.5">
+                        {highlight}
+                      </span>
+                      {after && <span className="block text-white">{after}</span>}
+                    </>
+                  );
+                }
+                return heroTitle;
+              })()}
             </h1>
 
-            <p className="text-sm sm:text-lg text-mist/90 max-w-xl font-normal leading-relaxed">
+            <p className="text-sm sm:text-base lg:text-lg text-slate-200/90 max-w-xl font-normal leading-relaxed">
               {heroSubtitle}
             </p>
 
@@ -87,7 +104,7 @@ export default async function HomePage() {
             <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
               <Link
                 href={heroCtaLink}
-                className="px-6 py-3.5 rounded-lg bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark font-extrabold text-sm shadow-[0_0_25px_rgba(0,229,192,0.4)] hover:shadow-[0_0_35px_rgba(0,229,192,0.6)] transition-all duration-200 flex items-center justify-center gap-2 group w-full sm:w-auto"
+                className="px-6 py-3.5 rounded-xl bg-turquoise-bright hover:bg-turquoise text-navy-dark font-extrabold text-sm shadow-[0_0_25px_rgba(0,229,192,0.55)] hover:shadow-[0_0_35px_rgba(0,229,192,0.8)] transition-all duration-200 flex items-center justify-center gap-2 group w-full sm:w-auto"
               >
                 <span>{heroCtaText}</span>
                 <ArrowRight className="w-4 h-4 text-navy-dark group-hover:translate-x-1 transition-transform" />
@@ -95,10 +112,10 @@ export default async function HomePage() {
 
               <Link
                 href="/investors"
-                className="px-6 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-turquoise/30 hover:border-turquoise backdrop-blur-xs transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
+                className="px-6 py-3.5 rounded-xl bg-[#1A2E40]/70 hover:bg-[#1A2E40]/90 text-slate-200 hover:text-white font-medium text-sm border border-[#385166]/70 hover:border-turquoise/50 backdrop-blur-md transition-all flex items-center justify-center gap-1.5 group w-full sm:w-auto"
               >
                 <span>View latest results</span>
-                <ChevronRight className="w-4 h-4 text-turquoise-bright" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-turquoise transition-colors" />
               </Link>
             </div>
           </div>
