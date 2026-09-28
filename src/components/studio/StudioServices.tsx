@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { StudioBackgroundFx } from './StudioBackgroundFx';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 
 interface ServicesProps {
@@ -44,9 +45,14 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
   return (
     <section
       style={sectionStyle}
-      className={`${paddingClass} px-6 transition-colors ${!hasCustomBg ? defaultBgClass : 'border-b border-white/10'}`}
+      className={`relative overflow-hidden ${paddingClass} px-6 transition-colors ${!hasCustomBg ? defaultBgClass : 'border-b border-white/10'}`}
     >
-      <div className="max-w-7xl mx-auto space-y-12">
+      <StudioBackgroundFx
+        pattern={styles?.backgroundPattern}
+        opacity={styles?.patternOpacity}
+        accentColor={styles?.accentColor}
+      />
+      <div className="max-w-7xl mx-auto space-y-12 relative z-10">
         <div className="max-w-3xl space-y-4">
           {props.eyebrow && (
             <div

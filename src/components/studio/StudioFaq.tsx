@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 import { ChevronDown, HelpCircle, MessageSquare } from 'lucide-react';
+import { StudioBackgroundFx } from './StudioBackgroundFx';
 
 interface FaqItem {
   question: string;
@@ -60,6 +61,11 @@ export const StudioFaq: React.FC<StudioFaqProps> = ({
 
   return (
     <section className={`relative overflow-hidden ${paddingClass}`} style={inlineStyle}>
+      <StudioBackgroundFx
+        pattern={styles?.backgroundPattern}
+        opacity={styles?.patternOpacity}
+        accentColor={accentColor}
+      />
       <div className="max-w-4xl mx-auto px-6 sm:px-8 relative z-10">
         {/* Header */}
         <div className="text-center space-y-4 mb-14">

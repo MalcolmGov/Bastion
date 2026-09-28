@@ -156,6 +156,8 @@ export interface BrandKit {
   updatedAt: string;
 }
 
+export type BackgroundPatternType = 'none' | 'grid' | 'dots' | 'glow_orbs' | 'mesh' | 'galaxy' | 'aurora';
+
 export interface SectionStyles {
   backgroundType?: 'solid' | 'gradient' | 'default';
   backgroundColor?: string;
@@ -164,6 +166,8 @@ export interface SectionStyles {
   gradientDirection?: string;
   gradientFrom?: string;
   gradientTo?: string;
+  backgroundPattern?: BackgroundPatternType;
+  patternOpacity?: number;
   textColor?: string;
   headingColor?: string;
   accentColor?: string;

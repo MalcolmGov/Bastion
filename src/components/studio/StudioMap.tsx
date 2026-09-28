@@ -3,6 +3,7 @@
 import React from 'react';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 import { MapPin, Phone, Mail, Clock, Calendar, Navigation } from 'lucide-react';
+import { StudioBackgroundFx } from './StudioBackgroundFx';
 
 interface BusinessHour {
   day: string;
@@ -64,6 +65,11 @@ export const StudioMap: React.FC<StudioMapProps> = ({
 
   return (
     <section className={`relative overflow-hidden ${paddingClass}`} style={inlineStyle}>
+      <StudioBackgroundFx
+        pattern={styles?.backgroundPattern}
+        opacity={styles?.patternOpacity}
+        accentColor={accentColor}
+      />
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">

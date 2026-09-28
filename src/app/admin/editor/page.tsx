@@ -29,13 +29,19 @@ import {
   Palette,
   Paintbrush,
   Droplet,
-  Type
+  Type,
+  Grid,
+  CircleDot,
+  Sun,
+  Star,
+  Waves,
+  Ban
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
 import { SectionLibraryDrawer } from '@/components/studio/SectionLibraryDrawer';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
-import type { SectionInstance, DesignCollectionId } from '@/lib/studio/types';
+import type { SectionInstance, DesignCollectionId, BackgroundPatternType } from '@/lib/studio/types';
 
 const SOLID_SWATCHES = [
   { name: 'Obsidian Noir', hex: '#09090B' },
@@ -115,6 +121,16 @@ const ACCENT_SWATCHES = [
   { name: 'Amber Glow', hex: '#F59E0B' },
   { name: 'Violet', hex: '#8B5CF6' },
   { name: 'Crimson', hex: '#E11D48' }
+];
+
+const PATTERN_OPTIONS: { id: BackgroundPatternType; label: string; desc: string; icon: any }[] = [
+  { id: 'none', label: 'None', desc: 'Clean background', icon: Ban },
+  { id: 'grid', label: 'Cyber Grid', desc: 'Architectural tech lines', icon: Grid },
+  { id: 'dots', label: 'Radial Dots', desc: 'Precision matrix stipple', icon: CircleDot },
+  { id: 'glow_orbs', label: 'Ambient Glow', desc: 'Luminous dual bloom', icon: Sun },
+  { id: 'mesh', label: 'Conic Mesh', desc: 'Multi-hue aura blend', icon: Palette },
+  { id: 'galaxy', label: 'Galaxy Stars', desc: 'Celestial starlight nodes', icon: Star },
+  { id: 'aurora', label: 'Aurora Wave', desc: 'Prismatic kinetic waves', icon: Waves },
 ];
 
 function VisualWebsiteEditorContent() {
@@ -1462,6 +1478,113 @@ function VisualWebsiteEditorContent() {
                       </div>
                     </div>
                   )}
+
+                  {/* AMBIENT FX & BACKGROUND TEXTURES */}
+                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                          Ambient FX & Textures
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 capitalize">
+                        {selectedSection.styles?.backgroundPattern && selectedSection.styles.backgroundPattern !== 'none'
+                          ? selectedSection.styles.backgroundPattern.replace('_', ' ')
+                          : 'None'}
+                      </span>
+                    </div>
+
+                    {/* Pattern Selection Cards */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {PATTERN_OPTIONS.map((pat) => {
+                        const Icon = pat.icon;
+                        const isCurrent =
+                          (!selectedSection.styles?.backgroundPattern && pat.id === 'none') ||
+                          selectedSection.styles?.backgroundPattern === pat.id;
+                        return (
+                          <button
+                            key={pat.id}
+                            type="button"
+                            onClick={() => handleStyleChange('backgroundPattern', pat.id)}
+                            className={`p-2.5 rounded-xl border text-left flex items-start space-x-2.5 transition group ${
+                              isCurrent
+                                ? 'bg-sky-950/60 border-sky-400 ring-1 ring-sky-400 text-white shadow-sm'
+                                : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white hover:border-slate-600'
+                            }`}
+                          >
+                            <div className={`p-1.5 rounded-lg border mt-0.5 ${
+                              isCurrent
+                                ? 'bg-sky-500/20 border-sky-400/40 text-sky-300'
+                                : 'bg-[#141C2A] border-[#222E42] text-slate-400 group-hover:text-white'
+                            }`}>
+                              <Icon className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-semibold truncate leading-tight">
+                                {pat.label}
+                              </div>
+                              <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                                {pat.desc}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Opacity / Intensity Controls (active when a pattern is chosen) */}
+                    {selectedSection.styles?.backgroundPattern && selectedSection.styles.backgroundPattern !== 'none' && (
+                      <div className="pt-3 border-t border-slate-800 space-y-2.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400 font-medium">Texture Intensity</span>
+                          <span className="text-sky-400 font-mono text-[11px] font-semibold">
+                            {Math.round((selectedSection.styles?.patternOpacity ?? 0.35) * 100)}%
+                          </span>
+                        </div>
+
+                        {/* Preset quick buttons */}
+                        <div className="grid grid-cols-4 gap-1 text-[10px]">
+                          {[
+                            { label: 'Subtle', val: 0.15 },
+                            { label: 'Balanced', val: 0.35 },
+                            { label: 'Vivid', val: 0.60 },
+                            { label: 'Max', val: 0.90 }
+                          ].map((op) => {
+                            const currentVal = selectedSection.styles?.patternOpacity ?? 0.35;
+                            const isMatch = Math.abs(currentVal - op.val) < 0.05;
+                            return (
+                              <button
+                                key={op.label}
+                                type="button"
+                                onClick={() => handleStyleChange('patternOpacity', op.val)}
+                                className={`py-1 rounded border text-center font-medium transition ${
+                                  isMatch
+                                    ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                    : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                {op.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Continuous Precision Slider */}
+                        <div className="flex items-center space-x-2 pt-0.5">
+                          <input
+                            type="range"
+                            min="0.05"
+                            max="1.0"
+                            step="0.05"
+                            value={selectedSection.styles?.patternOpacity ?? 0.35}
+                            onChange={(e) => handleStyleChange('patternOpacity', parseFloat(e.target.value))}
+                            className="w-full accent-sky-500 cursor-pointer h-1.5 bg-[#0E1522] rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* TYPOGRAPHY COLORS: HEADINGS & BODY */}
                   <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-4">

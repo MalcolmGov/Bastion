@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { StudioBackgroundFx } from './StudioBackgroundFx';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 
 interface HeroProps {
@@ -42,6 +43,11 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
         style={heroStyle}
         className={`relative min-h-[85vh] flex items-center justify-center ${!hasCustomBg ? 'bg-[#09090B]' : ''} text-white px-6 ${paddingClass} overflow-hidden`}
       >
+        <StudioBackgroundFx
+          pattern={styles?.backgroundPattern}
+          opacity={styles?.patternOpacity}
+          accentColor={styles?.accentColor}
+        />
         {/* Ambient atmospheric backdrop */}
         {!hasCustomBg && (
           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-[#09090B] z-10" />
@@ -112,9 +118,14 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
     return (
       <section
         style={heroStyle}
-        className={`${!hasCustomBg ? 'bg-[#F7F6F2] text-[#172C3D]' : ''} ${paddingClass} px-6 border-b border-black/10`}
+        className={`${!hasCustomBg ? 'bg-[#F7F6F2] text-[#172C3D]' : ''} ${paddingClass} px-6 border-b border-black/10 relative overflow-hidden`}
       >
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <StudioBackgroundFx
+          pattern={styles?.backgroundPattern}
+          opacity={styles?.patternOpacity}
+          accentColor={styles?.accentColor}
+        />
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
           <div className="lg:col-span-7 space-y-6">
             {props.badge && (
               <div
@@ -185,9 +196,14 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
   return (
     <section
       style={heroStyle}
-      className={`${!hasCustomBg ? 'bg-[#F8FAFC] text-[#0F172A]' : ''} ${paddingClass} px-6 border-b border-black/10`}
+      className={`${!hasCustomBg ? 'bg-[#F8FAFC] text-[#0F172A]' : ''} ${paddingClass} px-6 border-b border-black/10 relative overflow-hidden`}
     >
-      <div className="max-w-7xl mx-auto space-y-12">
+      <StudioBackgroundFx
+        pattern={styles?.backgroundPattern}
+        opacity={styles?.patternOpacity}
+        accentColor={styles?.accentColor}
+      />
+      <div className="max-w-7xl mx-auto space-y-12 relative z-10">
         <div className="max-w-4xl space-y-6">
           {props.badge && (
             <div

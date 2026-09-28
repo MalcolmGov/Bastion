@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Phone, Mail } from 'lucide-react';
+import { StudioBackgroundFx } from './StudioBackgroundFx';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 
 interface CtaProps {
@@ -47,9 +48,14 @@ export function StudioCta({ props, styles, collection = 'contemporary', variant 
   return (
     <section
       style={sectionStyle}
-      className={`${paddingClass} px-6 transition-colors ${!hasCustomBg ? defaultBgClass : ''}`}
+      className={`relative overflow-hidden ${paddingClass} px-6 transition-colors ${!hasCustomBg ? defaultBgClass : ''}`}
     >
-      <div className="max-w-6xl mx-auto">
+      <StudioBackgroundFx
+        pattern={styles?.backgroundPattern}
+        opacity={styles?.patternOpacity}
+        accentColor={styles?.accentColor}
+      />
+      <div className="max-w-6xl mx-auto relative z-10">
         <div
           className={`p-10 md:p-14 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-10 shadow-2xl transition ${
             hasCustomBg
