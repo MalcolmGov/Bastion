@@ -169,6 +169,7 @@ export default function AdminPageBuilder() {
   const [seoDesc, setSeoDesc] = useState('');
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string>('hero_block');
+  const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
 
   // Preview & Viewport State
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -187,6 +188,7 @@ export default function AdminPageBuilder() {
   // AI Copilot State
   const [aiGeneratingField, setAiGeneratingField] = useState<'title' | 'subtitle' | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<{
+    blockId?: string;
     field: 'title' | 'subtitle';
     text: string;
     rationale: string;
@@ -275,9 +277,13 @@ export default function AdminPageBuilder() {
 
   const selectedBlock = blocks.find((b) => b.id === selectedBlockId) || blocks[0];
 
+  const updateBlock = (blockId: string, updates: Partial<Block>) => {
+    setBlocks((prev) => prev.map((b) => (b.id === blockId ? { ...b, ...updates } : b)));
+  };
+
   const updateSelectedBlock = (updates: Partial<Block>) => {
     if (!selectedBlock) return;
-    setBlocks(blocks.map((b) => (b.id === selectedBlock.id ? { ...b, ...updates } : b)));
+    updateBlock(selectedBlock.id, updates);
   };
 
   const moveBlock = (index: number, direction: 'up' | 'down') => {
@@ -303,6 +309,7 @@ export default function AdminPageBuilder() {
     newBlocks.splice(index + 1, 0, newBlock);
     setBlocks(newBlocks);
     setSelectedBlockId(newBlock.id);
+    setInlineEditingId(newBlock.id);
     setNotification({ type: 'success', msg: `Duplicated "${blockToDup.title}"` });
     setTimeout(() => setNotification(null), 3000);
   };
@@ -317,6 +324,9 @@ export default function AdminPageBuilder() {
     setBlocks(remaining);
     if (selectedBlockId === blockId) {
       setSelectedBlockId(remaining[0]?.id || '');
+    }
+    if (inlineEditingId === blockId) {
+      setInlineEditingId(null);
     }
     setNotification({ type: 'success', msg: 'Block removed' });
     setTimeout(() => setNotification(null), 2500);
@@ -334,16 +344,18 @@ export default function AdminPageBuilder() {
     };
     setBlocks([...blocks, newBlock]);
     setSelectedBlockId(newId);
+    setInlineEditingId(newId);
     setIsPresetModalOpen(false);
     setActiveTab('inspector');
-    setNotification({ type: 'success', msg: `Added "${preset.name}" to page` });
+    setNotification({ type: 'success', msg: `Added "${preset.name}" — ready to edit!` });
     setTimeout(() => setNotification(null), 3500);
   };
 
   // AI Copilot Tone Transform Handler
-  const handleAiPolish = async (field: 'title' | 'subtitle', tone: string) => {
-    if (!selectedBlock) return;
-    const currentText = field === 'title' ? selectedBlock.title : selectedBlock.subtitle || '';
+  const handleAiPolish = async (field: 'title' | 'subtitle', tone: string, targetBlockId?: string) => {
+    const blockToPolish = targetBlockId ? blocks.find((b) => b.id === targetBlockId) : selectedBlock;
+    if (!blockToPolish) return;
+    const currentText = field === 'title' ? blockToPolish.title : blockToPolish.subtitle || '';
     if (!currentText.trim()) {
       setNotification({ type: 'error', msg: `Please enter some ${field} text first` });
       setTimeout(() => setNotification(null), 3000);
@@ -366,6 +378,7 @@ export default function AdminPageBuilder() {
       if (!res.ok) throw new Error(data.error || 'AI Copilot failed');
 
       setAiSuggestion({
+        blockId: blockToPolish.id,
         field,
         text: data.rewritten,
         rationale: data.rationale,
@@ -379,11 +392,14 @@ export default function AdminPageBuilder() {
   };
 
   const applyAiSuggestion = () => {
-    if (!aiSuggestion || !selectedBlock) return;
+    if (!aiSuggestion) return;
+    const targetId = aiSuggestion.blockId || selectedBlock?.id;
+    if (!targetId) return;
+
     if (aiSuggestion.field === 'title') {
-      updateSelectedBlock({ title: aiSuggestion.text });
+      updateBlock(targetId, { title: aiSuggestion.text });
     } else {
-      updateSelectedBlock({ subtitle: aiSuggestion.text });
+      updateBlock(targetId, { subtitle: aiSuggestion.text });
     }
     setAiSuggestion(null);
     setCustomAiPrompt('');
@@ -475,21 +491,21 @@ export default function AdminPageBuilder() {
       title: '1. Block Structure Tree',
       subtitle: 'The Left Panel (Outline)',
       description:
-        'Your page is composed of modular Gold Fields blocks. Click any block in the list to inspect it, use the ↑ and ↓ arrows to reorder, or click the gold "+" button to insert pre-designed executive section templates.',
+        'Your page is composed of modular Gold Fields blocks. Click any block in the list to select it, use the ↑ and ↓ arrows to reorder, or click the gold "+ Add Block" button to insert pre-designed executive section templates.',
       targetId: 'tour-block-tree'
     },
     {
-      title: '2. Live WYSIWYG Canvas',
-      subtitle: 'The Center Panel (Preview)',
+      title: '2. Live WYSIWYG Canvas & In-Place Editing',
+      subtitle: 'The Center Panel (Preview & Direct Edit)',
       description:
-        'Hover over any section on the canvas to see instant action shortcuts (Edit, Duplicate, Move, Delete). Click anywhere directly on the preview to select that section. Use the top viewport switcher to verify Desktop, Tablet, and Mobile layouts.',
+        'Hover over any section on the canvas to reveal the action bar. Click the ✏️ pencil icon or double-click any section to edit headline, subtitle, and badge text directly in place! Switch between Desktop, Tablet, and Mobile layouts at the top.',
       targetId: 'tour-canvas'
     },
     {
       title: '3. Property Inspector & AI Copilot',
       subtitle: 'The Right Panel (Editing & Tone)',
       description:
-        'Edit titles, body paragraphs, badges, and imagery with real-time feedback. Click "✨ Polish with AI Copilot" to instantly transform draft copy into Investor Relations, ESG, or Executive tone with 1 click.',
+        'Edit titles, body paragraphs, badges, and imagery with real-time two-way synchronization. Click "✨ Polish with AI Copilot" to instantly transform draft copy into Investor Relations, ESG, or Executive tone with 1 click.',
       targetId: 'tour-inspector'
     },
     {
@@ -730,6 +746,7 @@ export default function AdminPageBuilder() {
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
             {blocks.map((b, idx) => {
               const isSelected = b.id === selectedBlockId;
+              const isEditing = b.id === inlineEditingId;
               return (
                 <div
                   key={b.id}
@@ -738,22 +755,45 @@ export default function AdminPageBuilder() {
                     setActiveTab('inspector');
                   }}
                   className={`p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-center justify-between ${
-                    isSelected
+                    isEditing
+                      ? 'bg-[#18263D] border-[#C99700] text-white shadow-md'
+                      : isSelected
                       ? 'bg-[#142033] border-[#C99700]/70 text-white shadow-md'
                       : 'bg-[#0E1522] border-[#1C2638] text-gray-400 hover:bg-[#121A2A] hover:text-gray-200'
                   }`}
                 >
                   <div className="overflow-hidden flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C99700] shrink-0" />
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        isEditing ? 'bg-emerald-400 animate-pulse' : 'bg-[#C99700]'
+                      }`}
+                    />
                     <div className="truncate">
                       <div className="font-semibold truncate text-xs">{b.title}</div>
-                      <div className="text-[10px] text-gray-500 uppercase font-mono mt-0.5">
-                        {b.type}
+                      <div className="text-[10px] text-gray-500 uppercase font-mono mt-0.5 flex items-center space-x-1">
+                        <span>{b.type}</span>
+                        {isEditing && (
+                          <span className="text-emerald-400 font-bold ml-1">• EDITING</span>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-1 shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => {
+                        setInlineEditingId(isEditing ? null : b.id);
+                        setSelectedBlockId(b.id);
+                      }}
+                      className={`p-1 rounded transition ${
+                        isEditing
+                          ? 'bg-[#C99700] text-black font-bold'
+                          : 'text-gray-400 hover:text-[#E6C657]'
+                      }`}
+                      title={isEditing ? 'Done Editing' : 'Edit Section'}
+                    >
+                      {isEditing ? <Check className="w-3 h-3" /> : <Edit3 className="w-3 h-3" />}
+                    </button>
                     <button
                       onClick={() => moveBlock(idx, 'up')}
                       disabled={idx === 0}
@@ -785,7 +825,7 @@ export default function AdminPageBuilder() {
 
           <div className="p-3 border-t border-[#1E293B] text-[11px] text-gray-400 text-center flex items-center justify-center space-x-1.5 bg-[#080C14]">
             <Edit3 className="w-3 h-3 text-[#C99700]" />
-            <span>Click any block to inspect &amp; edit</span>
+            <span>Click any block to inspect or edit</span>
           </div>
         </div>
 
@@ -800,7 +840,7 @@ export default function AdminPageBuilder() {
           <div className="w-full max-w-5xl mb-3 flex items-center justify-between text-xs text-gray-400">
             <span className="flex items-center space-x-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Interactive WYSIWYG Canvas • Hover to act, click to edit</span>
+              <span>Interactive WYSIWYG Canvas • Click ✏️ or double-click to edit directly</span>
             </span>
             <button
               onClick={() => setIsPresetModalOpen(true)}
@@ -839,24 +879,32 @@ export default function AdminPageBuilder() {
                 .filter((b) => b.visible)
                 .map((b, idx) => {
                   const isSelected = selectedBlockId === b.id;
+                  const isEditingInline = inlineEditingId === b.id;
+
                   return (
                     <div
                       key={b.id}
                       onClick={() => {
                         setSelectedBlockId(b.id);
+                      }}
+                      onDoubleClick={() => {
+                        setInlineEditingId(b.id);
+                        setSelectedBlockId(b.id);
                         setActiveTab('inspector');
                       }}
-                      className={`group relative transition cursor-pointer p-8 ${
-                        isSelected
-                          ? 'ring-2 ring-[#C99700] ring-inset bg-[#0E1522]/30'
+                      className={`group relative transition p-8 ${
+                        isEditingInline
+                          ? 'ring-2 ring-[#C99700] ring-inset bg-[#070D17]'
+                          : isSelected
+                          ? 'ring-2 ring-[#C99700]/70 ring-inset bg-[#0E1522]/30'
                           : 'hover:bg-[#0E1522]/20'
                       }`}
                     >
                       {/* Floating Canvas Quick-Actions Bar */}
                       <div
-                        className={`absolute top-3 right-4 z-20 flex items-center space-x-1 bg-[#0A1019]/90 backdrop-blur-md px-2.5 py-1.5 rounded-xl border transition-opacity ${
-                          isSelected
-                            ? 'border-[#C99700]/70 opacity-100 shadow-lg'
+                        className={`absolute top-3 right-4 z-30 flex items-center space-x-1 bg-[#0A1019]/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border transition-opacity ${
+                          isSelected || isEditingInline
+                            ? 'border-[#C99700]/70 opacity-100 shadow-xl'
                             : 'border-[#1E293B] opacity-0 group-hover:opacity-100'
                         }`}
                         onClick={(e) => e.stopPropagation()}
@@ -865,16 +913,38 @@ export default function AdminPageBuilder() {
                           {b.type}
                         </span>
 
+                        {/* Direct In-Place Edit Toggle Button */}
                         <button
                           onClick={() => {
+                            const next = isEditingInline ? null : b.id;
+                            setInlineEditingId(next);
                             setSelectedBlockId(b.id);
                             setActiveTab('inspector');
+                            if (next) {
+                              setNotification({
+                                type: 'success',
+                                msg: `Editing "${b.title.slice(0, 24)}..." directly on canvas`
+                              });
+                              setTimeout(() => setNotification(null), 2500);
+                            }
                           }}
-                          className="p-1 rounded text-gray-300 hover:text-white hover:bg-[#1A2638] transition"
-                          title="Edit in Inspector"
+                          className={`p-1.5 rounded transition flex items-center space-x-1 ${
+                            isEditingInline
+                              ? 'bg-[#C99700] text-black font-bold shadow'
+                              : 'text-gray-300 hover:text-white hover:bg-[#1A2638]'
+                          }`}
+                          title={isEditingInline ? 'Save & Done' : 'Click to Edit Directly on Canvas'}
                         >
-                          <Edit3 className="w-3.5 h-3.5 text-[#C99700]" />
+                          {isEditingInline ? (
+                            <>
+                              <Check className="w-3.5 h-3.5" />
+                              <span className="text-[10px] font-bold">Done</span>
+                            </>
+                          ) : (
+                            <Edit3 className="w-3.5 h-3.5 text-[#C99700]" />
+                          )}
                         </button>
+
                         <button
                           onClick={() => moveBlock(idx, 'up')}
                           disabled={idx === 0}
@@ -908,161 +978,385 @@ export default function AdminPageBuilder() {
                       </div>
 
                       {/* Active Section Corner Indicator */}
-                      {isSelected && (
-                        <div className="absolute top-2 left-2 z-10 flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-[#C99700] text-black text-[9px] font-extrabold uppercase tracking-wider shadow">
-                          <span>ACTIVE SECTION</span>
+                      {(isSelected || isEditingInline) && (
+                        <div className="absolute top-2 left-2 z-20 flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-[#C99700] text-black text-[9px] font-extrabold uppercase tracking-wider shadow">
+                          <span>{isEditingInline ? 'EDITING SECTION' : 'ACTIVE SECTION'}</span>
                         </div>
                       )}
 
-                      {/* Block Type 1: Hero */}
-                      {b.type === 'hero' && (
-                        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#0F1726] to-[#0A0E17] border border-[#22334D] p-8 text-center sm:text-left">
-                          {b.badge && (
-                            <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#C99700]/20 text-[#E6C657] border border-[#C99700]/40 mb-4">
-                              {b.badge}
+                      {/* ============================================================== */}
+                      {/* INLINE EDIT MODE (When user clicks pencil or double-clicks)   */}
+                      {/* ============================================================== */}
+                      {isEditingInline ? (
+                        <div
+                          className="rounded-2xl bg-gradient-to-b from-[#0F1726] to-[#0A0F1A] border-2 border-[#C99700] p-6 shadow-2xl space-y-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* Inline Header Bar */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#1E2E44]">
+                            <div className="flex items-center space-x-2">
+                              <span className="p-1.5 rounded-lg bg-[#C99700] text-black">
+                                <Edit3 className="w-4 h-4" />
+                              </span>
+                              <div>
+                                <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
+                                  <span>Direct Canvas Editor</span>
+                                  <span className="text-[10px] text-[#C99700] font-mono px-1.5 py-0.2 rounded bg-[#C99700]/10 border border-[#C99700]/30">
+                                    {b.type.toUpperCase()}
+                                  </span>
+                                </span>
+                                <p className="text-[11px] text-gray-400">
+                                  Type directly into the fields below to update this section in real time.
+                                </p>
+                              </div>
                             </div>
-                          )}
-                          <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mb-4 leading-tight">
-                            {b.title}
-                          </h2>
-                          <p className="text-sm text-gray-300 max-w-2xl leading-relaxed mb-6">
-                            {b.subtitle}
-                          </p>
-                          {b.ctaText && (
-                            <div className="inline-flex items-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] text-black text-xs font-bold shadow-lg">
-                              {b.ctaText}
-                            </div>
-                          )}
-                        </div>
-                      )}
 
-                      {/* Block Type 2: Metrics Telemetry */}
-                      {b.type === 'metrics' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              {/* Quick Tone Buttons directly on canvas */}
+                              <div className="hidden sm:flex items-center bg-[#070B12] rounded-xl border border-[#1E2D42] p-0.5 space-x-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAiPolish('title', 'investor', b.id)}
+                                  disabled={aiGeneratingField !== null}
+                                  className="px-2 py-1 rounded-lg text-[10px] font-medium text-gray-300 hover:text-white hover:bg-[#152234] transition disabled:opacity-50"
+                                  title="Rewrite headline with Investor Relations tone"
+                                >
+                                  📈 IR Tone
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAiPolish('title', 'sustainability', b.id)}
+                                  disabled={aiGeneratingField !== null}
+                                  className="px-2 py-1 rounded-lg text-[10px] font-medium text-gray-300 hover:text-white hover:bg-[#152234] transition disabled:opacity-50"
+                                  title="Rewrite headline with ESG & Decarbonization tone"
+                                >
+                                  🌿 ESG Tone
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAiPolish('title', 'punchy', b.id)}
+                                  disabled={aiGeneratingField !== null}
+                                  className="px-2 py-1 rounded-lg text-[10px] font-medium text-gray-300 hover:text-white hover:bg-[#152234] transition disabled:opacity-50"
+                                  title="Make headline punchy and concise"
+                                >
+                                  ⚡ Punchy
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInlineEditingId(null);
+                                  setNotification({ type: 'success', msg: 'Section updated!' });
+                                  setTimeout(() => setNotification(null), 2500);
+                                }}
+                                className="px-4 py-1.5 rounded-xl bg-[#C99700] hover:bg-[#D4A316] text-black text-xs font-bold flex items-center space-x-1.5 shadow transition"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Done</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* AI Suggestion Banner if generated for this block */}
+                          {aiSuggestion && (aiSuggestion.blockId === b.id || (!aiSuggestion.blockId && selectedBlockId === b.id)) && (
+                            <div className="p-3 rounded-xl bg-[#0B1422] border border-[#C99700]/70 space-y-2">
+                              <div className="flex items-center justify-between text-xs font-bold text-[#E6C657]">
+                                <span className="flex items-center space-x-1">
+                                  <Sparkles className="w-3.5 h-3.5 text-[#C99700]" />
+                                  <span>AI Suggestion for {aiSuggestion.field}:</span>
+                                </span>
+                                <button onClick={() => setAiSuggestion(null)} className="text-gray-400 hover:text-white">
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <p className="text-xs text-white bg-[#060A10] p-2 rounded border border-[#1A2638]">
+                                &ldquo;{aiSuggestion.text}&rdquo;
+                              </p>
+                              <div className="flex items-center space-x-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={applyAiSuggestion}
+                                  className="px-3 py-1 rounded-lg bg-[#C99700] hover:bg-[#D4A316] text-black text-xs font-bold flex items-center space-x-1"
+                                >
+                                  <Check className="w-3 h-3" />
+                                  <span>Apply to {aiSuggestion.field}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setAiSuggestion(null)}
+                                  className="px-2.5 py-1 rounded-lg bg-[#142033] text-gray-300 text-xs"
+                                >
+                                  Discard
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Editable Fields */}
+                          <div className="space-y-3">
+                            {/* Badge / Eyebrow */}
                             <div>
+                              <label className="text-[10px] uppercase font-bold text-[#C99700] block mb-1">
+                                Eyebrow Badge Text
+                              </label>
+                              <input
+                                type="text"
+                                value={b.badge || ''}
+                                onChange={(e) => updateBlock(b.id, { badge: e.target.value })}
+                                placeholder="e.g. Gold Fields Flagship • Global Production"
+                                className="w-full bg-[#05080E] border border-[#202C3F] focus:border-[#C99700] rounded-xl px-3 py-2 text-xs text-[#E6C657] focus:outline-none"
+                              />
+                            </div>
+
+                            {/* Title / Headline */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="text-[10px] uppercase font-bold text-gray-300">
+                                  Headline / Title
+                                </label>
+                                {aiGeneratingField === 'title' && (
+                                  <span className="text-[9px] text-[#C99700] animate-pulse">Polishing with AI...</span>
+                                )}
+                              </div>
+                              <textarea
+                                rows={2}
+                                value={b.title || ''}
+                                onChange={(e) => updateBlock(b.id, { title: e.target.value })}
+                                placeholder="Enter headline..."
+                                className="w-full bg-[#05080E] border-2 border-[#C99700] rounded-xl p-3 text-lg sm:text-2xl font-extrabold text-white tracking-tight focus:outline-none focus:ring-1 focus:ring-[#C99700] shadow-inner resize-none leading-snug"
+                                autoFocus
+                              />
+                            </div>
+
+                            {/* Subtitle / Paragraph */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="text-[10px] uppercase font-bold text-gray-300">
+                                  Body Copy / Subtitle Description
+                                </label>
+                                {aiGeneratingField === 'subtitle' && (
+                                  <span className="text-[9px] text-[#C99700] animate-pulse">Polishing with AI...</span>
+                                )}
+                              </div>
+                              <textarea
+                                rows={3}
+                                value={b.subtitle || ''}
+                                onChange={(e) => updateBlock(b.id, { subtitle: e.target.value })}
+                                placeholder="Enter subtitle description..."
+                                className="w-full bg-[#05080E] border border-[#202C3F] focus:border-[#C99700] rounded-xl p-3 text-xs sm:text-sm text-gray-200 focus:outline-none resize-y leading-relaxed"
+                              />
+                            </div>
+
+                            {/* Hero CTA inputs */}
+                            {b.type === 'hero' && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#162234]">
+                                <div>
+                                  <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">
+                                    CTA Button Label
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={b.ctaText || ''}
+                                    onChange={(e) => updateBlock(b.id, { ctaText: e.target.value })}
+                                    placeholder="e.g. Explore Operations"
+                                    className="w-full bg-[#05080E] border border-[#202C3F] focus:border-[#C99700] rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">
+                                    CTA Destination Link
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={b.ctaLink || ''}
+                                    onChange={(e) => updateBlock(b.id, { ctaLink: e.target.value })}
+                                    placeholder="e.g. /operations"
+                                    className="w-full bg-[#05080E] border border-[#202C3F] focus:border-[#C99700] rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Bottom Done Action */}
+                            <div className="pt-2 flex items-center justify-between border-t border-[#162234]">
+                              <span className="text-[11px] text-gray-400">
+                                Also synced live to the right-hand Property Inspector.
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInlineEditingId(null);
+                                  setNotification({ type: 'success', msg: 'Section updated!' });
+                                  setTimeout(() => setNotification(null), 2500);
+                                }}
+                                className="px-4 py-1.5 rounded-xl bg-[#C99700] hover:bg-[#D4A316] text-black text-xs font-bold flex items-center space-x-1.5 shadow transition"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Save &amp; Close</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* ============================================================== */
+                        /* READ-ONLY CANVAS PREVIEW (Double-click to edit)                */
+                        /* ============================================================== */
+                        <div>
+                          {/* Block Type 1: Hero */}
+                          {b.type === 'hero' && (
+                            <div
+                              className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#0F1726] to-[#0A0E17] border border-[#22334D] p-8 text-center sm:text-left cursor-text"
+                              title="Double-click or click pencil to edit inline"
+                            >
                               {b.badge && (
-                                <span className="text-[10px] text-[#C99700] uppercase font-bold tracking-wider">
+                                <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#C99700]/20 text-[#E6C657] border border-[#C99700]/40 mb-4">
+                                  {b.badge}
+                                </div>
+                              )}
+                              <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mb-4 leading-tight">
+                                {b.title}
+                              </h2>
+                              <p className="text-sm text-gray-300 max-w-2xl leading-relaxed mb-6">
+                                {b.subtitle}
+                              </p>
+                              {b.ctaText && (
+                                <div className="inline-flex items-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] text-black text-xs font-bold shadow-lg">
+                                  {b.ctaText}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Block Type 2: Metrics Telemetry */}
+                          {b.type === 'metrics' && (
+                            <div className="space-y-4 cursor-text" title="Double-click or click pencil to edit inline">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  {b.badge && (
+                                    <span className="text-[10px] text-[#C99700] uppercase font-bold tracking-wider">
+                                      {b.badge}
+                                    </span>
+                                  )}
+                                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                                    {b.title}
+                                  </h3>
+                                </div>
+                                <span className="text-[10px] text-emerald-400 font-mono">H1 2026 AUDITED</span>
+                              </div>
+                              {b.subtitle && <p className="text-xs text-gray-400">{b.subtitle}</p>}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {[
+                                  { label: 'Attributable Production', value: '1,054 koz' },
+                                  { label: 'AISC Cost Guidance', value: '$1,385 /oz' },
+                                  { label: 'Adjusted Free Cash Flow', value: '$485M' },
+                                  { label: 'Renewable Power Share', value: '54%' }
+                                ].map((m) => (
+                                  <div key={m.label} className="p-3.5 rounded-xl bg-[#090E17] border border-[#1E2B3E]">
+                                    <div className="text-lg font-bold text-white font-mono">{m.value}</div>
+                                    <div className="text-[10px] text-gray-400 mt-1">{m.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Block Type 3: Corporate Reporting */}
+                          {b.type === 'reporting' && (
+                            <div className="p-6 rounded-2xl bg-[#0A1019] border border-[#1E2B3E] space-y-3 cursor-text" title="Double-click or click pencil to edit inline">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs uppercase font-bold text-white tracking-wider">
+                                  {b.title}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800">
+                                  {b.badge || 'Regulated SENS / SEC'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-400">{b.subtitle}</p>
+                              <div className="pt-2 flex flex-wrap gap-2">
+                                {['H1 2026 Results Booklet (PDF)', 'Mineral Resources & Reserves 2025', 'Taskforce for Climate-Related Financial Disclosures'].map((doc) => (
+                                  <div key={doc} className="px-3 py-1.5 rounded-lg bg-[#111A29] border border-[#22334A] text-[11px] text-gray-300 flex items-center space-x-1.5">
+                                    <FileText className="w-3 h-3 text-[#C99700]" />
+                                    <span>{doc}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Block Type 4: ESG Sustainability */}
+                          {b.type === 'sustainability' && (
+                            <div className="p-6 rounded-2xl bg-[#0A1019] border border-[#1E2B3E] space-y-3 cursor-text" title="Double-click or click pencil to edit inline">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs uppercase font-bold text-white tracking-wider">
+                                  {b.title}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                  {b.badge || '2030 Science-Based'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-400">{b.subtitle}</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                                <div className="p-3 rounded-xl bg-[#0E1624] border border-[#1E2E44]">
+                                  <div className="text-base font-bold text-emerald-400 font-mono">50MW</div>
+                                  <div className="text-[10px] text-gray-300 font-medium">Khanyisa Solar Plant</div>
+                                  <div className="text-[9px] text-gray-500 mt-0.5">Displacing 110,000t CO2e/yr</div>
+                                </div>
+                                <div className="p-3 rounded-xl bg-[#0E1624] border border-[#1E2E44]">
+                                  <div className="text-base font-bold text-emerald-400 font-mono">50%</div>
+                                  <div className="text-[10px] text-gray-300 font-medium">Renewable Electricity Target</div>
+                                  <div className="text-[9px] text-gray-500 mt-0.5">By 2030 across all operations</div>
+                                </div>
+                                <div className="p-3 rounded-xl bg-[#0E1624] border border-[#1E2E44]">
+                                  <div className="text-base font-bold text-emerald-400 font-mono">Zero</div>
+                                  <div className="text-[10px] text-gray-300 font-medium">Harm Workplace Culture</div>
+                                  <div className="text-[9px] text-gray-500 mt-0.5">Courageous leadership standard</div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Block Type 5: Operations Portfolio */}
+                          {b.type === 'operations' && (
+                            <div className="space-y-4 cursor-text" title="Double-click or click pencil to edit inline">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="text-[10px] text-[#C99700] uppercase font-bold tracking-wider">
+                                    {b.badge || 'Tier-1 Asset Portfolio'}
+                                  </span>
+                                  <h3 className="text-base font-bold text-white">{b.title}</h3>
+                                </div>
+                                <span className="text-[10px] text-gray-400 font-mono">GLOBAL HUBS</span>
+                              </div>
+                              {b.subtitle && <p className="text-xs text-gray-400">{b.subtitle}</p>}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {[
+                                  { name: 'South Deep', country: 'South Africa', type: 'Deep-Level Underground', status: 'Ramp-up' },
+                                  { name: 'Tarkwa & Damang', country: 'Ghana', type: 'Open Pit Bulk Gold', status: 'Expanding' },
+                                  { name: 'Salares Norte', country: 'Chile', type: 'High-Altitude Epithermal', status: 'Commissioning' }
+                                ].map((op) => (
+                                  <div key={op.name} className="p-3.5 rounded-xl bg-[#090E17] border border-[#1E2B3E]">
+                                    <div className="text-xs font-bold text-white">{op.name}</div>
+                                    <div className="text-[10px] text-[#C99700] mt-0.5">{op.country}</div>
+                                    <div className="text-[10px] text-gray-400 mt-1">{op.type}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Block Type 6: CTA / Executive Callout */}
+                          {b.type === 'cta' && (
+                            <div className="p-6 rounded-2xl bg-gradient-to-r from-[#111A29] to-[#0A101A] border border-[#1E2B3E] text-center space-y-2 cursor-text" title="Double-click or click pencil to edit inline">
+                              {b.badge && (
+                                <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-[#C99700] mb-1">
                                   {b.badge}
                                 </span>
                               )}
-                              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                                {b.title}
-                              </h3>
+                              <h4 className="text-base font-bold text-white">{b.title}</h4>
+                              <p className="text-xs text-gray-400 max-w-lg mx-auto">{b.subtitle}</p>
                             </div>
-                            <span className="text-[10px] text-emerald-400 font-mono">H1 2026 AUDITED</span>
-                          </div>
-                          {b.subtitle && <p className="text-xs text-gray-400">{b.subtitle}</p>}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            {[
-                              { label: 'Attributable Production', value: '1,054 koz' },
-                              { label: 'AISC Cost Guidance', value: '$1,385 /oz' },
-                              { label: 'Adjusted Free Cash Flow', value: '$485M' },
-                              { label: 'Renewable Power Share', value: '54%' }
-                            ].map((m) => (
-                              <div key={m.label} className="p-3.5 rounded-xl bg-[#090E17] border border-[#1E2B3E]">
-                                <div className="text-lg font-bold text-white font-mono">{m.value}</div>
-                                <div className="text-[10px] text-gray-400 mt-1">{m.label}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Block Type 3: Corporate Reporting */}
-                      {b.type === 'reporting' && (
-                        <div className="p-6 rounded-2xl bg-[#0A1019] border border-[#1E2B3E] space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs uppercase font-bold text-white tracking-wider">
-                              {b.title}
-                            </span>
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800">
-                              {b.badge || 'Regulated SENS / SEC'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-400">{b.subtitle}</p>
-                          <div className="pt-2 flex flex-wrap gap-2">
-                            {['H1 2026 Results Booklet (PDF)', 'Mineral Resources & Reserves 2025', 'Taskforce for Climate-Related Financial Disclosures'].map((doc) => (
-                              <div key={doc} className="px-3 py-1.5 rounded-lg bg-[#111A29] border border-[#22334A] text-[11px] text-gray-300 flex items-center space-x-1.5">
-                                <FileText className="w-3 h-3 text-[#C99700]" />
-                                <span>{doc}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Block Type 4: ESG Sustainability */}
-                      {b.type === 'sustainability' && (
-                        <div className="p-6 rounded-2xl bg-[#0A1019] border border-[#1E2B3E] space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs uppercase font-bold text-white tracking-wider">
-                              {b.title}
-                            </span>
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                              {b.badge || '2030 Science-Based'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-400">{b.subtitle}</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                            <div className="p-3 rounded-xl bg-[#0E1624] border border-[#1E2E44]">
-                              <div className="text-base font-bold text-emerald-400 font-mono">50MW</div>
-                              <div className="text-[10px] text-gray-300 font-medium">Khanyisa Solar Plant</div>
-                              <div className="text-[9px] text-gray-500 mt-0.5">Displacing 110,000t CO2e/yr</div>
-                            </div>
-                            <div className="p-3 rounded-xl bg-[#0E1624] border border-[#1E2E44]">
-                              <div className="text-base font-bold text-emerald-400 font-mono">50%</div>
-                              <div className="text-[10px] text-gray-300 font-medium">Renewable Electricity Target</div>
-                              <div className="text-[9px] text-gray-500 mt-0.5">By 2030 across all operations</div>
-                            </div>
-                            <div className="p-3 rounded-xl bg-[#0E1624] border border-[#1E2E44]">
-                              <div className="text-base font-bold text-emerald-400 font-mono">Zero</div>
-                              <div className="text-[10px] text-gray-300 font-medium">Harm Workplace Culture</div>
-                              <div className="text-[9px] text-gray-500 mt-0.5">Courageous leadership standard</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Block Type 5: Operations Portfolio */}
-                      {b.type === 'operations' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="text-[10px] text-[#C99700] uppercase font-bold tracking-wider">
-                                {b.badge || 'Tier-1 Asset Portfolio'}
-                              </span>
-                              <h3 className="text-base font-bold text-white">{b.title}</h3>
-                            </div>
-                            <span className="text-[10px] text-gray-400 font-mono">GLOBAL HUBS</span>
-                          </div>
-                          {b.subtitle && <p className="text-xs text-gray-400">{b.subtitle}</p>}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {[
-                              { name: 'South Deep', country: 'South Africa', type: 'Deep-Level Underground', status: 'Ramp-up' },
-                              { name: 'Tarkwa & Damang', country: 'Ghana', type: 'Open Pit Bulk Gold', status: 'Expanding' },
-                              { name: 'Salares Norte', country: 'Chile', type: 'High-Altitude Epithermal', status: 'Commissioning' }
-                            ].map((op) => (
-                              <div key={op.name} className="p-3.5 rounded-xl bg-[#090E17] border border-[#1E2B3E]">
-                                <div className="text-xs font-bold text-white">{op.name}</div>
-                                <div className="text-[10px] text-[#C99700] mt-0.5">{op.country}</div>
-                                <div className="text-[10px] text-gray-400 mt-1">{op.type}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Block Type 6: CTA / Executive Callout */}
-                      {b.type === 'cta' && (
-                        <div className="p-6 rounded-2xl bg-gradient-to-r from-[#111A29] to-[#0A101A] border border-[#1E2B3E] text-center space-y-2">
-                          {b.badge && (
-                            <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-[#C99700] mb-1">
-                              {b.badge}
-                            </span>
                           )}
-                          <h4 className="text-base font-bold text-white">{b.title}</h4>
-                          <p className="text-xs text-gray-400 max-w-lg mx-auto">{b.subtitle}</p>
                         </div>
                       )}
                     </div>
