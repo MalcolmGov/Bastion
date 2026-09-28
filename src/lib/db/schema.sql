@@ -146,3 +146,103 @@ CREATE TABLE IF NOT EXISTS analytics_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_analytics_event_time ON analytics_events(event_name, timestamp);
+
+-- ============================================================================
+-- MOVE STUDIO MULTI-TENANT PLATFORM TABLES
+-- Hierarchy: Agency Workspace -> Client -> Website -> Environment
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS clients (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  industry TEXT NOT NULL,
+  logo_url TEXT,
+  primary_contact_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS websites (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  blueprint_id TEXT NOT NULL, -- corporate, professional_services, hospitality
+  design_collection_id TEXT NOT NULL, -- editorial, contemporary, immersive
+  status TEXT NOT NULL DEFAULT 'draft', -- draft, in_review, approved, published
+  primary_domain TEXT,
+  published_revision_id TEXT,
+  current_draft_revision_id TEXT,
+  settings_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_websites_client ON websites(client_id);
+CREATE INDEX IF NOT EXISTS idx_websites_slug ON websites(slug);
+
+CREATE TABLE IF NOT EXISTS brand_kits (
+  id TEXT PRIMARY KEY,
+  site_id TEXT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+  version INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'approved', -- observed, inferred, approved, needs_review
+  logos_json TEXT NOT NULL,
+  colors_json TEXT NOT NULL,
+  typography_json TEXT NOT NULL,
+  component_rules_json TEXT NOT NULL,
+  voice_and_messaging_json TEXT NOT NULL,
+  locked_attributes_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_brand_kits_site ON brand_kits(site_id);
+
+CREATE TABLE IF NOT EXISTS page_compositions (
+  id TEXT PRIMARY KEY,
+  site_id TEXT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+  page_slug TEXT NOT NULL,
+  title TEXT NOT NULL,
+  layout_collection TEXT NOT NULL,
+  sections_json TEXT NOT NULL,
+  meta_json TEXT,
+  version INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'draft',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_compositions_site_page ON page_compositions(site_id, page_slug);
+
+CREATE TABLE IF NOT EXISTS website_imports (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  site_id TEXT REFERENCES websites(id),
+  source_url TEXT NOT NULL,
+  status TEXT NOT NULL, -- pending, in_progress, completed, failed
+  step TEXT NOT NULL, -- setup, scope, extract, review, design, assemble, refine
+  scope_config_json TEXT NOT NULL,
+  discovered_pages_json TEXT NOT NULL,
+  extracted_data_json TEXT NOT NULL,
+  review_state_json TEXT NOT NULL,
+  error_log TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_imports_client ON website_imports(client_id);
+
+CREATE TABLE IF NOT EXISTS site_releases (
+  id TEXT PRIMARY KEY,
+  site_id TEXT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+  version_label TEXT NOT NULL,
+  composition_snapshot_json TEXT NOT NULL,
+  brand_kit_snapshot_json TEXT NOT NULL,
+  published_by TEXT NOT NULL,
+  published_at TEXT NOT NULL,
+  notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_releases_site ON site_releases(site_id);
+

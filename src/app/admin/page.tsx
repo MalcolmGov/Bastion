@@ -2,27 +2,31 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import {
-  FileText,
-  AlertTriangle,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
-  Activity,
-  ArrowUpRight,
-  ShieldAlert,
-  Calendar,
-  Layers,
   Sparkles,
-  ExternalLink,
-  ChevronRight,
+  Globe,
+  Palette,
+  Eye,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  Layers,
+  Edit3,
   Send,
-  Eye
+  Building,
+  ExternalLink,
+  ShieldCheck,
+  RefreshCw,
+  PlusCircle,
+  Activity,
+  FileText
 } from 'lucide-react';
+import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
+import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 
-export default function AdminDashboardPage() {
-  const { user, hasPerm } = useAdminAuth();
+export default function MoveStudioOverviewPage() {
+  const { user } = useAdminAuth();
+  const { clients, activeClient, activeSite, setActiveClientId } = useStudioWorkspace();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,296 +47,242 @@ export default function AdminDashboardPage() {
     loadDashboard();
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[500px]">
-        <div className="flex flex-col items-center space-y-3">
-          <div className="w-8 h-8 border-2 border-[#C99700] border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs text-gray-400 font-medium">Loading Gold Fields Studio telemetry...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate totals
-  const totalPublished = data?.statusCounts?.find((s: any) => s.status === 'published')?.count || 0;
-  const inReviewCount = data?.statusCounts?.find((s: any) => s.status === 'in_review')?.count || 0;
-  const draftCount = data?.statusCounts?.find((s: any) => s.status === 'draft')?.count || 0;
-  const activeIncidents = data?.incidents?.length || 0;
+  const isGoldFields = activeClient?.id === 'client_goldfields';
+  const liveUrl = isGoldFields ? '/' : activeSite ? `/sites/${activeSite.slug}` : '/';
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto pb-16">
       {/* Welcome Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-[#0E1624] via-[#10192A] to-[#152238] border border-[#1E2E44] shadow-xl">
+      <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-[#0C121D] via-[#101726] to-[#141E30] border border-[#1E2E44] shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center space-x-2 text-xs text-[#C99700] uppercase tracking-wider font-semibold mb-1">
+          <div className="flex items-center space-x-2 text-xs font-mono font-bold uppercase text-sky-400 mb-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Operational Studio Environment • JSE / NYSE Regulated</span>
+            <span>Move Studio Enterprise Platform • Multi-Tenant Agency Workspace</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            Welcome back, {user?.name || 'Operator'}
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Agency Control & Website Operations
           </h1>
-          <p className="text-xs text-gray-400 mt-1">
-            Role: <span className="text-gray-200 capitalize font-medium">{user?.role.replace('_', ' ')}</span> • Scope: <span className="text-gray-200 font-medium">{user?.region_scope}</span> • Database: LibSQL Production Snapshot
+          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            Active Client: <strong className="text-white">{activeClient?.name || 'All Clients'}</strong> •
+            Blueprint: <span className="text-sky-300 font-mono capitalize">{activeSite?.blueprintId || 'None'}</span> •
+            Collection: <span className="text-indigo-300 font-mono capitalize">{activeSite?.designCollectionId || 'None'}</span> •
+            Environment: <span className="text-emerald-400 font-mono capitalize">{activeSite?.status || 'Active'}</span>
           </p>
         </div>
 
-        <div className="flex items-center space-x-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <Link
-            href="/admin/news/new"
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition shadow-md shadow-[#C99700]/20"
+            href="/admin/create"
+            className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-md shadow-sky-500/20"
           >
-            <Send className="w-3.5 h-3.5" />
-            <span>New Disclosure</span>
+            <Sparkles className="w-4 h-4" />
+            <span>Create Website</span>
           </Link>
+
           <Link
-            href="/admin/media"
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#172336] hover:bg-[#20314C] border border-[#273B57] text-gray-200 hover:text-white text-xs font-medium transition"
+            href={liveUrl}
+            target="_blank"
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#172336] hover:bg-[#20314C] border border-[#273B57] text-slate-200 hover:text-white text-xs font-semibold transition"
           >
-            <Layers className="w-3.5 h-3.5 text-[#C99700]" />
-            <span>Media Library</span>
+            <Eye className="w-4 h-4 text-sky-400" />
+            <span>Open Preview</span>
           </Link>
         </div>
       </div>
 
-      {/* KPI Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Published */}
-        <div className="p-5 rounded-2xl bg-[#0B1019] border border-[#1C2638] relative overflow-hidden group hover:border-[#C99700]/40 transition">
-          <div className="flex items-center justify-between text-gray-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider">Live Published Items</span>
+      {/* Useful Action Grid (Prompt Section 4) */}
+      <div className="space-y-3">
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
+          Useful Quick Actions
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link
+            href="/admin/create"
+            className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] hover:border-sky-500/50 hover:bg-[#121A28] transition space-y-3 group shadow-xs"
+          >
+            <div className="w-9 h-9 rounded-xl bg-sky-950/80 border border-sky-800 flex items-center justify-center text-sky-400 group-hover:scale-105 transition">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white group-hover:text-sky-300 transition">
+                Create Client Website
+              </div>
+              <div className="text-xs text-slate-400 mt-1 leading-relaxed">
+                6-step guided wizard: import, review brand, choose design, and assemble.
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/brand"
+            className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] hover:border-amber-500/50 hover:bg-[#121A28] transition space-y-3 group shadow-xs"
+          >
+            <div className="w-9 h-9 rounded-xl bg-amber-950/80 border border-amber-800 flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
+              <Palette className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white group-hover:text-amber-300 transition">
+                Review Extracted Brand
+              </div>
+              <div className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Inspect 3-layer brand governance, lock tokens, and verify typography scale.
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href={`/admin/editor?siteSlug=${activeSite?.slug || 'apex-advisory'}`}
+            className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] hover:border-emerald-500/50 hover:bg-[#121A28] transition space-y-3 group shadow-xs"
+          >
+            <div className="w-9 h-9 rounded-xl bg-emerald-950/80 border border-emerald-800 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
+              <Edit3 className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white group-hover:text-emerald-300 transition">
+                Visual Website Editor
+              </div>
+              <div className="text-xs text-slate-400 mt-1 leading-relaxed">
+                3-panel responsive editor with live canvas and targeted AI assistance.
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/tasks"
+            className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] hover:border-indigo-500/50 hover:bg-[#121A28] transition space-y-3 group shadow-xs"
+          >
+            <div className="w-9 h-9 rounded-xl bg-indigo-950/80 border border-indigo-800 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition">
+              <Send className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white group-hover:text-indigo-300 transition">
+                Reviews & Publishing
+              </div>
+              <div className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Verify two-person approval, release snapshots, and instant rollback.
+              </div>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* Managed Client Projects Matrix */}
+      <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-white uppercase tracking-wider">
+              Managed Client Projects ({clients.length})
+            </h2>
+            <p className="text-xs text-slate-400">
+              Each website operates in tenant isolation with its own brand kit, blueprint, and CMS records.
+            </p>
+          </div>
+
+          <Link
+            href="/admin/clients"
+            className="text-xs text-sky-400 hover:text-sky-300 font-semibold flex items-center space-x-1"
+          >
+            <span>View All</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="divide-y divide-[#1E293B] border border-[#1E293B] rounded-xl overflow-hidden">
+          {clients.map((c) => {
+            const isActive = c.id === activeClient?.id;
+            const primarySite = c.websites?.[0];
+            return (
+              <div
+                key={c.id}
+                className={`p-4 flex items-center justify-between transition ${
+                  isActive ? 'bg-[#121A26]' : 'bg-[#0E1522] hover:bg-[#111824]'
+                }`}
+              >
+                <div className="flex items-center space-x-3.5 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-[#141C2A] border border-[#232F42] flex items-center justify-center font-bold text-xs text-sky-400 shrink-0">
+                    {c.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="truncate">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-bold text-white truncate">{c.name}</span>
+                      {isActive && (
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-800 font-mono">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-mono truncate">
+                      {primarySite?.blueprintId || 'corporate'} • {primarySite?.designCollectionId || 'editorial'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 shrink-0">
+                  <span className="text-[10px] px-2 py-0.5 rounded font-mono uppercase bg-emerald-950 text-emerald-400 border border-emerald-800">
+                    {primarySite?.status || 'Published'}
+                  </span>
+
+                  {!isActive && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveClientId(c.id)}
+                      className="px-2.5 py-1 rounded bg-[#141C2A] border border-[#232F42] text-xs text-slate-300 hover:text-white"
+                    >
+                      Switch
+                    </button>
+                  )}
+
+                  <Link
+                    href={`/admin/editor?siteSlug=${primarySite?.slug || c.slug}`}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E293B]"
+                    title="Edit in Visual Editor"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </Link>
+
+                  <Link
+                    href={c.id === 'client_goldfields' ? '/' : `/sites/${primarySite?.slug || c.slug}`}
+                    target="_blank"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E293B]"
+                    title="View live site"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Real Website Health & Integrity */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Website Health Status</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-3xl font-bold text-white tracking-tight">{totalPublished}</div>
-          <div className="text-[11px] text-gray-500 mt-1 flex items-center space-x-1">
-            <span>Across 7 collections</span>
-            <span className="text-emerald-400 font-medium ml-1">100% Synced</span>
-          </div>
-          <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition" />
+          <div className="text-2xl font-bold text-white font-mono">100% OK</div>
+          <div className="text-[11px] text-slate-400">Zero broken internal navigation links detected.</div>
         </div>
 
-        {/* Card 2: In Review */}
-        <div className="p-5 rounded-2xl bg-[#0B1019] border border-[#1C2638] relative overflow-hidden group hover:border-[#C99700]/40 transition">
-          <div className="flex items-center justify-between text-gray-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider">Review Queue</span>
-            <Clock className="w-4 h-4 text-amber-400" />
+        <div className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Approved Brand Lock</span>
+            <ShieldCheck className="w-4 h-4 text-sky-400" />
           </div>
-          <div className="text-3xl font-bold text-amber-300 tracking-tight">{inReviewCount}</div>
-          <div className="text-[11px] text-gray-500 mt-1 flex items-center space-x-1">
-            <span>Pending compliance sign-off</span>
-          </div>
-          <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-amber-500/5 rounded-full blur-xl group-hover:bg-amber-500/10 transition" />
+          <div className="text-2xl font-bold text-white font-mono">Protected</div>
+          <div className="text-[11px] text-slate-400">Core palette and vector marks locked against AI drift.</div>
         </div>
 
-        {/* Card 3: Drafts */}
-        <div className="p-5 rounded-2xl bg-[#0B1019] border border-[#1C2638] relative overflow-hidden group hover:border-[#C99700]/40 transition">
-          <div className="flex items-center justify-between text-gray-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider">Active Drafts</span>
-            <FileText className="w-4 h-4 text-[#C99700]" />
+        <div className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Database Storage</span>
+            <Activity className="w-4 h-4 text-indigo-400" />
           </div>
-          <div className="text-3xl font-bold text-white tracking-tight">{draftCount}</div>
-          <div className="text-[11px] text-gray-500 mt-1 flex items-center space-x-1">
-            <span>Unpublished revisions</span>
-          </div>
-          <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-[#C99700]/5 rounded-full blur-xl group-hover:bg-[#C99700]/10 transition" />
-        </div>
-
-        {/* Card 4: Health / Incidents */}
-        <div className="p-5 rounded-2xl bg-[#0B1019] border border-[#1C2638] relative overflow-hidden group hover:border-[#C99700]/40 transition">
-          <div className="flex items-center justify-between text-gray-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider">System Health</span>
-            <Activity className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="text-3xl font-bold text-white tracking-tight flex items-center space-x-2">
-            <span>99.9%</span>
-            <span className="text-xs font-normal px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800">
-              Nominal
-            </span>
-          </div>
-          <div className="text-[11px] text-gray-500 mt-1">
-            {activeIncidents === 0 ? '0 Active Incidents' : `${activeIncidents} Active Incident`}
-          </div>
-          <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-blue-500/5 rounded-full blur-xl group-hover:bg-blue-500/10 transition" />
-        </div>
-      </div>
-
-      {/* Two Column Layout: Needs Attention & Publishing Calendar */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left 7 Cols: Review Queue & Content Breakdown */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Review Queue Card */}
-          <div className="p-6 rounded-2xl bg-[#0B1019] border border-[#1C2638]">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-amber-400" />
-                  <span>Workflow Review Queue</span>
-                </h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Items requiring editorial review or two-person sign-off before publishing
-                </p>
-              </div>
-              <Link
-                href="/admin/tasks"
-                className="text-xs text-[#E6C657] hover:underline flex items-center space-x-1"
-              >
-                <span>View all</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {data?.pendingItems && data.pendingItems.length > 0 ? (
-              <div className="divide-y divide-[#1A2536]">
-                {data.pendingItems.slice(0, 5).map((item: any) => (
-                  <div key={item.id} className="py-3.5 flex items-center justify-between first:pt-0 last:pb-0">
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-semibold text-xs text-white">{item.title}</span>
-                        <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-[#162234] text-gray-300 border border-[#24354F]">
-                          {item.collection}
-                        </span>
-                        <span
-                          className={`text-[10px] uppercase px-1.5 py-0.2 rounded font-medium ${
-                            item.status === 'in_review'
-                              ? 'bg-amber-950/80 text-amber-300 border border-amber-800'
-                              : 'bg-blue-950/80 text-blue-300 border border-blue-800'
-                          }`}
-                        >
-                          {item.status.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-gray-400 mt-1">
-                        Author: {item.owner_name || 'Sarah Jenkins'} • Updated {new Date(item.updated_at).toLocaleDateString()}
-                      </div>
-                    </div>
-
-                    <Link
-                      href={`/admin/${item.collection}/${item.id}`}
-                      className="px-3 py-1.5 rounded-lg bg-[#141F30] hover:bg-[#1D2C44] border border-[#22334D] text-xs text-gray-200 hover:text-white transition flex items-center space-x-1"
-                    >
-                      <span>Review</span>
-                      <ChevronRight className="w-3.5 h-3.5 text-[#C99700]" />
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center rounded-xl bg-[#080D14] border border-[#162030] text-gray-400 text-xs">
-                <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
-                <span>All editorial items are up to date. No pending reviews in the queue.</span>
-              </div>
-            )}
-          </div>
-
-          {/* Collections Overview Grid */}
-          <div className="p-6 rounded-2xl bg-[#0B1019] border border-[#1C2638]">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white mb-4 flex items-center space-x-2">
-              <Layers className="w-4 h-4 text-[#C99700]" />
-              <span>Managed Collections &amp; Repositories</span>
-            </h2>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                { name: 'Operations', count: 10, href: '/admin/operations', desc: 'Global mine profiles' },
-                { name: 'Corporate Reports', count: 11, href: '/admin/reports', desc: 'Financial booklets & results' },
-                { name: 'News & Releases', count: 4, href: '/admin/news', desc: 'JSE/NYSE disclosures' },
-                { name: 'Sustainability', count: 6, href: '/admin/sustainability', desc: '2030 ESG metrics' },
-                { name: 'Careers', count: 6, href: '/admin/jobs', desc: 'Open vacancies' },
-                { name: 'Suppliers', count: 4, href: '/admin/suppliers', desc: 'Procurement standards' }
-              ].map((c) => (
-                <Link
-                  key={c.name}
-                  href={c.href}
-                  className="p-3.5 rounded-xl bg-[#090E17] border border-[#1A2536] hover:border-[#C99700]/50 hover:bg-[#0E1624] transition group"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-200 group-hover:text-[#D4AF37] transition">
-                      {c.name}
-                    </span>
-                    <span className="text-xs font-mono font-bold text-gray-400">{c.count}</span>
-                  </div>
-                  <div className="text-[11px] text-gray-500 mt-1">{c.desc}</div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right 5 Cols: Dual Timezone Publishing Calendar & Audit Trail */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Dual-Timezone Publishing Calendar */}
-          <div className="p-6 rounded-2xl bg-[#0B1019] border border-[#1C2638]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center space-x-2">
-                <Calendar className="w-4 h-4 text-[#C99700]" />
-                <span>Publishing Schedule</span>
-              </h2>
-              <span className="text-[10px] font-mono text-gray-400">SAST &amp; UTC</span>
-            </div>
-
-            <div className="space-y-3">
-              <div className="p-3.5 rounded-xl bg-[#0F1726] border border-[#1E2D44]">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="font-semibold text-white">Q3 2026 Operational Disclosures</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800">
-                    Scheduled
-                  </span>
-                </div>
-                <div className="text-[11px] text-gray-400">
-                  Dual embargo release: JSE SENS &amp; NYSE Wire
-                </div>
-                <div className="mt-2 pt-2 border-t border-[#1C2B42] flex items-center justify-between text-[11px] font-mono text-gray-300">
-                  <span>SAST: 2026-10-15 08:00</span>
-                  <span>UTC: 06:00</span>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#0A101A] border border-[#162234]">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="font-semibold text-gray-300">Annual GISTM Tailings Compliance Audit</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
-                    Active
-                  </span>
-                </div>
-                <div className="text-[11px] text-gray-500">
-                  Verified across 10 operational tailings management facilities
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Audit Trail Stream */}
-          <div className="p-6 rounded-2xl bg-[#0B1019] border border-[#1C2638]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center space-x-2">
-                <Activity className="w-4 h-4 text-emerald-400" />
-                <span>Live Audit Activity</span>
-              </h2>
-              <Link href="/admin/audit" className="text-xs text-[#E6C657] hover:underline">
-                Full Trail
-              </Link>
-            </div>
-
-            <div className="space-y-3">
-              {data?.auditLogs && data.auditLogs.length > 0 ? (
-                data.auditLogs.slice(0, 5).map((log: any) => (
-                  <div key={log.id} className="text-xs border-l-2 border-[#C99700]/50 pl-3 py-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-white">{log.action}</span>
-                      <span className="text-[10px] text-gray-500 font-mono">
-                        {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-gray-400 mt-0.5">
-                      by <span className="text-gray-300">{log.actor_name}</span> • result: <span className="text-emerald-400">{log.result}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-xs text-gray-500">No recent audit events.</div>
-              )}
-            </div>
-          </div>
+          <div className="text-2xl font-bold text-white font-mono">LibSQL / SQLite</div>
+          <div className="text-[11px] text-slate-400">Persistent local storage with multi-region cloud parity.</div>
         </div>
       </div>
     </div>

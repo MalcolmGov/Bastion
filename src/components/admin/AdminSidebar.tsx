@@ -1,200 +1,389 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAdminAuth } from './AdminAuthProvider';
+import { useStudioWorkspace } from './StudioWorkspaceProvider';
 import {
   LayoutDashboard,
+  Users,
+  Sparkles,
+  Palette,
+  Layers,
+  Edit3,
   FileText,
+  Image as ImageIcon,
+  Send,
+  BarChart3,
+  Activity,
+  Sliders,
+  Settings,
   Compass,
   FileSpreadsheet,
   Newspaper,
   Leaf,
-  Briefcase,
-  Truck,
-  Image as ImageIcon,
-  Palette,
-  Clock,
-  Activity,
-  BarChart3,
-  Bot,
-  History,
-  CheckSquare,
-  LogOut,
+  ChevronDown,
   ExternalLink,
-  Shield,
-  MapPin
+  PlusCircle,
+  Building,
+  Check
 } from 'lucide-react';
-
-interface NavSection {
-  title: string;
-  items: {
-    label: string;
-    href: string;
-    icon: React.ElementType;
-    badge?: string;
-    perm?: string;
-  }[];
-}
-
-const NAV_SECTIONS: NavSection[] = [
-  {
-    title: 'Workspace',
-    items: [
-      { label: 'Overview', href: '/admin', icon: LayoutDashboard },
-      { label: 'Review Queue', href: '/admin/tasks', icon: CheckSquare, badge: '2' },
-      { label: 'Audit Trail', href: '/admin/audit', icon: History }
-    ]
-  },
-  {
-    title: 'Content Collections',
-    items: [
-      { label: 'Flagship Pages', href: '/admin/pages', icon: FileText },
-      { label: 'Operations (10)', href: '/admin/operations', icon: Compass },
-      { label: 'Reports & Results', href: '/admin/reports', icon: FileSpreadsheet },
-      { label: 'News & Releases', href: '/admin/news', icon: Newspaper },
-      { label: 'Sustainability & ESG', href: '/admin/sustainability', icon: Leaf },
-      { label: 'Careers (6)', href: '/admin/jobs', icon: Briefcase },
-      { label: 'Suppliers (4)', href: '/admin/suppliers', icon: Truck }
-    ]
-  },
-  {
-    title: 'Brand & Design',
-    items: [
-      { label: 'Design System & UI', href: '/admin/design-system', icon: Palette, badge: 'Tokens' },
-      { label: 'Media Library', href: '/admin/media', icon: ImageIcon }
-    ]
-  },
-  {
-    title: 'Operations & Intelligence',
-    items: [
-      { label: 'Scheduled Worker', href: '/admin/scheduled', icon: Clock },
-      { label: 'Site Health', href: '/admin/health', icon: Activity, badge: 'OK' },
-      { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
-      { label: 'AI Assistant Governance', href: '/admin/ai-knowledge', icon: Bot }
-    ]
-  }
-];
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const { user, logout, hasPerm } = useAdminAuth();
+  const { user } = useAdminAuth();
+  const { clients, activeClient, activeSite, setActiveClientId } = useStudioWorkspace();
+  const [clientMenuOpen, setClientMenuOpen] = useState(false);
+
+  const isGoldFields = activeClient?.id === 'client_goldfields';
 
   return (
-    <aside className="w-64 bg-[#0A0F17] border-r border-[#1E293B] flex flex-col justify-between h-screen sticky top-0 selection:bg-[#C99700] selection:text-black shrink-0">
-      {/* Brand Header */}
+    <aside className="w-64 bg-[#0A0D14] border-r border-[#1E293B] flex flex-col justify-between h-screen sticky top-0 selection:bg-sky-500 selection:text-white shrink-0 z-20">
       <div>
+        {/* Move Studio Brand Header */}
         <div className="p-4 border-b border-[#1E293B] flex items-center justify-between">
           <Link href="/admin" className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#996515] flex items-center justify-center font-bold text-black text-xs shadow-md">
-              GF
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 via-indigo-500 to-violet-600 flex items-center justify-center font-bold text-white text-xs shadow-md shadow-sky-500/20">
+              M
             </div>
             <div>
-              <div className="font-bold text-sm tracking-wide text-white leading-tight">
-                GOLD FIELDS
+              <div className="font-bold text-sm tracking-wide text-white leading-tight flex items-center space-x-1.5">
+                <span>MOVE STUDIO</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-sky-950 text-sky-400 border border-sky-800">
+                  PRO
+                </span>
               </div>
-              <div className="text-[10px] text-[#C99700] uppercase tracking-wider font-semibold">
-                Studio Operations
+              <div className="text-[10px] text-slate-400 tracking-wider font-medium">
+                AI Website Creation Platform
               </div>
             </div>
           </Link>
 
           <Link
-            href="/"
+            href={isGoldFields ? '/' : activeSite ? `/sites/${activeSite.slug}` : '/'}
             target="_blank"
             title="Open Live Website"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1E293B] transition"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E293B] transition"
           >
             <ExternalLink className="w-4 h-4" />
           </Link>
         </div>
 
-        {/* Navigation Sections */}
-        <div className="p-3 space-y-6 overflow-y-auto max-h-[calc(100vh-170px)] scrollbar-thin scrollbar-thumb-gray-800">
-          {NAV_SECTIONS.map((section) => (
-            <div key={section.title}>
-              <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                {section.title}
-              </div>
-              <div className="space-y-0.5">
-                {section.items.map((item) => {
-                  const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
-                  const Icon = item.icon;
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
-                        isActive
-                          ? 'bg-[#C99700]/15 text-[#E6C657] border border-[#C99700]/30 shadow-sm'
-                          : 'text-gray-400 hover:text-gray-200 hover:bg-[#141C2A]'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2.5">
-                        <Icon className={`w-4 h-4 ${isActive ? 'text-[#D4AF37]' : 'text-gray-400'}`} />
-                        <span>{item.label}</span>
-                      </div>
-                      {item.badge && (
-                        <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                            item.badge === 'OK'
-                              ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                              : 'bg-amber-950 text-amber-300 border border-amber-800'
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
+        {/* Client & Website Switcher Dropdown */}
+        <div className="p-3 border-b border-[#1E293B] relative">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1 px-1">
+            Active Client & Site
+          </div>
+          <button
+            type="button"
+            onClick={() => setClientMenuOpen(!clientMenuOpen)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[#131A26] hover:bg-[#1A2333] border border-[#232F42] text-left transition shadow-xs"
+          >
+            <div className="flex items-center space-x-2 min-w-0">
+              <Building className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+              <div className="truncate">
+                <div className="text-xs font-semibold text-white truncate">
+                  {activeClient?.name || 'Select Client'}
+                </div>
+                <div className="text-[10px] text-slate-400 truncate">
+                  {activeSite?.name || 'All Websites'}
+                </div>
               </div>
             </div>
-          ))}
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
+          </button>
+
+          {/* Client Switcher Popup */}
+          {clientMenuOpen && (
+            <div className="absolute top-full left-3 right-3 mt-1 bg-[#131A26] border border-[#2A374A] rounded-xl shadow-xl z-50 py-1 max-h-60 overflow-y-auto animate-fadeIn">
+              <div className="px-3 py-1.5 text-[9px] font-bold uppercase text-slate-400 border-b border-[#232F42]">
+                Switch Client Project
+              </div>
+              {clients.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveClientId(c.id);
+                    setClientMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition ${
+                    c.id === activeClient?.id
+                      ? 'bg-sky-950/60 text-sky-300 font-semibold'
+                      : 'text-slate-300 hover:bg-[#1E2838]'
+                  }`}
+                >
+                  <div className="truncate">
+                    <div>{c.name}</div>
+                    <div className="text-[10px] text-slate-400 capitalize">{c.industry.replace('_', ' ')}</div>
+                  </div>
+                  {c.id === activeClient?.id && <Check className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
+                </button>
+              ))}
+
+              <div className="border-t border-[#232F42] p-1.5">
+                <Link
+                  href="/admin/create"
+                  onClick={() => setClientMenuOpen(false)}
+                  className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-sky-400 hover:bg-sky-950/50 transition"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Create New Client</span>
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Primary Navigation Sections */}
+        <div className="p-3 space-y-5 overflow-y-auto max-h-[calc(100vh-220px)] scrollbar-thin scrollbar-thumb-slate-800">
+          {/* Workspace */}
+          <div>
+            <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Agency Workspace
+            </div>
+            <div className="space-y-0.5">
+              <Link
+                href="/admin"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname === '/admin'
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4 text-sky-400" />
+                <span>Overview</span>
+              </Link>
+              <Link
+                href="/admin/clients"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/clients')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <Users className="w-4 h-4 text-slate-400" />
+                <span>Clients & Websites</span>
+              </Link>
+              <Link
+                href="/admin/create"
+                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/create')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                  <span>Website Import & Wizard</span>
+                </div>
+                <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-indigo-950 text-indigo-300 border border-indigo-800">
+                  New
+                </span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Design & Assembly */}
+          <div>
+            <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Design & Assembly
+            </div>
+            <div className="space-y-0.5">
+              <Link
+                href="/admin/brand"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/brand')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <Palette className="w-4 h-4 text-amber-400" />
+                <span>Brand Library</span>
+              </Link>
+              <Link
+                href="/admin/blueprints"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/blueprints')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <Layers className="w-4 h-4 text-violet-400" />
+                <span>Blueprints (3)</span>
+              </Link>
+              <Link
+                href="/admin/editor"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/editor')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <Edit3 className="w-4 h-4 text-emerald-400" />
+                <span>Visual Website Editor</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Content & Management */}
+          <div>
+            <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Content & Publishing
+            </div>
+            <div className="space-y-0.5">
+              <Link
+                href="/admin/pages"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname === '/admin/pages'
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <FileText className="w-4 h-4 text-slate-400" />
+                <span>Pages & Layouts</span>
+              </Link>
+              <Link
+                href="/admin/media"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/media')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <ImageIcon className="w-4 h-4 text-slate-400" />
+                <span>Media Library</span>
+              </Link>
+              <Link
+                href="/admin/tasks"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/tasks')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <Send className="w-4 h-4 text-slate-400" />
+                <span>Reviews & Publishing</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Gold Fields Specific Module (Only shown when Gold Fields is active) */}
+          {isGoldFields && (
+            <div>
+              <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-500 flex items-center justify-between">
+                <span>Gold Fields Disclosures</span>
+                <span className="text-[8px] bg-amber-950 px-1 rounded text-amber-300">Active</span>
+              </div>
+              <div className="space-y-0.5">
+                <Link
+                  href="/admin/operations"
+                  className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    pathname.startsWith('/admin/operations')
+                      ? 'bg-amber-950/50 text-amber-300 border border-amber-800/50'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                  }`}
+                >
+                  <Compass className="w-4 h-4 text-amber-400" />
+                  <span>Operations (10)</span>
+                </Link>
+                <Link
+                  href="/admin/reports"
+                  className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    pathname.startsWith('/admin/reports')
+                      ? 'bg-amber-950/50 text-amber-300 border border-amber-800/50'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                  }`}
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-amber-400" />
+                  <span>Reports & Results</span>
+                </Link>
+                <Link
+                  href="/admin/news"
+                  className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    pathname.startsWith('/admin/news')
+                      ? 'bg-amber-950/50 text-amber-300 border border-amber-800/50'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                  }`}
+                >
+                  <Newspaper className="w-4 h-4 text-amber-400" />
+                  <span>SENS Announcements</span>
+                </Link>
+                <Link
+                  href="/admin/sustainability"
+                  className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    pathname.startsWith('/admin/sustainability')
+                      ? 'bg-amber-950/50 text-amber-300 border border-amber-800/50'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                  }`}
+                >
+                  <Leaf className="w-4 h-4 text-emerald-400" />
+                  <span>2030 ESG Targets</span>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Operations & Settings */}
+          <div>
+            <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Operations & Systems
+            </div>
+            <div className="space-y-0.5">
+              <Link
+                href="/admin/health"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/health')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <Activity className="w-4 h-4 text-emerald-400" />
+                <span>Website Health</span>
+              </Link>
+              <Link
+                href="/admin/analytics"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/analytics')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 text-sky-400" />
+                <span>Analytics</span>
+              </Link>
+              <Link
+                href="/admin/settings"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/settings')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <Settings className="w-4 h-4 text-slate-400" />
+                <span>Workspace & Export</span>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* User Footer / RBAC status */}
-      <div className="p-3 border-t border-[#1E293B] bg-[#080D14]">
-        {user ? (
-          <div className="space-y-2">
-            <div className="flex items-start justify-between">
-              <div className="overflow-hidden">
-                <div className="text-xs font-semibold text-white truncate">{user.name}</div>
-                <div className="flex items-center space-x-1.5 text-[10px] text-[#C99700] mt-0.5">
-                  <Shield className="w-3 h-3" />
-                  <span className="capitalize">{user.role.replace('_', ' ')}</span>
-                </div>
-                {user.region_scope && user.region_scope !== 'All' && (
-                  <div className="flex items-center space-x-1 text-[10px] text-gray-400 mt-0.5">
-                    <MapPin className="w-2.5 h-2.5 text-gray-500" />
-                    <span>{user.region_scope}</span>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={logout}
-                title="Sign out of Studio"
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-950/30 transition"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+      {/* User Footer */}
+      <div className="p-3 border-t border-[#1E293B] bg-[#070B10]">
+        <div className="flex items-center justify-between px-2 py-1">
+          <div className="flex items-center space-x-2 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-sky-400">
+              {user?.name ? user.name[0] : 'A'}
             </div>
-
-            <div className="pt-1.5 border-t border-[#1E293B]/60 flex items-center justify-between text-[10px] text-gray-500">
-              <span>LibSQL Local DB</span>
-              <span className="flex items-center space-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>Connected</span>
-              </span>
+            <div className="truncate">
+              <div className="text-xs font-medium text-white truncate">
+                {user?.name || 'Move Studio Admin'}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">Agency Workspace</div>
             </div>
           </div>
-        ) : (
-          <div className="text-xs text-gray-500">Checking credentials...</div>
-        )}
+        </div>
       </div>
     </aside>
   );

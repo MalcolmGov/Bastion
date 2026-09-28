@@ -64,11 +64,17 @@ export async function ensureDbReady(): Promise<Client> {
           await seedEssentialUsers(raw);
           await seedEssentialContent(raw);
         }
+
+        // Run Move Studio multi-tenant migrations and seeds
+        const { runMoveStudioMigrations } = await import('@/lib/studio/seedMultiTenant');
+        await runMoveStudioMigrations(raw);
       } catch (err) {
         console.error('[DB] Error inspecting database tables:', err);
         try {
           await runInitSchema(raw);
           await seedEssentialUsers(raw);
+          const { runMoveStudioMigrations } = await import('@/lib/studio/seedMultiTenant');
+          await runMoveStudioMigrations(raw);
         } catch (innerErr) {
           console.error('[DB] Schema init fallback error:', innerErr);
         }
