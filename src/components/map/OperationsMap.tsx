@@ -52,7 +52,7 @@ export const OperationsMap: React.FC<OperationsMapProps> = ({
   };
 
   return (
-    <section className="bg-navy-dark text-white py-20 px-6 border-y border-navy-surface relative overflow-hidden">
+    <section className="bg-navy-dark text-white py-14 sm:py-20 px-4 sm:px-6 border-y border-navy-surface relative overflow-hidden">
       {/* Background Topographic lines */}
       <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#B79855_1px,transparent_1px)] [background-size:24px_24px]" />
 
@@ -64,7 +64,7 @@ export const OperationsMap: React.FC<OperationsMapProps> = ({
               <Globe className="w-3.5 h-3.5 text-gold" />
               Global Footprint • 9 Mines & Projects
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white font-display">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-white font-display">
               Explore Our Global Operations
             </h2>
             <p className="text-sm text-mist/70 mt-2 max-w-2xl font-normal">
@@ -72,32 +72,32 @@ export const OperationsMap: React.FC<OperationsMapProps> = ({
             </p>
           </div>
 
-          {/* View Mode Toggle — Defaulted to List View */}
-          <div className="flex items-center gap-3">
-            <div className="bg-navy p-1 rounded-xl border border-turquoise/30 flex items-center shadow-card">
+          {/* View Mode Toggle — Fully scrollable on mobile without overflow */}
+          <div className="w-full md:w-auto overflow-x-auto pb-1 scrollbar-none">
+            <div className="bg-navy p-1 rounded-xl border border-turquoise/30 inline-flex items-center shadow-card shrink-0">
               {/* 1. List View (Default) */}
               <button
                 onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                   viewMode === 'list'
                     ? 'bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 text-navy-dark shadow-[0_0_15px_rgba(0,229,192,0.4)] font-extrabold'
                     : 'text-mist/70 hover:text-turquoise-bright hover:bg-navy-surface'
                 }`}
               >
-                <List className="w-4 h-4" />
+                <List className="w-4 h-4 shrink-0" />
                 <span>List View ({filteredOps.length})</span>
               </button>
 
               {/* 2. Real 3D Globe */}
               <button
                 onClick={() => setViewMode('3d')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                   viewMode === '3d'
                     ? 'bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 text-navy-dark shadow-[0_0_15px_rgba(0,229,192,0.4)] font-extrabold'
                     : 'text-mist/70 hover:text-turquoise-bright hover:bg-navy-surface'
                 }`}
               >
-                <Compass className="w-4 h-4" />
+                <Compass className="w-4 h-4 shrink-0" />
                 <span>Real 3D Globe</span>
                 <span className="text-[9px] px-1 py-0.2 rounded bg-navy-dark/30 text-navy-dark font-mono uppercase font-bold">
                   3D
@@ -107,13 +107,13 @@ export const OperationsMap: React.FC<OperationsMapProps> = ({
               {/* 3. 2D Planar Map */}
               <button
                 onClick={() => setViewMode('map')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                   viewMode === 'map'
                     ? 'bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 text-navy-dark shadow-[0_0_15px_rgba(0,229,192,0.4)] font-extrabold'
                     : 'text-mist/70 hover:text-turquoise-bright hover:bg-navy-surface'
                 }`}
               >
-                <Globe className="w-4 h-4" />
+                <Globe className="w-4 h-4 shrink-0" />
                 <span>2D Map</span>
               </button>
             </div>
@@ -121,17 +121,17 @@ export const OperationsMap: React.FC<OperationsMapProps> = ({
         </div>
 
         {/* Filter Bar: Regions and Asset Types */}
-        <div className="space-y-4 mb-8 bg-navy/60 p-4 rounded-xl border border-turquoise/20">
+        <div className="space-y-4 mb-8 bg-navy/60 p-3 sm:p-4 rounded-xl border border-turquoise/20">
           {/* Region Chips */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-turquoise-bright font-bold mr-2 min-w-[70px]">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="text-xs uppercase tracking-wider text-turquoise-bright font-bold mr-1 sm:mr-2 min-w-[60px] sm:min-w-[70px]">
               Region:
             </span>
             {regions.map((region) => (
               <button
                 key={region}
                 onClick={() => setSelectedRegion(region)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium transition-all ${
                   selectedRegion === region
                     ? 'bg-turquoise-bright text-navy-dark font-extrabold shadow-[0_0_12px_rgba(0,229,192,0.45)]'
                     : 'bg-navy/70 hover:bg-navy-surface text-mist hover:text-turquoise-bright border border-turquoise/20'
@@ -143,15 +143,15 @@ export const OperationsMap: React.FC<OperationsMapProps> = ({
           </div>
 
           {/* Asset Type Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-mist/10">
-            <span className="text-xs uppercase tracking-wider text-turquoise-bright font-bold mr-2 min-w-[70px]">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2 border-t border-mist/10">
+            <span className="text-xs uppercase tracking-wider text-turquoise-bright font-bold mr-1 sm:mr-2 min-w-[60px] sm:min-w-[70px]">
               Asset Type:
             </span>
             {types.map((type) => (
               <button
                 key={type}
                 onClick={() => setSelectedType(type)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium transition-all ${
                   selectedType === type
                     ? 'bg-turquoise-light text-turquoise-dark font-extrabold border border-turquoise/50 shadow-xs'
                     : 'bg-navy/70 hover:bg-navy-surface text-mist hover:text-turquoise-bright border border-mist/10'

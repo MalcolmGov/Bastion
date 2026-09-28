@@ -585,7 +585,7 @@ export const Real3DGlobe: React.FC<Real3DGlobeProps> = ({
   const activeOp = operations.find((o) => o.id === selectedOpId) || operations[0];
 
   return (
-    <div className="relative w-full h-[650px] md:h-[680px] bg-navy-dark rounded-2xl overflow-hidden border border-turquoise/30 shadow-[0_0_40px_rgba(0,179,152,0.18)] flex flex-col select-none">
+    <div className="relative w-full h-[520px] sm:h-[650px] md:h-[680px] bg-navy-dark rounded-2xl overflow-hidden border border-turquoise/30 shadow-[0_0_40px_rgba(0,179,152,0.18)] flex flex-col select-none">
       {/* 3D WebGL Canvas Container */}
       <div
         ref={containerRef}
@@ -615,20 +615,20 @@ export const Real3DGlobe: React.FC<Real3DGlobeProps> = ({
                 transform: 'translate3d(0, 0, 0)',
                 transition: 'opacity 0.25s ease-out, transform 0.05s linear',
               }}
-              className={`pointer-events-auto flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold shadow-elevated cursor-pointer select-none transition-all ${
+              className={`pointer-events-auto flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-bold shadow-elevated cursor-pointer select-none transition-all ${
                 isSelected
                   ? 'bg-turquoise-bright text-navy-dark border-2 border-white scale-110 shadow-[0_0_20px_rgba(0,229,192,0.85)] z-30'
                   : 'bg-navy-dark/90 hover:bg-navy text-white hover:text-turquoise-bright border border-turquoise/40 hover:border-turquoise-bright hover:scale-105 z-10 backdrop-blur-md'
               }`}
             >
               <span
-                className={`w-2 h-2 rounded-full shrink-0 ${
+                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0 ${
                   isSelected ? 'bg-navy-dark animate-ping' : 'bg-turquoise-bright'
                 }`}
               />
               <span className="whitespace-nowrap font-display tracking-tight">{op.name}</span>
               <span
-                className={`text-[9px] uppercase px-1 py-0.2 rounded font-semibold ${
+                className={`text-[8px] sm:text-[9px] uppercase px-1 py-0.2 rounded font-semibold ${
                   isSelected ? 'bg-navy-dark/20 text-navy-dark' : 'bg-white/10 text-mist'
                 }`}
               >
@@ -640,30 +640,30 @@ export const Real3DGlobe: React.FC<Real3DGlobeProps> = ({
       </div>
 
       {/* Floating 3D Interaction Badge & Instructions */}
-      <div className="absolute top-4 left-4 bg-navy/90 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-turquoise/40 text-xs text-white shadow-card flex items-center gap-2.5 z-20">
-        <span className="w-2.5 h-2.5 rounded-full bg-turquoise-bright animate-ping" />
+      <div className="absolute top-3 sm:top-4 left-3 sm:left-4 bg-navy/90 backdrop-blur-md px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 rounded-xl border border-turquoise/40 text-xs text-white shadow-card flex items-center gap-2 z-20">
+        <span className="w-2 h-2 rounded-full bg-turquoise-bright animate-ping shrink-0" />
         <div>
-          <span className="font-bold text-xs text-white flex items-center gap-1.5 font-display">
+          <span className="font-bold text-[11px] sm:text-xs text-white flex items-center gap-1.5 font-display">
             Interactive 3D Earth
-            <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-turquoise/25 text-turquoise-bright border border-turquoise/40 font-bold">
+            <span className="text-[8px] sm:text-[9px] uppercase px-1 sm:px-1.5 py-0.5 rounded bg-turquoise/25 text-turquoise-bright border border-turquoise/40 font-bold">
               WebGL
             </span>
           </span>
-          <span className="text-[10px] text-mist/75">
+          <span className="text-[10px] text-mist/75 hidden sm:block">
             Click any location tag or drag to rotate in 3D
           </span>
         </div>
       </div>
 
       {/* Quick 3D Controls Bar */}
-      <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-navy/90 backdrop-blur-md p-1.5 rounded-xl border border-turquoise/30 shadow-card z-20">
+      <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex items-center gap-1 sm:gap-1.5 bg-navy/90 backdrop-blur-md p-1 sm:p-1.5 rounded-xl border border-turquoise/30 shadow-card z-20">
         <button
           onClick={() => {
             const next = !autoRotate;
             setAutoRotate(next);
             if (next) pauseAutoRotateUntilRef.current = 0;
           }}
-          className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+          className={`p-1.5 sm:p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
             autoRotate
               ? 'bg-gradient-to-r from-turquoise to-turquoise-bright text-navy-dark font-extrabold shadow-[0_0_12px_rgba(0,229,192,0.4)]'
               : 'text-mist hover:text-white hover:bg-navy-surface'
@@ -671,50 +671,50 @@ export const Real3DGlobe: React.FC<Real3DGlobeProps> = ({
           title="Toggle Auto-Rotation"
         >
           <RotateCw className="w-3.5 h-3.5" />
-          <span className="text-[11px] hidden sm:inline">Auto-Spin</span>
+          <span className="text-[11px] hidden md:inline">Auto-Spin</span>
         </button>
 
         <button
           onClick={() => handleZoom('in')}
-          className="p-2 rounded-lg text-mist hover:text-white hover:bg-navy-surface transition-colors"
+          className="p-1.5 sm:p-2 rounded-lg text-mist hover:text-white hover:bg-navy-surface transition-colors"
           title="Zoom In"
         >
-          <ZoomIn className="w-4 h-4" />
+          <ZoomIn className="w-3.5 h-3.5" />
         </button>
 
         <button
           onClick={() => handleZoom('out')}
-          className="p-2 rounded-lg text-mist hover:text-white hover:bg-navy-surface transition-colors"
+          className="p-1.5 sm:p-2 rounded-lg text-mist hover:text-white hover:bg-navy-surface transition-colors"
           title="Zoom Out"
         >
-          <ZoomOut className="w-4 h-4" />
+          <ZoomOut className="w-3.5 h-3.5" />
         </button>
 
         <button
           onClick={handleResetOrientation}
-          className="p-2 rounded-lg text-mist hover:text-white hover:bg-navy-surface transition-colors"
+          className="p-1.5 sm:p-2 rounded-lg text-mist hover:text-white hover:bg-navy-surface transition-colors"
           title="Reset to South Deep"
         >
-          <Compass className="w-4 h-4" />
+          <Compass className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* Operation Quick Pin Selector Overlay — Anchored at bottom */}
-      <div className="absolute bottom-4 left-4 right-4 bg-navy-dark/95 backdrop-blur-md p-4 rounded-xl border border-turquoise/40 shadow-[0_0_30px_rgba(0,179,152,0.22)] flex flex-col md:flex-row items-center justify-between gap-4 z-20">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-turquoise/15 border border-turquoise/40 flex items-center justify-center text-turquoise-bright shadow-[0_0_15px_rgba(0,229,192,0.3)]">
-            <MapPin className="w-5 h-5" />
+      <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 bg-navy-dark/95 backdrop-blur-md p-3 sm:p-4 rounded-xl border border-turquoise/40 shadow-[0_0_30px_rgba(0,179,152,0.22)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4 z-20">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-turquoise/15 border border-turquoise/40 flex items-center justify-center text-turquoise-bright shadow-[0_0_15px_rgba(0,229,192,0.3)] shrink-0">
+            <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-turquoise-bright">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-turquoise-bright">
                 {activeOp.country} • {activeOp.type}
               </span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-mist">
+              <span className="text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-mist">
                 {activeOp.status}
               </span>
             </div>
-            <h4 className="text-base font-bold text-white leading-tight font-display">
+            <h4 className="text-sm sm:text-base font-bold text-white leading-tight font-display">
               {activeOp.name}
             </h4>
           </div>
@@ -723,7 +723,7 @@ export const Real3DGlobe: React.FC<Real3DGlobeProps> = ({
         <div className="flex items-center gap-2 w-full md:w-auto">
           <a
             href={`/operations/${activeOp.slug}`}
-            className="flex-1 md:flex-initial px-5 py-2.5 rounded-lg bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark text-xs font-extrabold transition-all text-center inline-flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(0,229,192,0.45)]"
+            className="flex-1 md:flex-initial px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark text-xs font-extrabold transition-all text-center inline-flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(0,229,192,0.45)]"
           >
             <Eye className="w-3.5 h-3.5" />
             <span>Open Asset Details</span>
@@ -737,7 +737,7 @@ export const Real3DGlobe: React.FC<Real3DGlobeProps> = ({
                   `${activeOp.name} Profile`
                 )
               }
-              className="px-3.5 py-2.5 rounded-lg bg-navy-surface hover:bg-navy text-white text-xs font-semibold border border-turquoise/30 hover:border-turquoise transition-colors inline-flex items-center gap-1.5"
+              className="px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-lg bg-navy-surface hover:bg-navy text-white text-xs font-semibold border border-turquoise/30 hover:border-turquoise transition-colors inline-flex items-center gap-1.5 shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5 text-turquoise-bright" />
               <span>Ask AI</span>

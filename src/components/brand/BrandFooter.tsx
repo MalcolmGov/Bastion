@@ -10,9 +10,9 @@ export const BrandFooter: React.FC = () => {
     <footer className="bg-navy-dark text-mist border-t border-navy-surface pt-16 pb-12 relative overflow-hidden">
       {/* Authentic Gold Fields Radiant Turquoise Gradient Top Accent Bar */}
       <div className="absolute top-0 left-0 right-0 h-[3.5px] bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 shadow-[0_0_15px_rgba(0,229,192,0.4)]" />
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Main Footer Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-mist/10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 pb-12 border-b border-mist/10">
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
@@ -253,17 +253,17 @@ export const BrandFooter: React.FC = () => {
         </div>
 
         {/* Concept Prototype & Legal Bar */}
-        <div className="pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-mist/60 space-y-4 md:space-y-0">
-          <div className="flex items-center space-x-3">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-gold-dark/40 text-gold-light border border-gold-mineral/40">
+        <div className="pt-8 flex flex-col md:flex-row items-start md:items-center justify-between text-xs text-mist/60 gap-4 md:gap-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-gold-dark/40 text-gold-light border border-gold-mineral/40 shrink-0">
               Concept Prototype
             </span>
-            <p className="text-[11px]">
+            <p className="text-[11px] leading-relaxed">
               Proposed digital flagship redesign for demonstration purposes only. Not an authorized Gold Fields release.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-[11px]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
             <Link href="/about#privacy" className="hover:text-white transition-colors">
               Privacy Policy
             </Link>
@@ -273,9 +273,9 @@ export const BrandFooter: React.FC = () => {
             <Link href="/about#accessibility" className="hover:text-white transition-colors">
               Accessibility (WCAG 2.2 AA)
             </Link>
-            <span className="text-mist/40">|</span>
+            <span className="text-mist/40 hidden sm:inline">|</span>
             <p>© {new Date().getFullYear()} Gold Fields Limited.</p>
-            <span className="text-mist/40">|</span>
+            <span className="text-mist/40 hidden sm:inline">|</span>
             <a
               href="https://www.websitewhisperers.co.za/"
               target="_blank"

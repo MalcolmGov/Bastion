@@ -67,7 +67,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
       />
 
       {/* Main Content Area */}
-      <main id="main-content" className="flex-1 pt-30 sm:pt-32 lg:pt-36">
+      <main id="main-content" className="flex-1 pt-26 sm:pt-28 lg:pt-32">
         {children}
       </main>
 

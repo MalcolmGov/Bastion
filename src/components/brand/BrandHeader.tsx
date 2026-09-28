@@ -44,7 +44,8 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center space-x-5">
+          {/* Desktop utility links */}
+          <div className="hidden sm:flex items-center space-x-5">
             <Link
               href="/careers"
               className="text-mist hover:text-white transition-colors"
@@ -73,10 +74,22 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
+
+          {/* Mobile utility link (Speak Up only to avoid horizontal overflow) */}
+          <div className="flex sm:hidden items-center">
+            <a
+              href="https://secure.ethicspoint.eu/domain/media/en/gui/114521/index.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-gold-light hover:text-gold transition-colors font-semibold text-[10px]"
+            >
+              <span>Speak Up</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          </div>
         </div>
       </div>
 
-      {/* Main Navbar */}
       {/* Main Navbar */}
       <nav
         className={`relative w-full transition-all duration-300 ${
@@ -87,19 +100,19 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
       >
         <div
           className={`max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-all duration-300 ${
-            isScrolled ? 'h-18 lg:h-20' : 'h-22 sm:h-24 lg:h-26'
+            isScrolled ? 'h-16 sm:h-18 lg:h-20' : 'h-20 sm:h-24 lg:h-26'
           }`}
         >
           {/* Authentic Vector Logo — Proportional & Compact */}
-          <Link href="/" className="relative flex items-center gap-3 group focus:outline-none shrink-0 py-2">
-            <div className="relative h-11 sm:h-12 lg:h-13 w-auto flex items-center">
+          <Link href="/" className="relative flex items-center gap-2 sm:gap-3 group focus:outline-none shrink-0 py-2">
+            <div className="relative h-9 sm:h-11 lg:h-12 w-auto flex items-center">
               <Image
                 src="/assets/gold-fields-logo.svg"
                 alt="Gold Fields Corporate Logo"
                 width={140}
                 height={85}
                 priority
-                className="h-10 sm:h-11 lg:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                className="h-8 sm:h-10 lg:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
               />
             </div>
             <div className="hidden 2xl:flex flex-col border-l-2 border-gold-mineral/40 pl-3 py-0.5">
@@ -204,11 +217,19 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
             </button>
           </div>
 
-          {/* Mobile Hamburger & Assistant button */}
-          <div className="flex items-center gap-2.5 lg:hidden">
+          {/* Mobile Actions: Search, Assistant, Hamburger */}
+          <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden">
+            <button
+              onClick={onOpenSearch}
+              className="p-2 sm:p-2.5 rounded-lg border border-mist/80 text-ink-muted hover:text-navy hover:bg-mist transition-colors"
+              aria-label="Search website"
+            >
+              <Search className="w-4 h-4 text-ink" />
+            </button>
+
             <button
               onClick={() => onOpenAssistant()}
-              className="p-2.5 rounded-full bg-gradient-to-r from-turquoise to-turquoise-bright text-navy-dark text-xs font-bold shadow-[0_0_12px_rgba(0,229,192,0.5)]"
+              className="p-2 sm:p-2.5 rounded-full bg-gradient-to-r from-turquoise to-turquoise-bright text-navy-dark text-xs font-bold shadow-[0_0_12px_rgba(0,229,192,0.5)] active:scale-95 transition-transform"
               aria-label="Ask Gold Fields AI Assistant"
             >
               <Sparkles className="w-4 h-4 text-navy-dark" />
@@ -216,10 +237,10 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
 
             <button
               onClick={() => setMobileNavOpen(true)}
-              className="p-2.5 rounded-md border border-mist text-ink hover:bg-mist transition-colors"
+              className="p-2 sm:p-2.5 rounded-lg border border-mist/80 text-ink hover:bg-mist transition-colors"
               aria-label="Open mobile navigation"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-5 h-5 text-ink" />
             </button>
           </div>
         </div>

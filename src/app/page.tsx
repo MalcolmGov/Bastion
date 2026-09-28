@@ -53,7 +53,7 @@ export default async function HomePage() {
       {/* ============================================================ */}
       {/* A. CINEMATIC HERO SECTION                                     */}
       {/* ============================================================ */}
-      <section className="relative min-h-[680px] lg:min-h-[760px] flex items-center bg-navy-dark overflow-hidden">
+      <section className="relative min-h-[580px] sm:min-h-[680px] lg:min-h-[760px] flex items-center bg-navy-dark overflow-hidden">
         {/* Authentic Background Hero Image */}
         <div className="absolute inset-0">
           <Image
@@ -68,26 +68,26 @@ export default async function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-navy-dark/90 via-transparent to-black/20" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 py-24 sm:py-28 relative z-10 w-full">
-          <div className="max-w-2xl lg:max-w-3xl space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-navy/80 border border-turquoise/40 text-turquoise-bright text-xs font-semibold uppercase tracking-widest backdrop-blur-xs shadow-[0_0_15px_rgba(0,229,192,0.2)]">
-              <span className="w-2 h-2 rounded-full bg-turquoise-bright animate-pulse" />
-              <span>{heroBadge}</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 sm:py-28 relative z-10 w-full">
+          <div className="max-w-2xl lg:max-w-3xl space-y-5 sm:space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-navy/80 border border-turquoise/40 text-turquoise-bright text-[11px] sm:text-xs font-semibold uppercase tracking-widest backdrop-blur-xs shadow-[0_0_15px_rgba(0,229,192,0.2)]">
+              <span className="w-2 h-2 rounded-full bg-turquoise-bright animate-pulse shrink-0" />
+              <span className="truncate">{heroBadge}</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.12] max-w-2xl font-display">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.14] sm:leading-[1.12] max-w-2xl font-display">
               {heroTitle}
             </h1>
 
-            <p className="text-base sm:text-lg text-mist/90 max-w-xl font-normal leading-relaxed">
+            <p className="text-sm sm:text-lg text-mist/90 max-w-xl font-normal leading-relaxed">
               {heroSubtitle}
             </p>
 
             {/* CTAs */}
-            <div className="pt-2 flex flex-wrap items-center gap-4">
+            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
               <Link
                 href={heroCtaLink}
-                className="px-6 py-3.5 rounded-lg bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark font-extrabold text-sm shadow-[0_0_25px_rgba(0,229,192,0.4)] hover:shadow-[0_0_35px_rgba(0,229,192,0.6)] transition-all duration-200 flex items-center gap-2 group"
+                className="px-6 py-3.5 rounded-lg bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark font-extrabold text-sm shadow-[0_0_25px_rgba(0,229,192,0.4)] hover:shadow-[0_0_35px_rgba(0,229,192,0.6)] transition-all duration-200 flex items-center justify-center gap-2 group w-full sm:w-auto"
               >
                 <span>{heroCtaText}</span>
                 <ArrowRight className="w-4 h-4 text-navy-dark group-hover:translate-x-1 transition-transform" />
@@ -95,7 +95,7 @@ export default async function HomePage() {
 
               <Link
                 href="/investors"
-                className="px-6 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-turquoise/30 hover:border-turquoise backdrop-blur-xs transition-colors flex items-center gap-2"
+                className="px-6 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-turquoise/30 hover:border-turquoise backdrop-blur-xs transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <span>View latest results</span>
                 <ChevronRight className="w-4 h-4 text-turquoise-bright" />
@@ -108,10 +108,10 @@ export default async function HomePage() {
       {/* ============================================================ */}
       {/* B. MARKET & REPORTING STRIP                                   */}
       {/* ============================================================ */}
-      <section className="bg-white border-b border-mist py-3.5 px-6 shadow-subtle">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between text-xs gap-4">
+      <section className="bg-white border-b border-mist py-3.5 px-4 sm:px-6 shadow-subtle">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between text-xs gap-3 sm:gap-4">
           {/* Ticker Snapshot */}
-          <div className="flex flex-wrap items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6">
             <div className="flex items-center gap-2">
               <span className="font-bold text-navy">JSE: GFI</span>
               <span className="font-mono text-ink tabular-nums font-semibold">ZAR 285.50</span>
@@ -129,7 +129,7 @@ export default async function HomePage() {
           </div>
 
           {/* Direct Quick Shortcuts */}
-          <div className="flex items-center space-x-6 text-xs text-ink-muted">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 text-xs text-ink-muted">
             <Link href="/investors" className="hover:text-navy transition-colors font-medium">
               Financial Calendar
             </Link>
@@ -150,16 +150,16 @@ export default async function HomePage() {
       {/* ============================================================ */}
       {/* C. PURPOSE IN ACTION (EDITORIAL SPLIT)                       */}
       {/* ============================================================ */}
-      <section className="py-20 px-6 bg-editorial">
+      <section className="py-14 sm:py-20 px-4 sm:px-6 bg-editorial">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Story Text (6 cols) */}
             <div className="lg:col-span-6 space-y-6">
               <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gold-dark">
                 <span>Responsible Mining Leadership</span>
               </div>
 
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-navy tracking-tight leading-tight">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-navy tracking-tight leading-tight">
                 A sustainable future built on safety, integrity, and shared stakeholder value.
               </h2>
 
@@ -201,8 +201,8 @@ export default async function HomePage() {
             </div>
 
             {/* Substantial Authentic Photography (6 cols) */}
-            <div className="lg:col-span-6 relative">
-              <div className="relative h-[440px] w-full rounded-2xl overflow-hidden shadow-elevated border border-mist">
+            <div className="lg:col-span-6 relative mt-4 lg:mt-0">
+              <div className="relative h-[260px] sm:h-[380px] lg:h-[440px] w-full rounded-2xl overflow-hidden shadow-elevated border border-mist">
                 <Image
                   src="/assets/home-stakeholders.png"
                   alt="Gold Fields Community & Workplace Partnership"
@@ -211,14 +211,14 @@ export default async function HomePage() {
                 />
               </div>
               {/* Floating Verified Badge */}
-              <div className="absolute -bottom-5 -left-5 bg-white p-4 rounded-xl shadow-card border border-mist max-w-xs hidden sm:block">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-forest-light text-forest flex items-center justify-center">
-                    <ShieldCheck className="w-5 h-5" />
+              <div className="absolute -bottom-4 sm:-bottom-5 left-3 sm:-left-5 bg-white p-3 sm:p-4 rounded-xl shadow-card border border-mist max-w-[280px] sm:max-w-xs">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-forest-light text-forest flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-navy">Zero Fatalities (H1 2026)</h4>
-                    <p className="text-[11px] text-ink-muted">
+                    <p className="text-[10px] sm:text-[11px] text-ink-muted leading-tight mt-0.5">
                       Courageous safety leadership across all operations
                     </p>
                   </div>
@@ -237,14 +237,14 @@ export default async function HomePage() {
       {/* ============================================================ */}
       {/* E. LATEST RESULTS & REPORTING SUITE                          */}
       {/* ============================================================ */}
-      <section className="py-20 px-6 bg-white">
+      <section className="py-14 sm:py-20 px-4 sm:px-6 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-4 border-b border-mist">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-12 pb-4 border-b border-mist">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-gold-dark block mb-2">
                 Financial Disclosures
               </span>
-              <h2 className="text-3xl font-bold text-navy">
+              <h2 className="text-2xl sm:text-3xl font-bold text-navy">
                 Latest Results & Corporate Reporting
               </h2>
             </div>
@@ -327,7 +327,7 @@ export default async function HomePage() {
                   </span>
                 </div>
 
-                <h3 className="text-2xl font-bold text-navy">
+                <h3 className="text-xl sm:text-2xl font-bold text-navy">
                   {h1Report.title}
                 </h3>
                 <p className="text-xs text-ink-muted leading-relaxed">
@@ -348,12 +348,12 @@ export default async function HomePage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-6 mt-6 border-t border-mist flex flex-wrap items-center gap-3">
+              <div className="pt-6 mt-6 border-t border-mist flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <a
                   href={h1Report.downloadUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2.5 rounded-lg bg-navy hover:bg-navy-light text-white text-xs font-bold transition-colors inline-flex items-center gap-2"
+                  className="px-4 py-2.5 rounded-lg bg-navy hover:bg-navy-light text-white text-xs font-bold transition-colors inline-flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
                   <Download className="w-4 h-4" />
                   <span>Download Report ({h1Report.fileSize})</span>
@@ -361,7 +361,7 @@ export default async function HomePage() {
 
                 <Link
                   href="/investors"
-                  className="px-4 py-2.5 rounded-lg bg-white hover:bg-mist text-ink text-xs font-semibold border border-mist transition-colors"
+                  className="px-4 py-2.5 rounded-lg bg-white hover:bg-mist text-ink text-xs font-semibold border border-mist transition-colors inline-flex items-center justify-center w-full sm:w-auto"
                 >
                   Investor Presentation
                 </Link>
@@ -418,13 +418,16 @@ export default async function HomePage() {
       {/* ============================================================ */}
       {/* F. SUSTAINABILITY & SHARED VALUE (EDITORIAL MOSAIC)           */}
       {/* ============================================================ */}
-      <section className="py-20 px-6 bg-editorial border-t border-mist">
+      {/* ============================================================ */}
+      {/* F. SUSTAINABILITY & SHARED VALUE (EDITORIAL MOSAIC)           */}
+      {/* ============================================================ */}
+      <section className="py-14 sm:py-20 px-4 sm:px-6 bg-editorial border-t border-mist">
         <div className="max-w-7xl mx-auto">
-          <div className="max-w-2xl mb-12">
+          <div className="max-w-2xl mb-8 sm:mb-12">
             <span className="text-xs font-bold uppercase tracking-wider text-forest block mb-2">
               Environmental, Social & Governance
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-navy">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-navy">
               Sustainability Grounded in Science & Accountability
             </h2>
             <p className="text-sm text-ink-muted mt-2">
@@ -434,7 +437,7 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Tile 1: Decarbonization */}
-            <div className="bg-white rounded-2xl border border-mist p-6 shadow-subtle flex flex-col justify-between hover:shadow-card transition-shadow">
+            <div className="bg-white rounded-2xl border border-mist p-5 sm:p-6 shadow-subtle flex flex-col justify-between hover:shadow-card transition-shadow">
               <div className="space-y-4">
                 <div className="relative h-44 w-full rounded-xl overflow-hidden">
                   <Image
@@ -463,7 +466,7 @@ export default async function HomePage() {
             </div>
 
             {/* Tile 2: Water Stewardship (Authentic Turquoise Accent) */}
-            <div className="bg-white rounded-2xl border border-mist p-6 shadow-subtle flex flex-col justify-between hover:shadow-card hover:border-turquoise/40 transition-all">
+            <div className="bg-white rounded-2xl border border-mist p-5 sm:p-6 shadow-subtle flex flex-col justify-between hover:shadow-card hover:border-turquoise/40 transition-all">
               <div className="space-y-4">
                 <div className="relative h-44 w-full rounded-xl overflow-hidden">
                   <Image
@@ -492,7 +495,7 @@ export default async function HomePage() {
             </div>
 
             {/* Tile 3: Tailings Stewardship */}
-            <div className="bg-white rounded-2xl border border-mist p-6 shadow-subtle flex flex-col justify-between hover:shadow-card transition-shadow">
+            <div className="bg-white rounded-2xl border border-mist p-5 sm:p-6 shadow-subtle flex flex-col justify-between hover:shadow-card transition-shadow">
               <div className="space-y-4">
                 <div className="relative h-44 w-full rounded-xl overflow-hidden">
                   <Image
@@ -521,7 +524,7 @@ export default async function HomePage() {
             </div>
 
             {/* Tile 4: Host Communities */}
-            <div className="bg-white rounded-2xl border border-mist p-6 shadow-subtle flex flex-col justify-between hover:shadow-card transition-shadow">
+            <div className="bg-white rounded-2xl border border-mist p-5 sm:p-6 shadow-subtle flex flex-col justify-between hover:shadow-card transition-shadow">
               <div className="space-y-4">
                 <div className="relative h-44 w-full rounded-xl overflow-hidden">
                   <Image
@@ -555,14 +558,14 @@ export default async function HomePage() {
       {/* ============================================================ */}
       {/* G. NEWS & PERSPECTIVES                                       */}
       {/* ============================================================ */}
-      <section className="py-20 px-6 bg-white border-t border-mist">
+      <section className="py-14 sm:py-20 px-4 sm:px-6 bg-white border-t border-mist">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-4 border-b border-mist">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-12 pb-4 border-b border-mist">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-gold-dark block mb-2">
                 Corporate Announcements
               </span>
-              <h2 className="text-3xl font-bold text-navy">
+              <h2 className="text-2xl sm:text-3xl font-bold text-navy">
                 News, Media Releases & Insights
               </h2>
             </div>
@@ -578,7 +581,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Primary Feature Story (7 cols) */}
             <div className="lg:col-span-7 bg-editorial rounded-2xl border border-mist overflow-hidden shadow-card flex flex-col justify-between">
-              <div className="relative h-64 w-full">
+              <div className="relative h-56 sm:h-64 w-full">
                 <Image
                   src={primaryNews.image}
                   alt={primaryNews.title}
@@ -589,9 +592,9 @@ export default async function HomePage() {
                   {primaryNews.category}
                 </span>
               </div>
-              <div className="p-6 sm:p-8 space-y-3">
+              <div className="p-5 sm:p-8 space-y-3">
                 <span className="text-xs text-ink-muted">{primaryNews.date} • {primaryNews.readTime}</span>
-                <h3 className="text-2xl font-bold text-navy leading-snug">
+                <h3 className="text-xl sm:text-2xl font-bold text-navy leading-snug">
                   {primaryNews.title}
                 </h3>
                 <p className="text-xs text-ink-muted leading-relaxed line-clamp-3">
@@ -614,7 +617,7 @@ export default async function HomePage() {
               {secondaryNews.map((article) => (
                 <div
                   key={article.id}
-                  className="p-5 rounded-2xl bg-editorial border border-mist hover:border-gold-mineral transition-colors shadow-subtle flex flex-col justify-between"
+                  className="p-4 sm:p-5 rounded-2xl bg-editorial border border-mist hover:border-gold-mineral transition-colors shadow-subtle flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-[11px] text-ink-muted">
@@ -649,16 +652,16 @@ export default async function HomePage() {
       {/* ============================================================ */}
       {/* H. PEOPLE & PARTNERSHIPS (CAREERS & SUPPLIERS DUAL BLOCKS)     */}
       {/* ============================================================ */}
-      <section className="py-20 px-6 bg-editorial border-t border-mist">
+      <section className="py-14 sm:py-20 px-4 sm:px-6 bg-editorial border-t border-mist">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
             {/* Careers Block */}
-            <div className="bg-white rounded-2xl border border-mist p-8 shadow-card flex flex-col justify-between space-y-6">
+            <div className="bg-white rounded-2xl border border-mist p-5 sm:p-8 shadow-card flex flex-col justify-between space-y-6">
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-xl bg-gold/10 text-gold-dark flex items-center justify-center">
                   <Briefcase className="w-6 h-6 text-gold-dark" />
                 </div>
-                <h3 className="text-2xl font-bold text-navy">
+                <h3 className="text-xl sm:text-2xl font-bold text-navy">
                   Careers & Workplace Culture
                 </h3>
                 <p className="text-xs text-ink-muted leading-relaxed">
@@ -666,11 +669,11 @@ export default async function HomePage() {
                 </p>
                 <div className="space-y-2 pt-2 text-xs text-ink-muted">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-forest" />
+                    <CheckCircle2 className="w-4 h-4 text-forest shrink-0" />
                     <span>Equal opportunity employer with 26.2% female workforce representation</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-forest" />
+                    <CheckCircle2 className="w-4 h-4 text-forest shrink-0" />
                     <span>Global talent development and mechanized skills academies</span>
                   </div>
                 </div>
@@ -679,7 +682,7 @@ export default async function HomePage() {
               <div className="pt-4 border-t border-mist flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/careers"
-                  className="px-5 py-2.5 rounded-lg bg-navy hover:bg-navy-light text-white text-xs font-bold text-center transition-colors"
+                  className="px-5 py-2.5 rounded-lg bg-navy hover:bg-navy-light text-white text-xs font-bold text-center transition-colors w-full sm:w-auto"
                 >
                   Explore Careers & Vacancies
                 </Link>
@@ -687,12 +690,12 @@ export default async function HomePage() {
             </div>
 
             {/* Suppliers Block */}
-            <div className="bg-white rounded-2xl border border-mist p-8 shadow-card flex flex-col justify-between space-y-6">
+            <div className="bg-white rounded-2xl border border-mist p-5 sm:p-8 shadow-card flex flex-col justify-between space-y-6">
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-xl bg-navy/10 text-navy flex items-center justify-center">
                   <Layers className="w-6 h-6 text-navy" />
                 </div>
-                <h3 className="text-2xl font-bold text-navy">
+                <h3 className="text-xl sm:text-2xl font-bold text-navy">
                   Suppliers & Transparent Procurement
                 </h3>
                 <p className="text-xs text-ink-muted leading-relaxed">
@@ -700,11 +703,11 @@ export default async function HomePage() {
                 </p>
                 <div className="space-y-2 pt-2 text-xs text-ink-muted">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-forest" />
+                    <CheckCircle2 className="w-4 h-4 text-forest shrink-0" />
                     <span>Rigorous adherence to anti-bribery and mining safety standards</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-forest" />
+                    <CheckCircle2 className="w-4 h-4 text-forest shrink-0" />
                     <span>Prioritizing registered host community suppliers</span>
                   </div>
                 </div>
@@ -713,7 +716,7 @@ export default async function HomePage() {
               <div className="pt-4 border-t border-mist flex flex-col sm:flex-row gap-3">
                 <Link
                   href="/suppliers"
-                  className="px-5 py-2.5 rounded-lg bg-gold hover:bg-gold-light text-navy-dark text-xs font-bold text-center transition-colors"
+                  className="px-5 py-2.5 rounded-lg bg-gold hover:bg-gold-light text-navy-dark text-xs font-bold text-center transition-colors w-full sm:w-auto"
                 >
                   Supplier Guidelines & Checklist
                 </Link>
@@ -726,12 +729,12 @@ export default async function HomePage() {
       {/* ============================================================ */}
       {/* I. CLOSING CORPORATE PURPOSE STATEMENT                       */}
       {/* ============================================================ */}
-      <section className="bg-navy py-16 px-6 text-white text-center border-t border-navy-surface">
+      <section className="bg-navy py-12 sm:py-16 px-4 sm:px-6 text-white text-center border-t border-navy-surface">
         <div className="max-w-3xl mx-auto space-y-4">
           <p className="text-xs font-bold uppercase tracking-widest text-gold-light">
             Enduring Value Beyond Mining
           </p>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">
             “If we cannot mine safely, we will not mine.”
           </h2>
           <p className="text-xs text-mist/80 max-w-xl mx-auto leading-relaxed">

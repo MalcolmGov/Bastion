@@ -51,18 +51,18 @@ export const AboutHero: React.FC<AboutHeroProps> = ({ onAskAI, title, subtitle, 
         <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-black/40" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-20 relative z-10 w-full">
-        <div className="max-w-3xl space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20 relative z-10 w-full">
+        <div className="max-w-3xl space-y-5 sm:space-y-6">
           {/* Tag Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gold/15 border border-gold/40 text-gold-light text-xs font-semibold uppercase tracking-wider backdrop-blur-xs">
-            <Award className="w-3.5 h-3.5 text-gold" />
+          <div className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-gold/15 border border-gold/40 text-gold-light text-xs font-semibold uppercase tracking-wider backdrop-blur-xs">
+            <Award className="w-3.5 h-3.5 text-gold shrink-0" />
             <span>{badge || 'Est. 1887 • 135+ Years of Mining Heritage'}</span>
-            <span className="text-mist/40">•</span>
-            <span>JSE & NYSE: GFI</span>
+            <span className="text-mist/40 hidden sm:inline">•</span>
+            <span className="hidden sm:inline">JSE & NYSE: GFI</span>
           </div>
 
           {/* Main Display Headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.12] font-display">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.14] sm:leading-[1.12] font-display">
             {title ? (
               title
             ) : (
@@ -75,16 +75,16 @@ export const AboutHero: React.FC<AboutHeroProps> = ({ onAskAI, title, subtitle, 
             )}
           </h1>
 
-          <p className="text-base sm:text-lg text-mist/90 font-normal leading-relaxed max-w-2xl">
+          <p className="text-sm sm:text-lg text-mist/90 font-normal leading-relaxed max-w-2xl">
             {subtitle || 'Gold Fields is a globally diversified gold producer with an attributable annual production profile, operating nine tier-1 and quality mines and projects across six countries on four continents. Grounded in our core values, we deliver sustainable shareholder returns, environmental stewardship, and enduring community prosperity.'}
           </p>
 
           {/* Action Row & Contextual Trigger */}
-          <div className="pt-2 flex flex-wrap items-center gap-4">
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => handleTriggerAI()}
-              className="px-6 py-3.5 rounded-lg bg-gold hover:bg-gold-light text-navy-dark font-bold text-sm shadow-card hover:shadow-elevated transition-all duration-200 flex items-center gap-2 group cursor-pointer"
+              className="px-6 py-3.5 rounded-lg bg-gold hover:bg-gold-light text-navy-dark font-bold text-sm shadow-card hover:shadow-elevated transition-all duration-200 flex items-center justify-center gap-2 group cursor-pointer w-full sm:w-auto"
             >
               <Sparkles className="w-4 h-4 text-navy-dark transition-transform group-hover:rotate-12" />
               <span>Ask AI about Gold Fields</span>
@@ -92,7 +92,7 @@ export const AboutHero: React.FC<AboutHeroProps> = ({ onAskAI, title, subtitle, 
 
             <a
               href="#values"
-              className="px-5 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/20 backdrop-blur-xs transition-colors flex items-center gap-2"
+              className="px-5 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/20 backdrop-blur-xs transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <span>Our Core Values</span>
               <ArrowDown className="w-4 h-4 text-mist" />
@@ -101,7 +101,7 @@ export const AboutHero: React.FC<AboutHeroProps> = ({ onAskAI, title, subtitle, 
         </div>
 
         {/* 5 Fast Facts KPI Strip */}
-        <div className="mt-14 grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 border-t border-mist/15 pt-8 text-white">
+        <div className="mt-10 sm:mt-14 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 border-t border-mist/15 pt-8 text-white">
           <div className="bg-navy/70 border border-mist/10 rounded-xl p-4 backdrop-blur-xs">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-mist/70 block">
               Continuous Heritage

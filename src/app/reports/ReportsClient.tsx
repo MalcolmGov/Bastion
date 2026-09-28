@@ -180,21 +180,21 @@ export default function ReportsClient({ initialReports }: ReportsClientProps) {
       {/* ============================================================ */}
       {/* 1. CINEMATIC LIBRARY HERO HEADER                              */}
       {/* ============================================================ */}
-      <section className="bg-navy-dark text-white border-b border-navy-surface/50 py-16 px-6 relative overflow-hidden">
+      <section className="bg-navy-dark text-white border-b border-navy-surface/50 py-12 sm:py-16 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-gold/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="max-w-7xl mx-auto space-y-6 relative z-10">
+        <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-dark/40 border border-gold-mineral/40 text-gold-light text-xs font-semibold uppercase tracking-widest backdrop-blur-xs">
             <span>Corporate Disclosure Library</span>
             <span className="text-white/40">•</span>
             <span>Annual Suite & Archive</span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
-            <div className="lg:col-span-8 space-y-4">
-              <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight font-display">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-end">
+            <div className="lg:col-span-8 space-y-3 sm:space-y-4">
+              <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight font-display">
                 Reports & Presentations
               </h1>
-              <p className="text-base sm:text-lg text-mist/90 max-w-2xl font-normal leading-relaxed">
+              <p className="text-sm sm:text-lg text-mist/90 max-w-2xl font-normal leading-relaxed">
                 Access verified integrated annual reports, half-year and quarterly results booklets, ESG disclosures, JSE SENS filings, and executive investor presentations.
               </p>
             </div>
@@ -228,8 +228,8 @@ export default function ReportsClient({ initialReports }: ReportsClientProps) {
       {/* ============================================================ */}
       {/* 2. FILTER & SEARCH CONTROL CONSOLE                            */}
       {/* ============================================================ */}
-      <section className="bg-white border-b border-mist sticky top-16 z-30 shadow-subtle">
-        <div className="max-w-7xl mx-auto px-6 py-4 space-y-4">
+      <section className="bg-white border-b border-mist relative lg:sticky lg:top-24 z-30 shadow-subtle">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 space-y-4">
           {/* Top Bar: Search Input, Year Selector & View Toggle */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             {/* Search Input */}
@@ -342,7 +342,7 @@ export default function ReportsClient({ initialReports }: ReportsClientProps) {
       {/* ============================================================ */}
       {/* 3. ACTIVE FILTERS & STATUS BAR                                */}
       {/* ============================================================ */}
-      <section className="max-w-7xl mx-auto px-6 pt-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-ink-muted pb-4 border-b border-mist">
           <div>
             Showing <strong className="text-navy">{filteredReports.length}</strong> of{' '}
@@ -369,7 +369,7 @@ export default function ReportsClient({ initialReports }: ReportsClientProps) {
       {/* ============================================================ */}
       {/* 4. MAIN REPORTS LIBRARY: GRID OR LIST VIEW                    */}
       {/* ============================================================ */}
-      <section className="max-w-7xl mx-auto px-6 pt-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
         {filteredReports.length === 0 ? (
           /* Empty State */
           <div className="py-20 text-center bg-white rounded-2xl border border-mist p-8 space-y-4">
@@ -588,7 +588,7 @@ export default function ReportsClient({ initialReports }: ReportsClientProps) {
       {/* ============================================================ */}
       {/* 5. REPORT PACK CALLOUT STRIP                                  */}
       {/* ============================================================ */}
-      <section className="max-w-7xl mx-auto px-6 pt-16">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-16">
         <div className="bg-editorial p-6 sm:p-8 rounded-2xl border border-mist shadow-subtle flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -615,7 +615,7 @@ export default function ReportsClient({ initialReports }: ReportsClientProps) {
       {/* ============================================================ */}
       {/* 6. REGULATORY & ARCHIVE DISCLOSURE NOTE                       */}
       {/* ============================================================ */}
-      <section className="max-w-7xl mx-auto px-6 pt-12">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-12">
         <div className="p-5 rounded-xl bg-white border border-mist text-xs text-ink-muted flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <span className="font-bold text-navy block">Regulatory Reporting Compliance</span>
