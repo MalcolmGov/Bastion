@@ -14,6 +14,7 @@ import {
   Briefcase,
   Truck,
   Image as ImageIcon,
+  Palette,
   Clock,
   Activity,
   BarChart3,
@@ -59,8 +60,9 @@ const NAV_SECTIONS: NavSection[] = [
     ]
   },
   {
-    title: 'Media & Assets',
+    title: 'Brand & Design',
     items: [
+      { label: 'Design System & UI', href: '/admin/design-system', icon: Palette, badge: 'Tokens' },
       { label: 'Media Library', href: '/admin/media', icon: ImageIcon }
     ]
   },
