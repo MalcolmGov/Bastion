@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { BrandHeader } from '@/components/brand/BrandHeader';
 import { BrandFooter } from '@/components/brand/BrandFooter';
 import { AskGoldFieldsDrawer } from '@/components/assistant/AskGoldFieldsDrawer';
@@ -9,6 +10,8 @@ import { ReportPackDrawer } from '@/components/reports/ReportPackDrawer';
 import { ContentRepository } from '@/lib/adapters/ContentRepository';
 
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith('/admin');
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantPrompt, setAssistantPrompt] = useState<string | undefined>();
   const [assistantContext, setAssistantContext] = useState<string | undefined>();
@@ -43,6 +46,10 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
     setAssistantContext(context);
     setAssistantOpen(true);
   };
+
+  if (isAdmin) {
+    return <>{children}</>;
+  }
 
   const allReports = ContentRepository.getReports();
 
