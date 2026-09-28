@@ -1,11 +1,20 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppShell } from '@/components/layout/AppShell';
 import { DraftPreviewBanner } from '@/components/brand/DraftPreviewBanner';
 
+export const viewport: Viewport = {
+  themeColor: '#082B49',
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.goldfields.com'),
-  title: 'Gold Fields — Creating Enduring Value Beyond Mining',
+  title: {
+    default: 'Gold Fields — Creating Enduring Value Beyond Mining',
+    template: '%s | Gold Fields',
+  },
   description:
     'Gold Fields is a globally diversified gold producer with operations across Australia, Canada, Chile, Ghana, Peru, and South Africa. Discover our operational performance, H1 2026 results, and 2030 ESG targets.',
   keywords: [
@@ -20,6 +29,52 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Gold Fields Corporate Communications' }],
   robots: 'noindex, nofollow', // As specified: concept prototype default
+  manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: ['/favicon.ico'],
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://www.goldfields.com',
+    siteName: 'Gold Fields',
+    title: 'Gold Fields — Creating Enduring Value Beyond Mining',
+    description:
+      'Gold Fields is a globally diversified gold producer with operations across Australia, Canada, Chile, Ghana, Peru, and South Africa. Discover our operational performance, H1 2026 results, and 2030 ESG targets.',
+    images: [
+      {
+        url: '/assets/goldfields-og-share.png',
+        width: 1200,
+        height: 630,
+        alt: 'Gold Fields Corporate Flagship — Global Gold Producer',
+        type: 'image/png',
+      },
+      {
+        url: '/assets/goldfields-og-square.png',
+        width: 600,
+        height: 600,
+        alt: 'Gold Fields Lion Emblem',
+        type: 'image/png',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Gold Fields — Creating Enduring Value Beyond Mining',
+    description:
+      'Gold Fields is a globally diversified gold producer with operations across Australia, Canada, Chile, Ghana, Peru, and South Africa.',
+    site: '@GoldFields_LTD',
+    creator: '@GoldFields_LTD',
+    images: ['/assets/goldfields-og-share.png'],
+  },
 };
 
 export default function RootLayout({
@@ -30,7 +85,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <head>
-        <link rel="icon" type="image/svg+xml" href="/assets/gold-fields-logo.svg" />
+        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+        <link rel="alternate icon" type="image/png" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="antialiased font-sans">
         <DraftPreviewBanner />
