@@ -10,9 +10,12 @@ import {
 
 interface AboutHeroProps {
   onAskAI?: (prompt?: string, context?: string) => void;
+  title?: string;
+  subtitle?: string;
+  badge?: string;
 }
 
-export const AboutHero: React.FC<AboutHeroProps> = ({ onAskAI }) => {
+export const AboutHero: React.FC<AboutHeroProps> = ({ onAskAI, title, subtitle, badge }) => {
   const handleTriggerAI = (customPrompt?: string) => {
     const prompt =
       customPrompt ||
@@ -53,21 +56,27 @@ export const AboutHero: React.FC<AboutHeroProps> = ({ onAskAI }) => {
           {/* Tag Pill */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gold/15 border border-gold/40 text-gold-light text-xs font-semibold uppercase tracking-wider backdrop-blur-xs">
             <Award className="w-3.5 h-3.5 text-gold" />
-            <span>Est. 1887 • 135+ Years of Mining Heritage</span>
+            <span>{badge || 'Est. 1887 • 135+ Years of Mining Heritage'}</span>
             <span className="text-mist/40">•</span>
             <span>JSE & NYSE: GFI</span>
           </div>
 
           {/* Main Display Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.12] font-display">
-            Creating enduring value <br />
-            <span className="text-gold-light font-normal italic">
-              beyond mining.
-            </span>
+            {title ? (
+              title
+            ) : (
+              <>
+                Creating enduring value <br />
+                <span className="text-gold-light font-normal italic">
+                  beyond mining.
+                </span>
+              </>
+            )}
           </h1>
 
           <p className="text-base sm:text-lg text-mist/90 font-normal leading-relaxed max-w-2xl">
-            Gold Fields is a globally diversified gold producer with an attributable annual production profile, operating nine tier-1 and quality mines and projects across six countries on four continents. Grounded in our core values, we deliver sustainable shareholder returns, environmental stewardship, and enduring community prosperity.
+            {subtitle || 'Gold Fields is a globally diversified gold producer with an attributable annual production profile, operating nine tier-1 and quality mines and projects across six countries on four continents. Grounded in our core values, we deliver sustainable shareholder returns, environmental stewardship, and enduring community prosperity.'}
           </p>
 
           {/* Action Row & Contextual Trigger */}

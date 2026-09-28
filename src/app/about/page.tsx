@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
+import { getPublishedPage } from '@/lib/server/content';
 import { AboutHero } from '@/components/about/AboutHero';
 import { PurposeNarrative } from '@/components/about/PurposeNarrative';
 import { CoreValuesSection } from '@/components/about/CoreValuesSection';
@@ -7,6 +8,8 @@ import { StrategicPillarsSection } from '@/components/about/StrategicPillarsSect
 import { LeadershipGovernanceSection } from '@/components/about/LeadershipGovernanceSection';
 import { HeritageAndPresenceSection } from '@/components/about/HeritageAndPresenceSection';
 import { AboutCTA } from '@/components/about/AboutCTA';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'About Gold Fields — 135+ Years of Mining Heritage & Leadership',
@@ -25,11 +28,24 @@ export const metadata: Metadata = {
   ],
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  let isDraft = false;
+  try {
+    const { draftMode } = await import('next/headers');
+    const dm = await draftMode();
+    isDraft = dm.isEnabled;
+  } catch (e) {}
+
+  const pageData = await getPublishedPage('about', isDraft);
+
   return (
     <div className="space-y-0">
       {/* 1. Cinematic Hero with Purpose Anchor & Fast Facts Strip */}
-      <AboutHero />
+      <AboutHero
+        title={pageData?.hero?.title}
+        subtitle={pageData?.hero?.subtitle}
+        badge={pageData?.hero?.badge}
+      />
 
       {/* 2. Purpose Narrative: "Creating enduring value beyond mining" & Six Capitals */}
       <PurposeNarrative />

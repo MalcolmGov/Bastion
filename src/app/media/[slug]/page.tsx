@@ -13,14 +13,12 @@ import {
   ShieldCheck,
   Building2
 } from 'lucide-react';
-import { ContentRepository } from '@/lib/adapters/ContentRepository';
+import {
+  getPublishedNews,
+  getPublishedNewsBySlug
+} from '@/lib/server/content';
 
-export function generateStaticParams() {
-  const articles = ContentRepository.getNews();
-  return articles.map((article) => ({
-    slug: article.slug,
-  }));
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
@@ -28,7 +26,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = ContentRepository.getNewsBySlug(slug);
+  const article = await getPublishedNewsBySlug(slug);
 
   if (!article) {
     return {
@@ -53,13 +51,21 @@ export default async function MediaArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = ContentRepository.getNewsBySlug(slug);
+
+  let isDraft = false;
+  try {
+    const { draftMode } = await import('next/headers');
+    const dm = await draftMode();
+    isDraft = dm.isEnabled;
+  } catch (e) {}
+
+  const article = await getPublishedNewsBySlug(slug, isDraft);
 
   if (!article) {
     notFound();
   }
 
-  const allNews = ContentRepository.getNews();
+  const allNews = await getPublishedNews(isDraft);
   const relatedNews = allNews
     .filter((n) => n.slug !== article.slug)
     .slice(0, 3);

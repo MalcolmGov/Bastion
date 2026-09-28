@@ -13,11 +13,12 @@ import { SustainabilityTarget } from '@/lib/types';
 import sustainabilityData from '@/content/sustainability.json';
 
 interface ESGTargetTrackerProps {
+  initialTargets?: SustainabilityTarget[];
   onAskAI?: (prompt: string, context: string) => void;
 }
 
-export const ESGTargetTracker: React.FC<ESGTargetTrackerProps> = ({ onAskAI }) => {
-  const targets = sustainabilityData as SustainabilityTarget[];
+export const ESGTargetTracker: React.FC<ESGTargetTrackerProps> = ({ initialTargets, onAskAI }) => {
+  const targets = (initialTargets && initialTargets.length > 0) ? initialTargets : (sustainabilityData as SustainabilityTarget[]);
   const [selectedPillar, setSelectedPillar] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
 

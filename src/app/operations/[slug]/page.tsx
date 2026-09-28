@@ -22,7 +22,11 @@ import {
   Building,
   Compass
 } from 'lucide-react';
-import { ContentRepository } from '@/lib/adapters/ContentRepository';
+import {
+  getPublishedOperations,
+  getPublishedOperationBySlug,
+  getPublishedReports
+} from '@/lib/server/content';
 import { OPERATION_EXTENDED_DATA } from '@/lib/data/operationGeologyData';
 import {
   OperationActionButtons,
@@ -30,32 +34,18 @@ import {
 } from '@/components/operations/OperationActionButtons';
 import { ReportItem } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   params: Promise<{
     slug: string;
   }>;
 }
 
-// Generate static routes for all 10 operations
-export async function generateStaticParams() {
-  return [
-    { slug: 'south-deep' },
-    { slug: 'tarkwa' },
-    { slug: 'salares-norte' },
-    { slug: 'cerro-corona' },
-    { slug: 'st-ives' },
-    { slug: 'granny-smith' },
-    { slug: 'agnew' },
-    { slug: 'gruyere' },
-    { slug: 'windfall' },
-    { slug: 'damang' },
-  ];
-}
-
 // Generate dynamic metadata for SEO and page head
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const operation = ContentRepository.getOperationBySlug(slug);
+  const operation = await getPublishedOperationBySlug(slug);
 
   if (!operation) {
     return {
@@ -71,14 +61,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function OperationDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const operation = ContentRepository.getOperationBySlug(slug);
+
+  let isDraft = false;
+  try {
+    const { draftMode } = await import('next/headers');
+    const dm = await draftMode();
+    isDraft = dm.isEnabled;
+  } catch (e) {}
+
+  const operation = await getPublishedOperationBySlug(slug, isDraft);
 
   if (!operation) {
     notFound();
   }
 
-  const allOperations = ContentRepository.getOperations();
-  const allReports = ContentRepository.getReports();
+  const allOperations = await getPublishedOperations(isDraft);
+  const allReports = await getPublishedReports(isDraft);
   const extendedData = OPERATION_EXTENDED_DATA[operation.slug];
 
   // Sibling operations in the same region

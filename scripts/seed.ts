@@ -127,7 +127,7 @@ async function main() {
   // 7. Seed Sustainability
   const sustData = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/content/sustainability.json'), 'utf8'));
   for (const s of sustData) {
-    await insertRecord('sustainability_targets', s.id, s.id, s.title, s);
+    await insertRecord('sustainability', s.id, s.id, s.title, s);
   }
   console.log(`✓ Seeded ${sustData.length} sustainability targets.`);
 
@@ -180,6 +180,76 @@ async function main() {
       hero: {
         title: 'Sustainability Grounded in Science & Accountability',
         subtitle: 'Progress against our 2030 ESG Targets across decarbonization, water stewardship, and community value.'
+      }
+    },
+    {
+      id: 'page_operations',
+      slug: 'operations',
+      title: 'Global Mining Operations & Mineral Assets',
+      hero: {
+        badge: 'Global Operational Footprint',
+        title: 'Disciplined Execution Across Six Mining Jurisdictions',
+        subtitle: 'Our 10 mining operations across South Africa, Australia, Ghana, Chile, Peru, and Canada deliver resilient, mechanized production underpinned by renewable energy.'
+      }
+    },
+    {
+      id: 'page_reports',
+      slug: 'reports',
+      title: 'Reports & Regulatory Disclosures',
+      hero: {
+        badge: 'Corporate Reporting Suite',
+        title: 'Transparent Reporting & Comprehensive Financial Disclosures',
+        subtitle: 'Access audited annual integrated reports, quarterly results booklets, climate resilience disclosures, and mineral resource declarations.'
+      }
+    },
+    {
+      id: 'page_careers',
+      slug: 'careers',
+      title: 'Careers & Workplace Culture',
+      hero: {
+        badge: 'Life at Gold Fields',
+        title: 'Empowering People to Shape the Future of Mining',
+        subtitle: 'Join over 20,000 innovators, engineers, geologists, and technicians building safer, mechanized, and sustainable mining operations.'
+      }
+    },
+    {
+      id: 'page_suppliers',
+      slug: 'suppliers',
+      title: 'Suppliers & Procurement Guidelines',
+      hero: {
+        badge: 'Ethical Supply Chain',
+        title: 'Transparent, Competitive, and Inclusive Procurement',
+        subtitle: 'Prequalification checklists, anti-bribery standards, compliance mandates, and local content policies across our global operations.'
+      }
+    },
+    {
+      id: 'page_media',
+      slug: 'media',
+      title: 'Media Releases & Announcements',
+      hero: {
+        badge: 'Newsroom & Media Centre',
+        title: 'Media Releases & Corporate Announcements',
+        subtitle: 'Verified operational announcements, financial results, labor agreements, and renewable energy milestones across Gold Fields global assets.'
+      }
+    },
+    {
+      id: 'page_investors',
+      slug: 'investors',
+      title: 'Investor Relations & Shareholder Center',
+      hero: {
+        badge: 'Shareholder Value',
+        title: 'Sustainable Returns, Capital Discipline & Growth',
+        subtitle: 'Tracking JSE: GFI and NYSE: GFI performance, distribution history, financial calendar, and executive presentations.'
+      }
+    },
+    {
+      id: 'page_contact',
+      slug: 'contact',
+      title: 'Global Corporate Directory & Contact',
+      hero: {
+        badge: 'Connect With Us',
+        title: 'Corporate Headquarters & Regional Administrative Offices',
+        subtitle: 'Get in touch with executive management, media spokespeople, investor relations, and operational leadership across six jurisdictions.'
       }
     }
   ];

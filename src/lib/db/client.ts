@@ -1,6 +1,4 @@
 import { createClient, Client } from '@libsql/client';
-import fs from 'fs';
-import path from 'path';
 
 // Singleton database client for Gold Fields Studio
 let client: Client | null = null;
@@ -19,6 +17,10 @@ export function getDb(): Client {
 
 // Initialize tables if they do not exist
 export async function initDb(): Promise<void> {
+  if (typeof window !== 'undefined') return;
+  const fs = await import('fs');
+  const path = await import('path');
+
   const db = getDb();
   const schemaPath = path.join(process.cwd(), 'src/lib/db/schema.sql');
   const sql = fs.readFileSync(schemaPath, 'utf8');

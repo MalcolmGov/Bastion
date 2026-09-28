@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser, hasPermission } from '@/lib/auth/auth';
 import { sendReviewNotification } from '@/lib/notifications/notifier';
@@ -145,6 +146,23 @@ export async function POST(
                 WHERE id = ?`,
           args: [draftRevId, now, id]
         });
+
+        // Invalidate public caches immediately
+        try {
+          revalidatePath('/');
+          revalidatePath('/about');
+          revalidatePath('/sustainability');
+          revalidatePath('/operations');
+          revalidatePath('/reports');
+          revalidatePath('/news');
+          revalidatePath(`/${collection}`);
+          if (record.slug) {
+            revalidatePath(`/${record.slug}`);
+            revalidatePath(`/${collection}/${record.slug}`);
+          }
+        } catch (e) {
+          console.warn('revalidatePath warning:', e);
+        }
         break;
       }
 

@@ -12,13 +12,37 @@ import {
   ChevronRight,
   CheckCircle2
 } from 'lucide-react';
-import { ContentRepository } from '@/lib/adapters/ContentRepository';
+import {
+  getPublishedPage,
+  getPublishedOperations,
+  getPublishedReports,
+  getPublishedNews
+} from '@/lib/server/content';
 import { OperationsMap } from '@/components/map/OperationsMap';
 
-export default function HomePage() {
-  const operations = ContentRepository.getOperations();
-  const reports = ContentRepository.getReports();
-  const news = ContentRepository.getNews();
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  // Check draft preview mode
+  let isDraft = false;
+  try {
+    const { draftMode } = await import('next/headers');
+    const dm = await draftMode();
+    isDraft = dm.isEnabled;
+  } catch (e) {}
+
+  const pageData = await getPublishedPage('home', isDraft);
+
+  const heroBadge = pageData?.hero?.badge || 'Gold Fields Flagship • Global Production';
+  const heroTitle = pageData?.hero?.title || 'Creating enduring value beyond mining.';
+  const heroSubtitle = pageData?.hero?.subtitle || 'Discover our globally diversified operations, our workforce of over 20,000 people, and the sustainable economic value we generate across six mining jurisdictions.';
+  const heroBg = pageData?.hero?.bgImage || '/assets/goldfields-3d-mining-hero.jpg';
+  const heroCtaText = pageData?.hero?.ctaText || 'Explore our operations';
+  const heroCtaLink = pageData?.hero?.ctaLink || '/operations';
+
+  const operations = await getPublishedOperations(isDraft);
+  const reports = await getPublishedReports(isDraft);
+  const news = await getPublishedNews(isDraft);
 
   const h1Report = reports.find((r) => r.id === 'h1-2026-booklet') || reports[0];
   const primaryNews = news[0];
@@ -33,7 +57,7 @@ export default function HomePage() {
         {/* Authentic Background Hero Image */}
         <div className="absolute inset-0">
           <Image
-            src="/assets/goldfields-3d-mining-hero.jpg"
+            src={heroBg}
             alt="Gold Fields 3D Sustainable Mining Flagship Landscape"
             fill
             priority
@@ -48,27 +72,24 @@ export default function HomePage() {
           <div className="max-w-2xl lg:max-w-3xl space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-navy/80 border border-turquoise/40 text-turquoise-bright text-xs font-semibold uppercase tracking-widest backdrop-blur-xs shadow-[0_0_15px_rgba(0,229,192,0.2)]">
               <span className="w-2 h-2 rounded-full bg-turquoise-bright animate-pulse" />
-              <span>Gold Fields Flagship</span>
-              <span className="text-white/40">•</span>
-              <span>Global Production</span>
+              <span>{heroBadge}</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.12] max-w-2xl font-display">
-              Creating enduring value <br />
-              <span className="text-turquoise-bright font-normal italic">beyond mining.</span>
+              {heroTitle}
             </h1>
 
             <p className="text-base sm:text-lg text-mist/90 max-w-xl font-normal leading-relaxed">
-              Discover our globally diversified operations, our workforce of over 20,000 people, and the sustainable economic value we generate across six mining jurisdictions.
+              {heroSubtitle}
             </p>
 
             {/* CTAs */}
             <div className="pt-2 flex flex-wrap items-center gap-4">
               <Link
-                href="/operations"
+                href={heroCtaLink}
                 className="px-6 py-3.5 rounded-lg bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark font-extrabold text-sm shadow-[0_0_25px_rgba(0,229,192,0.4)] hover:shadow-[0_0_35px_rgba(0,229,192,0.6)] transition-all duration-200 flex items-center gap-2 group"
               >
-                <span>Explore our operations</span>
+                <span>{heroCtaText}</span>
                 <ArrowRight className="w-4 h-4 text-navy-dark group-hover:translate-x-1 transition-transform" />
               </Link>
 

@@ -110,6 +110,30 @@ export function RecordEditor({ collection, id, collectionTitle }: RecordEditorPr
     setIsSaving(true);
     setNotification(null);
     try {
+      // Auto-save latest form edits first so publish/review always applies current inputs
+      if (action === 'publish' || action === 'submit_review') {
+        let parsedData = {};
+        try {
+          parsedData = JSON.parse(jsonData);
+        } catch (e) {
+          throw new Error('Invalid JSON format in data payload');
+        }
+
+        const saveRes = await fetch(`/api/admin/content/${collection}/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            slug,
+            data: parsedData
+          })
+        });
+        if (!saveRes.ok) {
+          const errData = await saveRes.json();
+          throw new Error(errData.error || 'Failed to auto-save latest edits before publishing');
+        }
+      }
+
       const res = await fetch(`/api/admin/content/${collection}/${id}/workflow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -119,7 +143,10 @@ export function RecordEditor({ collection, id, collectionTitle }: RecordEditorPr
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Workflow action failed');
 
-      setNotification({ type: 'success', msg: `Status updated to ${data.newStatus}!` });
+      setNotification({
+        type: 'success',
+        msg: action === 'publish' ? 'Published live to website successfully!' : `Status updated to ${data.newStatus}!`
+      });
       setRecord((prev: any) => ({ ...prev, status: data.newStatus }));
       setTimeout(() => setNotification(null), 4000);
     } catch (err: any) {

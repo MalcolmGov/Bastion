@@ -455,6 +455,40 @@ export default function AdminPageBuilder() {
     setIsSaving(true);
     setNotification(null);
     try {
+      // 1. Auto-save current in-memory changes first so latest edits are always included
+      const heroBlock = blocks.find((b) => b.type === 'hero');
+      const payload = {
+        title: pageTitle,
+        slug: pageSlug,
+        data: {
+          title: pageTitle,
+          slug: pageSlug,
+          hero: {
+            badge: heroBlock?.badge || 'Gold Fields Flagship • Global Production',
+            title: heroBlock?.title || 'Creating enduring value beyond mining.',
+            subtitle: heroBlock?.subtitle || 'Discover our globally diversified operations, our workforce of over 20,000 people, and the sustainable economic value we generate across six mining jurisdictions.',
+            bgImage: heroBlock?.bgImage || '/assets/goldfields-3d-mining-hero.jpg',
+            ctaText: heroBlock?.ctaText || 'Explore our operations',
+            ctaLink: heroBlock?.ctaLink || '/operations'
+          },
+          meta: {
+            description: seoDesc
+          },
+          blocks
+        }
+      };
+
+      const saveRes = await fetch(`/api/admin/content/pages/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!saveRes.ok) {
+        const errData = await saveRes.json();
+        throw new Error(errData.error || 'Failed to save changes before executing workflow');
+      }
+
+      // 2. Perform the workflow transition
       const res = await fetch(`/api/admin/content/pages/${id}/workflow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -464,7 +498,10 @@ export default function AdminPageBuilder() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Workflow action failed');
 
-      setNotification({ type: 'success', msg: `Page status updated to ${data.newStatus}!` });
+      setNotification({
+        type: 'success',
+        msg: action === 'publish' ? 'Page published live! Public site updated.' : `Page status updated to ${data.newStatus}!`
+      });
       setRecord((prev: any) => ({ ...prev, status: data.newStatus }));
       setTimeout(() => setNotification(null), 4000);
     } catch (err: any) {
