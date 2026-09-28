@@ -1251,10 +1251,10 @@ export default function AdminPageBuilder() {
                                   {b.badge}
                                 </div>
                               )}
-                              <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mb-4 leading-tight">
+                              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-4 leading-tight font-display">
                                 {b.title}
                               </h2>
-                              <p className="text-sm text-gray-300 max-w-2xl leading-relaxed mb-6">
+                              <p className="text-base sm:text-lg text-gray-300 max-w-2xl leading-relaxed mb-6">
                                 {b.subtitle}
                               </p>
                               {b.ctaText && (
