@@ -31,6 +31,8 @@ export interface AssembleInput {
     contactInfo?: { email?: string; phone?: string; address?: string };
     businessSummary?: string;
     navigation?: Array<{ label: string; url: string }>;
+    socialLinks?: Array<{ platform: string; url: string; handle?: string }>;
+    footerNavigation?: Array<{ category: string; links: Array<{ label: string; url: string }> }>;
     stats?: Array<{ value: string; label: string }>;
     teamMembers?: Array<{ name: string; role: string; bio?: string; image?: string }>;
     caseStudies?: Array<{ headline: string; client: string; outcome: string; tag?: string }>;
@@ -50,7 +52,76 @@ export class WebsiteAssembler {
     const siteId = `site_${input.websiteSlug.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
     const blueprint = BLUEPRINTS[input.blueprintId] || BLUEPRINTS.corporate;
 
-    // 1. Prepare Website Settings
+    // 1. Prepare Curated Navigation (clean, uncrowded, top 5 primary links)
+    const rawNav = input.extractedContent.navigation || [];
+    const seenNavLabels = new Set<string>();
+    const curatedMainNav: Array<{ label: string; href: string }> = [];
+
+    for (const item of rawNav) {
+      const cleanLabel = item.label.trim();
+      const lower = cleanLabel.toLowerCase();
+      if (
+        !cleanLabel ||
+        seenNavLabels.has(lower) ||
+        lower === 'home' ||
+        lower.startsWith('sign in') ||
+        lower.startsWith('log in') ||
+        curatedMainNav.length >= 5
+      ) {
+        continue;
+      }
+      seenNavLabels.add(lower);
+      const displayLabel = cleanLabel.length > 18 ? cleanLabel.slice(0, 16) + '…' : cleanLabel;
+      curatedMainNav.push({ label: displayLabel, href: item.url });
+    }
+
+    if (curatedMainNav.length === 0) {
+      curatedMainNav.push(
+        { label: 'Services', href: '/services' },
+        { label: 'About', href: '/about' },
+        { label: 'Contact', href: '/contact' }
+      );
+    }
+
+    // Default rich footer columns
+    const defaultFooterColumns = [
+      {
+        category: 'Capabilities',
+        links: [
+          { label: 'Platform Architecture', url: '/services' },
+          { label: 'Core Solutions', url: '/services' },
+          { label: 'Systems Integration', url: '/services' }
+        ]
+      },
+      {
+        category: 'Organization',
+        links: [
+          { label: 'About Executive Team', url: '/about' },
+          { label: 'Practice Philosophy', url: '/about' },
+          { label: 'Client Mandates', url: '/about' }
+        ]
+      },
+      {
+        category: 'Governance & Connect',
+        links: [
+          { label: 'Direct Partner Contact', url: '/contact' },
+          { label: 'Privacy & Disclosures', url: '/privacy' },
+          { label: 'Terms of Engagement', url: '/terms' }
+        ]
+      }
+    ];
+
+    const footerColumns = (input.extractedContent.footerNavigation && input.extractedContent.footerNavigation.length > 0)
+      ? input.extractedContent.footerNavigation
+      : defaultFooterColumns;
+
+    const socialLinks = (input.extractedContent.socialLinks && input.extractedContent.socialLinks.length > 0)
+      ? input.extractedContent.socialLinks
+      : [
+          { platform: 'linkedin', url: `https://linkedin.com/company/${input.websiteSlug}`, handle: input.websiteSlug },
+          { platform: 'twitter', url: `https://x.com/${input.websiteSlug}`, handle: `@${input.websiteSlug}` }
+        ];
+
     const settings = {
       enabledModules: {
         servicesList: input.blueprintId === 'professional_services',
@@ -61,11 +132,8 @@ export class WebsiteAssembler {
         publicAssistant: true
       },
       navigation: {
-        mainNav: input.extractedContent.navigation?.map(n => ({ label: n.label, href: n.url })) || [
-          { label: 'About', href: '/about' },
-          { label: 'Services', href: '/services' },
-          { label: 'Contact', href: '/contact' }
-        ],
+        mainNav: curatedMainNav,
+        allNav: rawNav.map(n => ({ label: n.label, href: n.url })),
         primaryCta: { label: 'Get in Touch', href: '/contact' }
       },
       footer: {
@@ -73,10 +141,8 @@ export class WebsiteAssembler {
         officeAddress: input.extractedContent.contactInfo?.address || 'Corporate Headquarters',
         contactEmail: input.extractedContent.contactInfo?.email || `contact@${input.websiteSlug}.com`,
         contactPhone: input.extractedContent.contactInfo?.phone,
-        columns: [
-          { title: 'Navigation', links: [{ label: 'About', href: '/about' }, { label: 'Services', href: '/services' }] },
-          { title: 'Connect', links: [{ label: 'Contact', href: '/contact' }] }
-        ]
+        columns: footerColumns,
+        socialLinks
       }
     };
 
@@ -209,6 +275,7 @@ export class WebsiteAssembler {
           brandName: input.clientName,
           logoUrl: fullBrandKit.logos.primary?.url,
           links: settings.navigation.mainNav,
+          allLinks: settings.navigation.allNav,
           ctaText: settings.navigation.primaryCta.label,
           ctaHref: settings.navigation.primaryCta.href
         }
@@ -291,10 +358,15 @@ export class WebsiteAssembler {
         variant: 'multi_column',
         visible: true,
         props: {
+          brandName: input.clientName,
+          logoUrl: fullBrandKit.logos.primary?.url,
+          tagline: input.extractedContent.tagline || input.brandKit.voiceAndMessaging?.tagline || `Precision solutions and architecture for ${input.clientName}.`,
           copyright: settings.footer.copyright,
           officeAddress: input.extractedContent.contactInfo?.address || settings.footer.officeAddress,
           contactEmail: input.extractedContent.contactInfo?.email || settings.footer.contactEmail,
-          contactPhone: input.extractedContent.contactInfo?.phone || settings.footer.contactPhone
+          contactPhone: input.extractedContent.contactInfo?.phone || settings.footer.contactPhone,
+          socialLinks: settings.footer.socialLinks,
+          columns: settings.footer.columns
         }
       }
     );

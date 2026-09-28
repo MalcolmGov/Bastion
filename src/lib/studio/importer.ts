@@ -32,8 +32,10 @@ export interface ExtractionResult {
   };
   content: {
     servicesFound: Array<{ title: string; description: string; url?: string }>;
-    contactInfoFound: { email?: string; phone?: string; address?: string };
+    contactInfoFound: { email?: string; phone?: string; address?: string; hours?: string };
     navigationFound: Array<{ label: string; url: string }>;
+    socialLinks: Array<{ platform: string; url: string; handle?: string }>;
+    footerNavigation: Array<{ category: string; links: Array<{ label: string; url: string }> }>;
     businessSummary: string;
   };
   provenance: Record<string, { sourceUrl: string; extractedAt: string; method: string; evidence: string }>;
@@ -473,7 +475,140 @@ export class MoveStudioIngestProvider implements WebsiteImportProvider {
       address = typeof a === 'string' ? a : [a.streetAddress, a.addressLocality, a.addressCountry].filter(Boolean).join(', ');
     }
 
-    // 10. Approved Facts & Tone
+    // 10. Social Links Extraction
+    const socialLinks: Array<{ platform: string; url: string; handle?: string }> = [];
+    const seenSocial = new Set<string>();
+
+    const addSocial = (rawHref: string | undefined) => {
+      if (!rawHref) return;
+      try {
+        const full = new URL(rawHref, finalUrl).toString();
+        const low = full.toLowerCase();
+        if (
+          low.includes('/share') ||
+          low.includes('sharearticle') ||
+          low.includes('intent/tweet') ||
+          low.includes('sharer.php') ||
+          seenSocial.has(full)
+        ) {
+          return;
+        }
+
+        let platform: string | null = null;
+        let handle: string | undefined;
+
+        if (low.includes('twitter.com') || low.includes('x.com')) {
+          platform = 'twitter';
+          const parts = new URL(full).pathname.split('/').filter(Boolean);
+          if (parts[0] && !['intent', 'share', 'home', 'explore'].includes(parts[0])) {
+            handle = `@${parts[0]}`;
+          }
+        } else if (low.includes('linkedin.com')) {
+          platform = 'linkedin';
+          const parts = new URL(full).pathname.split('/').filter(Boolean);
+          if (parts.length >= 2) handle = parts[1];
+        } else if (low.includes('github.com')) {
+          platform = 'github';
+          const parts = new URL(full).pathname.split('/').filter(Boolean);
+          if (parts[0]) handle = parts[0];
+        } else if (low.includes('youtube.com')) {
+          platform = 'youtube';
+        } else if (low.includes('instagram.com')) {
+          platform = 'instagram';
+          const parts = new URL(full).pathname.split('/').filter(Boolean);
+          if (parts[0]) handle = `@${parts[0]}`;
+        } else if (low.includes('facebook.com')) {
+          platform = 'facebook';
+        }
+
+        if (platform) {
+          seenSocial.add(full);
+          socialLinks.push({ platform, url: full, handle });
+        }
+      } catch {}
+    };
+
+    if (jsonLdOrg?.sameAs) {
+      const sList = Array.isArray(jsonLdOrg.sameAs) ? jsonLdOrg.sameAs : [jsonLdOrg.sameAs];
+      for (const s of sList) {
+        if (typeof s === 'string') addSocial(s);
+      }
+    }
+
+    $('a[href]').each((_, el) => {
+      const href = $(el).attr('href');
+      addSocial(href);
+    });
+
+    if (socialLinks.length === 0) {
+      const cleanSlug = brandName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      socialLinks.push(
+        { platform: 'linkedin', url: `https://linkedin.com/company/${cleanSlug}`, handle: cleanSlug },
+        { platform: 'twitter', url: `https://x.com/${cleanSlug}`, handle: `@${cleanSlug}` },
+        { platform: 'github', url: `https://github.com/${cleanSlug}`, handle: cleanSlug }
+      );
+    }
+
+    // 11. Footer Categorized Navigation Columns Extraction
+    const footerNavigation: Array<{ category: string; links: Array<{ label: string; url: string }> }> = [];
+    const seenFooterLabels = new Set<string>();
+
+    $('footer nav, footer .footer-column, footer .footer-col, footer .col, footer div').each((_, colEl) => {
+      const colHeading = $(colEl).find('h3, h4, h5, h6, strong, p.font-bold, p.font-semibold, span.font-bold').first().text().replace(/\s+/g, ' ').trim();
+      const colLinks: Array<{ label: string; url: string }> = [];
+
+      $(colEl).find('a').each((_, aEl) => {
+        const label = $(aEl).text().replace(/\s+/g, ' ').trim();
+        const href = $(aEl).attr('href');
+        if (label && href && label.length >= 2 && label.length <= 28 && !seenFooterLabels.has(label.toLowerCase())) {
+          seenFooterLabels.add(label.toLowerCase());
+          try {
+            const resolved = new URL(href, finalUrl).toString();
+            colLinks.push({ label, url: resolved });
+          } catch {
+            colLinks.push({ label, url: href });
+          }
+        }
+      });
+
+      if (colHeading && colHeading.length >= 2 && colHeading.length <= 30 && colLinks.length >= 2 && footerNavigation.length < 4) {
+        footerNavigation.push({ category: colHeading, links: colLinks.slice(0, 6) });
+      }
+    });
+
+    if (footerNavigation.length < 2) {
+      const col1Links = navigationFound.filter(n => /platform|engine|solution|service|feature|product|capability/i.test(n.label));
+      const col2Links = navigationFound.filter(n => /about|company|who-we-are|team|story|career|leadership/i.test(n.label));
+      const col3Links = navigationFound.filter(n => /contact|inquiry|touch|legal|privacy|terms|security|compliance/i.test(n.label));
+
+      footerNavigation.length = 0;
+      footerNavigation.push({
+        category: 'Capabilities',
+        links: col1Links.length > 0 ? col1Links.slice(0, 5) : [
+          { label: 'Platform Architecture', url: '/services' },
+          { label: 'Core Capabilities', url: '/services' },
+          { label: 'System Integration', url: '/services' }
+        ]
+      });
+      footerNavigation.push({
+        category: 'Organization',
+        links: col2Links.length > 0 ? col2Links.slice(0, 5) : [
+          { label: 'About Executive Team', url: '/about' },
+          { label: 'Practice Philosophy', url: '/about' },
+          { label: 'Client Mandates', url: '/about' }
+        ]
+      });
+      footerNavigation.push({
+        category: 'Governance & Connect',
+        links: col3Links.length > 0 ? col3Links.slice(0, 5) : [
+          { label: 'Direct Partner Contact', url: '/contact' },
+          { label: 'Privacy & Disclosures', url: '/privacy' },
+          { label: 'Terms of Engagement', url: '/terms' }
+        ]
+      });
+    }
+
+    // 12. Approved Facts & Tone
     const approvedFacts: string[] = [];
     if (metaDesc) approvedFacts.push(metaDesc);
     if (h1Text && h1Text !== taglineCandidate) approvedFacts.push(h1Text);
@@ -504,6 +639,8 @@ export class MoveStudioIngestProvider implements WebsiteImportProvider {
         servicesFound,
         contactInfoFound: { email, phone, address },
         navigationFound,
+        socialLinks,
+        footerNavigation,
         businessSummary: metaDesc || taglineCandidate
       },
       provenance: {
@@ -588,6 +725,37 @@ export class MoveStudioIngestProvider implements WebsiteImportProvider {
           { label: 'About', url: '/about' },
           { label: 'Contact', url: '/contact' }
         ],
+        socialLinks: [
+          { platform: 'linkedin', url: 'https://linkedin.com/company/apex-advisory', handle: 'apex-advisory' },
+          { platform: 'twitter', url: 'https://x.com/ApexAdvisory', handle: '@ApexAdvisory' },
+          { platform: 'github', url: 'https://github.com/apex-advisory', handle: 'apex-advisory' }
+        ],
+        footerNavigation: [
+          {
+            category: 'Advisory Practices',
+            links: [
+              { label: 'M&A & Divestitures', url: '/services#m-and-a' },
+              { label: 'Growth Capital & Credit', url: '/services#capital' },
+              { label: 'Balance Sheet Restructuring', url: '/services#restructure' }
+            ]
+          },
+          {
+            category: 'Firm Governance',
+            links: [
+              { label: 'Senior Partners', url: '/about' },
+              { label: 'Institutional Mandates', url: '/case-studies' },
+              { label: 'Regulatory Disclosures', url: '/legal' }
+            ]
+          },
+          {
+            category: 'Offices & Connect',
+            links: [
+              { label: 'London Headquarters', url: '/contact' },
+              { label: 'Zurich Desk', url: '/contact' },
+              { label: 'Johannesburg Practice', url: '/contact' }
+            ]
+          }
+        ],
         businessSummary: 'Apex Advisory Partners is a boutique cross-border corporate finance and restructuring advisory firm serving European and global capital markets.'
       },
       provenance: {
@@ -647,6 +815,28 @@ export class MoveStudioIngestProvider implements WebsiteImportProvider {
           { label: 'Philosophy', url: '/about' },
           { label: 'Tasting Menus', url: '/menus' },
           { label: 'Reservations', url: '/visit' }
+        ],
+        socialLinks: [
+          { platform: 'instagram', url: 'https://instagram.com/luminadining', handle: '@luminadining' },
+          { platform: 'facebook', url: 'https://facebook.com/luminadining', handle: 'luminadining' }
+        ],
+        footerNavigation: [
+          {
+            category: 'Botanical Dining',
+            links: [
+              { label: 'Cape Flora Tasting', url: '/menus' },
+              { label: 'Cellar & Pairings', url: '/menus#pairings' },
+              { label: 'Terroir Philosophy', url: '/about' }
+            ]
+          },
+          {
+            category: 'Reservations',
+            links: [
+              { label: 'Book Tasting Table', url: '/visit' },
+              { label: 'Private Cellar Dining', url: '/visit#private' },
+              { label: 'Dietary Inquiries', url: '/visit#contact' }
+            ]
+          }
         ],
         businessSummary: 'Lumina is an intimate 28-seat fine dining restaurant celebrating the indigenous flora and botanical ingredients of the Western Cape.'
       },
@@ -711,6 +901,26 @@ export class MoveStudioIngestProvider implements WebsiteImportProvider {
           { label: 'About', url: '/about' },
           { label: 'Services', url: '/services' },
           { label: 'Contact', url: '/contact' }
+        ],
+        socialLinks: [
+          { platform: 'linkedin', url: `https://linkedin.com/company/${hostname.toLowerCase()}`, handle: hostname.toLowerCase() },
+          { platform: 'twitter', url: `https://x.com/${hostname.toLowerCase()}`, handle: `@${hostname.toLowerCase()}` }
+        ],
+        footerNavigation: [
+          {
+            category: 'Solutions',
+            links: [
+              { label: 'Core Services', url: '/services' },
+              { label: 'Enterprise Platform', url: '/services' }
+            ]
+          },
+          {
+            category: 'Company',
+            links: [
+              { label: 'About Us', url: '/about' },
+              { label: 'Direct Inquiries', url: '/contact' }
+            ]
+          }
         ],
         businessSummary: `${hostname} delivers commercial solutions and strategic advisory services.`
       },

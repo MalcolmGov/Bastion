@@ -35,13 +35,13 @@ export function StudioComponentRenderer({
 
   switch (section.componentId) {
     case 'header':
-      renderedContent = <StudioHeader props={section.props as any} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      renderedContent = <StudioHeader props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
       break;
     case 'hero':
-      renderedContent = <StudioHero props={section.props as any} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      renderedContent = <StudioHero props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
       break;
     case 'services_grid':
-      renderedContent = <StudioServices props={section.props as any} collection={collection} variant={section.variant} />;
+      renderedContent = <StudioServices props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;
       break;
     case 'case_studies':
       renderedContent = <StudioCaseStudies props={section.props as any} collection={collection} variant={section.variant} />;
@@ -53,13 +53,13 @@ export function StudioComponentRenderer({
       renderedContent = <StudioRichText props={section.props as any} collection={collection} variant={section.variant} />;
       break;
     case 'cta':
-      renderedContent = <StudioCta props={section.props as any} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      renderedContent = <StudioCta props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
       break;
     case 'contact_form':
       renderedContent = <StudioContactForm props={section.props as any} collection={collection} variant={section.variant} isEditor={isEditor} />;
       break;
     case 'footer':
-      renderedContent = <StudioFooter props={section.props as any} collection={collection} variant={section.variant} />;
+      renderedContent = <StudioFooter props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;
       break;
     default:
       renderedContent = (

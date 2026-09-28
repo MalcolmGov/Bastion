@@ -25,12 +25,96 @@ import {
   Send,
   Layers,
   FileText,
-  RotateCcw
+  RotateCcw,
+  Palette,
+  Paintbrush,
+  Droplet,
+  Type
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import type { SectionInstance, DesignCollectionId } from '@/lib/studio/types';
+
+const SOLID_SWATCHES = [
+  { name: 'Obsidian Noir', hex: '#09090B' },
+  { name: 'Executive Slate', hex: '#0F172A' },
+  { name: 'Royal Navy', hex: '#082B49' },
+  { name: 'Deep Emerald', hex: '#062E25' },
+  { name: 'Rich Plum', hex: '#1E112A' },
+  { name: 'Warm Charcoal', hex: '#18181B' },
+  { name: 'Editorial Sand', hex: '#FAF8F5' },
+  { name: 'Pure White', hex: '#FFFFFF' }
+];
+
+const GRADIENT_PRESETS = [
+  {
+    name: 'Cosmic Noir',
+    css: 'linear-gradient(135deg, #09090B 0%, #18181B 50%, #0F172A 100%)',
+    from: '#09090B',
+    to: '#0F172A'
+  },
+  {
+    name: 'Royal Navy Depth',
+    css: 'linear-gradient(135deg, #021226 0%, #082B49 50%, #0E3D66 100%)',
+    from: '#021226',
+    to: '#0E3D66'
+  },
+  {
+    name: 'Emerald Depth',
+    css: 'linear-gradient(135deg, #021F17 0%, #064E3B 50%, #02231B 100%)',
+    from: '#021F17',
+    to: '#064E3B'
+  },
+  {
+    name: 'Carbon Gold',
+    css: 'linear-gradient(135deg, #121214 0%, #23221C 50%, #3D3522 100%)',
+    from: '#121214',
+    to: '#3D3522'
+  },
+  {
+    name: 'Cyber Indigo',
+    css: 'linear-gradient(135deg, #0F172A 0%, #312E81 50%, #1E1B4B 100%)',
+    from: '#0F172A',
+    to: '#1E1B4B'
+  },
+  {
+    name: 'Velvet Sunset',
+    css: 'linear-gradient(135deg, #18092B 0%, #3B0764 50%, #0F172A 100%)',
+    from: '#18092B',
+    to: '#0F172A'
+  },
+  {
+    name: 'Warm Champagne (Light)',
+    css: 'linear-gradient(135deg, #FAF7F2 0%, #EFE8DC 50%, #E5DAC9 100%)',
+    from: '#FAF7F2',
+    to: '#E5DAC9'
+  },
+  {
+    name: 'Ice Pearl (Light)',
+    css: 'linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 50%, #E2E8F0 100%)',
+    from: '#FFFFFF',
+    to: '#E2E8F0'
+  }
+];
+
+const TEXT_COLOR_SWATCHES = [
+  { name: 'Pure White', hex: '#FFFFFF' },
+  { name: 'Slate Light', hex: '#F8FAFC' },
+  { name: 'Muted Slate', hex: '#94A3B8' },
+  { name: 'Warm Gold', hex: '#D4AF37' },
+  { name: 'Sky Azure', hex: '#38BDF8' },
+  { name: 'Dark Ink', hex: '#0F172A' }
+];
+
+const ACCENT_SWATCHES = [
+  { name: 'Sky Electric', hex: '#0284C7' },
+  { name: 'Royal Gold', hex: '#D4AF37' },
+  { name: 'Emerald', hex: '#10B981' },
+  { name: 'Amber Glow', hex: '#F59E0B' },
+  { name: 'Violet', hex: '#8B5CF6' },
+  { name: 'Crimson', hex: '#E11D48' }
+];
 
 function VisualWebsiteEditorContent() {
   const searchParams = useSearchParams();
@@ -64,6 +148,14 @@ function VisualWebsiteEditorContent() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
+
+  // Inspector Active Tab: 'content' | 'design' | 'ai'
+  const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai'>('content');
+
+  // Gradient Custom Builder State
+  const [customGradDir, setCustomGradDir] = useState('135deg');
+  const [customGradFrom, setCustomGradFrom] = useState('#09090B');
+  const [customGradTo, setCustomGradTo] = useState('#0F172A');
 
   // Fetch composition from API
   useEffect(() => {
@@ -180,6 +272,83 @@ function VisualWebsiteEditorContent() {
     const updated = sections.map(s => {
       if (s.id !== selectedSectionId) return s;
       return { ...s, variant: variantId };
+    });
+    updateSections(updated);
+  };
+
+  const handleStyleChange = (field: string, val: any) => {
+    if (!selectedSectionId) return;
+    const updated = sections.map(s => {
+      if (s.id !== selectedSectionId) return s;
+      const currentStyles = s.styles || {};
+      const newStyles = { ...currentStyles, [field]: val };
+      return {
+        ...s,
+        styles: newStyles
+      };
+    });
+    updateSections(updated);
+  };
+
+  const handleApplyGradientPreset = (gradientStr: string, presetName: string, from?: string, to?: string) => {
+    if (!selectedSectionId) return;
+    if (from) setCustomGradFrom(from);
+    if (to) setCustomGradTo(to);
+    const updated: SectionInstance[] = sections.map(s => {
+      if (s.id !== selectedSectionId) return s;
+      return {
+        ...s,
+        styles: {
+          ...s.styles,
+          backgroundType: 'gradient' as const,
+          gradient: gradientStr,
+          gradientPreset: presetName,
+          ...(from ? { gradientFrom: from } : {}),
+          ...(to ? { gradientTo: to } : {})
+        }
+      };
+    });
+    updateSections(updated);
+  };
+
+  const handleUpdateCustomGradient = (dir: string, from: string, to: string) => {
+    const grad = dir === 'radial'
+      ? `radial-gradient(circle at center, ${from} 0%, ${to} 100%)`
+      : `linear-gradient(${dir}, ${from} 0%, ${to} 100%)`;
+    if (!selectedSectionId) return;
+    const updated: SectionInstance[] = sections.map(s => {
+      if (s.id !== selectedSectionId) return s;
+      return {
+        ...s,
+        styles: {
+          ...s.styles,
+          backgroundType: 'gradient' as const,
+          gradient: grad,
+          gradientDirection: dir,
+          gradientFrom: from,
+          gradientTo: to
+        }
+      };
+    });
+    updateSections(updated);
+  };
+
+  const handleResetSectionStyles = () => {
+    if (!selectedSectionId) return;
+    const updated: SectionInstance[] = sections.map(s => {
+      if (s.id !== selectedSectionId) return s;
+      return {
+        ...s,
+        styles: {
+          backgroundType: 'default' as const,
+          backgroundColor: undefined,
+          gradient: undefined,
+          textColor: undefined,
+          headingColor: undefined,
+          accentColor: undefined,
+          paddingY: undefined
+        }
+      };
     });
     updateSections(updated);
   };
@@ -468,152 +637,617 @@ function VisualWebsiteEditorContent() {
           </div>
         </div>
 
-        {/* RIGHT PANEL: Selected Section Inspector & AI Assistant (340px) */}
-        <div className="w-80 bg-[#0A0D14] border-l border-[#1E293B] flex flex-col justify-between shrink-0 overflow-y-auto">
+        {/* RIGHT PANEL: Selected Section Inspector & Design Studio (w-96, 384px) */}
+        <div className="w-96 bg-[#0A0D14] border-l border-[#1E293B] flex flex-col justify-between shrink-0 overflow-y-auto">
           {selectedSection ? (
-            <div className="p-4 space-y-6">
+            <div className="p-4 space-y-5">
+              {/* Header */}
               <div>
-                <div className="flex items-center space-x-1.5 text-xs text-sky-400 font-bold uppercase tracking-wider">
-                  <Sliders className="w-3.5 h-3.5" />
-                  <span>Block Inspector: {selectedSection.componentId.replace('_', ' ')}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 text-xs text-sky-400 font-bold uppercase tracking-wider">
+                    <Sliders className="w-3.5 h-3.5" />
+                    <span>Block: {selectedSection.componentId.replace('_', ' ')}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetSectionStyles}
+                    title="Reset styling to blueprint defaults"
+                    className="px-2 py-0.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition text-[10px] flex items-center space-x-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset</span>
+                  </button>
                 </div>
-                <div className="text-[11px] text-slate-400 mt-1">
-                  Adjust section copy, design variants, and media tokens.
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  Customize content copy, layout variants, colors, and gradients.
                 </div>
               </div>
 
-              {/* Layout Variant Dropdown */}
-              {registeredComp?.variants && registeredComp.variants.length > 0 && (
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-semibold uppercase text-slate-400">
-                    Component Layout Variant
-                  </label>
-                  <select
-                    value={selectedSection.variant}
-                    onChange={(e) => handleVariantChange(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs"
-                  >
-                    {registeredComp.variants.map((v) => (
-                      <option key={v.id} value={v.id}>{v.name}</option>
-                    ))}
-                  </select>
+              {/* Navigation Tabs: Content | Styles & Colors | AI Copilot */}
+              <div className="flex p-1 rounded-xl bg-[#141C2A] border border-[#232F42] text-xs">
+                <button
+                  type="button"
+                  onClick={() => setInspectorTab('content')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition ${
+                    inspectorTab === 'content'
+                      ? 'bg-sky-500 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Content</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInspectorTab('design')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition ${
+                    inspectorTab === 'design'
+                      ? 'bg-sky-500 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Palette className="w-3.5 h-3.5" />
+                  <span>Colors & Style</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInspectorTab('ai')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition ${
+                    inspectorTab === 'ai'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>AI Copilot</span>
+                </button>
+              </div>
+
+              {/* TAB 1: CONTENT & COPY */}
+              {inspectorTab === 'content' && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  {/* Layout Variant Dropdown */}
+                  {registeredComp?.variants && registeredComp.variants.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400">
+                        Component Layout Variant
+                      </label>
+                      <select
+                        value={selectedSection.variant}
+                        onChange={(e) => handleVariantChange(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500"
+                      >
+                        {registeredComp.variants.map((v) => (
+                          <option key={v.id} value={v.id}>{v.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Eyebrow / Badge */}
+                  {(selectedSection.props.eyebrow !== undefined || selectedSection.props.badge !== undefined) && (
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
+                        Badge / Eyebrow Tag
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedSection.props.eyebrow !== undefined ? (selectedSection.props.eyebrow || '') : (selectedSection.props.badge || '')}
+                        onChange={(e) => {
+                          if (selectedSection.props.eyebrow !== undefined) handlePropChange('eyebrow', e.target.value);
+                          else handlePropChange('badge', e.target.value);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  )}
+
+                  {/* Section Headline */}
+                  {selectedSection.props.title !== undefined && (
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
+                        Section Headline
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={selectedSection.props.title || ''}
+                        onChange={(e) => handlePropChange('title', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  )}
+
+                  {/* Section Subtitle */}
+                  {(selectedSection.props.subtitle !== undefined || selectedSection.props.description !== undefined) && (
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
+                        Supporting Subtitle / Paragraph
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={selectedSection.props.subtitle !== undefined ? (selectedSection.props.subtitle || '') : (selectedSection.props.description || '')}
+                        onChange={(e) => {
+                          if (selectedSection.props.subtitle !== undefined) handlePropChange('subtitle', e.target.value);
+                          else handlePropChange('description', e.target.value);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  )}
+
+                  {/* Primary CTA */}
+                  {selectedSection.props.primaryCta && (
+                    <div className="space-y-2 p-3 rounded-xl bg-[#141C2A] border border-[#232F42]">
+                      <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wide">
+                        Primary CTA Button
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-400 mb-1">Button Label</label>
+                        <input
+                          type="text"
+                          value={selectedSection.props.primaryCta.label || ''}
+                          onChange={(e) => handlePropChange('primaryCta', { ...selectedSection.props.primaryCta, label: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-xs focus:outline-none focus:border-sky-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-400 mb-1">Target Link (href)</label>
+                        <input
+                          type="text"
+                          value={selectedSection.props.primaryCta.href || ''}
+                          onChange={(e) => handlePropChange('primaryCta', { ...selectedSection.props.primaryCta, href: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-xs focus:outline-none focus:border-sky-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Standalone ctaText (Header, CTA) */}
+                  {selectedSection.props.ctaText !== undefined && (
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
+                        Action CTA Button Text
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedSection.props.ctaText || ''}
+                        onChange={(e) => handlePropChange('ctaText', e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Editable Fields */}
-              <div className="space-y-4">
-                {selectedSection.props.title !== undefined && (
-                  <div>
-                    <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
-                      Section Headline
+              {/* TAB 2: DESIGN & COLORS */}
+              {inspectorTab === 'design' && (
+                <div className="space-y-5 animate-in fade-in duration-150">
+                  {/* Background Mode Toggle */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold uppercase text-slate-400">
+                      Background Fill Mode
                     </label>
-                    <textarea
-                      rows={3}
-                      value={selectedSection.props.title || ''}
-                      onChange={(e) => handlePropChange('title', e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500"
-                    />
+                    <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[#141C2A] border border-[#232F42] text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleStyleChange('backgroundType', 'solid')}
+                        className={`py-1.5 rounded-lg font-medium transition ${
+                          selectedSection.styles?.backgroundType === 'solid'
+                            ? 'bg-sky-500 text-white font-semibold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Solid
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStyleChange('backgroundType', 'gradient')}
+                        className={`py-1.5 rounded-lg font-medium transition ${
+                          selectedSection.styles?.backgroundType === 'gradient'
+                            ? 'bg-sky-500 text-white font-semibold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Gradient
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStyleChange('backgroundType', 'default')}
+                        className={`py-1.5 rounded-lg font-medium transition ${
+                          !selectedSection.styles?.backgroundType || selectedSection.styles?.backgroundType === 'default'
+                            ? 'bg-slate-700 text-white font-semibold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Default
+                      </button>
+                    </div>
                   </div>
-                )}
 
-                {selectedSection.props.subtitle !== undefined && (
-                  <div>
-                    <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
-                      Supporting Subtitle / Paragraph
+                  {/* SOLID COLOR PICKER */}
+                  {selectedSection.styles?.backgroundType === 'solid' && (
+                    <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-300">Section Background Color</span>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="color"
+                            value={selectedSection.styles?.backgroundColor || '#09090B'}
+                            onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
+                            className="w-7 h-7 rounded-lg border border-slate-600 cursor-pointer bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={selectedSection.styles?.backgroundColor || '#09090B'}
+                            onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
+                            className="w-20 px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[11px] uppercase"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Luxury Palette Swatches */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                          Luxury Curated Swatches
+                        </div>
+                        <div className="grid grid-cols-4 gap-2">
+                          {SOLID_SWATCHES.map((sw, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => handleStyleChange('backgroundColor', sw.hex)}
+                              title={`${sw.name} (${sw.hex})`}
+                              className={`h-9 rounded-lg border transition transform hover:scale-105 flex flex-col justify-end p-1 text-[9px] font-mono ${
+                                selectedSection.styles?.backgroundColor?.toLowerCase() === sw.hex.toLowerCase()
+                                  ? 'ring-2 ring-sky-400 border-white'
+                                  : 'border-white/10'
+                              }`}
+                              style={{ backgroundColor: sw.hex }}
+                            >
+                              <span className={`truncate ${sw.hex === '#FFFFFF' || sw.hex === '#FAF8F5' ? 'text-black font-bold' : 'text-white/80'}`}>
+                                {sw.name.split(' ')[0]}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* GRADIENT BUILDER & PRESETS */}
+                  {selectedSection.styles?.backgroundType === 'gradient' && (
+                    <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-4">
+                      {/* One-Click Presets */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-300">Luxury Gradient Presets</span>
+                          <span className="text-[10px] text-sky-400 font-mono">1-Click Apply</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {GRADIENT_PRESETS.map((p, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => handleApplyGradientPreset(p.css, p.name, p.from, p.to)}
+                              className={`h-14 rounded-xl border p-2 text-left flex flex-col justify-between transition group transform hover:scale-[1.02] shadow-sm ${
+                                selectedSection.styles?.gradient === p.css
+                                  ? 'ring-2 ring-sky-400 border-white'
+                                  : 'border-white/10'
+                              }`}
+                              style={{ background: p.css }}
+                            >
+                              <span className={`text-[10px] font-bold leading-tight ${p.name.includes('Light') ? 'text-slate-900' : 'text-white'}`}>
+                                {p.name}
+                              </span>
+                              <span className={`text-[9px] font-mono opacity-70 ${p.name.includes('Light') ? 'text-slate-700' : 'text-white'}`}>
+                                {p.from} → {p.to}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Custom Dual-Color Builder */}
+                      <div className="space-y-2.5 pt-3 border-t border-slate-800">
+                        <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                          Custom Gradient Builder
+                        </div>
+
+                        {/* Direction */}
+                        <div className="grid grid-cols-4 gap-1 text-[10px]">
+                          {[
+                            { label: 'Diagonal', val: '135deg' },
+                            { label: 'Horizontal', val: 'to right' },
+                            { label: 'Vertical', val: 'to bottom' },
+                            { label: 'Radial', val: 'radial' }
+                          ].map((d) => (
+                            <button
+                              key={d.val}
+                              type="button"
+                              onClick={() => {
+                                setCustomGradDir(d.val);
+                                handleUpdateCustomGradient(d.val, customGradFrom, customGradTo);
+                              }}
+                              className={`py-1 rounded border text-center transition ${
+                                customGradDir === d.val
+                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Color From & To */}
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <label className="block text-[10px] text-slate-400 mb-1">Start Color</label>
+                            <div className="flex items-center space-x-1.5">
+                              <input
+                                type="color"
+                                value={customGradFrom}
+                                onChange={(e) => {
+                                  setCustomGradFrom(e.target.value);
+                                  handleUpdateCustomGradient(customGradDir, e.target.value, customGradTo);
+                                }}
+                                className="w-6 h-6 rounded cursor-pointer border border-slate-600 bg-transparent"
+                              />
+                              <input
+                                type="text"
+                                value={customGradFrom}
+                                onChange={(e) => {
+                                  setCustomGradFrom(e.target.value);
+                                  handleUpdateCustomGradient(customGradDir, e.target.value, customGradTo);
+                                }}
+                                className="w-full px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] text-slate-400 mb-1">End Color</label>
+                            <div className="flex items-center space-x-1.5">
+                              <input
+                                type="color"
+                                value={customGradTo}
+                                onChange={(e) => {
+                                  setCustomGradTo(e.target.value);
+                                  handleUpdateCustomGradient(customGradDir, customGradFrom, e.target.value);
+                                }}
+                                className="w-6 h-6 rounded cursor-pointer border border-slate-600 bg-transparent"
+                              />
+                              <input
+                                type="text"
+                                value={customGradTo}
+                                onChange={(e) => {
+                                  setCustomGradTo(e.target.value);
+                                  handleUpdateCustomGradient(customGradDir, customGradFrom, e.target.value);
+                                }}
+                                className="w-full px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Live gradient output preview */}
+                        {selectedSection.styles?.gradient && (
+                          <div
+                            className="h-6 w-full rounded-lg border border-white/20 shadow-inner mt-1"
+                            style={{ background: selectedSection.styles.gradient }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TYPOGRAPHY COLORS: HEADINGS & BODY */}
+                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-4">
+                    <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                      Text & Typography Colors
+                    </div>
+
+                    {/* Heading Color */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400">Headings (H1/H2)</span>
+                        <div className="flex items-center space-x-1.5">
+                          <input
+                            type="color"
+                            value={selectedSection.styles?.headingColor || '#FFFFFF'}
+                            onChange={(e) => handleStyleChange('headingColor', e.target.value)}
+                            className="w-6 h-6 rounded cursor-pointer border border-slate-600 bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={selectedSection.styles?.headingColor || '#FFFFFF'}
+                            onChange={(e) => handleStyleChange('headingColor', e.target.value)}
+                            className="w-20 px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex space-x-1">
+                        {TEXT_COLOR_SWATCHES.map((sw, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleStyleChange('headingColor', sw.hex)}
+                            title={sw.name}
+                            className="w-5 h-5 rounded-full border border-white/20 hover:scale-110 transition"
+                            style={{ backgroundColor: sw.hex }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Body Text Color */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400">Body & Paragraphs</span>
+                        <div className="flex items-center space-x-1.5">
+                          <input
+                            type="color"
+                            value={selectedSection.styles?.textColor || '#CBD5E1'}
+                            onChange={(e) => handleStyleChange('textColor', e.target.value)}
+                            className="w-6 h-6 rounded cursor-pointer border border-slate-600 bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={selectedSection.styles?.textColor || '#CBD5E1'}
+                            onChange={(e) => handleStyleChange('textColor', e.target.value)}
+                            className="w-20 px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex space-x-1">
+                        {TEXT_COLOR_SWATCHES.map((sw, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleStyleChange('textColor', sw.hex)}
+                            title={sw.name}
+                            className="w-5 h-5 rounded-full border border-white/20 hover:scale-110 transition"
+                            style={{ backgroundColor: sw.hex }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Accent Color */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400">Accent & Button CTA</span>
+                        <div className="flex items-center space-x-1.5">
+                          <input
+                            type="color"
+                            value={selectedSection.styles?.accentColor || '#0284C7'}
+                            onChange={(e) => handleStyleChange('accentColor', e.target.value)}
+                            className="w-6 h-6 rounded cursor-pointer border border-slate-600 bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={selectedSection.styles?.accentColor || '#0284C7'}
+                            onChange={(e) => handleStyleChange('accentColor', e.target.value)}
+                            className="w-20 px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex space-x-1">
+                        {ACCENT_SWATCHES.map((sw, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleStyleChange('accentColor', sw.hex)}
+                            title={sw.name}
+                            className="w-5 h-5 rounded-full border border-white/20 hover:scale-110 transition"
+                            style={{ backgroundColor: sw.hex }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SPACING & VERTICAL PADDING */}
+                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
+                    <label className="block text-[11px] font-semibold uppercase text-slate-400">
+                      Block Vertical Padding
                     </label>
-                    <textarea
-                      rows={3}
-                      value={selectedSection.props.subtitle || ''}
-                      onChange={(e) => handlePropChange('subtitle', e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500"
-                    />
+                    <div className="grid grid-cols-4 gap-1 text-[11px]">
+                      {[
+                        { label: 'Compact', val: 'py-12' },
+                        { label: 'Balanced', val: 'py-20' },
+                        { label: 'Spacious', val: 'py-28' },
+                        { label: 'Epic', val: 'py-36' }
+                      ].map((pad) => (
+                        <button
+                          key={pad.val}
+                          type="button"
+                          onClick={() => handleStyleChange('paddingY', pad.val)}
+                          className={`py-1.5 rounded-lg border text-center transition ${
+                            selectedSection.styles?.paddingY === pad.val
+                              ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                              : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {pad.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                )}
-
-                {selectedSection.props.primaryCta && (
-                  <div>
-                    <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
-                      Primary CTA Button Label
-                    </label>
-                    <input
-                      type="text"
-                      value={selectedSection.props.primaryCta.label || ''}
-                      onChange={(e) => handlePropChange('primaryCta', { ...selectedSection.props.primaryCta, label: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Targeted AI Actions */}
-              <div className="p-4 rounded-xl bg-[#131A26] border border-[#222E42] space-y-3">
-                <div className="flex items-center space-x-1.5 text-xs font-bold text-indigo-400">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Targeted AI Assistance</span>
                 </div>
+              )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={aiLoading}
-                    onClick={() => handleAIAction('improve_headline')}
-                    className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
-                  >
-                    ⚡ Improve Headline
-                  </button>
-                  <button
-                    type="button"
-                    disabled={aiLoading}
-                    onClick={() => handleAIAction('shorten_paragraph')}
-                    className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
-                  >
-                    ✂️ Shorten Text
-                  </button>
-                  <button
-                    type="button"
-                    disabled={aiLoading}
-                    onClick={() => handleAIAction('rewrite_brand_voice')}
-                    className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
-                  >
-                    🎯 Brand Voice Rewrite
-                  </button>
-                  <button
-                    type="button"
-                    disabled={aiLoading}
-                    onClick={() => handleAIAction('suggest_layout_variant')}
-                    className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
-                  >
-                    📐 Suggest Variant
-                  </button>
-                </div>
+              {/* TAB 3: AI COPILOT */}
+              {inspectorTab === 'ai' && (
+                <div className="p-4 rounded-xl bg-[#131A26] border border-[#222E42] space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center space-x-1.5 text-xs font-bold text-indigo-400">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Targeted AI Copilot</span>
+                  </div>
 
-                {/* Natural Language Prompt */}
-                <div className="pt-2">
-                  <div className="flex space-x-1.5">
-                    <input
-                      type="text"
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder="e.g. Move case studies above contact..."
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-[11px] focus:outline-none focus:border-indigo-500"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      disabled={aiLoading || !aiPrompt.trim()}
-                      onClick={() => handleAIAction('natural_language_refine')}
-                      className="p-2 rounded-lg bg-indigo-600 text-white disabled:opacity-40 hover:bg-indigo-500"
+                      disabled={aiLoading}
+                      onClick={() => handleAIAction('improve_headline')}
+                      className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
                     >
-                      <Send className="w-3 h-3" />
+                      ⚡ Improve Headline
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aiLoading}
+                      onClick={() => handleAIAction('shorten_paragraph')}
+                      className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
+                    >
+                      ✂️ Shorten Text
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aiLoading}
+                      onClick={() => handleAIAction('rewrite_brand_voice')}
+                      className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
+                    >
+                      🎯 Brand Voice Rewrite
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aiLoading}
+                      onClick={() => handleAIAction('suggest_layout_variant')}
+                      className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
+                    >
+                      📐 Suggest Variant
                     </button>
                   </div>
-                </div>
 
-                {aiNotice && (
-                  <div className="p-2.5 rounded-lg bg-indigo-950/50 border border-indigo-800 text-indigo-300 text-[10px] leading-relaxed">
-                    {aiNotice}
+                  {/* Natural Language Prompt */}
+                  <div className="pt-2">
+                    <div className="flex space-x-1.5">
+                      <input
+                        type="text"
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        placeholder="e.g. Move case studies above contact..."
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-[11px] focus:outline-none focus:border-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        disabled={aiLoading || !aiPrompt.trim()}
+                        onClick={() => handleAIAction('natural_language_refine')}
+                        className="p-2 rounded-lg bg-indigo-600 text-white disabled:opacity-40 hover:bg-indigo-500"
+                      >
+                        <Send className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  {aiNotice && (
+                    <div className="p-2.5 rounded-lg bg-indigo-950/50 border border-indigo-800 text-indigo-300 text-[10px] leading-relaxed">
+                      {aiNotice}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-8 text-center text-xs text-slate-500">

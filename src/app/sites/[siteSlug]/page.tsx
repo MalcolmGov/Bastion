@@ -19,18 +19,29 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 
   if (siteRes.rows.length === 0) {
-    return { title: 'Site Not Found | Move Studio' };
+    return { title: { absolute: 'Site Not Found | Move Studio' } };
   }
 
   const site = siteRes.rows[0];
   const settings = typeof site.settings_json === 'string' ? JSON.parse(site.settings_json) : (site.settings_json || {});
   const siteName = (site.name as string) || 'Client Website';
-  const tagline = settings.tagline || 'Move Studio Created Experience';
+  const tagline = settings.tagline || 'Official Website';
 
   return {
-    title: `${siteName} — ${tagline}`,
+    title: { absolute: `${siteName} — ${tagline}` },
     description: `${siteName} official website. Powered by Move Studio.`,
-    robots: { index: false, follow: false }
+    robots: { index: false, follow: false },
+    openGraph: {
+      title: `${siteName} — ${tagline}`,
+      description: `${siteName} official website. Powered by Move Studio.`,
+      siteName: siteName,
+      type: 'website'
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${siteName} — ${tagline}`,
+      description: `${siteName} official website. Powered by Move Studio.`
+    }
   };
 }
 

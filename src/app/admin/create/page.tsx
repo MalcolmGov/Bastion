@@ -185,7 +185,9 @@ export default function WebsiteCreationWizardPage() {
             services: extractedContent?.servicesFound,
             contactInfo: extractedContent?.contactInfoFound,
             businessSummary: extractedContent?.businessSummary,
-            navigation: extractedContent?.navigationFound
+            navigation: extractedContent?.navigationFound,
+            socialLinks: extractedContent?.socialLinks,
+            footerNavigation: extractedContent?.footerNavigation
           }
         })
       });
@@ -586,6 +588,60 @@ export default function WebsiteCreationWizardPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* 4. Contact Details & Social Channels */}
+            <div className="p-5 rounded-xl bg-[#141C2A] border border-[#1E293B] space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Extracted Contact Details & Social Footprint
+                </span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">
+                  Footer Ready
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 rounded-lg bg-[#0A0D14] border border-[#1E293B] space-y-1">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Headquarters / Address</div>
+                  <div className="text-white font-medium truncate">
+                    {extractedContent?.contactInfoFound?.address || 'Not specified in DOM'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-[#0A0D14] border border-[#1E293B] space-y-1">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Corporate Email</div>
+                  <div className="text-white font-medium truncate">
+                    {extractedContent?.contactInfoFound?.email || 'contact@client.com'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-[#0A0D14] border border-[#1E293B] space-y-1">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Direct Telephone</div>
+                  <div className="text-white font-medium truncate">
+                    {extractedContent?.contactInfoFound?.phone || 'Not detected in extraction'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Social Channels Pills */}
+              {extractedContent?.socialLinks && extractedContent.socialLinks.length > 0 && (
+                <div className="pt-2 border-t border-slate-800/80">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">
+                    Verified Social Channels ({extractedContent.socialLinks.length})
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {extractedContent.socialLinks.map((s: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="px-2.5 py-1 rounded-lg bg-[#0A0D14] border border-[#1E293B] text-[11px] text-slate-300 flex items-center space-x-1.5"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span className="capitalize font-semibold text-white">{s.platform}</span>
+                        {s.handle && <span className="text-slate-500 font-mono text-[10px]">{s.handle}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -156,12 +156,30 @@ export interface BrandKit {
   updatedAt: string;
 }
 
+export interface SectionStyles {
+  backgroundType?: 'solid' | 'gradient' | 'default';
+  backgroundColor?: string;
+  gradient?: string;
+  gradientPreset?: string;
+  gradientDirection?: string;
+  gradientFrom?: string;
+  gradientTo?: string;
+  textColor?: string;
+  headingColor?: string;
+  accentColor?: string;
+  paddingY?: 'py-8' | 'py-12' | 'py-16' | 'py-20' | 'py-28' | 'py-36';
+  borderTop?: boolean;
+  borderBottom?: boolean;
+  borderColor?: string;
+}
+
 export interface SectionInstance {
   id: string;
   componentId: string; // matches registered component ID in componentRegistry
   variant: string;
   visible: boolean;
   props: Record<string, any>;
+  styles?: SectionStyles;
   contentRef?: {
     collection?: string;
     recordId?: string;
