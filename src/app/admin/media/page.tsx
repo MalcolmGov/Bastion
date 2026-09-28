@@ -40,7 +40,7 @@ export default function AdminMediaPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const loadAssets = async () => {
+  const loadAssets = React.useCallback(async () => {
     try {
       const q = new URLSearchParams();
       if (search) q.set('search', search);
@@ -56,11 +56,11 @@ export default function AdminMediaPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, formatFilter]);
 
   useEffect(() => {
     loadAssets();
-  }, [formatFilter]);
+  }, [loadAssets]);
 
   const handleSelect = (asset: any) => {
     setSelectedAsset(asset);

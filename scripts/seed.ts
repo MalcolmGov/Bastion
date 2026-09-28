@@ -4,7 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 
 function hashPassword(password: string): string {
-  const salt = 'goldfields_studio_salt_2026';
+  const salt = process.env.AUTH_SALT || 'goldfields_studio_salt_2026';
   return crypto.createHash('sha256').update(password + salt).digest('hex');
 }
 
@@ -14,8 +14,10 @@ function hashContent(content: string): string {
 
 async function main() {
   console.log('--- Initializing Gold Fields Studio Database ---');
-  const dbPath = path.join(process.cwd(), 'studio.db');
-  const db = createClient({ url: `file:${dbPath}` });
+  const dbUrl = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || `file:${path.join(process.cwd(), 'studio.db')}`;
+  const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN;
+  console.log(`Connecting to database: ${dbUrl.startsWith('file:') ? dbUrl : dbUrl.replace(/\/\/[^@]+@/, '//***@')}`);
+  const db = createClient({ url: dbUrl, authToken: authToken || undefined });
 
   // 1. Execute schema.sql
   const schemaPath = path.join(process.cwd(), 'src/lib/db/schema.sql');

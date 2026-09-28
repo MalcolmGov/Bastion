@@ -11,7 +11,7 @@ export default function AdminAuditPage() {
   const [search, setSearch] = useState('');
   const [selectedAction, setSelectedAction] = useState('');
 
-  const loadLogs = async () => {
+  const loadLogs = React.useCallback(async () => {
     try {
       const q = new URLSearchParams();
       if (search) q.set('search', search);
@@ -27,11 +27,11 @@ export default function AdminAuditPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, selectedAction]);
 
   useEffect(() => {
     loadLogs();
-  }, [selectedAction]);
+  }, [loadLogs]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

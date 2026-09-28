@@ -41,7 +41,7 @@ export function hasPermission(role: UserRole, permission: string): boolean {
 
 // SHA-256 password hash with salt
 export function hashPassword(password: string): string {
-  const salt = 'goldfields_studio_salt_2026';
+  const salt = process.env.AUTH_SALT || 'goldfields_studio_salt_2026';
   return crypto.createHash('sha256').update(password + salt).digest('hex');
 }
 
