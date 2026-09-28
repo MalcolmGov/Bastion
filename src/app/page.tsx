@@ -37,106 +37,48 @@ export default function HomePage() {
             alt="Gold Fields Global Mining Landscape"
             fill
             priority
-            className="object-cover object-center opacity-75"
+            className="object-cover object-center opacity-90"
           />
-          {/* Controlled Navy Gradient Overlay (6 columns left-aligned protection) */}
-          <div className="absolute inset-0 bg-gradient-to-r from-navy-dark via-navy-dark/90 to-transparent lg:w-4/5" />
-          <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-black/30" />
+          {/* Controlled Navy Gradient Overlay (protects text on left, leaves landscape clear on right) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-navy-dark via-navy-dark/85 via-45% to-transparent lg:w-3/5" />
+          <div className="absolute inset-0 bg-gradient-to-t from-navy-dark/90 via-transparent to-black/20" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 py-20 relative z-10 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Narrative (7 cols) */}
-            <div className="lg:col-span-8 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-navy/80 border border-turquoise/40 text-turquoise-bright text-xs font-semibold uppercase tracking-widest backdrop-blur-xs shadow-[0_0_15px_rgba(0,229,192,0.2)]">
-                <span className="w-2 h-2 rounded-full bg-turquoise-bright animate-pulse" />
-                <span>Gold Fields Flagship</span>
-                <span className="text-white/40">•</span>
-                <span>Global Production</span>
-              </div>
-
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.12] max-w-2xl font-display">
-                Creating enduring value <br />
-                <span className="text-turquoise-bright font-normal italic">beyond mining.</span>
-              </h1>
-
-              <p className="text-base sm:text-lg text-mist/90 max-w-xl font-normal leading-relaxed">
-                Discover our globally diversified operations, our workforce of over 20,000 people, and the sustainable economic value we generate across six mining jurisdictions.
-              </p>
-
-              {/* CTAs */}
-              <div className="pt-2 flex flex-wrap items-center gap-4">
-                <Link
-                  href="/operations"
-                  className="px-6 py-3.5 rounded-lg bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark font-extrabold text-sm shadow-[0_0_25px_rgba(0,229,192,0.4)] hover:shadow-[0_0_35px_rgba(0,229,192,0.6)] transition-all duration-200 flex items-center gap-2 group"
-                >
-                  <span>Explore our operations</span>
-                  <ArrowRight className="w-4 h-4 text-navy-dark group-hover:translate-x-1 transition-transform" />
-                </Link>
-
-                <Link
-                  href="/investors"
-                  className="px-6 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-turquoise/30 hover:border-turquoise text-white backdrop-blur-xs transition-colors flex items-center gap-2"
-                >
-                  <span>View latest results</span>
-                  <ChevronRight className="w-4 h-4 text-turquoise-bright" />
-                </Link>
-              </div>
+        <div className="max-w-7xl mx-auto px-6 py-24 sm:py-28 relative z-10 w-full">
+          <div className="max-w-2xl lg:max-w-3xl space-y-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-navy/80 border border-turquoise/40 text-turquoise-bright text-xs font-semibold uppercase tracking-widest backdrop-blur-xs shadow-[0_0_15px_rgba(0,229,192,0.2)]">
+              <span className="w-2 h-2 rounded-full bg-turquoise-bright animate-pulse" />
+              <span>Gold Fields Flagship</span>
+              <span className="text-white/40">•</span>
+              <span>Global Production</span>
             </div>
 
-            {/* Right Hero Feature Panel (4 cols) — Latest Sourced Results */}
-            <div className="lg:col-span-4">
-              <div className="bg-navy/85 backdrop-blur-md rounded-2xl border border-turquoise/30 p-6 shadow-elevated text-white space-y-4 shadow-[0_0_30px_rgba(0,179,152,0.15)]">
-                <div className="flex items-center justify-between border-b border-mist/10 pb-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-turquoise-bright flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5 text-turquoise-bright" />
-                    Latest Corporate Disclosure
-                  </span>
-                  <span className="text-[10px] text-mist/60 bg-navy-surface px-2 py-0.5 rounded">
-                    25 Aug 2026
-                  </span>
-                </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.12] max-w-2xl font-display">
+              Creating enduring value <br />
+              <span className="text-turquoise-bright font-normal italic">beyond mining.</span>
+            </h1>
 
-                <div>
-                  <h3 className="text-lg font-bold text-white leading-snug">
-                    H1 2026 Financial & Operational Results
-                  </h3>
-                  <p className="text-xs text-mist/80 mt-1">
-                    Six months ended 30 June 2026: 1.06Moz attributable gold production, stable South Deep output, and disciplined capital allocation.
-                  </p>
-                </div>
+            <p className="text-base sm:text-lg text-mist/90 max-w-xl font-normal leading-relaxed">
+              Discover our globally diversified operations, our workforce of over 20,000 people, and the sustainable economic value we generate across six mining jurisdictions.
+            </p>
 
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-mist/10 text-xs">
-                  <div className="bg-navy-surface/60 p-2.5 rounded border border-mist/5">
-                    <span className="text-[10px] text-mist/60 block uppercase">Group Output</span>
-                    <span className="text-sm font-bold text-white tabular-nums">1.06 Moz</span>
-                  </div>
-                  <div className="bg-navy-surface/60 p-2.5 rounded border border-mist/5">
-                    <span className="text-[10px] text-mist/60 block uppercase">South Deep</span>
-                    <span className="text-sm font-bold text-white tabular-nums">151 koz</span>
-                  </div>
-                </div>
+            {/* CTAs */}
+            <div className="pt-2 flex flex-wrap items-center gap-4">
+              <Link
+                href="/operations"
+                className="px-6 py-3.5 rounded-lg bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark font-extrabold text-sm shadow-[0_0_25px_rgba(0,229,192,0.4)] hover:shadow-[0_0_35px_rgba(0,229,192,0.6)] transition-all duration-200 flex items-center gap-2 group"
+              >
+                <span>Explore our operations</span>
+                <ArrowRight className="w-4 h-4 text-navy-dark group-hover:translate-x-1 transition-transform" />
+              </Link>
 
-                <div className="pt-2 flex items-center justify-between text-xs">
-                  <Link
-                    href="/investors"
-                    className="font-bold text-gold hover:text-gold-light inline-flex items-center gap-1"
-                  >
-                    <span>Full H1 Overview</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-
-                  <a
-                    href="https://www.goldfields.com/reports/q2-2026/pdf/booklet.pdf"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-mist hover:text-white inline-flex items-center gap-1 text-[11px]"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>PDF (3.8MB)</span>
-                  </a>
-                </div>
-              </div>
+              <Link
+                href="/investors"
+                className="px-6 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-turquoise/30 hover:border-turquoise backdrop-blur-xs transition-colors flex items-center gap-2"
+              >
+                <span>View latest results</span>
+                <ChevronRight className="w-4 h-4 text-turquoise-bright" />
+              </Link>
             </div>
           </div>
         </div>
@@ -294,7 +236,63 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+            {/* Executive Results Disclosure Spotlight Card (Moved from Hero) */}
+            <div className="lg:col-span-5 bg-navy rounded-2xl border border-turquoise/30 p-6 sm:p-8 shadow-elevated text-white flex flex-col justify-between shadow-[0_0_30px_rgba(0,179,152,0.15)] relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400" />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-mist/10 pb-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-turquoise-bright flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-turquoise-bright" />
+                    Latest Corporate Disclosure
+                  </span>
+                  <span className="text-[10px] text-mist/70 bg-navy-surface px-2.5 py-1 rounded font-medium">
+                    25 Aug 2026
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-white leading-snug">
+                    H1 2026 Financial & Operational Results
+                  </h3>
+                  <p className="text-xs text-mist/85 mt-2 leading-relaxed">
+                    Six months ended 30 June 2026: 1.06Moz attributable gold production, stable South Deep output, and disciplined capital allocation.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-mist/10 text-xs">
+                  <div className="bg-navy-surface/80 p-3 rounded-xl border border-mist/10">
+                    <span className="text-[10px] text-mist/70 block uppercase tracking-wider">Group Output</span>
+                    <span className="text-lg font-bold text-white tabular-nums">1.06 Moz</span>
+                  </div>
+                  <div className="bg-navy-surface/80 p-3 rounded-xl border border-mist/10">
+                    <span className="text-[10px] text-mist/70 block uppercase tracking-wider">South Deep</span>
+                    <span className="text-lg font-bold text-white tabular-nums">151 koz</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-mist/10 flex items-center justify-between text-xs">
+                <Link
+                  href="/investors"
+                  className="font-bold text-turquoise-bright hover:text-white inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <span>Full H1 Overview</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+
+                <a
+                  href="https://www.goldfields.com/reports/q2-2026/pdf/booklet.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-mist hover:text-white inline-flex items-center gap-1 text-[11px] transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>PDF (3.8MB)</span>
+                </a>
+              </div>
+            </div>
+
             {/* Primary Feature Report (7 cols) */}
             <div className="lg:col-span-7 bg-editorial rounded-2xl border border-mist p-6 sm:p-8 shadow-card flex flex-col justify-between">
               <div className="space-y-4">
@@ -348,30 +346,34 @@ export default function HomePage() {
                 </Link>
               </div>
             </div>
+          </div>
 
-            {/* Secondary Reports List (5 cols) */}
-            <div className="lg:col-span-5 space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
-                Related Reporting Documents
-              </h4>
+          {/* Related Reporting Documents below (3-column layout) */}
+          <div className="mt-8 pt-8 border-t border-mist">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-4">
+              Related Reporting Documents
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {reports.slice(1, 4).map((r) => (
                 <div
                   key={r.id}
-                  className="p-4 rounded-xl bg-white border border-mist hover:border-gold-mineral transition-colors shadow-subtle group"
+                  className="p-5 rounded-xl bg-white border border-mist hover:border-gold-mineral transition-colors shadow-subtle group flex flex-col justify-between"
                 >
-                  <div className="flex items-center justify-between text-[11px] text-ink-muted mb-1">
-                    <span className="font-semibold text-gold-dark uppercase tracking-wider">
-                      {r.category}
-                    </span>
-                    <span>{r.date}</span>
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] text-ink-muted mb-2">
+                      <span className="font-semibold text-gold-dark uppercase tracking-wider">
+                        {r.category}
+                      </span>
+                      <span>{r.date}</span>
+                    </div>
+                    <h5 className="text-sm font-bold text-ink group-hover:text-navy transition-colors">
+                      {r.title}
+                    </h5>
+                    <p className="text-xs text-ink-muted line-clamp-2 mt-2 leading-relaxed">
+                      {r.summary}
+                    </p>
                   </div>
-                  <h5 className="text-sm font-bold text-ink group-hover:text-navy transition-colors">
-                    {r.title}
-                  </h5>
-                  <p className="text-xs text-ink-muted line-clamp-2 mt-1">
-                    {r.summary}
-                  </p>
-                  <div className="mt-3 flex items-center justify-between pt-2 border-t border-mist/50 text-xs">
+                  <div className="mt-4 flex items-center justify-between pt-3 border-t border-mist/50 text-xs">
                     <span className="text-[11px] text-ink-subtle">
                       {r.fileFormat} • {r.fileSize}
                     </span>
