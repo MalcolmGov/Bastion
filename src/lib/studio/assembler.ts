@@ -26,6 +26,7 @@ export interface AssembleInput {
   collectionId: DesignCollectionId;
   brandKit: Partial<BrandKit>;
   extractedContent: {
+    tagline?: string;
     services?: Array<{ title: string; description: string; metrics?: string; href?: string }>;
     contactInfo?: { email?: string; phone?: string; address?: string };
     businessSummary?: string;
@@ -219,12 +220,12 @@ export class WebsiteAssembler {
         visible: true,
         props: {
           badge: `${input.clientName} Flagship`,
-          title: input.extractedContent.businessSummary
+          title: input.extractedContent.tagline || input.brandKit.voiceAndMessaging?.tagline || (input.extractedContent.businessSummary
             ? `${input.clientName}: Strategic excellence.`
-            : `Delivering precision capabilities for demanding requirements.`,
-          subtitle: input.extractedContent.businessSummary || 'Providing industry-leading services and strategic advisory with senior partner dedication.',
-          primaryCta: { label: 'Explore Our Practice', href: '/services' },
-          secondaryCta: { label: 'Contact Our Partners', href: '/contact' },
+            : `Delivering precision capabilities for demanding requirements.`),
+          subtitle: input.extractedContent.businessSummary || input.brandKit.voiceAndMessaging?.missionStatement || 'Providing industry-leading capabilities and strategic advisory with senior partner dedication.',
+          primaryCta: { label: settings.navigation.primaryCta?.label || 'Explore Capabilities', href: settings.navigation.primaryCta?.href || '/services' },
+          secondaryCta: { label: 'Contact Our Team', href: '/contact' },
           stats: input.extractedContent.stats || [
             { value: '100%', label: 'Dedicated Execution' },
             { value: '24h', label: 'Response Guarantee' },
@@ -238,14 +239,16 @@ export class WebsiteAssembler {
         variant: 'cards_3col',
         visible: true,
         props: {
-          eyebrow: 'Our Practice Areas',
-          title: 'Structured capabilities for high-stakes corporate execution.',
-          description: 'Senior partner-led execution across all core commercial disciplines.',
-          services: input.extractedContent.services || [
-            { title: 'Core Advisory & Consulting', description: 'Comprehensive strategic advisory tailored to institutional clients.' },
-            { title: 'Execution & Delivery', description: 'Rigorous implementation ensuring sustainable performance and efficiency.' },
-            { title: 'Risk Governance & Review', description: 'Continuous compliance and risk assessment protocols.' }
-          ]
+          eyebrow: input.blueprintId === 'hospitality' ? 'Seasonal Offerings' : (input.blueprintId === 'professional_services' ? 'Practice Areas & Capabilities' : 'Core Capabilities'),
+          title: `Capabilities and solutions by ${input.clientName}.`,
+          description: input.extractedContent.businessSummary || 'Senior partner-led execution across all core disciplines.',
+          services: (input.extractedContent.services && input.extractedContent.services.length > 0)
+            ? input.extractedContent.services
+            : [
+                { title: 'Core Advisory & Consulting', description: 'Comprehensive strategic advisory tailored to institutional clients.' },
+                { title: 'Execution & Delivery', description: 'Rigorous implementation ensuring sustainable performance and efficiency.' },
+                { title: 'Risk Governance & Review', description: 'Continuous compliance and risk assessment protocols.' }
+              ]
         }
       }
     ];
@@ -271,13 +274,13 @@ export class WebsiteAssembler {
         variant: 'split_card',
         visible: true,
         props: {
-          eyebrow: 'Confidential Inquiry',
-          title: `Initiate a confidential discussion with ${input.clientName}.`,
-          description: 'We review all inquiries under strict non-disclosure and respond within 24 hours.',
-          ctaText: 'Submit Inquiry',
-          ctaHref: '/contact',
+          eyebrow: 'Inquire & Connect',
+          title: `Connect with ${input.clientName} for your next initiative.`,
+          description: input.extractedContent.businessSummary || `Engage directly with ${input.clientName} to discuss specifications, architecture, or partnerships.`,
+          ctaText: settings.navigation.primaryCta?.label || 'Get in Touch',
+          ctaHref: settings.navigation.primaryCta?.href || '/contact',
           contactDetails: {
-            london: input.extractedContent.contactInfo?.phone,
+            phone: input.extractedContent.contactInfo?.phone,
             email: input.extractedContent.contactInfo?.email
           }
         }
@@ -289,9 +292,9 @@ export class WebsiteAssembler {
         visible: true,
         props: {
           copyright: settings.footer.copyright,
-          officeAddress: settings.footer.officeAddress,
-          contactEmail: settings.footer.contactEmail,
-          contactPhone: settings.footer.contactPhone
+          officeAddress: input.extractedContent.contactInfo?.address || settings.footer.officeAddress,
+          contactEmail: input.extractedContent.contactInfo?.email || settings.footer.contactEmail,
+          contactPhone: input.extractedContent.contactInfo?.phone || settings.footer.contactPhone
         }
       }
     );

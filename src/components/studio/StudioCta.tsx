@@ -13,6 +13,7 @@ interface CtaProps {
     ctaText: string;
     ctaHref: string;
     contactDetails?: {
+      phone?: string;
       london?: string;
       email?: string;
     };
@@ -54,10 +55,10 @@ export function StudioCta({ props, collection = 'contemporary', variant = 'split
             )}
             {props.contactDetails && (
               <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-slate-400">
-                {props.contactDetails.london && (
+                {(props.contactDetails.phone || props.contactDetails.london) && (
                   <div className="flex items-center space-x-1.5">
                     <Phone className="w-3.5 h-3.5 text-sky-400" />
-                    <span>{props.contactDetails.london}</span>
+                    <span>{props.contactDetails.phone || props.contactDetails.london}</span>
                   </div>
                 )}
                 {props.contactDetails.email && (

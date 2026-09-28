@@ -35,7 +35,7 @@ import type { SectionInstance, DesignCollectionId } from '@/lib/studio/types';
 function VisualWebsiteEditorContent() {
   const searchParams = useSearchParams();
   const siteSlugParam = searchParams.get('siteSlug') || searchParams.get('siteId');
-  const { activeClient, activeSite } = useStudioWorkspace();
+  const { activeClient, activeSite, setActiveClientId, setActiveSiteId } = useStudioWorkspace();
 
   const siteSlug = siteSlugParam || activeSite?.slug || 'apex-advisory';
 
@@ -74,6 +74,11 @@ function VisualWebsiteEditorContent() {
           const data = await res.json();
           setSiteData(data.site);
           setBrandKit(data.brandKit);
+
+          if (data.site?.id && data.site?.clientId) {
+            setActiveClientId(data.site.clientId);
+            setActiveSiteId(data.site.id);
+          }
 
           const comp = data.compositions?.find((c: any) => c.pageSlug === activePageSlug) || data.compositions?.[0];
           if (comp?.sections) {

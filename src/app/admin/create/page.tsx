@@ -103,6 +103,12 @@ export default function WebsiteCreationWizardPage() {
       setExtractedContent(result.content);
       setProvenanceData(result.provenance || {});
 
+      // Auto-populate client and website name from real extracted brand candidate
+      if (result.brandCandidates?.nameCandidate) {
+        setClientName(result.brandCandidates.nameCandidate);
+        setWebsiteName(`${result.brandCandidates.nameCandidate} Flagship`);
+      }
+
       // Select all by default
       const initialMap: Record<string, boolean> = {};
       result.discoveredPages.forEach((p: DiscoveredPage) => {
@@ -146,14 +152,20 @@ export default function WebsiteCreationWizardPage() {
               primary: extractedBrand?.logos?.[0] || { url: '/assets/logo-placeholder.svg', status: 'approved' }
             },
             colors: {
-              primary: extractedBrand?.colors?.[0] || { name: 'Slate', value: '#0F172A', status: 'approved' },
-              secondary: extractedBrand?.colors?.[1] || { name: 'Navy', value: '#1E293B', status: 'approved' },
-              accent: extractedBrand?.colors?.[2] || { name: 'Accent Sky', value: '#0284C7', status: 'approved' },
-              background: { name: 'Canvas', value: '#F8FAFC', status: 'approved' },
-              surface: { name: 'White', value: '#FFFFFF', status: 'approved' },
-              textPrimary: { name: 'Text Dark', value: '#0F172A', status: 'approved' },
-              textMuted: { name: 'Text Muted', value: '#64748B', status: 'approved' },
-              hairline: { name: 'Border', value: '#E2E8F0', status: 'approved' }
+              primary: extractedBrand?.colors?.[0]
+                ? { name: extractedBrand.colors[0].name, value: extractedBrand.colors[0].hex || (extractedBrand.colors[0] as any).value || '#0F172A', status: 'approved' }
+                : { name: 'Slate', value: '#0F172A', status: 'approved' },
+              secondary: extractedBrand?.colors?.[1]
+                ? { name: extractedBrand.colors[1].name, value: extractedBrand.colors[1].hex || (extractedBrand.colors[1] as any).value || '#1E293B', status: 'approved' }
+                : { name: 'Navy', value: '#1E293B', status: 'approved' },
+              accent: extractedBrand?.colors?.[2]
+                ? { name: extractedBrand.colors[2].name, value: extractedBrand.colors[2].hex || (extractedBrand.colors[2] as any).value || '#0284C7', status: 'approved' }
+                : { name: 'Accent Sky', value: '#0284C7', status: 'approved' },
+              background: { name: 'Canvas', value: selectedCollection === 'immersive' ? '#09090B' : '#F8FAFC', status: 'approved' },
+              surface: { name: 'Surface', value: selectedCollection === 'immersive' ? '#18181B' : '#FFFFFF', status: 'approved' },
+              textPrimary: { name: 'Text Dark', value: selectedCollection === 'immersive' ? '#FFFFFF' : '#0F172A', status: 'approved' },
+              textMuted: { name: 'Text Muted', value: selectedCollection === 'immersive' ? '#A1A1AA' : '#64748B', status: 'approved' },
+              hairline: { name: 'Border', value: selectedCollection === 'immersive' ? '#27272A' : '#E2E8F0', status: 'approved' }
             },
             typography: {
               headingFont: extractedBrand?.typography?.headingFont || 'Plus Jakarta Sans',
@@ -164,10 +176,12 @@ export default function WebsiteCreationWizardPage() {
             },
             voiceAndMessaging: {
               toneOfVoice: extractedBrand?.toneOfVoice || 'Authoritative and decisive',
-              approvedFacts: extractedBrand?.approvedFacts || []
+              approvedFacts: extractedBrand?.approvedFacts || [],
+              tagline: extractedBrand?.taglineCandidate
             }
           },
           extractedContent: {
+            tagline: extractedBrand?.taglineCandidate,
             services: extractedContent?.servicesFound,
             contactInfo: extractedContent?.contactInfoFound,
             businessSummary: extractedContent?.businessSummary,
