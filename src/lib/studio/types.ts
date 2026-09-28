@@ -167,7 +167,7 @@ export interface SectionStyles {
   textColor?: string;
   headingColor?: string;
   accentColor?: string;
-  paddingY?: 'py-8' | 'py-12' | 'py-16' | 'py-20' | 'py-28' | 'py-36';
+  paddingY?: 'py-8' | 'py-12' | 'py-16' | 'py-20' | 'py-24' | 'py-28' | 'py-36';
   borderTop?: boolean;
   borderBottom?: boolean;
   borderColor?: string;

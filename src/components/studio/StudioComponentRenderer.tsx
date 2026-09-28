@@ -11,6 +11,12 @@ import { StudioRichText } from './StudioRichText';
 import { StudioCta } from './StudioCta';
 import { StudioContactForm } from './StudioContactForm';
 import { StudioFooter } from './StudioFooter';
+import { StudioPricing } from './StudioPricing';
+import { StudioFaq } from './StudioFaq';
+import { StudioProcess } from './StudioProcess';
+import { StudioComparison } from './StudioComparison';
+import { StudioTestimonials } from './StudioTestimonials';
+import { StudioMap } from './StudioMap';
 
 interface RendererProps {
   section: SectionInstance;
@@ -60,6 +66,24 @@ export function StudioComponentRenderer({
       break;
     case 'footer':
       renderedContent = <StudioFooter props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;
+      break;
+    case 'pricing':
+      renderedContent = <StudioPricing props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      break;
+    case 'faq':
+      renderedContent = <StudioFaq props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      break;
+    case 'process':
+      renderedContent = <StudioProcess props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      break;
+    case 'comparison':
+      renderedContent = <StudioComparison props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      break;
+    case 'testimonials':
+      renderedContent = <StudioTestimonials props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      break;
+    case 'map_hours':
+      renderedContent = <StudioMap props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
       break;
     default:
       renderedContent = (

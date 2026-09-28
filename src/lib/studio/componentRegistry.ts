@@ -344,5 +344,299 @@ export const COMPONENT_REGISTRY: Record<string, RegisteredComponent> = {
       contactEmail: 'contact@movestudio.agency',
       contactPhone: '+44 20 7946 0912'
     }
+  },
+
+  pricing: {
+    id: 'pricing',
+    name: 'Pricing Plans',
+    category: 'conversion',
+    description: 'Tiered subscription or service pricing cards with billing cycle switch and feature lists.',
+    schemaVersion: '1.0.0',
+    variants: [
+      { id: '3_tier_cards', name: '3-Tier Interactive Cards', description: 'Clean bordered cards with popular tier glow' },
+      { id: 'minimal_list', name: 'Minimal Matrix', description: 'Subtle high-contrast cards' }
+    ],
+    fields: {
+      eyebrow: { type: 'text', label: 'Eyebrow', defaultValue: 'Predictable Investment' },
+      title: { type: 'text', label: 'Headline', required: true, defaultValue: 'Transparent pricing built for every stage of growth' },
+      subtitle: { type: 'textarea', label: 'Subtitle', defaultValue: 'Choose the mandate or tier that fits your institutional timeline. No hidden overhead.' },
+      annualSavingsNote: { type: 'text', label: 'Savings Badge', defaultValue: 'Save 20% on annual billing' },
+      plans: {
+        type: 'list',
+        label: 'Pricing Plans',
+        required: true
+      }
+    },
+    defaultProps: {
+      eyebrow: 'Predictable Investment',
+      title: 'Transparent pricing built for every stage of growth.',
+      subtitle: 'Choose the tier that matches your transaction volume and operational scale.',
+      annualSavingsNote: 'Save 20% on annual commitments',
+      plans: [
+        {
+          name: 'Starter',
+          badge: 'Early Stage',
+          monthlyPrice: 'R14,500',
+          annualPrice: 'R11,600',
+          period: '/month',
+          description: 'Essential infrastructure and advisory access for emerging enterprises.',
+          features: [
+            'Up to 10,000 monthly transactions',
+            'Standard KYC & biometric verification',
+            'Automated webhook notifications',
+            'Standard email & Slack support (24h SLA)'
+          ],
+          ctaText: 'Get Started',
+          ctaHref: '/contact',
+          isPopular: false
+        },
+        {
+          name: 'Professional',
+          badge: 'Most Popular',
+          monthlyPrice: 'R38,000',
+          annualPrice: 'R30,400',
+          period: '/month',
+          description: 'High-velocity infrastructure and priority clearing for growing institutions.',
+          features: [
+            'Unlimited cross-border settlement corridors',
+            'Real-time AML & fraud interception',
+            'Dedicated account director & technical TAM',
+            'Custom ERP & accounting webhook integrations',
+            '99.99% uptime guarantee with financial SLA'
+          ],
+          ctaText: 'Deploy Platform',
+          ctaHref: '/contact',
+          isPopular: true
+        },
+        {
+          name: 'Enterprise',
+          badge: 'Custom Architecture',
+          monthlyPrice: 'Custom',
+          annualPrice: 'Custom',
+          period: 'mandate',
+          description: 'Bespoke high-volume corridors, on-premise vaulting, and customized liquidity pools.',
+          features: [
+            'Bespoke corridor routing & FX hedging',
+            'Dedicated hardware security modules (HSM)',
+            '24/7/365 direct bridge to engineering leads',
+            'Quarterly compliance & penetration testing audits'
+          ],
+          ctaText: 'Contact Enterprise Team',
+          ctaHref: '/contact',
+          isPopular: false
+        }
+      ]
+    }
+  },
+
+  faq: {
+    id: 'faq',
+    name: 'FAQ Accordion',
+    category: 'social_proof',
+    description: 'Expandable question and answer accordion for objection handling and investor clarity.',
+    schemaVersion: '1.0.0',
+    variants: [
+      { id: 'accordion_centered', name: 'Centered Clean Accordion', description: 'Clean minimalist cards with chevron reveal' },
+      { id: 'split_with_contact', name: 'Split with Support Desk', description: 'Questions on right, contact card on left' }
+    ],
+    fields: {
+      eyebrow: { type: 'text', label: 'Eyebrow', defaultValue: 'Common Inquiries' },
+      title: { type: 'text', label: 'Title', required: true, defaultValue: 'Frequently Asked Questions' },
+      subtitle: { type: 'textarea', label: 'Subtitle', defaultValue: 'Everything you need to know about our platform, onboarding timeline, and institutional compliance.' },
+      items: { type: 'list', label: 'FAQ Items', required: true }
+    },
+    defaultProps: {
+      eyebrow: 'Common Inquiries',
+      title: 'Frequently Asked Questions',
+      subtitle: 'Everything you need to know about our platform, onboarding timeline, and institutional compliance.',
+      items: [
+        {
+          question: 'How quickly can our team integrate and go live?',
+          answer: 'Most clients complete API sandbox certification within 3 to 5 business days. Production credentials are issued following automated KYC and corporate AML review.'
+        },
+        {
+          question: 'What regulatory and compliance frameworks do you adhere to?',
+          answer: 'Our infrastructure complies with global ISO 27001, SOC 2 Type II, POPIA (South Africa), and GDPR standards. All transaction logs are cryptographically immutable.'
+        },
+        {
+          question: 'Can we configure custom settlement currencies and corridor limits?',
+          answer: 'Yes. Enterprise partners can configure bespoke liquidity pools, FX settlement thresholds, and regional corridor limits via our developer portal.'
+        },
+        {
+          question: 'What level of technical support is provided during onboarding?',
+          answer: 'All tiers include dedicated Slack bridge channels, direct access to our technical solutions architects, and comprehensive API documentation.'
+        }
+      ]
+    }
+  },
+
+  process: {
+    id: 'process',
+    name: 'Process & How It Works',
+    category: 'content',
+    description: 'Sequential numbered step-by-step roadmap demonstrating workflow and operational speed.',
+    schemaVersion: '1.0.0',
+    variants: [
+      { id: 'horizontal_numbered', name: 'Numbered Step Cards', description: 'Sequential numbered cards 01, 02, 03, 04 with connector line' },
+      { id: 'vertical_timeline', name: 'Vertical Progression', description: 'Step-by-step vertical timeline' }
+    ],
+    fields: {
+      eyebrow: { type: 'text', label: 'Eyebrow', defaultValue: 'Our Workflow' },
+      title: { type: 'text', label: 'Title', required: true, defaultValue: 'A simple, proven process engineered for precision' },
+      subtitle: { type: 'textarea', label: 'Subtitle', defaultValue: 'From mandate origination to final deployment, every phase is transparent and rigorous.' },
+      steps: { type: 'list', label: 'Process Steps', required: true }
+    },
+    defaultProps: {
+      eyebrow: 'Our Workflow',
+      title: 'A simple, proven process engineered for precision.',
+      subtitle: 'From initial consultation to production launch, we eliminate friction and accelerate time-to-value.',
+      steps: [
+        {
+          number: '01',
+          icon: 'Compass',
+          title: 'Mandate Discovery & Scope',
+          description: 'We analyze your strategic objectives, transaction architecture, and compliance constraints in a deep-dive alignment session.'
+        },
+        {
+          number: '02',
+          icon: 'Layers',
+          title: 'Custom Blueprint Design',
+          description: 'Our design and engineering teams assemble a tailored digital experience and technical corridor specification within 5 days.'
+        },
+        {
+          number: '03',
+          icon: 'Cpu',
+          title: 'Integration & Sandbox Staging',
+          description: 'We configure sandbox API environments, run automated security checks, and refine user flows with live stakeholder feedback.'
+        },
+        {
+          number: '04',
+          icon: 'CheckCircle2',
+          title: 'Production Launch & Handover',
+          description: 'Seamless DNS switchover, full administrative handover, SLA monitoring activation, and ongoing 24/7 dedicated support.'
+        }
+      ]
+    }
+  },
+
+  comparison: {
+    id: 'comparison',
+    name: 'Comparison Matrix',
+    category: 'social_proof',
+    description: 'Detailed feature comparison table comparing tier capabilities with checkmarks and badges.',
+    schemaVersion: '1.0.0',
+    variants: [
+      { id: 'table_matrix', name: 'Structured Comparison Table', description: 'Multi-column matrix with checkmarks and highlight column' }
+    ],
+    fields: {
+      eyebrow: { type: 'text', label: 'Eyebrow', defaultValue: 'Side-by-Side Comparison' },
+      title: { type: 'text', label: 'Title', required: true, defaultValue: 'Compare Platform Capabilities' },
+      subtitle: { type: 'textarea', label: 'Subtitle', defaultValue: 'Detailed breakdown of modules, SLA tiers, and institutional features across all offerings.' },
+      plans: { type: 'list', label: 'Plan Headers' },
+      features: { type: 'list', label: 'Feature Rows' }
+    },
+    defaultProps: {
+      eyebrow: 'Side-by-Side Comparison',
+      title: 'Compare Platform Capabilities',
+      subtitle: 'Select the exact level of capability, compliance automation, and dedicated engineering support you need.',
+      plans: [
+        { name: 'Starter', isPopular: false },
+        { name: 'Professional', isPopular: true, badge: 'Recommended' },
+        { name: 'Enterprise', isPopular: false }
+      ],
+      features: [
+        { name: 'Custom Domain & SSL Hosting', values: [true, true, true] },
+        { name: 'Automated AML & KYC Verification', values: ['Basic', 'Advanced', 'Full Institutional'] },
+        { name: 'Cross-Border Corridors', values: ['3 Corridors', '15 Corridors', 'Unlimited Global'] },
+        { name: 'Dedicated Technical Account Manager', values: [false, true, true] },
+        { name: 'Custom API Rate Limits', values: ['100 req/s', '1,000 req/s', 'Bespoke'] },
+        { name: 'Uptime SLA Guarantee', values: ['99.9%', '99.99%', '99.999%'] },
+        { name: 'White-Label Branding & Portals', values: [false, false, true] }
+      ]
+    }
+  },
+
+  testimonials: {
+    id: 'testimonials',
+    name: 'Testimonials & Social Proof',
+    category: 'social_proof',
+    description: 'Executive testimonials, customer reviews, ratings, and verified institutional endorsements.',
+    schemaVersion: '1.0.0',
+    variants: [
+      { id: 'cards_grid', name: '3-Column Review Cards', description: 'Structured cards with star ratings, quotes, and client credentials' },
+      { id: 'single_featured', name: 'Single Flagship Endorsement', description: 'Large pull-quote with corporate accreditation' }
+    ],
+    fields: {
+      eyebrow: { type: 'text', label: 'Eyebrow', defaultValue: 'Client Endorsements' },
+      title: { type: 'text', label: 'Title', required: true, defaultValue: 'Trusted by leaders who demand excellence' },
+      subtitle: { type: 'textarea', label: 'Subtitle', defaultValue: 'Read how our partners have accelerated growth and scaled cross-border infrastructure.' },
+      items: { type: 'list', label: 'Testimonials', required: true }
+    },
+    defaultProps: {
+      eyebrow: 'Client Endorsements',
+      title: 'Trusted by leaders who demand excellence.',
+      subtitle: 'Read how our partners have accelerated growth and scaled mission-critical infrastructure.',
+      items: [
+        {
+          quote: 'Move Studio allowed our executive team to deploy a world-class institutional presence in less than a week. The design quality and speed of iteration are unmatched.',
+          author: 'David Chen',
+          role: 'Chief Technology Officer',
+          company: 'Nexus Capital Group',
+          rating: 5,
+          verified: true
+        },
+        {
+          quote: 'The automated brand extraction and high-end typography pairings gave our fintech platform the instant credibility needed to close our Series B syndicate.',
+          author: 'Sarah Jenkins',
+          role: 'Head of Growth',
+          company: 'Solstice Financial',
+          rating: 5,
+          verified: true
+        },
+        {
+          quote: 'Having real CMS control with visual previewing and zero brand leakage transformed how we manage multiple client properties across our agency.',
+          author: 'Marcus Lindholm',
+          role: 'Managing Partner',
+          company: 'Aura Advisory Labs',
+          rating: 5,
+          verified: true
+        }
+      ]
+    }
+  },
+
+  map_hours: {
+    id: 'map_hours',
+    name: 'Map & Business Hours',
+    category: 'directory',
+    description: 'Corporate headquarters or studio location card with interactive visual map, weekly operating hours, and contact details.',
+    schemaVersion: '1.0.0',
+    variants: [
+      { id: 'split_map_card', name: 'Split Map & Schedule Card', description: 'Interactive visual location pin on left, schedule and contacts on right' }
+    ],
+    fields: {
+      eyebrow: { type: 'text', label: 'Eyebrow', defaultValue: 'Visit Our Offices' },
+      title: { type: 'text', label: 'Title', required: true, defaultValue: 'Global Presence & Client Access' },
+      subtitle: { type: 'textarea', label: 'Subtitle', defaultValue: 'Schedule an in-person working session or connect directly with our partner desks.' },
+      city: { type: 'text', label: 'City / Region', defaultValue: 'Johannesburg, South Africa' },
+      address: { type: 'text', label: 'Street Address', defaultValue: 'Sandton City Executive Tower, 5th Street, Sandton' },
+      phone: { type: 'text', label: 'Phone', defaultValue: '+27 11 946 8820' },
+      email: { type: 'text', label: 'Email', defaultValue: 'partners@movestudio.agency' },
+      hours: { type: 'list', label: 'Business Hours' }
+    },
+    defaultProps: {
+      eyebrow: 'Visit Our Offices',
+      title: 'Global Presence & Client Access',
+      subtitle: 'Schedule an in-person working session or connect directly with our partner desks.',
+      city: 'Johannesburg, South Africa',
+      address: 'Sandton City Executive Tower, 5th Street, Sandton, 2196',
+      phone: '+27 11 946 8820',
+      email: 'partners@movestudio.agency',
+      hours: [
+        { day: 'Monday – Friday', time: '08:00 – 18:00 SAST' },
+        { day: 'Saturday', time: '09:00 – 13:00 SAST' },
+        { day: 'Sunday & Public Holidays', time: 'By Partner Appointment' }
+      ]
+    }
   }
 };
