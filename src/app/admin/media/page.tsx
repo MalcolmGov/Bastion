@@ -1,0 +1,336 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
+import {
+  Image as ImageIcon,
+  Search,
+  Filter,
+  Copy,
+  Check,
+  FileText,
+  ExternalLink,
+  Shield,
+  Layers,
+  UploadCloud,
+  X
+} from 'lucide-react';
+
+export default function AdminMediaPage() {
+  const { user } = useAdminAuth();
+  const [assets, setAssets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [formatFilter, setFormatFilter] = useState('all');
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
+  // Edit state
+  const [editAlt, setEditAlt] = useState('');
+  const [editCaption, setEditCaption] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const loadAssets = async () => {
+    try {
+      const q = new URLSearchParams();
+      if (search) q.set('search', search);
+      if (formatFilter !== 'all') q.set('mime', formatFilter);
+
+      const res = await fetch(`/api/admin/media?${q.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        setAssets(json.assets || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAssets();
+  }, [formatFilter]);
+
+  const handleSelect = (asset: any) => {
+    setSelectedAsset(asset);
+    setEditAlt(asset.alt_text || '');
+    setEditCaption(asset.caption || '');
+    setSaveSuccess(false);
+  };
+
+  const handleCopy = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedUrl(url);
+    setTimeout(() => setCopiedUrl(null), 2000);
+  };
+
+  const handleSaveMetadata = async () => {
+    if (!selectedAsset) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/admin/media', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedAsset.id,
+          alt_text: editAlt,
+          caption: editCaption
+        })
+      });
+
+      if (res.ok) {
+        setSaveSuccess(true);
+        setSelectedAsset({ ...selectedAsset, alt_text: editAlt, caption: editCaption });
+        loadAssets();
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-2 border-[#C99700] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="p-6 rounded-2xl bg-[#0B1019] border border-[#1C2638] flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2 text-xs text-[#C99700] uppercase font-bold tracking-wider mb-1">
+            <ImageIcon className="w-4 h-4" />
+            <span>Digital Asset Management &amp; WCAG Compliance</span>
+          </div>
+          <h1 className="text-xl font-bold text-white tracking-tight">Corporate Media Library</h1>
+          <p className="text-xs text-gray-400 mt-1">
+            High-resolution photography, 3D renders, investor booklets, diagrams, and vector assets with accessibility auditing.
+          </p>
+        </div>
+
+        <div className="text-xs font-mono text-gray-400 bg-[#080D14] border border-[#1E2B3E] px-3.5 py-2 rounded-xl">
+          Cataloged Assets: <span className="text-[#C99700] font-bold">{assets.length}</span>
+        </div>
+      </div>
+
+      {/* Filter / Search Bar */}
+      <div className="p-4 rounded-2xl bg-[#0B1019] border border-[#1C2638] flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && loadAssets()}
+            placeholder="Search assets by filename or alt text..."
+            className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#C99700]"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { id: 'all', label: 'All Files' },
+            { id: 'image', label: 'Images (JPG/PNG)' },
+            { id: 'svg', label: 'Vectors (SVG)' },
+            { id: 'pdf', label: 'Documents (PDF)' }
+          ].map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFormatFilter(f.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs transition ${
+                formatFilter === f.id
+                  ? 'bg-[#C99700]/20 text-[#E6C657] border border-[#C99700]/40 font-semibold'
+                  : 'bg-[#0E1522] text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid of Media Assets */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {assets.map((asset) => {
+          const isPdf = asset.mime_type?.includes('pdf') || asset.filename.endsWith('.pdf');
+          const isImage = !isPdf;
+
+          return (
+            <div
+              key={asset.id}
+              onClick={() => handleSelect(asset)}
+              className="group bg-[#0B1019] border border-[#1C2638] hover:border-[#C99700]/50 rounded-2xl overflow-hidden cursor-pointer transition flex flex-col justify-between"
+            >
+              <div className="relative aspect-square w-full bg-[#070B12] flex items-center justify-center overflow-hidden">
+                {isImage ? (
+                  <img
+                    src={asset.url}
+                    alt={asset.alt_text || asset.filename}
+                    className="object-cover w-full h-full group-hover:scale-105 transition duration-300"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-4 text-center">
+                    <FileText className="w-10 h-10 text-red-400 mb-1" />
+                    <span className="text-[10px] font-mono text-gray-400 uppercase">PDF Report</span>
+                  </div>
+                )}
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                  <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/80 text-[#C99700] border border-[#C99700]/30 backdrop-blur-sm">
+                    {asset.mime_type.split('/')[1] || 'asset'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 border-t border-[#1C2638]">
+                <div className="text-xs font-semibold text-white truncate group-hover:text-[#D4AF37] transition">
+                  {asset.filename}
+                </div>
+                <div className="text-[10px] text-gray-500 font-mono mt-0.5">
+                  {(asset.size_bytes / 1024).toFixed(1)} KB
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Asset Inspection Modal */}
+      {selectedAsset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0B1019] border border-[#1E2B3E] rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl space-y-4">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-[#1E2B3E] flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <ImageIcon className="w-4 h-4 text-[#C99700]" />
+                <span className="font-bold text-sm text-white">{selectedAsset.filename}</span>
+              </div>
+              <button
+                onClick={() => setSelectedAsset(null)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-[#1A2536]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Preview */}
+              <div className="relative rounded-xl overflow-hidden bg-[#070B12] border border-[#1A2536] max-h-72 flex items-center justify-center">
+                {!selectedAsset.mime_type?.includes('pdf') ? (
+                  <img
+                    src={selectedAsset.url}
+                    alt={selectedAsset.alt_text}
+                    className="max-h-72 object-contain"
+                  />
+                ) : (
+                  <div className="py-12 flex flex-col items-center">
+                    <FileText className="w-16 h-16 text-red-400 mb-2" />
+                    <span className="text-sm font-semibold text-white">Document Asset (PDF)</span>
+                  </div>
+                )}
+              </div>
+
+              {/* URL & Quick Copy */}
+              <div>
+                <label className="block text-[11px] uppercase font-bold text-gray-400 mb-1">
+                  Public CDN / Asset URL
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={selectedAsset.url}
+                    className="flex-1 bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs font-mono text-gray-300"
+                  />
+                  <button
+                    onClick={() => handleCopy(selectedAsset.url)}
+                    className="px-3 py-2 rounded-xl bg-[#142033] hover:bg-[#1C2C44] border border-[#22334D] text-xs font-semibold text-[#E6C657] transition flex items-center space-x-1"
+                  >
+                    {copiedUrl === selectedAsset.url ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy URL</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Alt Text (WCAG Compliance) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] uppercase font-bold text-gray-400">
+                    Alt Text (WCAG 2.2 AA Accessibility)
+                  </label>
+                  <span className="text-[10px] text-emerald-400">Required for SEO &amp; Screen Readers</span>
+                </div>
+                <input
+                  type="text"
+                  value={editAlt}
+                  onChange={(e) => setEditAlt(e.target.value)}
+                  placeholder="Describe image content for accessibility..."
+                  className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#C99700]"
+                />
+              </div>
+
+              {/* Caption */}
+              <div>
+                <label className="block text-[11px] uppercase font-bold text-gray-400 mb-1">
+                  Caption / Editorial Description
+                </label>
+                <textarea
+                  rows={2}
+                  value={editCaption}
+                  onChange={(e) => setEditCaption(e.target.value)}
+                  className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#C99700] resize-none"
+                />
+              </div>
+
+              {saveSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs flex items-center space-x-1.5">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Asset metadata updated successfully!</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[#1E2B3E] bg-[#0E1522] flex items-center justify-between">
+              <a
+                href={selectedAsset.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-gray-400 hover:text-white flex items-center space-x-1"
+              >
+                <span>Open Raw Asset</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              <button
+                onClick={handleSaveMetadata}
+                disabled={isSaving}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition shadow-md shadow-[#C99700]/20 disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Update Metadata'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   ShieldCheck,
   CheckCircle,
@@ -205,13 +206,13 @@ export const TSFStewardshipSection: React.FC<TSFStewardshipSectionProps> = ({ on
                   <span>Ask AI about Salares Norte dry stack tailings</span>
                 </button>
 
-                <a
+                <Link
                   href="/operations/salares-norte"
                   className="text-xs font-bold text-navy hover:text-gold-dark inline-flex items-center gap-1"
                 >
                   <span>Explore Salares Norte Profile</span>
                   <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                </Link>
               </div>
             </div>
           </div>

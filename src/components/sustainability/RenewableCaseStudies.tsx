@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Sun,
   Wind,
@@ -150,13 +151,13 @@ export const RenewableCaseStudies: React.FC<RenewableCaseStudiesProps> = ({ onAs
                     <span>Ask AI about Khanyisa Solar Plant</span>
                   </button>
 
-                  <a
+                  <Link
                     href="/operations/south-deep"
                     className="text-xs font-bold text-navy hover:text-gold-dark inline-flex items-center gap-1"
                   >
                     <span>View South Deep Operation</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -263,13 +264,13 @@ export const RenewableCaseStudies: React.FC<RenewableCaseStudiesProps> = ({ onAs
                     <span>Ask AI about Agnew Hybrid Microgrid</span>
                   </button>
 
-                  <a
+                  <Link
                     href="/operations#agnew"
                     className="text-xs font-bold text-navy hover:text-gold-dark inline-flex items-center gap-1"
                   >
                     <span>View Agnew Operation Details</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
