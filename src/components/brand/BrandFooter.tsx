@@ -263,7 +263,7 @@ export const BrandFooter: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-5 text-[11px]">
+          <div className="flex flex-wrap items-center gap-4 text-[11px]">
             <Link href="/about#privacy" className="hover:text-white transition-colors">
               Privacy Policy
             </Link>
@@ -274,7 +274,21 @@ export const BrandFooter: React.FC = () => {
               Accessibility (WCAG 2.2 AA)
             </Link>
             <span className="text-mist/40">|</span>
-            <p>© {new Date().getFullYear()} Gold Fields Limited. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Gold Fields Limited.</p>
+            <span className="text-mist/40">|</span>
+            <a
+              href="https://www.websitewhisperers.co.za/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-mist/90 hover:text-turquoise-bright transition-colors font-medium group"
+              title="Website Whisperers • https://www.websitewhisperers.co.za/"
+            >
+              <span>Powered By:</span>
+              <span className="font-semibold text-white group-hover:text-turquoise-bright underline underline-offset-2 decoration-turquoise/50">
+                Website Whisperers
+              </span>
+              <ArrowUpRight className="w-3 h-3 text-turquoise-bright transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </a>
           </div>
         </div>
       </div>
