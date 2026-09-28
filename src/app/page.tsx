@@ -53,7 +53,7 @@ export default async function HomePage() {
       {/* ============================================================ */}
       {/* A. CINEMATIC HERO SECTION                                     */}
       {/* ============================================================ */}
-      <section className="relative min-h-[750px] lg:min-h-[840px] xl:min-h-[890px] flex items-center bg-navy-dark overflow-hidden">
+      <section className="relative min-h-[680px] lg:min-h-[760px] flex items-center bg-navy-dark overflow-hidden">
         {/* Authentic Background Hero Image */}
         <div className="absolute inset-0">
           <Image
@@ -64,41 +64,41 @@ export default async function HomePage() {
             className="object-cover object-center opacity-95"
           />
           {/* Controlled Navy Gradient Overlay (protects text on left, leaves landscape clear on right) */}
-          <div className="absolute inset-0 bg-gradient-to-r from-navy-dark via-navy-dark/90 via-45% to-transparent lg:w-[68%]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-navy-dark via-transparent to-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-navy-dark via-navy-dark/80 via-40% to-transparent lg:w-3/5" />
+          <div className="absolute inset-0 bg-gradient-to-t from-navy-dark/90 via-transparent to-black/20" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 py-28 sm:py-32 lg:py-36 relative z-10 w-full">
-          <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl space-y-7 sm:space-y-8">
-            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-navy/85 border border-turquoise/50 text-turquoise-bright text-xs sm:text-sm font-bold uppercase tracking-widest backdrop-blur-md shadow-[0_0_20px_rgba(0,229,192,0.25)]">
-              <span className="w-2.5 h-2.5 rounded-full bg-turquoise-bright animate-pulse" />
+        <div className="max-w-7xl mx-auto px-6 py-24 sm:py-28 relative z-10 w-full">
+          <div className="max-w-2xl lg:max-w-3xl space-y-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-navy/80 border border-turquoise/40 text-turquoise-bright text-xs font-semibold uppercase tracking-widest backdrop-blur-xs shadow-[0_0_15px_rgba(0,229,192,0.2)]">
+              <span className="w-2 h-2 rounded-full bg-turquoise-bright animate-pulse" />
               <span>{heroBadge}</span>
             </div>
 
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-7xl xl:text-8xl font-extrabold text-white tracking-tight leading-[1.04] max-w-4xl font-display drop-shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.12] max-w-2xl font-display">
               {heroTitle}
             </h1>
 
-            <p className="text-lg sm:text-xl md:text-2xl text-mist/95 max-w-2xl lg:max-w-3xl font-normal leading-relaxed drop-shadow-[0_2px_14px_rgba(0,0,0,0.5)]">
+            <p className="text-base sm:text-lg text-mist/90 max-w-xl font-normal leading-relaxed">
               {heroSubtitle}
             </p>
 
             {/* CTAs */}
-            <div className="pt-3 flex flex-wrap items-center gap-5">
+            <div className="pt-2 flex flex-wrap items-center gap-4">
               <Link
                 href={heroCtaLink}
-                className="px-8 py-4 rounded-xl bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark font-extrabold text-sm sm:text-base shadow-[0_0_30px_rgba(0,229,192,0.45)] hover:shadow-[0_0_40px_rgba(0,229,192,0.7)] transition-all duration-200 flex items-center gap-2.5 group"
+                className="px-6 py-3.5 rounded-lg bg-gradient-to-r from-turquoise via-turquoise-bright to-emerald-400 hover:brightness-110 text-navy-dark font-extrabold text-sm shadow-[0_0_25px_rgba(0,229,192,0.4)] hover:shadow-[0_0_35px_rgba(0,229,192,0.6)] transition-all duration-200 flex items-center gap-2 group"
               >
                 <span>{heroCtaText}</span>
-                <ArrowRight className="w-5 h-5 text-navy-dark group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-4 h-4 text-navy-dark group-hover:translate-x-1 transition-transform" />
               </Link>
 
               <Link
                 href="/investors"
-                className="px-7 py-4 rounded-xl bg-navy/60 hover:bg-white/20 text-white font-semibold text-sm sm:text-base border border-turquoise/40 hover:border-turquoise backdrop-blur-md transition-all flex items-center gap-2.5 shadow-subtle"
+                className="px-6 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-turquoise/30 hover:border-turquoise backdrop-blur-xs transition-colors flex items-center gap-2"
               >
                 <span>View latest results</span>
-                <ChevronRight className="w-5 h-5 text-turquoise-bright" />
+                <ChevronRight className="w-4 h-4 text-turquoise-bright" />
               </Link>
             </div>
           </div>
