@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Sparkles,
   Globe,
@@ -28,7 +28,7 @@ import { BLUEPRINTS } from '@/lib/studio/blueprints';
 import { DESIGN_COLLECTIONS } from '@/lib/studio/collections';
 import type { BlueprintId, DesignCollectionId, DiscoveredPage } from '@/lib/studio/types';
 
-export default function WebsiteCreationWizardPage() {
+function WebsiteCreationWizardContent() {
   const router = useRouter();
 
   // Step state: 1 to 6
@@ -69,7 +69,11 @@ export default function WebsiteCreationWizardPage() {
   });
 
   // Step D: Design Selection
-  const [selectedBlueprint, setSelectedBlueprint] = useState<BlueprintId>('professional_services');
+  const searchParams = useSearchParams();
+  const bpParam = searchParams.get('blueprint') as BlueprintId | null;
+  const [selectedBlueprint, setSelectedBlueprint] = useState<BlueprintId>(
+    bpParam && bpParam in BLUEPRINTS ? bpParam : 'mining_resources'
+  );
   const [selectedCollection, setSelectedCollection] = useState<DesignCollectionId>('contemporary');
   const [previewDirection, setPreviewDirection] = useState<'direction_a' | 'direction_b'>('direction_a');
 
@@ -679,23 +683,47 @@ export default function WebsiteCreationWizardPage() {
 
           {/* 1. Blueprint Selection */}
           <div className="space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">1. Select Website Blueprint</span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                1. Select Website Blueprint ({Object.keys(BLUEPRINTS).length} Sector Templates)
+              </span>
+              <span className="text-[10px] text-sky-400 font-mono">Pre-Configured Information Architecture</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {Object.values(BLUEPRINTS).map((bp) => (
                 <button
                   key={bp.id}
                   type="button"
                   onClick={() => setSelectedBlueprint(bp.id)}
-                  className={`p-5 rounded-xl border text-left transition ${
+                  className={`p-4 rounded-xl border text-left transition flex flex-col justify-between ${
                     selectedBlueprint === bp.id
-                      ? 'bg-sky-950/50 border-sky-500 ring-1 ring-sky-500 text-white'
+                      ? 'bg-sky-950/60 border-sky-500 ring-1 ring-sky-500 text-white shadow-md'
                       : 'bg-[#141C2A] border-[#1E293B] text-slate-300 hover:border-slate-700'
                   }`}
                 >
-                  <div className="text-sm font-bold">{bp.name}</div>
-                  <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{bp.tagline}</div>
-                  <div className="mt-3 text-[10px] font-mono text-sky-400">
-                    {bp.defaultPages.length} Pages • {bp.coreModules.join(', ')}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-bold truncate text-white">{bp.name}</span>
+                      <span
+                        className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-full border shrink-0"
+                        style={{
+                          backgroundColor: `${bp.accentColor}20`,
+                          color: bp.accentColor,
+                          borderColor: `${bp.accentColor}40`
+                        }}
+                      >
+                        {bp.badge}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                      {bp.tagline}
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-slate-800 text-[10px] font-mono text-sky-400 flex items-center justify-between">
+                    <span>{bp.defaultPages.length} Pages</span>
+                    <span className="truncate max-w-[110px] text-slate-500">
+                      {bp.coreModules.slice(0, 2).join(', ')}
+                    </span>
                   </div>
                 </button>
               ))}
@@ -912,3 +940,12 @@ export default function WebsiteCreationWizardPage() {
     </div>
   );
 }
+
+export default function WebsiteCreationWizardPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading website creation wizard...</div>}>
+      <WebsiteCreationWizardContent />
+    </React.Suspense>
+  );
+}
+

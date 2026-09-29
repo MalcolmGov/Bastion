@@ -1,22 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { HeadlessBrandExtractor } from '@/lib/studio/headlessExtractor';
 import { BrandDnaExtractor } from '@/lib/studio/brandExtractor';
+import { JobManager } from '@/lib/studio/worker';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { url } = body;
+    const { url, maxPages = 3 } = body;
 
     if (!url) {
       return NextResponse.json({ error: 'Target website URL is required.' }, { status: 400 });
     }
 
-    const extractor = new BrandDnaExtractor();
-    const result = await extractor.extractBrandKit(url);
-
-    return NextResponse.json({
-      success: true,
-      result
-    });
+    // Try HeadlessBrandExtractor with temporary job
+    const job = JobManager.createJob(url);
+    try {
+      const headlessExtractor = new HeadlessBrandExtractor();
+      const result = await headlessExtractor.extractWithJob(url, job.id, maxPages);
+      return NextResponse.json({
+        success: true,
+        jobId: job.id,
+        result
+      });
+    } catch (headlessErr) {
+      console.warn('[BrandDnaExtractAPI] Headless failed, falling back to static parser:', headlessErr);
+      const fallbackExtractor = new BrandDnaExtractor();
+      const result = await fallbackExtractor.extractBrandKit(url);
+      return NextResponse.json({
+        success: true,
+        jobId: job.id,
+        result
+      });
+    }
   } catch (err: any) {
     console.error('[BrandDnaExtractAPI] Error:', err);
     return NextResponse.json(

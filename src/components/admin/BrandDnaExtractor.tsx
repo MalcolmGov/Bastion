@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   Globe,
@@ -21,10 +21,46 @@ import {
   Sliders,
   Eye,
   Lock,
-  Layers
+  Layers,
+  Terminal,
+  Activity,
+  XCircle,
+  FileCheck,
+  ChevronRight
 } from 'lucide-react';
 import type { BrandKitDnaResult, StandardThemeJson } from '@/lib/studio/brandExtractor';
 import { useDashboardCustomizer } from './DashboardCustomizerProvider';
+
+interface JobLogEntry {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error' | 'success';
+  message: string;
+}
+
+interface ExtractionJobStatus {
+  id: string;
+  url: string;
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+  progress: number;
+  currentPhase: string;
+  currentPhaseIndex: number;
+  totalPhases: number;
+  logs: JobLogEntry[];
+  result: BrandKitDnaResult | null;
+  error: string | null;
+  createdAt: string;
+}
+
+const EXTRACTION_PHASES = [
+  'Headless Browser Engine Initialization & SSRF Guardrails',
+  'Multi-Page Crawling & Dynamic DOM Execution',
+  'Computed Style Harvesting on Semantic Elements & :root Variables',
+  'Brand Vector Marks, Favicon & Retina Asset Discovery',
+  'Copywriting Voice, Sentiment & Flesch-Kincaid Reading Analysis',
+  'Google Fonts Classification & Commercial Font Licensing Audit',
+  'WCAG 2.1 AA Relative Luminance & Contrast Auditing',
+  'Theme Normalization & Standard JSON Synthesis'
+];
 
 interface BrandDnaExtractorProps {
   initialUrl?: string;
@@ -34,8 +70,9 @@ interface BrandDnaExtractorProps {
 export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaExtractorProps) {
   const { primaryColor, accentColor } = useDashboardCustomizer();
   const [url, setUrl] = useState(initialUrl);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobState, setJobState] = useState<ExtractionJobStatus | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
-  const [crawlStep, setCrawlStep] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<BrandKitDnaResult | null>(null);
   const [isApproving, setIsApproving] = useState(false);
@@ -49,61 +86,113 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
   const [editableDoNots, setEditableDoNots] = useState<string[]>([]);
   const [selectedMediaIds, setSelectedMediaIds] = useState<Record<string, boolean>>({});
 
-  const crawlSteps = [
-    'Initializing headless crawler with RFC1918 guardrails...',
-    'Loading homepage and linked interior pages...',
-    'Reading final computed styles & :root CSS variables...',
-    'Extracting SVG marks, favicons, open-graph & media...',
-    'Analyzing copy, Flesch-Kincaid reading level & brand voice...',
-    'Mapping typefaces to Google Fonts & checking WCAG AA ratios...'
-  ];
+  const logsEndRef = useRef<HTMLDivElement>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-scroll terminal logs to bottom
+  useEffect(() => {
+    if (jobState?.logs?.length) {
+      logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [jobState?.logs?.length]);
+
+  // Cleanup polling timer on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, []);
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
 
   const handleStartExtraction = async (targetUrl?: string) => {
-    const runUrl = targetUrl || url;
-    if (!runUrl.trim()) return;
+    const runUrl = (targetUrl || url).trim();
+    if (!runUrl) return;
 
+    stopPolling();
     setIsExtracting(true);
     setError(null);
-    setCrawlStep(0);
+    setJobState(null);
     setApprovedSuccess(false);
 
-    // Simulate multi-step crawler progress
-    const stepInterval = setInterval(() => {
-      setCrawlStep(prev => (prev < crawlSteps.length - 1 ? prev + 1 : prev));
-    }, 900);
-
     try {
-      const res = await fetch('/api/admin/brand/extract', {
+      // 1. Dispatch asynchronous job to backend
+      const res = await fetch('/api/admin/brand/extract/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: runUrl })
+        body: JSON.stringify({ url: runUrl, maxPages: 4 })
       });
 
-      clearInterval(stepInterval);
       const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || 'Extraction failed');
+        throw new Error(data.error || 'Failed to dispatch extraction job');
       }
 
-      const result: BrandKitDnaResult = data.result;
-      setExtractedData(result);
-      setEditableTheme(result.theme);
-      setEditableVoiceSummary(result.theme.voice.summary);
-      setEditableDoNots(result.theme.voice.doNot || []);
-      setSelectedLogoId(result.assets.logos[0]?.id || '');
+      const jobId = data.jobId;
+      setActiveJobId(jobId);
 
-      // Select first 4 media by default
-      const initialMedia: Record<string, boolean> = {};
-      result.assets.media.slice(0, 4).forEach(m => {
-        initialMedia[m.id] = true;
-      });
-      setSelectedMediaIds(initialMedia);
+      // 2. Poll job status
+      pollingRef.current = setInterval(async () => {
+        try {
+          const pollRes = await fetch(`/api/admin/brand/extract/status?jobId=${jobId}`);
+          if (!pollRes.ok) return;
+
+          const pollData = await pollRes.json();
+          const job: ExtractionJobStatus = pollData.job;
+          setJobState(job);
+
+          if (job.status === 'completed' && job.result) {
+            stopPolling();
+            setIsExtracting(false);
+            const result = job.result;
+            setExtractedData(result);
+            setEditableTheme(result.theme);
+            setEditableVoiceSummary(result.theme.voice?.summary || '');
+            setEditableDoNots(result.theme.voice?.doNot || []);
+            setSelectedLogoId(result.assets.logos[0]?.id || '');
+
+            const initialMedia: Record<string, boolean> = {};
+            result.assets.media.slice(0, 4).forEach((m) => {
+              initialMedia[m.id] = true;
+            });
+            setSelectedMediaIds(initialMedia);
+          } else if (job.status === 'failed') {
+            stopPolling();
+            setIsExtracting(false);
+            setError(job.error || 'Extraction job failed');
+          } else if (job.status === 'cancelled') {
+            stopPolling();
+            setIsExtracting(false);
+            setError('Extraction job was cancelled');
+          }
+        } catch (pollErr: any) {
+          console.warn('[BrandDnaExtractor] Polling error:', pollErr);
+        }
+      }, 750);
     } catch (err: any) {
-      clearInterval(stepInterval);
-      setError(err.message || 'Failed to extract Brand DNA.');
-    } finally {
       setIsExtracting(false);
+      setError(err.message || 'Failed to initiate extraction');
+    }
+  };
+
+  const handleCancelExtraction = async () => {
+    if (!activeJobId) return;
+    try {
+      await fetch(`/api/admin/brand/extract/status?jobId=${activeJobId}`, {
+        method: 'DELETE'
+      });
+      stopPolling();
+      setIsExtracting(false);
+      setError('Extraction cancelled by user');
+    } catch (err: any) {
+      console.warn('Failed to cancel job:', err);
     }
   };
 
@@ -139,7 +228,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
           theme: finalizedTheme,
           voice: finalizedTheme.voice,
           fontAnalysis: extractedData.fontAnalysis,
-          mediaAssets: extractedData.assets.media.filter(m => selectedMediaIds[m.id])
+          mediaAssets: extractedData.assets.media.filter((m) => selectedMediaIds[m.id])
         })
       });
 
@@ -170,7 +259,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span 
+              <span
                 className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border"
                 style={{
                   backgroundColor: `${primaryColor}15`,
@@ -178,13 +267,18 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                   borderColor: `${primaryColor}40`
                 }}
               >
-                Claude Design Pipeline
+                Bastion Headless Engine
               </span>
-              <span className="text-xs text-slate-500 font-medium">website URL &rarr; approved brand kit</span>
+              <span className="text-xs text-slate-500 font-medium">
+                Live Chromium DOM Ingestion &bull; 8-Phase Architectural Audit
+              </span>
             </div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white mt-1">
               Extract Brand DNA from Website URL
             </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Deep crawl with client JS execution, computed style harvesting, typography frequency, WCAG 2.1 AA auditing, and copy voice synthesis.
+            </p>
           </div>
         </div>
 
@@ -209,17 +303,17 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
             className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white hover:opacity-95 disabled:opacity-50 transition shadow-md flex items-center justify-center gap-2 shrink-0 cursor-pointer"
           >
             <Sparkles className="w-4 h-4" />
-            <span>{isExtracting ? 'Extracting DNA…' : 'Extract Brand Kit'}</span>
+            <span>{isExtracting ? 'Crawling DNA…' : 'Extract Brand Kit'}</span>
           </button>
         </div>
 
         {/* Quick Demo URLs */}
         <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500">
-          <span className="font-semibold text-slate-400">Try Live Demonstration:</span>
+          <span className="font-semibold text-slate-400">Verified Corporate Targets:</span>
           {[
             { label: 'Gold Fields Official', url: 'https://www.goldfields.com' },
-            { label: 'Apex Strategic Advisory', url: 'https://demo-apex-advisory.test' },
-            { label: 'Bastion Group SA', url: 'https://bastiongroup.co.za' }
+            { label: 'Bastion Group SA', url: 'https://www.bastiongroup.co.za' },
+            { label: 'Exxaro Resources', url: 'https://www.exxaro.com' }
           ].map((demo, idx) => (
             <button
               key={idx}
@@ -236,39 +330,133 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
           ))}
         </div>
 
-        {/* Crawling Progress Visualizer */}
+        {/* Live Phased Telemetry & Terminal Monitor */}
         {isExtracting && (
-          <div 
-            className="p-4 rounded-xl border space-y-2 animate-in fade-in"
-            style={{
-              backgroundColor: `${primaryColor}10`,
-              borderColor: `${primaryColor}30`
-            }}
-          >
-            <div 
-              className="flex items-center justify-between text-xs font-bold"
-              style={{ color: primaryColor }}
-            >
-              <span className="flex items-center gap-2">
-                <span 
-                  className="w-2 h-2 rounded-full animate-ping" 
-                  style={{ backgroundColor: primaryColor }}
-                />
-                <span>Crawling in Background Worker (Playwright / DOM Ingest)</span>
-              </span>
-              <span>Step {crawlStep + 1} of {crawlSteps.length}</span>
+          <div className="space-y-4 pt-3 border-t border-slate-200 dark:border-slate-800 animate-in fade-in duration-300">
+            {/* Top Bar: Progress & Cancel */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {jobState?.currentPhase || 'Initializing Headless Crawler Engine…'}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                  {jobState?.progress ?? 5}%
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelExtraction}
+                className="px-3 py-1 rounded-lg text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition flex items-center space-x-1"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                <span>Cancel Crawl</span>
+              </button>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 font-mono">
-              &gt; {crawlSteps[crawlStep]}
-            </p>
-            <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-              <div 
-                className="h-full transition-all duration-300"
-                style={{ 
-                  width: `${((crawlStep + 1) / crawlSteps.length) * 100}%`,
-                  background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`
+
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div
+                className="h-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${Math.max(5, jobState?.progress ?? 5)}%`,
+                  background: `linear-gradient(90deg, ${primaryColor}, ${accentColor})`
                 }}
               />
+            </div>
+
+            {/* 8-Phase Milestones Stepper */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1">
+              {EXTRACTION_PHASES.map((phaseTitle, idx) => {
+                const currentIdx = jobState?.currentPhaseIndex ?? 0;
+                const isPassed = currentIdx > idx + 1;
+                const isCurrent = currentIdx === idx + 1;
+
+                return (
+                  <div
+                    key={idx}
+                    className={`p-2 rounded-xl border text-[11px] transition flex items-start space-x-2 ${
+                      isPassed
+                        ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
+                        : isCurrent
+                        ? 'bg-purple-50/50 dark:bg-purple-950/30 border-purple-400 dark:border-purple-600 text-purple-900 dark:text-purple-200 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800/60 text-slate-400 opacity-60'
+                    }`}
+                  >
+                    <div className="shrink-0 mt-0.5">
+                      {isPassed ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      ) : isCurrent ? (
+                        <Activity className="w-3.5 h-3.5 text-purple-500 animate-spin" />
+                      ) : (
+                        <span className="w-3.5 h-3.5 rounded-full border border-slate-400 flex items-center justify-center text-[9px] font-mono">
+                          {idx + 1}
+                        </span>
+                      )}
+                    </div>
+                    <div className="leading-tight truncate">
+                      <div className="font-bold text-[10px] uppercase tracking-wider">
+                        Phase {idx + 1}
+                      </div>
+                      <div className="truncate font-medium">{phaseTitle}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Live Monospace Terminal Log */}
+            <div className="rounded-xl bg-[#090D14] border border-slate-800 p-3.5 space-y-2 font-mono text-[11px] shadow-inner">
+              <div className="flex items-center justify-between text-slate-400 pb-2 border-b border-slate-800/80">
+                <div className="flex items-center space-x-2">
+                  <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                    Chromium Execution Telemetry
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-500">
+                  {jobState?.logs?.length || 0} events logged
+                </span>
+              </div>
+
+              <div className="max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                {(jobState?.logs || [
+                  { timestamp: new Date().toISOString(), level: 'info', message: 'Connecting to Chromium headless browser...' }
+                ]).map((entry, i) => (
+                  <div key={i} className="flex items-start space-x-2 leading-relaxed">
+                    <span className="text-slate-500 text-[10px] shrink-0">
+                      {new Date(entry.timestamp).toLocaleTimeString()}
+                    </span>
+                    <span
+                      className={`text-[9px] uppercase px-1 rounded font-bold shrink-0 ${
+                        entry.level === 'success'
+                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                          : entry.level === 'warn'
+                          ? 'bg-amber-950 text-amber-400 border border-amber-800'
+                          : entry.level === 'error'
+                          ? 'bg-rose-950 text-rose-400 border border-rose-800'
+                          : 'bg-slate-800 text-sky-400 border border-slate-700'
+                      }`}
+                    >
+                      {entry.level}
+                    </span>
+                    <span
+                      className={
+                        entry.level === 'success'
+                          ? 'text-emerald-300'
+                          : entry.level === 'warn'
+                          ? 'text-amber-300'
+                          : entry.level === 'error'
+                          ? 'text-rose-300'
+                          : 'text-slate-300'
+                      }
+                    >
+                      {entry.message}
+                    </span>
+                  </div>
+                ))}
+                <div ref={logsEndRef} />
+              </div>
             </div>
           </div>
         )}
@@ -285,8 +473,8 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
       {extractedData && editableTheme && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
           {/* Top Banner: Verification Status */}
-          <div 
-            className="p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+          <div
+            className="p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
             style={{
               borderColor: `${primaryColor}40`,
               backgroundImage: `linear-gradient(to right, ${primaryColor}15, transparent)`
@@ -300,9 +488,12 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200">
                   Ready for Review
                 </span>
+                <span className="text-[10px] font-mono text-slate-500">
+                  {extractedData.crawledPages.length} Pages Crawled
+                </span>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                Review extracted vector marks, color palette, WCAG AA compliance, typography, and voice rules before committing.
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                Review extracted vector marks, color palette, WCAG 2.1 AA compliance, typography waterfall, and voice guardrails before committing.
               </p>
             </div>
 
@@ -333,7 +524,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
               <button
                 type="button"
                 onClick={() => setApprovedSuccess(false)}
-                className="text-xs underline hover:text-emerald-900"
+                className="text-xs underline hover:text-emerald-900 cursor-pointer"
               >
                 Dismiss
               </button>
@@ -372,13 +563,17 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                       className={`p-3 rounded-xl border cursor-pointer transition relative flex flex-col justify-between ${
                         isSelected
                           ? 'ring-1'
-                          : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100'
+                          : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50'
                       }`}
-                      style={isSelected ? {
-                        backgroundColor: `${primaryColor}15`,
-                        borderColor: primaryColor,
-                        boxShadow: `0 0 0 1px ${primaryColor}`
-                      } : undefined}
+                      style={
+                        isSelected
+                          ? {
+                              backgroundColor: `${primaryColor}15`,
+                              borderColor: primaryColor,
+                              boxShadow: `0 0 0 1px ${primaryColor}`
+                            }
+                          : undefined
+                      }
                     >
                       <div className="h-16 flex items-center justify-center p-2 rounded-lg bg-slate-100 dark:bg-slate-800/80 overflow-hidden">
                         {logo.isSvg && logo.svgContent ? (
@@ -395,8 +590,12 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                         )}
                       </div>
                       <div className="mt-2 flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">{logo.altText}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 shrink-0" style={{ color: primaryColor }} />}
+                        <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
+                          {logo.altText}
+                        </span>
+                        {isSelected && (
+                          <Check className="w-3.5 h-3.5 shrink-0" style={{ color: primaryColor }} />
+                        )}
                       </div>
                     </div>
                   );
@@ -422,9 +621,12 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                   { role: 'primary', label: 'Primary Brand', hex: editableTheme.color.primary },
                   { role: 'accent', label: 'CTA Accent', hex: editableTheme.color.accent },
                   { role: 'surface', label: 'Surface Card', hex: editableTheme.color.surface },
-                  { role: 'text', label: 'Main Text', hex: editableTheme.color.text },
+                  { role: 'text', label: 'Main Text', hex: editableTheme.color.text }
                 ].map(({ role, label, hex }) => (
-                  <div key={role} className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                  <div
+                    key={role}
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50"
+                  >
                     <div className="flex items-center gap-2 mb-1.5">
                       <input
                         type="color"
@@ -491,14 +693,19 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-900 dark:text-white">Heading Typeface</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200">
-                      Google Font &bull; Free License
+                      {extractedData.fontAnalysis.heading.isGoogleFont ? 'Google Font • Free License' : 'Commercial Font'}
                     </span>
                   </div>
                   <div className="text-base font-bold font-serif" style={{ color: primaryColor }}>
                     {editableTheme.font.heading}
                   </div>
+                  {extractedData.fontAnalysis.heading.licenseNote && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                      {extractedData.fontAnalysis.heading.licenseNote}
+                    </p>
+                  )}
                   <p className="text-xs text-slate-500 italic">
-                    &ldquo;Gold Fields delivers sustainable mining operations across four continents.&rdquo;
+                    &ldquo;Excellence in corporate governance and market leadership.&rdquo;
                   </p>
                 </div>
 
@@ -506,12 +713,17 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-900 dark:text-white">Body Copy Typeface</span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200">
-                      Google Font &bull; Optimized Web
+                      {extractedData.fontAnalysis.body.isGoogleFont ? 'Google Font • Optimized Web' : 'Detected System Font'}
                     </span>
                   </div>
                   <div className="text-base font-bold text-slate-800 dark:text-slate-200 font-sans">
                     {editableTheme.font.body}
                   </div>
+                  {extractedData.fontAnalysis.body.licenseNote && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                      {extractedData.fontAnalysis.body.licenseNote}
+                    </p>
+                  )}
                   <p className="text-xs text-slate-600 dark:text-slate-400">
                     Precision corporate disclosure, institutional governance, and verified ESG benchmarks.
                   </p>
@@ -527,7 +739,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                   <span>AI Brand Voice &amp; Guardrails</span>
                 </h4>
                 <p className="text-xs text-slate-500">
-                  Reading Level: <strong className="text-slate-700 dark:text-slate-300">{extractedData.copyAnalysis.readingLevel}</strong>
+                  Reading Level: <strong className="text-slate-700 dark:text-slate-300">{extractedData.copyAnalysis.readingLevel}</strong> (Flesch-Kincaid Score: {extractedData.copyAnalysis.readingScore})
                 </p>
               </div>
 
@@ -576,7 +788,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <ImageIcon className="w-4 h-4" style={{ color: primaryColor }} />
-                  <span>Extracted Media Assets Mini-Gallery</span>
+                  <span>Extracted Media Assets Mini-Gallery ({extractedData.assets.media.length})</span>
                 </h4>
                 <p className="text-xs text-slate-500">Check assets to import into the client&apos;s Media Library</p>
               </div>
@@ -589,17 +801,21 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                   <div
                     key={item.id}
                     onClick={() => {
-                      setSelectedMediaIds(prev => ({ ...prev, [item.id]: !prev[item.id] }));
+                      setSelectedMediaIds((prev) => ({ ...prev, [item.id]: !prev[item.id] }));
                     }}
                     className={`p-2 rounded-xl border cursor-pointer transition relative flex flex-col justify-between ${
                       isChecked
                         ? 'border-transparent'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50'
                     }`}
-                    style={isChecked ? {
-                      backgroundColor: `${primaryColor}15`,
-                      borderColor: primaryColor
-                    } : undefined}
+                    style={
+                      isChecked
+                        ? {
+                            backgroundColor: `${primaryColor}15`,
+                            borderColor: primaryColor
+                          }
+                        : undefined
+                    }
                   >
                     <div className="h-24 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden relative">
                       <img
@@ -612,13 +828,15 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                       </span>
                     </div>
                     <div className="mt-2 flex items-center justify-between text-[10px]">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[100px]">{item.altText}</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[100px]">
+                        {item.altText}
+                      </span>
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => {}}
                         style={{ accentColor: primaryColor }}
-                        className="rounded"
+                        className="rounded cursor-pointer"
                       />
                     </div>
                   </div>
@@ -646,15 +864,26 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                   <span className="font-mono text-purple-400 font-bold">:root CSS Variables</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(extractedData.generatedArtifacts.cssVariables, 'css')}
-                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white"
+                    onClick={() =>
+                      handleCopy(
+                        extractedData.generatedArtifacts?.cssVariables ||
+                          `:root {\n  --brand-primary: ${editableTheme.color.primary};\n  --brand-accent: ${editableTheme.color.accent};\n}`,
+                        'css'
+                      )
+                    }
+                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white cursor-pointer"
                   >
-                    {copiedArtifact === 'css' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedArtifact === 'css' ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
                     <span>{copiedArtifact === 'css' ? 'Copied' : 'Copy CSS'}</span>
                   </button>
                 </div>
                 <pre className="text-[10px] font-mono text-slate-300 overflow-x-auto max-h-36 p-2 rounded bg-black/40">
-                  {extractedData.generatedArtifacts.cssVariables}
+                  {extractedData.generatedArtifacts?.cssVariables ||
+                    `:root {\n  --brand-primary: ${editableTheme.color.primary};\n  --brand-accent: ${editableTheme.color.accent};\n}`}
                 </pre>
               </div>
 
@@ -664,15 +893,26 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                   <span className="font-mono text-purple-400 font-bold">Tailwind Theme Token Snippet</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(extractedData.generatedArtifacts.tailwindConfigSnippet, 'tailwind')}
-                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white"
+                    onClick={() =>
+                      handleCopy(
+                        extractedData.generatedArtifacts?.tailwindConfigSnippet ||
+                          JSON.stringify(editableTheme.color, null, 2),
+                        'tailwind'
+                      )
+                    }
+                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white cursor-pointer"
                   >
-                    {copiedArtifact === 'tailwind' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedArtifact === 'tailwind' ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
                     <span>{copiedArtifact === 'tailwind' ? 'Copied' : 'Copy Config'}</span>
                   </button>
                 </div>
                 <pre className="text-[10px] font-mono text-slate-300 overflow-x-auto max-h-36 p-2 rounded bg-black/40">
-                  {extractedData.generatedArtifacts.tailwindConfigSnippet}
+                  {extractedData.generatedArtifacts?.tailwindConfigSnippet ||
+                    JSON.stringify(editableTheme.color, null, 2)}
                 </pre>
               </div>
             </div>

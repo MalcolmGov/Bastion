@@ -5,16 +5,29 @@
 
 export type IndustryType =
   | 'corporate'
+  | 'mining_resources'
+  | 'wealth_private_equity'
+  | 'renewable_energy'
+  | 'enterprise_tech'
+  | 'healthcare'
+  | 'legal_advisory'
+  | 'luxury_living'
   | 'professional_services'
   | 'hospitality'
   | 'technology'
   | 'health_wellness'
   | 'retail'
-  | 'mining_resources'
   | 'general';
 
 export type BlueprintId =
   | 'corporate'
+  | 'mining_resources'
+  | 'wealth_private_equity'
+  | 'renewable_energy'
+  | 'enterprise_tech'
+  | 'healthcare'
+  | 'legal_advisory'
+  | 'hospitality_living'
   | 'professional_services'
   | 'hospitality';
 
