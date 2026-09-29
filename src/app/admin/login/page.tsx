@@ -8,6 +8,13 @@ import { Shield, Lock, Mail, ArrowRight, CheckCircle2, AlertCircle, Building2 } 
 const DEMO_PERSONAS = [
   {
     role: 'platform_admin',
+    name: 'Malcolm Govender',
+    title: 'Moove Digital Lead & Platform Admin',
+    email: 'malcolm@movedigital.africa',
+    desc: 'Full platform administration & Moove Digital portal management'
+  },
+  {
+    role: 'platform_admin',
     name: 'Sarah Jenkins',
     title: 'Platform Administrator',
     email: 'admin@goldfields.com',

@@ -29,7 +29,8 @@ import {
   Building,
   Check,
   CreditCard,
-  Terminal
+  Terminal,
+  UserPlus
 } from 'lucide-react';
 
 export function AdminSidebar() {
@@ -282,6 +283,17 @@ export function AdminSidebar() {
                     <Send className="w-4 h-4 text-slate-400" />
                     <span>Reviews & JSE Sign-Off</span>
                   </Link>
+                  <Link
+                    href="/admin/users"
+                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                      pathname.startsWith('/admin/users')
+                        ? 'bg-amber-950/60 text-amber-300 border border-amber-800/60 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                    }`}
+                  >
+                    <UserPlus className="w-4 h-4 text-amber-400" />
+                    <span>Team & Welcome Emailer</span>
+                  </Link>
                 </div>
               </div>
 
@@ -462,6 +474,17 @@ export function AdminSidebar() {
                   >
                     <Send className="w-4 h-4 text-slate-400" />
                     <span>Reviews & Publishing</span>
+                  </Link>
+                  <Link
+                    href="/admin/users"
+                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                      pathname.startsWith('/admin/users')
+                        ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                    }`}
+                  >
+                    <UserPlus className="w-4 h-4 text-sky-400" />
+                    <span>Team & Welcome Emailer</span>
                   </Link>
                 </div>
               </div>
