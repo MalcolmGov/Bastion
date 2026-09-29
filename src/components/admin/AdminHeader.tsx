@@ -29,11 +29,14 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+import { useDashboardCustomizer } from './DashboardCustomizerProvider';
+
 export function AdminHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAdminAuth();
   const { theme, toggleTheme } = useTheme();
+  const { primaryColor, accentColor, openCustomizer } = useDashboardCustomizer();
   const {
     clients,
     activeClient,
@@ -125,14 +128,25 @@ export function AdminHeader() {
         <div className="flex items-center gap-3">
           {/* Dynamic Brand Logo & Wordmark (Zara CareerOS style) */}
           <Link href="/admin" className="flex items-center gap-2.5 select-none group">
-            <div className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-white/15 shadow-md shadow-purple-500/20 flex-shrink-0 bg-gradient-to-br from-[#7C3AED] to-[#9333EA] flex items-center justify-center text-white font-black text-lg transition-transform group-hover:scale-105">
+            <div 
+              style={{
+                background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
+                boxShadow: `0 4px 14px ${primaryColor}40`
+              }}
+              className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-white/15 flex-shrink-0 flex items-center justify-center text-white font-black text-lg transition-transform group-hover:scale-105"
+            >
               <span>B</span>
             </div>
             <div className="flex items-baseline tracking-tight">
               <span className="font-extrabold text-base sm:text-xl text-white">
                 BASTION
               </span>
-              <span className="font-bold text-base sm:text-xl bg-gradient-to-r from-purple-400 via-violet-300 to-indigo-400 bg-clip-text text-transparent ml-1">
+              <span 
+                style={{
+                  backgroundImage: `linear-gradient(to right, ${accentColor}, ${primaryColor})`
+                }}
+                className="font-bold text-base sm:text-xl bg-clip-text text-transparent ml-1"
+              >
                 CMS
               </span>
             </div>
@@ -145,10 +159,13 @@ export function AdminHeader() {
             <button
               type="button"
               onClick={() => setPerspectiveDropdownOpen(!perspectiveDropdownOpen)}
-              className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-200 hover:text-white transition-all shadow-2xs group"
+              className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-200 hover:text-white transition-all shadow-2xs group cursor-pointer"
               title="Click to switch between Agency Workspace and Client CMS"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#7C3AED] animate-pulse" />
+              <span 
+                style={{ backgroundColor: primaryColor }}
+                className="w-1.5 h-1.5 rounded-full animate-pulse" 
+              />
               <span>
                 {isClientPortal ? `${activeClient?.name || 'Client'} CMS` : 'Agency Studio'}
               </span>
@@ -166,13 +183,17 @@ export function AdminHeader() {
                     setPortalViewMode('agency');
                     setPerspectiveDropdownOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  style={!isClientPortal ? {
+                    backgroundColor: `${primaryColor}20`,
+                    borderColor: `${primaryColor}40`
+                  } : undefined}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                     !isClientPortal
-                      ? 'bg-[#7C3AED]/20 text-white font-bold border border-[#7C3AED]/30 shadow-xs'
-                      : 'text-slate-200 hover:text-white hover:bg-slate-800/80'
+                      ? 'text-white font-bold border shadow-xs'
+                      : 'text-slate-200 hover:text-white hover:bg-slate-800/80 border border-transparent'
                   }`}
                 >
-                  <Sliders className="w-4.5 h-4.5 flex-shrink-0 text-purple-400" />
+                  <Sliders className="w-4.5 h-4.5 flex-shrink-0" style={{ color: primaryColor }} />
                   <div className="text-left">
                     <div className="text-sm font-bold text-white">Bastion Agency Studio</div>
                     <div className="text-xs text-slate-400 font-normal">Clients, multi-tenant templates, brand systems &amp; publishing</div>
@@ -185,10 +206,14 @@ export function AdminHeader() {
                     setPortalViewMode('client');
                     setPerspectiveDropdownOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  style={isClientPortal ? {
+                    backgroundColor: `${primaryColor}20`,
+                    borderColor: `${primaryColor}40`
+                  } : undefined}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                     isClientPortal
-                      ? 'bg-[#7C3AED]/20 text-white font-bold border border-[#7C3AED]/30 shadow-xs'
-                      : 'text-slate-200 hover:text-white hover:bg-slate-800/80'
+                      ? 'text-white font-bold border shadow-xs'
+                      : 'text-slate-200 hover:text-white hover:bg-slate-800/80 border border-transparent'
                   }`}
                 >
                   <Building className="w-4.5 h-4.5 flex-shrink-0 text-amber-400" />
@@ -210,7 +235,7 @@ export function AdminHeader() {
               onClick={() => setSiteSwitcherOpen(!siteSwitcherOpen)}
               className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 text-slate-300 hover:text-white transition-all shadow-2xs"
             >
-              <Globe className="w-3.5 h-3.5 text-purple-400" />
+              <Globe className="w-3.5 h-3.5" style={{ color: primaryColor }} />
               <span className="truncate max-w-[130px] font-semibold text-slate-200">
                 {activeClient?.name || 'Bastion Group'}
               </span>
@@ -243,9 +268,14 @@ export function AdminHeader() {
                           setActiveClientId(c.id);
                           setSiteSwitcherOpen(false);
                         }}
+                        style={isActive ? {
+                          backgroundColor: `${primaryColor}20`,
+                          borderColor: `${primaryColor}40`,
+                          color: '#ffffff'
+                        } : undefined}
                         className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left text-xs transition ${
                           isActive
-                            ? 'bg-[#7C3AED]/20 text-purple-300 font-semibold border border-[#7C3AED]/30'
+                            ? 'font-semibold border'
                             : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                         }`}
                       >
@@ -255,7 +285,7 @@ export function AdminHeader() {
                             {c.websites?.[0]?.name || c.industry.replace('_', ' ')}
                           </div>
                         </div>
-                        {isActive && <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
+                        {isActive && <Check className="w-3.5 h-3.5 shrink-0" style={{ color: primaryColor }} />}
                       </button>
                     );
                   })}
@@ -265,7 +295,8 @@ export function AdminHeader() {
                   <Link
                     href="/admin/create"
                     onClick={() => setSiteSwitcherOpen(false)}
-                    className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-purple-400 hover:bg-purple-950/40 transition"
+                    style={{ color: primaryColor }}
+                    className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:opacity-80 transition"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
                     <span>Create New Client Website</span>
@@ -282,10 +313,10 @@ export function AdminHeader() {
           <button
             type="button"
             onClick={() => setSearchModalOpen(true)}
-            className="hidden md:flex items-center gap-2.5 h-10 px-3.5 rounded-xl border border-slate-800 bg-slate-900/90 hover:border-slate-700 hover:bg-slate-800 text-sm text-slate-300 hover:text-white transition-all shadow-xs group"
+            className="hidden md:flex items-center gap-2.5 h-10 px-3.5 rounded-xl border border-slate-800 bg-slate-900/90 hover:border-slate-700 hover:bg-slate-800 text-sm text-slate-300 hover:text-white transition-all shadow-xs group cursor-pointer"
             title="Search all websites, pages and collections (⌘K)"
           >
-            <Search className="w-4 h-4 text-slate-400 group-hover:text-purple-400 transition-colors" />
+            <Search className="w-4 h-4 transition-colors" style={{ color: primaryColor }} />
             <span className="text-sm font-medium text-slate-200">Search CMS...</span>
             <kbd className="text-xs px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 font-mono text-slate-300 group-hover:text-white transition-colors">
               ⌘K
@@ -299,7 +330,12 @@ export function AdminHeader() {
               // Trigger Copilot drawer / assistant
               window.dispatchEvent(new CustomEvent('open-bastion-copilot'));
             }}
-            className="h-10 px-4 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md bg-gradient-to-r from-[#7C3AED] to-[#9333EA] hover:from-[#6D28D9] hover:to-[#7C3AED] text-white shadow-purple-500/25 border border-purple-500/30 hover:scale-[1.02] active:scale-[0.98]"
+            style={{
+              background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
+              borderColor: `${accentColor}50`,
+              boxShadow: `0 4px 14px ${primaryColor}40`
+            }}
+            className="h-10 px-4 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md text-white border hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             title="Open Bastion AI Copilot"
           >
             <Sparkles className="w-4 h-4 fill-current" />
@@ -312,19 +348,22 @@ export function AdminHeader() {
             <button
               type="button"
               onClick={() => setNotificationsOpen(!notificationsOpen)}
-              className="h-10 w-10 rounded-xl border border-slate-800 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center relative transition-all shadow-xs"
+              className="h-10 w-10 rounded-xl border border-slate-800 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center relative transition-all shadow-xs cursor-pointer"
               title="Communications &amp; Notification Center"
               aria-label="Open notifications menu"
             >
               <Bell className="w-4.5 h-4.5" />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#7C3AED] ring-2 ring-[#0B0F19]" />
+              <span 
+                style={{ backgroundColor: primaryColor }}
+                className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full ring-2 ring-[#0B0F19]" 
+              />
             </button>
 
             {notificationsOpen && (
               <div className="absolute right-0 mt-2 w-80 bg-[#0F141C] border border-slate-800 rounded-xl shadow-2xl p-3 z-50 animate-in fade-in text-slate-200">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800 mb-2">
                   <span className="text-xs font-bold text-white uppercase tracking-wider">Publishing Alerts</span>
-                  <span className="text-[10px] text-purple-400 font-semibold">2 pending</span>
+                  <span className="text-[10px] font-semibold" style={{ color: accentColor }}>2 pending</span>
                 </div>
                 <div className="space-y-2 text-xs">
                   <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800">
@@ -343,24 +382,24 @@ export function AdminHeader() {
           {/* Customize Dashboard & Theme Trigger */}
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent('open-dashboard-customize'))}
-            className="h-10 w-10 rounded-xl border border-slate-800 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all shadow-xs"
+            onClick={openCustomizer}
+            className="h-10 w-10 rounded-xl border border-slate-800 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all shadow-xs cursor-pointer"
             title="Customize Dashboard, Cards, KPIs &amp; Colors"
             aria-label="Customize dashboard"
           >
-            <SlidersHorizontal className="w-4.5 h-4.5 text-purple-400 hover:text-purple-300 transition-colors" />
+            <SlidersHorizontal className="w-4.5 h-4.5 transition-colors" style={{ color: accentColor }} />
           </button>
 
           {/* Dark / Light Mode Switcher */}
           <button
             type="button"
             onClick={toggleTheme}
-            className="h-10 w-10 rounded-xl border border-slate-800 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all shadow-xs"
+            className="h-10 w-10 rounded-xl border border-slate-800 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all shadow-xs cursor-pointer"
             title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
             aria-label="Toggle light and dark mode"
           >
             {theme === 'dark' ? (
-              <Moon className="w-4.5 h-4.5 text-purple-300 hover:text-white transition-colors" />
+              <Moon className="w-4.5 h-4.5 hover:text-white transition-colors" style={{ color: accentColor }} />
             ) : (
               <Sun className="w-4.5 h-4.5 text-amber-400 hover:text-amber-300 transition-colors" />
             )}
@@ -369,7 +408,7 @@ export function AdminHeader() {
           {/* Dual SAST Time Clock */}
           <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900/80 text-xs font-mono text-slate-300">
             <span className="text-[10px] text-slate-500 font-sans font-bold">SAST</span>
-            <span className="font-semibold text-purple-300">{sastTime || '--:--:--'}</span>
+            <span className="font-semibold" style={{ color: accentColor }}>{sastTime || '--:--:--'}</span>
           </div>
 
           {/* Live Website Preview Pill Button */}

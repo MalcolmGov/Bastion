@@ -24,6 +24,7 @@ import {
   Layers
 } from 'lucide-react';
 import type { BrandKitDnaResult, StandardThemeJson } from '@/lib/studio/brandExtractor';
+import { useDashboardCustomizer } from './DashboardCustomizerProvider';
 
 interface BrandDnaExtractorProps {
   initialUrl?: string;
@@ -31,6 +32,7 @@ interface BrandDnaExtractorProps {
 }
 
 export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaExtractorProps) {
+  const { primaryColor, accentColor } = useDashboardCustomizer();
   const [url, setUrl] = useState(initialUrl);
   const [isExtracting, setIsExtracting] = useState(false);
   const [crawlStep, setCrawlStep] = useState<number>(0);
@@ -168,7 +170,14 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/80 text-[#7C3AED] dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+              <span 
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border"
+                style={{
+                  backgroundColor: `${primaryColor}15`,
+                  color: primaryColor,
+                  borderColor: `${primaryColor}40`
+                }}
+              >
                 Claude Design Pipeline
               </span>
               <span className="text-xs text-slate-500 font-medium">website URL &rarr; approved brand kit</span>
@@ -194,7 +203,10 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
             type="button"
             disabled={isExtracting || !url.trim()}
             onClick={() => handleStartExtraction()}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#7C3AED] to-[#9333EA] hover:opacity-95 disabled:opacity-50 transition shadow-md shadow-purple-500/25 flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+            style={{
+              background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`
+            }}
+            className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white hover:opacity-95 disabled:opacity-50 transition shadow-md flex items-center justify-center gap-2 shrink-0 cursor-pointer"
           >
             <Sparkles className="w-4 h-4" />
             <span>{isExtracting ? 'Extracting DNA…' : 'Extract Brand Kit'}</span>
@@ -216,7 +228,8 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                 setUrl(demo.url);
                 handleStartExtraction(demo.url);
               }}
-              className="text-[#7C3AED] dark:text-purple-400 hover:underline font-semibold"
+              style={{ color: primaryColor }}
+              className="hover:underline font-semibold"
             >
               {demo.label}{idx < 2 ? ' •' : ''}
             </button>
@@ -225,10 +238,22 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
 
         {/* Crawling Progress Visualizer */}
         {isExtracting && (
-          <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 space-y-2 animate-in fade-in">
-            <div className="flex items-center justify-between text-xs font-bold text-[#7C3AED] dark:text-purple-300">
+          <div 
+            className="p-4 rounded-xl border space-y-2 animate-in fade-in"
+            style={{
+              backgroundColor: `${primaryColor}10`,
+              borderColor: `${primaryColor}30`
+            }}
+          >
+            <div 
+              className="flex items-center justify-between text-xs font-bold"
+              style={{ color: primaryColor }}
+            >
               <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#7C3AED] animate-ping" />
+                <span 
+                  className="w-2 h-2 rounded-full animate-ping" 
+                  style={{ backgroundColor: primaryColor }}
+                />
                 <span>Crawling in Background Worker (Playwright / DOM Ingest)</span>
               </span>
               <span>Step {crawlStep + 1} of {crawlSteps.length}</span>
@@ -238,8 +263,11 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
             </p>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
               <div 
-                className="bg-gradient-to-r from-[#7C3AED] to-[#9333EA] h-full transition-all duration-300"
-                style={{ width: `${((crawlStep + 1) / crawlSteps.length) * 100}%` }}
+                className="h-full transition-all duration-300"
+                style={{ 
+                  width: `${((crawlStep + 1) / crawlSteps.length) * 100}%`,
+                  background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`
+                }}
               />
             </div>
           </div>
@@ -257,7 +285,13 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
       {extractedData && editableTheme && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
           {/* Top Banner: Verification Status */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-[#7C3AED]/10 via-purple-500/5 to-white dark:to-[#0F141C] border border-[#7C3AED]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div 
+            className="p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+            style={{
+              borderColor: `${primaryColor}40`,
+              backgroundImage: `linear-gradient(to right, ${primaryColor}15, transparent)`
+            }}
+          >
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
@@ -276,7 +310,10 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
               type="button"
               disabled={isApproving}
               onClick={handleApprove}
-              className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#7C3AED] to-[#9333EA] hover:opacity-95 shadow-md shadow-purple-500/25 flex items-center gap-2 shrink-0 cursor-pointer"
+              style={{
+                background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`
+              }}
+              className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white hover:opacity-95 shadow-md flex items-center gap-2 shrink-0 cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>{isApproving ? 'Committing…' : 'Approve Brand Kit'}</span>
@@ -310,7 +347,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-[#7C3AED]" />
+                    <ImageIcon className="w-4 h-4" style={{ color: primaryColor }} />
                     <span>Logo Options Found ({extractedData.assets.logos.length})</span>
                   </h4>
                   <p className="text-xs text-slate-500">Pick the primary logo for header and templates</p>
@@ -334,9 +371,14 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                       }}
                       className={`p-3 rounded-xl border cursor-pointer transition relative flex flex-col justify-between ${
                         isSelected
-                          ? 'bg-purple-50/50 dark:bg-purple-950/40 border-[#7C3AED] ring-1 ring-[#7C3AED]'
+                          ? 'ring-1'
                           : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100'
                       }`}
+                      style={isSelected ? {
+                        backgroundColor: `${primaryColor}15`,
+                        borderColor: primaryColor,
+                        boxShadow: `0 0 0 1px ${primaryColor}`
+                      } : undefined}
                     >
                       <div className="h-16 flex items-center justify-center p-2 rounded-lg bg-slate-100 dark:bg-slate-800/80 overflow-hidden">
                         {logo.isSvg && logo.svgContent ? (
@@ -354,7 +396,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                       </div>
                       <div className="mt-2 flex items-center justify-between text-[11px]">
                         <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">{logo.altText}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-[#7C3AED] shrink-0" />}
+                        {isSelected && <Check className="w-3.5 h-3.5 shrink-0" style={{ color: primaryColor }} />}
                       </div>
                     </div>
                   );
@@ -367,7 +409,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                    <Palette className="w-4 h-4 text-[#7C3AED]" />
+                    <Palette className="w-4 h-4" style={{ color: primaryColor }} />
                     <span>Color Palette with Semantic Roles</span>
                   </h4>
                   <p className="text-xs text-slate-500">Edit swatches to update client theme immediately</p>
@@ -438,7 +480,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
             <div className="p-5 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs space-y-4">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <Type className="w-4 h-4 text-[#7C3AED]" />
+                  <Type className="w-4 h-4" style={{ color: primaryColor }} />
                   <span>Typography Pairings &amp; Licensing</span>
                 </h4>
                 <p className="text-xs text-slate-500">Google Fonts vs Commercial Font licensing audit</p>
@@ -452,7 +494,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                       Google Font &bull; Free License
                     </span>
                   </div>
-                  <div className="text-base font-bold text-[#7C3AED] font-serif">
+                  <div className="text-base font-bold font-serif" style={{ color: primaryColor }}>
                     {editableTheme.font.heading}
                   </div>
                   <p className="text-xs text-slate-500 italic">
@@ -481,7 +523,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
             <div className="p-5 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs space-y-4">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-[#7C3AED]" />
+                  <MessageSquare className="w-4 h-4" style={{ color: primaryColor }} />
                   <span>AI Brand Voice &amp; Guardrails</span>
                 </h4>
                 <p className="text-xs text-slate-500">
@@ -533,7 +575,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-[#7C3AED]" />
+                  <ImageIcon className="w-4 h-4" style={{ color: primaryColor }} />
                   <span>Extracted Media Assets Mini-Gallery</span>
                 </h4>
                 <p className="text-xs text-slate-500">Check assets to import into the client&apos;s Media Library</p>
@@ -551,9 +593,13 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                     }}
                     className={`p-2 rounded-xl border cursor-pointer transition relative flex flex-col justify-between ${
                       isChecked
-                        ? 'bg-purple-50/50 dark:bg-purple-950/40 border-[#7C3AED]'
+                        ? 'border-transparent'
                         : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-slate-100'
                     }`}
+                    style={isChecked ? {
+                      backgroundColor: `${primaryColor}15`,
+                      borderColor: primaryColor
+                    } : undefined}
                   >
                     <div className="h-24 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden relative">
                       <img
@@ -571,7 +617,8 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => {}}
-                        className="rounded text-[#7C3AED]"
+                        style={{ accentColor: primaryColor }}
+                        className="rounded"
                       />
                     </div>
                   </div>
@@ -585,7 +632,7 @@ export function BrandDnaExtractor({ initialUrl = '', onKitApproved }: BrandDnaEx
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <Code2 className="w-4 h-4 text-[#7C3AED]" />
+                  <Code2 className="w-4 h-4" style={{ color: primaryColor }} />
                   <span>Generated Theme Tokens &amp; Tailwind Config</span>
                 </h4>
                 <p className="text-xs text-slate-500">Live variables compiled from approved brand kit</p>

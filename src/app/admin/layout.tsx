@@ -9,7 +9,13 @@ import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Sparkles, MessageSquare, X, Send, Bot } from 'lucide-react';
 
+import {
+  DashboardCustomizerProvider,
+  useDashboardCustomizer
+} from '@/components/admin/DashboardCustomizerProvider';
+
 export function FloatingCopilotButton() {
+  const { primaryColor, accentColor } = useDashboardCustomizer();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'assistant' | 'user'; text: string }>>([
@@ -55,13 +61,20 @@ export function FloatingCopilotButton() {
     }
   };
 
+  const gradientBg = `linear-gradient(135deg, ${primaryColor}, ${accentColor})`;
+
   return (
     <>
       {/* Floating Trigger Button (Bottom-Right, Zara CareerOS signature) */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-xl shadow-purple-500/30 border border-purple-400/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group"
+        style={{
+          background: gradientBg,
+          boxShadow: `0 8px 24px ${primaryColor}45`,
+          borderColor: `${accentColor}50`
+        }}
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl text-white border flex items-center justify-center hover:scale-105 active:scale-95 transition-all group"
         title="Open Bastion Copilot"
         aria-label="Open Bastion Copilot"
       >
@@ -75,7 +88,10 @@ export function FloatingCopilotButton() {
           {/* Header */}
           <div className="p-4 border-b border-slate-800 bg-[#0B0F19] flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7C3AED] to-[#9333EA] text-white flex items-center justify-center shadow-xs">
+              <div
+                style={{ background: gradientBg }}
+                className="w-8 h-8 rounded-lg text-white flex items-center justify-center shadow-xs"
+              >
                 <Bot className="w-4 h-4" />
               </div>
               <div>
@@ -83,7 +99,9 @@ export function FloatingCopilotButton() {
                   <span>Bastion Copilot</span>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 </div>
-                <div className="text-[10px] text-purple-400 font-medium">Corporate Platform Intelligence</div>
+                <div className="text-[10px] font-medium" style={{ color: accentColor }}>
+                  Corporate Platform Intelligence
+                </div>
               </div>
             </div>
             <button
@@ -103,9 +121,10 @@ export function FloatingCopilotButton() {
                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
+                  style={m.role === 'user' ? { background: gradientBg } : undefined}
                   className={`max-w-[85%] p-3 rounded-xl leading-relaxed ${
                     m.role === 'user'
-                      ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-xs'
+                      ? 'text-white shadow-xs'
                       : 'bg-slate-900 border border-slate-800 text-slate-200'
                   }`}
                 >
@@ -116,9 +135,9 @@ export function FloatingCopilotButton() {
             {isTyping && (
               <div className="flex justify-start">
                 <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl flex items-center gap-1.5 text-slate-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:0.4s]" />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: accentColor }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce [animation-delay:0.2s]" style={{ backgroundColor: accentColor }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce [animation-delay:0.4s]" style={{ backgroundColor: accentColor }} />
                 </div>
               </div>
             )}
@@ -136,7 +155,8 @@ export function FloatingCopilotButton() {
             <button
               type="submit"
               disabled={!input.trim()}
-              className="p-2 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white disabled:opacity-50 transition shadow-xs"
+              style={{ background: gradientBg }}
+              className="p-2 rounded-xl text-white disabled:opacity-50 transition shadow-xs cursor-pointer"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -171,21 +191,23 @@ export default function AdminRootLayout({
     <ThemeProvider>
       <AdminAuthProvider>
         <StudioWorkspaceProvider>
-          <div className="min-h-screen bg-[#FAFAFE] dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex font-sans selection:bg-[#7C3AED] selection:text-white antialiased transition-colors duration-150">
-            {/* Left Sticky Sidebar */}
-            <AdminSidebar />
+          <DashboardCustomizerProvider>
+            <div className="min-h-screen bg-[#FAFAFE] dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex font-sans antialiased transition-colors duration-150">
+              {/* Left Sticky Sidebar */}
+              <AdminSidebar />
 
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0">
-              <AdminHeader />
-              <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
-                {children}
-              </main>
+              {/* Main Content Area */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <AdminHeader />
+                <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+                  {children}
+                </main>
+              </div>
+
+              {/* Floating Copilot Button & Assistant Drawer */}
+              <FloatingCopilotButton />
             </div>
-
-            {/* Floating Copilot Button & Assistant Drawer */}
-            <FloatingCopilotButton />
-          </div>
+          </DashboardCustomizerProvider>
         </StudioWorkspaceProvider>
       </AdminAuthProvider>
     </ThemeProvider>

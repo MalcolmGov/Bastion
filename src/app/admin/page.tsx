@@ -46,11 +46,7 @@ import {
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import { useStudioWorkspace, WorkspaceClient, WorkspaceSite } from '@/components/admin/StudioWorkspaceProvider';
 import { ClientCmsHome } from '@/components/admin/ClientCmsHome';
-import {
-  DashboardCustomizeModal,
-  DashboardPreferences,
-  DEFAULT_DASHBOARD_PREFERENCES
-} from '@/components/admin/DashboardCustomizeModal';
+import { useDashboardCustomizer } from '@/components/admin/DashboardCustomizerProvider';
 
 export default function MoveStudioOverviewPage() {
   const router = useRouter();
@@ -65,49 +61,19 @@ export default function MoveStudioOverviewPage() {
     setPortalViewMode
   } = useStudioWorkspace();
 
+  const {
+    preferences: dashboardPrefs,
+    openCustomizer,
+    primaryColor: primaryCol,
+    accentColor
+  } = useDashboardCustomizer();
+
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSector, setSelectedSector] = useState('all');
   const [isListening, setIsListening] = useState(false);
   const [quickBrandUrl, setQuickBrandUrl] = useState('');
-  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
-
-  // User Dashboard Customization Preferences
-  const [dashboardPrefs, setDashboardPrefs] = useState<DashboardPreferences>(DEFAULT_DASHBOARD_PREFERENCES);
-
-  // Load saved dashboard preferences from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('bastion_dashboard_prefs');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setDashboardPrefs({ ...DEFAULT_DASHBOARD_PREFERENCES, ...parsed });
-          // Apply custom primary color to document root
-          if (parsed.primaryColor) {
-            document.documentElement.style.setProperty('--color-brand-primary', parsed.primaryColor);
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to parse dashboard preferences:', e);
-      }
-    }
-
-    const handleOpenCustomize = () => setIsCustomizeOpen(true);
-    window.addEventListener('open-dashboard-customize', handleOpenCustomize);
-    return () => window.removeEventListener('open-dashboard-customize', handleOpenCustomize);
-  }, []);
-
-  const handleSavePreferences = (newPrefs: DashboardPreferences) => {
-    setDashboardPrefs(newPrefs);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('bastion_dashboard_prefs', JSON.stringify(newPrefs));
-      if (newPrefs.primaryColor) {
-        document.documentElement.style.setProperty('--color-brand-primary', newPrefs.primaryColor);
-      }
-    }
-  };
 
   useEffect(() => {
     async function loadDashboard() {
@@ -187,8 +153,6 @@ export default function MoveStudioOverviewPage() {
     return true;
   });
 
-  const primaryCol = dashboardPrefs.primaryColor || '#7C3AED';
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
       {/* 1. Top Intelligence Strip & Customizer Trigger (Zara CareerOS Signature) */}
@@ -226,7 +190,7 @@ export default function MoveStudioOverviewPage() {
           {/* User Customize Dashboard Button */}
           <button
             type="button"
-            onClick={() => setIsCustomizeOpen(true)}
+            onClick={openCustomizer}
             className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
             title="Customize dashboard cards, KPIs, colors and layout"
           >
@@ -238,10 +202,13 @@ export default function MoveStudioOverviewPage() {
             <button
               type="button"
               onClick={() => setPortalViewMode('agency')}
-              style={portalViewMode === 'agency' ? { backgroundColor: primaryCol } : undefined}
+              style={portalViewMode === 'agency' ? {
+                background: `linear-gradient(135deg, ${primaryCol}, ${accentColor})`,
+                color: '#FFFFFF'
+              } : undefined}
               className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
                 portalViewMode === 'agency'
-                  ? 'text-white shadow-xs'
+                  ? 'shadow-xs'
                   : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -251,9 +218,13 @@ export default function MoveStudioOverviewPage() {
             <button
               type="button"
               onClick={() => setPortalViewMode('client')}
+              style={portalViewMode === 'client' ? {
+                background: `linear-gradient(135deg, ${primaryCol}, ${accentColor})`,
+                color: '#FFFFFF'
+              } : undefined}
               className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
                 portalViewMode === 'client'
-                  ? 'bg-amber-500 text-white shadow-xs'
+                  ? 'shadow-xs'
                   : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -789,14 +760,6 @@ export default function MoveStudioOverviewPage() {
           </div>
         )}
       </div>
-
-      {/* 5. User Customization Modal */}
-      <DashboardCustomizeModal
-        isOpen={isCustomizeOpen}
-        onClose={() => setIsCustomizeOpen(false)}
-        preferences={dashboardPrefs}
-        onSavePreferences={handleSavePreferences}
-      />
     </div>
   );
 }
