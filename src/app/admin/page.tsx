@@ -47,6 +47,7 @@ import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import { useStudioWorkspace, WorkspaceClient, WorkspaceSite } from '@/components/admin/StudioWorkspaceProvider';
 import { ClientCmsHome } from '@/components/admin/ClientCmsHome';
 import { useDashboardCustomizer } from '@/components/admin/DashboardCustomizerProvider';
+import { BastionLogo } from '@/components/admin/BastionLogo';
 
 export default function MoveStudioOverviewPage() {
   const router = useRouter();
@@ -164,16 +165,8 @@ export default function MoveStudioOverviewPage() {
         }}
       >
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3.5 py-1.5 rounded-xl shadow-xs border border-slate-200/80 dark:border-slate-800">
-            <div 
-              className="w-5 h-5 rounded-md text-white flex items-center justify-center font-black text-xs"
-              style={{ backgroundColor: primaryCol }}
-            >
-              B
-            </div>
-            <span className="text-xs font-black text-slate-900 dark:text-white tracking-tight">
-              BASTION
-            </span>
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl shadow-xs border border-slate-200/80 dark:border-slate-800">
+            <BastionLogo height={16} showCmsBadge={false} className="text-slate-900 dark:text-white" />
           </div>
           <div className="hidden sm:block h-6 w-px bg-slate-300 dark:bg-slate-700" />
           <div className="flex flex-col">

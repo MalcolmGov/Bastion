@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAdminAuth } from './AdminAuthProvider';
 import { useStudioWorkspace } from './StudioWorkspaceProvider';
 import { useDashboardCustomizer } from './DashboardCustomizerProvider';
+import { BastionLogo } from './BastionLogo';
 import {
   LayoutDashboard,
   Users,
@@ -102,35 +103,23 @@ export function AdminSidebar() {
                 </div>
               </>
             ) : (
-              <>
-                <div 
+              <div className="flex items-center gap-2 min-w-0">
+                <BastionLogo 
+                  height={22} 
+                  showCmsBadge={false} 
+                  className="text-slate-900 dark:text-white"
+                />
+                <span 
                   style={{
-                    background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-                    boxShadow: `0 4px 14px ${primaryColor}35`
+                    backgroundColor: `${primaryColor}15`,
+                    color: primaryColor,
+                    borderColor: `${primaryColor}30`
                   }}
-                  className="w-9 h-9 rounded-xl text-white flex items-center justify-center font-black text-sm shrink-0 ring-1 ring-white/15"
+                  className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase border shrink-0"
                 >
-                  <span>B</span>
-                </div>
-                <div className="truncate">
-                  <div className="font-bold text-sm tracking-tight text-slate-900 dark:text-white leading-tight flex items-center space-x-1.5">
-                    <span>BASTION</span>
-                    <span 
-                      style={{
-                        backgroundColor: `${primaryColor}15`,
-                        color: primaryColor,
-                        borderColor: `${primaryColor}30`
-                      }}
-                      className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase border"
-                    >
-                      AGENCY
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                    Website Management Platform
-                  </div>
-                </div>
-              </>
+                  AGENCY
+                </span>
+              </div>
             )}
           </Link>
 
