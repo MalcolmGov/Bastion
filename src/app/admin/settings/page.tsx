@@ -560,7 +560,7 @@ export default function WorkspaceSettingsAndExportPage() {
                 <Upload className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-white">Import Move Studio Project Package</h2>
+                <h2 className="text-base font-bold text-white">Import Bastion Studio Project Package</h2>
                 <div className="text-xs text-slate-400">Import pre-configured client sites into the database</div>
               </div>
             </div>

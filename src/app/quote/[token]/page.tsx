@@ -247,11 +247,11 @@ export default function QuoteSignPortal({ params }: ClientPortalProps) {
       <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 font-bold text-white text-base">
-            M
+            B
           </div>
           <div>
             <div className="text-xs font-bold text-white uppercase tracking-wider">
-              {quote.companyName || 'Move Studio Agency'}
+              {quote.companyName || 'Bastion Group'}
             </div>
             <div className="text-[11px] text-slate-400">Secure Digital Service Agreement</div>
           </div>
@@ -623,7 +623,7 @@ export default function QuoteSignPortal({ params }: ClientPortalProps) {
               {quote.companyName} • Reg: {quote.companyVat ? `VAT ${quote.companyVat}` : 'Johannesburg, South Africa'}
             </span>
           </div>
-          <div>Powered by Move Studio Commercial Engine</div>
+          <div>Powered by Bastion Group Commercial Engine</div>
         </div>
       </div>
     </div>

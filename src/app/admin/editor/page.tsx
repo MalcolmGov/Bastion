@@ -1819,7 +1819,7 @@ export default function VisualWebsiteEditorPage() {
         <div className="h-screen bg-[#080C14] text-white flex items-center justify-center">
           <div className="flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-slate-400 font-mono">Loading Move Studio Editor...</span>
+            <span className="text-xs text-slate-400 font-mono">Loading Bastion Studio Editor...</span>
           </div>
         </div>
       }

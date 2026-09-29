@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
     const result = await WebsiteAssembler.assembleAndSave(body, db);
     return NextResponse.json({ success: true, ...result });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[Assemble Error Details]:', err);
+    return NextResponse.json({ error: err.message, stack: err.stack, cause: err.cause }, { status: 500 });
   }
 }

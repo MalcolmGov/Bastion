@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 
   if (siteRes.rows.length === 0) {
-    return { title: { absolute: 'Site Not Found | Move Studio' } };
+    return { title: { absolute: 'Site Not Found | Bastion Studio' } };
   }
 
   const site = siteRes.rows[0];
@@ -29,18 +29,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: { absolute: `${siteName} — ${tagline}` },
-    description: `${siteName} official website. Powered by Move Studio.`,
+    description: `${siteName} official website. Powered by Bastion Studio.`,
     robots: { index: false, follow: false },
     openGraph: {
       title: `${siteName} — ${tagline}`,
-      description: `${siteName} official website. Powered by Move Studio.`,
+      description: `${siteName} official website. Powered by Bastion Studio.`,
       siteName: siteName,
       type: 'website'
     },
     twitter: {
       card: 'summary_large_image',
       title: `${siteName} — ${tagline}`,
-      description: `${siteName} official website. Powered by Move Studio.`
+      description: `${siteName} official website. Powered by Bastion Studio.`
     }
   };
 }
@@ -94,13 +94,13 @@ export default async function DynamicSitePage({ params, searchParams }: PageProp
         <div className="max-w-md text-center space-y-4">
           <h1 className="text-2xl font-bold">{siteRow.name as string}</h1>
           <p className="text-slate-400 text-sm">
-            This website is currently being assembled in Move Studio. Open the Visual Editor to publish its initial page composition.
+            This website is currently being assembled in Bastion Studio. Open the Visual Editor to publish its initial page composition.
           </p>
           <a
             href="/admin/editor"
             className="inline-block px-5 py-2.5 rounded-lg bg-sky-500 text-white text-xs font-semibold"
           >
-            Open in Move Studio Editor
+            Open in Bastion Studio Editor
           </a>
         </div>
       </div>
@@ -149,14 +149,14 @@ export default async function DynamicSitePage({ params, searchParams }: PageProp
         ))}
       </main>
 
-      {/* Floating Move Studio Attribution / Switcher */}
+      {/* Floating Bastion Studio Attribution / Switcher */}
       <div className="fixed bottom-4 right-4 z-40">
         <a
           href="/admin"
           className="group flex items-center space-x-2 px-3.5 py-2 rounded-full bg-[#0F172A]/90 hover:bg-[#0F172A] border border-slate-700 text-slate-300 hover:text-white text-xs font-medium backdrop-blur-md shadow-lg transition"
         >
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Move Studio</span>
+          <span>Bastion Studio</span>
           <span className="text-slate-500">•</span>
           <span className="text-slate-400 group-hover:text-sky-300">Open Studio</span>
         </a>

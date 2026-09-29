@@ -291,7 +291,7 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
             <span>{copyright}</span>
             <span className="hidden sm:inline text-slate-600">•</span>
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-300 font-mono">
-              Move Studio Powered
+              Bastion Studio Powered
             </span>
           </div>
 

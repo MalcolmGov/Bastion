@@ -138,9 +138,9 @@ export default function AdminBillingPage() {
         accountNo,
         branchCode,
         paymentRef: docNumber,
-        companyName: 'Move Studio Agency',
+        companyName: 'Bastion Group',
         companyAddress: '100 Sandton Drive, Sandton, Johannesburg, 2196',
-        companyEmail: 'billing@movestudio.agency',
+        companyEmail: 'billing@bastiongroup.co.za',
         companyPhone: '+27 11 883 4000',
         companyVat: '4820194821',
       };

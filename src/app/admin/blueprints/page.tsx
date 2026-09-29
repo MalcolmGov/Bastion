@@ -21,7 +21,7 @@ export default function BlueprintsAndCollectionsPage() {
       {/* Header */}
       <div>
         <div className="flex items-center space-x-2">
-          <span className="text-xs font-bold font-mono uppercase text-sky-400">Move Studio Architecture</span>
+          <span className="text-xs font-bold font-mono uppercase text-sky-400">Bastion Studio Architecture</span>
           <span className="text-slate-600">•</span>
           <span className="text-xs text-slate-400">Reusable Blueprint & Design Engine</span>
         </div>
@@ -29,7 +29,7 @@ export default function BlueprintsAndCollectionsPage() {
           Website Blueprints & Curated Collections
         </h1>
         <p className="text-xs text-slate-400 max-w-2xl mt-1.5 leading-relaxed">
-          Move Studio separates structural information architecture (Blueprints) from visual treatments (Collections), allowing any client site to assemble instantly with pre-verified responsive layouts.
+          Bastion Studio separates structural information architecture (Blueprints) from visual treatments (Collections), allowing any client site to assemble instantly with pre-verified responsive layouts.
         </p>
       </div>
 

@@ -222,7 +222,7 @@ export default function WebsiteCreationWizardPage() {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center space-x-2">
-              <span className="text-xs font-bold font-mono uppercase text-sky-400">Move Studio Creation Engine</span>
+              <span className="text-xs font-bold font-mono uppercase text-sky-400">Bastion Studio Creation Engine</span>
               <span className="text-slate-600">•</span>
               <span className="text-xs text-slate-400">Guided Client Onboarding</span>
             </div>
