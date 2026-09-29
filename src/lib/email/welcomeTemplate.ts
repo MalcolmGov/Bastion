@@ -1,5 +1,5 @@
 /**
- * Move Studio / Bastion Corporate CMS — Visual Welcome Email Template Generator
+ * Bastion Corporate CMS — Visual Welcome Email Template Generator
  * Generates an executive, responsive HTML email template for new CMS portal users.
  */
 
@@ -16,21 +16,38 @@ export interface WelcomeEmailOptions {
 }
 
 export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
+  // Enforce Bastion Group identity and cleanse any Moove Digital references
+  let rawClient = options.clientName || 'Bastion Group';
+  let rawEmail = options.recipientEmail || 'malcolm@bastiongroup.co.za';
+
+  if (rawClient.toLowerCase().includes('moove')) {
+    rawClient = 'Bastion Group';
+  }
+  if (rawEmail.toLowerCase().includes('movedigital')) {
+    rawEmail = rawEmail.replace(/movedigital\.africa/gi, 'bastiongroup.co.za');
+  }
+
+  const clientName = rawClient;
+  const recipientEmail = rawEmail;
   const {
-    recipientName,
-    recipientEmail,
-    roleTitle,
-    clientName,
-    clientInitials = clientName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
-    primaryColor = clientName.toLowerCase().includes('gold') ? '#C99700' : '#06B6D4',
-    loginUrl,
+    recipientName = 'Malcolm Govender',
+    roleTitle = 'Platform Administrator',
+    loginUrl: rawLoginUrl = 'http://localhost:3010/admin/login',
     temporaryPassword = 'GoldFields2026!',
     inviterName = 'Bastion Group Platform Operations'
   } = options;
 
+  let loginUrl = rawLoginUrl.replace(/email=[^&]*/, `email=${encodeURIComponent(recipientEmail)}`);
+  if (!loginUrl.includes('email=')) {
+    loginUrl += `${loginUrl.includes('?') ? '&' : '?'}email=${encodeURIComponent(recipientEmail)}`;
+  }
+
+  const clientInitials = options.clientInitials || (clientName.toLowerCase().includes('bastion') ? 'BG' : clientName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase());
+  const primaryColor = options.primaryColor || (clientName.toLowerCase().includes('gold') ? '#C99700' : clientName.toLowerCase().includes('bastion') ? '#B48C36' : '#2563EB');
+
   const currentYear = new Date().getFullYear();
 
-  return `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -82,7 +99,7 @@ export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
                             ${clientName}
                           </div>
                           <div style="font-size: 11px; color: #94A3B8; font-weight: 500; margin-top: 2px;">
-                            Corporate Portal &bull; <span style="color: ${primaryColor};">Operated by Bastion Group</span>
+                            ${clientName.toLowerCase().includes('bastion') ? 'Corporate Website Management Platform' : `Corporate Portal &bull; <span style="color: ${primaryColor};">Operated by Bastion Group</span>`}
                           </div>
                         </td>
                       </tr>
@@ -170,7 +187,7 @@ export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
                     <div style="width: 22px; height: 22px; border-radius: 50%; background-color: #131E2D; border: 1px solid #23344B; text-align: center; line-height: 22px; font-size: 11px; font-weight: bold; color: ${primaryColor};">2</div>
                   </td>
                   <td style="padding-bottom: 12px; font-size: 13px; color: #94A3B8; line-height: 1.5;">
-                    <strong style="color: #FFFFFF;">Edit with Zero Code:</strong> Update mine operations, upload financial PDFs, or draft press releases with built-in AI writing assistance.
+                    <strong style="color: #FFFFFF;">Edit with Zero Code:</strong> Update website pages, publish announcements, or draft press releases with built-in AI writing assistance.
                   </td>
                 </tr>
                 <tr>
@@ -215,4 +232,10 @@ export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
   </table>
 </body>
 </html>`;
+
+  // Absolute safety guarantee: filter out any remaining Moove Digital references
+  return html
+    .replace(/Moove Digital/gi, 'Bastion Group')
+    .replace(/malcolm@movedigital\.africa/gi, 'malcolm@bastiongroup.co.za')
+    .replace(/movedigital\.africa/gi, 'bastiongroup.co.za');
 }

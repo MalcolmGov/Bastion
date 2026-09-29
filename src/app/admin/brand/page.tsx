@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Palette,
   CheckCircle2,
@@ -12,14 +13,22 @@ import {
   Type,
   FileCheck,
   ShieldCheck,
-  Building
+  Building,
+  Sparkles,
+  Layers,
+  Globe
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
+import { BrandDnaExtractor } from '@/components/admin/BrandDnaExtractor';
 
-export default function BrandLibraryPage() {
+function BrandLibraryContent() {
   const { activeClient, activeSite } = useStudioWorkspace();
+  const searchParams = useSearchParams();
+  const initialUrlFromQuery = searchParams.get('url') || '';
 
-  const [activeLayer, setActiveLayer] = useState<'approved' | 'observed' | 'redesign'>('approved');
+  const [activeLayer, setActiveLayer] = useState<'extractor' | 'approved' | 'observed' | 'redesign'>(
+    initialUrlFromQuery ? 'extractor' : 'extractor'
+  );
   const [lockedItems, setLockedItems] = useState<Record<string, boolean>>({
     primaryLogo: true,
     primaryColor: true,
@@ -34,116 +43,135 @@ export default function BrandLibraryPage() {
   const isGoldFields = activeClient?.id === 'client_goldfields';
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-16">
+    <div className="max-w-6xl mx-auto space-y-8 pb-16 animate-in fade-in duration-200">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-bold font-mono uppercase text-sky-400">Move Studio Brand Governance</span>
-            <span className="text-slate-600">•</span>
-            <span className="text-xs text-slate-400">{activeClient?.name || 'Client Project'}</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#7C3AED] dark:text-purple-400">
+              Bastion Brand Intelligence &amp; Governance
+            </span>
+            <span className="text-slate-400">&bull;</span>
+            <span className="text-xs text-slate-500">{activeClient?.name || 'Client Project'}</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-1">
-            Reviewed Brand Library
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white mt-1">
+            Brand DNA &amp; Reviewed Library
           </h1>
         </div>
 
-        {/* 3-Layer Tab Switcher */}
-        <div className="flex p-1 rounded-xl bg-[#141C2A] border border-[#232F42] self-start sm:self-auto">
+        {/* Layer Tab Switcher */}
+        <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] self-start sm:self-auto flex-wrap gap-0.5">
+          <button
+            type="button"
+            onClick={() => setActiveLayer('extractor')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              activeLayer === 'extractor'
+                ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Brand DNA Pipeline</span>
+          </button>
           <button
             type="button"
             onClick={() => setActiveLayer('approved')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
               activeLayer === 'approved'
-                ? 'bg-sky-500 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            1. Approved Rules
+            Approved Rules
           </button>
           <button
             type="button"
             onClick={() => setActiveLayer('observed')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
               activeLayer === 'observed'
-                ? 'bg-sky-500 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            2. Observed Evidence
+            Observed Evidence
           </button>
           <button
             type="button"
             onClick={() => setActiveLayer('redesign')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
               activeLayer === 'redesign'
-                ? 'bg-sky-500 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            3. Redesign Extensions
+            Redesign Extensions
           </button>
         </div>
       </div>
+
+      {/* Layer 0: Brand DNA Pipeline (URL -> Approved Brand Kit) */}
+      {activeLayer === 'extractor' && (
+        <BrandDnaExtractor initialUrl={initialUrlFromQuery} />
+      )}
 
       {/* Layer 1: Client-Approved Brand Rules */}
       {activeLayer === 'approved' && (
         <div className="space-y-6">
           {/* 1. Logos & Marks */}
-          <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-4">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Approved Logo Assets & Variants
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Approved Logo Assets &amp; Variants
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Approved vector marks and light/dark alternates.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => toggleLock('primaryLogo')}
-                className="flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white"
+                className="flex items-center space-x-1.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
               >
-                {lockedItems.primaryLogo ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Unlock className="w-3.5 h-3.5" />}
+                {lockedItems.primaryLogo ? <Lock className="w-3.5 h-3.5 text-amber-500" /> : <Unlock className="w-3.5 h-3.5" />}
                 <span>{lockedItems.primaryLogo ? 'Locked (AI Protected)' : 'Unlocked'}</span>
               </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
-                <div className="h-16 bg-[#0A0D14] rounded-lg flex items-center justify-center p-3">
-                  <span className="font-bold text-sky-400 text-sm">{activeClient?.name}</span>
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3">
+                <div className="h-16 bg-white dark:bg-[#0A0D14] rounded-lg flex items-center justify-center p-3 border border-slate-200 dark:border-slate-800">
+                  <span className="font-bold text-[#7C3AED] text-sm">{activeClient?.name}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-white">Primary Vector Mark</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                  <span className="font-medium text-slate-800 dark:text-white">Primary Vector Mark</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200">
                     Approved
                   </span>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
-                <div className="h-16 bg-white rounded-lg flex items-center justify-center p-3">
-                  <span className="font-bold text-slate-900 text-sm">{activeClient?.name}</span>
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3">
+                <div className="h-16 bg-[#0B0F19] rounded-lg flex items-center justify-center p-3 border border-slate-800">
+                  <span className="font-bold text-amber-400 text-sm">{activeClient?.name}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-white">Light Canvas Variant</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                  <span className="font-medium text-slate-800 dark:text-white">Reverse / Dark Background</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200">
                     Approved
                   </span>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
-                <div className="h-16 bg-[#0A0D14] rounded-lg flex items-center justify-center p-3">
-                  <div className="w-8 h-8 rounded bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-xs">
-                    {activeClient?.name?.substring(0, 2).toUpperCase()}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3">
+                <div className="h-16 bg-white dark:bg-[#0A0D14] rounded-lg flex items-center justify-center p-3 border border-slate-200 dark:border-slate-800">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7C3AED] to-[#9333EA] text-white flex items-center justify-center font-bold text-xs">
+                    {activeClient?.name ? activeClient.name.substring(0, 2).toUpperCase() : 'GF'}
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-white">Favicon & App Icon</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                  <span className="font-medium text-slate-800 dark:text-white">Monogram / Favicon</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200">
                     Approved
                   </span>
                 </div>
@@ -152,88 +180,61 @@ export default function BrandLibraryPage() {
           </div>
 
           {/* 2. Color Palette */}
-          <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-4">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Approved Color Palette Tokens
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Brand Color Tokens
                 </h2>
-                <p className="text-xs text-slate-400">
-                  WCAG 2.2 AA verified contrast tokens.
+                <p className="text-xs text-slate-500">
+                  Approved hex tokens for buttons, surfaces, and contrast compliance.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => toggleLock('primaryColor')}
-                className="flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white"
+                className="flex items-center space-x-1.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
               >
-                {lockedItems.primaryColor ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Unlock className="w-3.5 h-3.5" />}
+                {lockedItems.primaryColor ? <Lock className="w-3.5 h-3.5 text-amber-500" /> : <Unlock className="w-3.5 h-3.5" />}
                 <span>{lockedItems.primaryColor ? 'Locked (AI Protected)' : 'Unlocked'}</span>
               </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
-                <div className="h-10 rounded-lg shadow-sm" style={{ backgroundColor: isGoldFields ? '#082B49' : '#0F172A' }} />
-                <div className="text-xs font-bold text-white">{isGoldFields ? 'Deep Navy' : 'Obsidian Slate'}</div>
-                <div className="text-[10px] font-mono text-slate-400">{isGoldFields ? '#082B49' : '#0F172A'}</div>
-                <div className="text-[10px] text-slate-500">Primary Brand Surface</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
-                <div className="h-10 rounded-lg shadow-sm" style={{ backgroundColor: isGoldFields ? '#00E5C0' : '#0284C7' }} />
-                <div className="text-xs font-bold text-white">{isGoldFields ? 'Electric Turquoise' : 'Sky Azure'}</div>
-                <div className="text-[10px] font-mono text-slate-400">{isGoldFields ? '#00E5C0' : '#0284C7'}</div>
-                <div className="text-[10px] text-slate-500">High-Contrast Accent</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
-                <div className="h-10 rounded-lg shadow-sm" style={{ backgroundColor: isGoldFields ? '#C8A064' : '#1E293B' }} />
-                <div className="text-xs font-bold text-white">{isGoldFields ? 'Mineral Gold' : 'Deep Navy Gray'}</div>
-                <div className="text-[10px] font-mono text-slate-400">{isGoldFields ? '#C8A064' : '#1E293B'}</div>
-                <div className="text-[10px] text-slate-500">Secondary Hierarchy</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
-                <div className="h-10 rounded-lg shadow-sm border border-slate-700" style={{ backgroundColor: isGoldFields ? '#F7F6F2' : '#F8FAFC' }} />
-                <div className="text-xs font-bold text-white">{isGoldFields ? 'Editorial Canvas' : 'Off-White Canvas'}</div>
-                <div className="text-[10px] font-mono text-slate-400">{isGoldFields ? '#F7F6F2' : '#F8FAFC'}</div>
-                <div className="text-[10px] text-slate-500">Reading Background</div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Typography & Voice */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-4">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Typography Scale & Pairings
-              </h2>
-              <div className="space-y-3">
-                <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42]">
-                  <div className="text-[10px] font-mono text-slate-400 uppercase">Headline Display Font</div>
-                  <div className="text-sm font-bold text-white mt-1">
-                    {isGoldFields ? 'Playfair Display (Serif)' : 'Plus Jakarta Sans (Geometric)'}
-                  </div>
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-2">
+                <div className="h-12 rounded-lg bg-[#0B3A66] shadow-xs" />
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-slate-900 dark:text-white">Primary Brand</span>
+                  <span className="font-mono text-[10px] text-slate-500">#0B3A66</span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42]">
-                  <div className="text-[10px] font-mono text-slate-400 uppercase">Body Reading Font</div>
-                  <div className="text-sm font-bold text-white mt-1">Inter (Neutral Sans-Serif)</div>
-                </div>
+                <div className="text-[10px] text-slate-500">Buttons, links &amp; headers</div>
               </div>
-            </div>
 
-            <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-4">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                Tone of Voice & Guardrails
-              </h2>
-              <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
-                <div className="text-xs font-bold text-sky-400">Approved Voice:</div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {isGoldFields
-                    ? 'Authoritative, institutional, source-grounded corporate reporting.'
-                    : 'Analytical, decisive, discreet, senior-partner advisory level.'}
-                </p>
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-2">
+                <div className="h-12 rounded-lg bg-[#E8793A] shadow-xs" />
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-slate-900 dark:text-white">CTA Accent</span>
+                  <span className="font-mono text-[10px] text-slate-500">#E8793A</span>
+                </div>
+                <div className="text-[10px] text-slate-500">Primary call-to-actions</div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-2">
+                <div className="h-12 rounded-lg bg-[#F8FAFC] border border-slate-300 shadow-xs" />
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-slate-900 dark:text-white">Surface / Card</span>
+                  <span className="font-mono text-[10px] text-slate-500">#F8FAFC</span>
+                </div>
+                <div className="text-[10px] text-slate-500">Module cards &amp; elevation</div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-2">
+                <div className="h-12 rounded-lg bg-[#0F172A] shadow-xs" />
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-slate-900 dark:text-white">Text / Foreground</span>
+                  <span className="font-mono text-[10px] text-slate-500">#0F172A</span>
+                </div>
+                <div className="text-[10px] text-slate-500">Headings &amp; body copy</div>
               </div>
             </div>
           </div>
@@ -242,55 +243,42 @@ export default function BrandLibraryPage() {
 
       {/* Layer 2: Observed Evidence */}
       {activeLayer === 'observed' && (
-        <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-4 animate-fadeIn">
-          <div className="text-sm font-bold text-white uppercase tracking-wider">
-            Original Observed Extraction Evidence
+        <div className="p-6 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-emerald-500" />
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Observed Web Evidence</h3>
           </div>
-          <p className="text-xs text-slate-400">
-            Raw evidence collected during the automated website crawler ingestion.
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Every token in this brand system is accompanied by cryptographic or source provenance (DOM locator, stylesheet URI, and extraction timestamp) to ensure strict corporate compliance.
           </p>
-
-          <div className="space-y-3 pt-2">
-            <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] text-xs font-mono space-y-1">
-              <div className="text-sky-400 font-bold">Provenance: Header Navigation Brand Anchor</div>
-              <div className="text-slate-300">DOM selector: &lt;nav class=&quot;site-nav&quot;&gt; &gt; &lt;a class=&quot;brand&quot;&gt;</div>
-              <div className="text-slate-500 text-[10px]">Extracted at 2026-09-28T13:40:00Z with 96% confidence score</div>
-            </div>
-            <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] text-xs font-mono space-y-1">
-              <div className="text-sky-400 font-bold">Provenance: Computed Primary Palette</div>
-              <div className="text-slate-300">CSS declaration: :root &#123; --color-primary: #0F172A; &#125;</div>
-              <div className="text-slate-500 text-[10px]">Extracted at 2026-09-28T13:40:00Z via computed stylesheet analysis</div>
-            </div>
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 font-mono text-xs text-slate-600 dark:text-slate-300">
+            <div>source_url: {activeSite?.primaryDomain || 'https://www.goldfields.com'}</div>
+            <div>provenance_engine: Bastion Playwright / Ingest v2.0</div>
+            <div>status: Verified &amp; Cached (42ms)</div>
           </div>
         </div>
       )}
 
       {/* Layer 3: Redesign Extensions */}
       {activeLayer === 'redesign' && (
-        <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-4 animate-fadeIn">
-          <div className="text-sm font-bold text-white uppercase tracking-wider">
-            Proposed Redesign Palette & Component Tokens
+        <div className="p-6 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-[#7C3AED]" />
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Proposed Redesign Extensions</h3>
           </div>
-          <p className="text-xs text-slate-400">
-            Harmonized design collection extensions proposed to elevate contrast and digital readability.
+          <p className="text-xs text-slate-500 leading-relaxed">
+            AI-suggested secondary tints, accessible dark-mode elevations, and responsive typography scales derived from your primary brand DNA.
           </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-            <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
-              <div className="text-xs font-bold text-white">Elevated Card Radius</div>
-              <p className="text-xs text-slate-400">12px (md) with subtle hairline border</p>
-            </div>
-            <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
-              <div className="text-xs font-bold text-white">Dark Surface Theme</div>
-              <p className="text-xs text-slate-400">Obsidian `#0A0D14` with selective glow</p>
-            </div>
-            <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
-              <div className="text-xs font-bold text-white">Sub-second LCP Assets</div>
-              <p className="text-xs text-slate-400">Optimized WebP/AVIF vector derivatives</p>
-            </div>
-          </div>
         </div>
       )}
     </div>
+  );
+}
+
+export default function BrandLibraryPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading brand library...</div>}>
+      <BrandLibraryContent />
+    </React.Suspense>
   );
 }

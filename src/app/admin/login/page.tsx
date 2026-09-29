@@ -9,9 +9,9 @@ const DEMO_PERSONAS = [
   {
     role: 'platform_admin',
     name: 'Malcolm Govender',
-    title: 'Moove Digital Lead & Platform Admin',
-    email: 'malcolm@movedigital.africa',
-    desc: 'Full platform administration & Moove Digital portal management'
+    title: 'Bastion Group Executive & Platform Admin',
+    email: 'malcolm@bastiongroup.co.za',
+    desc: 'Full platform administration & Bastion Group portal management'
   },
   {
     role: 'platform_admin',

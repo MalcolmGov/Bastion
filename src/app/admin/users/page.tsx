@@ -112,14 +112,19 @@ export default function AdminUsersPage() {
 
   const handlePreviewEmailForUser = async (u: UserRecord) => {
     try {
+      let clientName = u.region_scope && u.region_scope !== 'All' ? u.region_scope : 'Bastion Group';
+      let email = u.email;
+      if (clientName.toLowerCase().includes('moove')) clientName = 'Bastion Group';
+      if (email.toLowerCase().includes('movedigital')) email = email.replace(/movedigital\.africa/gi, 'bastiongroup.co.za');
+
       const res = await fetch('/api/admin/users/preview-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipientName: u.name,
-          recipientEmail: u.email,
+          recipientEmail: email,
           role: u.role,
-          clientName: u.region_scope && u.region_scope !== 'All' ? u.region_scope : 'Gold Fields Limited'
+          clientName: clientName
         })
       });
 
@@ -128,9 +133,9 @@ export default function AdminUsersPage() {
         setPreviewEmailHtml(data.emailHtml);
         setPreviewUser({
           name: u.name,
-          email: u.email,
+          email: email,
           role: u.role,
-          clientName: u.region_scope || 'Corporate CMS'
+          clientName: clientName
         });
       }
     } catch (err) {
@@ -323,7 +328,7 @@ export default function AdminUsersPage() {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. malcolm@movedigital.africa"
+                  placeholder="e.g. malcolm@bastiongroup.co.za"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-[#070B12] border border-[#1E293B] text-white focus:outline-hidden focus:border-amber-500 font-medium"
@@ -353,7 +358,7 @@ export default function AdminUsersPage() {
                     onChange={(e) => setInviteClientName(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-[#070B12] border border-[#1E293B] text-white focus:outline-hidden focus:border-amber-500 font-medium"
                   >
-                    <option value="Moove Digital">Moove Digital</option>
+                    <option value="Bastion Group">Bastion Group</option>
                     <option value="Gold Fields Limited">Gold Fields Limited</option>
                     <option value="Swifter">Swifter</option>
                     <option value="Apex Advisory Partners">Apex Advisory</option>

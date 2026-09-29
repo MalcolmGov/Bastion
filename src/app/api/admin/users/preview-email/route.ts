@@ -4,13 +4,21 @@ import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const {
+    let {
       recipientName = 'Malcolm Govender',
-      recipientEmail = 'malcolm@movedigital.africa',
-      role = 'content_editor',
-      clientName = 'Moove Digital',
+      recipientEmail = 'malcolm@bastiongroup.co.za',
+      role = 'platform_admin',
+      clientName = 'Bastion Group',
       initialPassword = 'GoldFields2026!'
     } = body;
+
+    // Strict cleansing: Replace any Moove Digital references with Bastion Group
+    if (clientName && clientName.toLowerCase().includes('moove')) {
+      clientName = 'Bastion Group';
+    }
+    if (recipientEmail && recipientEmail.toLowerCase().includes('movedigital')) {
+      recipientEmail = recipientEmail.replace(/movedigital\.africa/gi, 'bastiongroup.co.za');
+    }
 
     const roleTitles: Record<string, string> = {
       platform_admin: 'Platform Administrator',
@@ -37,7 +45,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       emailHtml,
-      loginUrl
+      loginUrl,
+      sanitizedUser: {
+        name: recipientName,
+        email: recipientEmail,
+        role,
+        clientName
+      }
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Sparkles,
   Globe,
@@ -34,13 +35,25 @@ import {
   Filter,
   Users,
   ChevronRight,
-  Monitor
+  Monitor,
+  Mic,
+  Calendar,
+  Lock,
+  X,
+  SlidersHorizontal,
+  Clock
 } from 'lucide-react';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import { useStudioWorkspace, WorkspaceClient, WorkspaceSite } from '@/components/admin/StudioWorkspaceProvider';
 import { ClientCmsHome } from '@/components/admin/ClientCmsHome';
+import {
+  DashboardCustomizeModal,
+  DashboardPreferences,
+  DEFAULT_DASHBOARD_PREFERENCES
+} from '@/components/admin/DashboardCustomizeModal';
 
 export default function MoveStudioOverviewPage() {
+  const router = useRouter();
   const { user } = useAdminAuth();
   const {
     clients,
@@ -56,7 +69,45 @@ export default function MoveStudioOverviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSector, setSelectedSector] = useState('all');
-  const [viewLayout, setViewLayout] = useState<'grid' | 'list'>('grid');
+  const [isListening, setIsListening] = useState(false);
+  const [quickBrandUrl, setQuickBrandUrl] = useState('');
+  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+
+  // User Dashboard Customization Preferences
+  const [dashboardPrefs, setDashboardPrefs] = useState<DashboardPreferences>(DEFAULT_DASHBOARD_PREFERENCES);
+
+  // Load saved dashboard preferences from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('bastion_dashboard_prefs');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setDashboardPrefs({ ...DEFAULT_DASHBOARD_PREFERENCES, ...parsed });
+          // Apply custom primary color to document root
+          if (parsed.primaryColor) {
+            document.documentElement.style.setProperty('--color-brand-primary', parsed.primaryColor);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse dashboard preferences:', e);
+      }
+    }
+
+    const handleOpenCustomize = () => setIsCustomizeOpen(true);
+    window.addEventListener('open-dashboard-customize', handleOpenCustomize);
+    return () => window.removeEventListener('open-dashboard-customize', handleOpenCustomize);
+  }, []);
+
+  const handleSavePreferences = (newPrefs: DashboardPreferences) => {
+    setDashboardPrefs(newPrefs);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bastion_dashboard_prefs', JSON.stringify(newPrefs));
+      if (newPrefs.primaryColor) {
+        document.documentElement.style.setProperty('--color-brand-primary', newPrefs.primaryColor);
+      }
+    }
+  };
 
   useEffect(() => {
     async function loadDashboard() {
@@ -91,15 +142,35 @@ export default function MoveStudioOverviewPage() {
   const totalWebsites = clients.reduce((acc, c) => acc + (c.websites?.length || 1), 0);
   const publishedWebsites = Math.max(1, totalWebsites - 1);
   const draftRevisionsCount = data?.statusCounts?.find((s: any) => s.status === 'draft')?.count || 2;
-  const pendingReviewCount = data?.pendingItems?.length || 3;
+  const pendingReviewCount = data?.pendingItems?.length || 2;
 
-  // Sector filtering
-  const sectors = [
-    { id: 'all', label: 'All Sectors' },
-    { id: 'mining', label: 'Mining & Resources' },
-    { id: 'agency', label: 'Digital & Media' },
-    { id: 'finance', label: 'Wealth & Advisory' },
-    { id: 'energy', label: 'Energy & Tech' },
+  const toggleListeningState = () => {
+    if (!isListening) {
+      setIsListening(true);
+      setTimeout(() => {
+        setSearchQuery('Gold Fields Mining Operations');
+        setIsListening(false);
+      }, 1500);
+    } else {
+      setIsListening(false);
+    }
+  };
+
+  const handleLaunchBrandDna = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (quickBrandUrl.trim()) {
+      router.push(`/admin/brand?url=${encodeURIComponent(quickBrandUrl.trim())}`);
+    } else {
+      router.push('/admin/brand');
+    }
+  };
+
+  const suggestionChips = [
+    { label: 'Brand DNA Extractor', query: 'Brand DNA' },
+    { label: 'SENS Announcements', query: 'SENS' },
+    { label: 'Bastion Group', query: 'Bastion' },
+    { label: 'Gold Fields Mining', query: 'Gold Fields' },
+    { label: 'Signed Webhooks', query: 'Webhooks' }
   ];
 
   const filteredClients = clients.filter(c => {
@@ -110,484 +181,622 @@ export default function MoveStudioOverviewPage() {
     if (!matchesSearch) return false;
     if (selectedSector === 'all') return true;
     if (selectedSector === 'mining') return c.industry.includes('mining') || c.id.includes('gold');
-    if (selectedSector === 'agency') return c.industry.includes('agency') || c.industry.includes('digital') || c.id.includes('moove');
+    if (selectedSector === 'agency') return c.industry.includes('agency') || c.industry.includes('digital') || c.id.includes('bastion');
     if (selectedSector === 'finance') return c.industry.includes('finance') || c.industry.includes('wealth') || c.industry.includes('advisory');
     if (selectedSector === 'energy') return c.industry.includes('energy') || c.id.includes('swifter') || c.id.includes('solaris');
     return true;
   });
 
+  const primaryCol = dashboardPrefs.primaryColor || '#7C3AED';
+
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
-      {/* 1. Executive Agency Operational Summary */}
-      <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden transition-colors">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 dark:bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-2.5">
-              <span className="flex items-center space-x-1.5 text-xs font-semibold text-bastion-blue dark:text-sky-400 bg-blue-50 dark:bg-sky-950/70 border border-blue-200 dark:border-sky-800/60 px-2.5 py-0.5 rounded-md">
-                <span className="h-2 w-2 rounded-full bg-bastion-blue dark:bg-sky-400 animate-pulse" />
-                <span>Bastion Agency Workspace</span>
-              </span>
-
-              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-md">
-                Multi-Tenant CMS Hub
-              </span>
-
-              <span className="inline-flex items-center space-x-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-md">
-                <ShieldCheck className="w-3 h-3" />
-                <span>Global Edge: 100% Operational (42ms)</span>
-              </span>
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Corporate Website Management Platform
-            </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-3xl leading-relaxed">
-              Centralized agency control for client websites, design systems, templates, brand governance, and live multi-tenant publishing. Select a client below to manage its content or switch directly into its client CMS workspace.
-            </p>
-
-            {/* Quick Context Summary */}
-            <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-slate-600 dark:text-slate-400">
-              <div className="flex items-center space-x-1.5">
-                <Building className="w-3.5 h-3.5 text-bastion-blue dark:text-sky-400" />
-                <span className="font-medium text-slate-800 dark:text-slate-200">{clients.length} Active Clients</span>
-              </div>
-              <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-              <div className="flex items-center space-x-1.5">
-                <Globe className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="font-medium text-slate-800 dark:text-slate-200">{totalWebsites} Hosted Corporate Websites</span>
-              </div>
-              <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-              <div className="flex items-center space-x-1.5 text-slate-500 dark:text-slate-400">
-                <Zap className="w-3.5 h-3.5 text-amber-500" />
-                <span>Instant Invalidation &lt;500ms</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Primary Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0 relative z-10">
-            <Link
-              href="/admin/create"
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-bastion text-white hover:bg-bastion-navy dark:bg-sky-500 dark:hover:bg-sky-400 dark:text-slate-950 font-semibold text-xs transition shadow-sm"
+    <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
+      {/* 1. Top Intelligence Strip & Customizer Trigger (Zara CareerOS Signature) */}
+      <div 
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:px-4 sm:py-2.5 rounded-2xl border shadow-xs transition-all duration-300"
+        style={{
+          background: `linear-gradient(135deg, ${primaryCol}0f 0%, #FFFFFF 50%, ${dashboardPrefs.accentColor}14 100%)`,
+          borderColor: `${primaryCol}40`,
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3.5 py-1.5 rounded-xl shadow-xs border border-slate-200/80 dark:border-slate-800">
+            <div 
+              className="w-5 h-5 rounded-md text-white flex items-center justify-center font-black text-xs"
+              style={{ backgroundColor: primaryCol }}
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>Create Website</span>
-            </Link>
-
-            <Link
-              href="/admin/clients"
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold text-xs transition shadow-2xs"
-            >
-              <Users className="w-4 h-4 text-slate-500" />
-              <span>All Clients</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Operational Stat KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Websites */}
-        <div className="p-5 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs transition-colors">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Total Websites</span>
-            <Globe className="w-4 h-4 text-bastion-blue dark:text-sky-400" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
-            {totalWebsites}
-          </div>
-          <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center space-x-1 font-medium">
-            <CheckCircle2 className="w-3 h-3" />
-            <span>Across {clients.length} Corporate Clients</span>
-          </div>
-        </div>
-
-        {/* Card 2: Live & Published */}
-        <div className="p-5 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs transition-colors">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Live &amp; Published</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
-            {publishedWebsites}
-          </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Global Edge Cached &bull; SSL Active
-          </div>
-        </div>
-
-        {/* Card 3: Draft Revisions */}
-        <div className="p-5 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs transition-colors">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Draft Revisions</span>
-            <Edit3 className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
-            {draftRevisionsCount}
-          </div>
-          <div className="text-xs text-amber-700 dark:text-amber-400 mt-1 font-medium">
-            In progress across editors
-          </div>
-        </div>
-
-        {/* Card 4: Awaiting Review */}
-        <Link
-          href="/admin/tasks"
-          className="p-5 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-600/50 shadow-2xs transition group"
-        >
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Awaiting Sign-Off</span>
-            <Send className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">
-            {pendingReviewCount}
-          </div>
-          <div className="text-xs text-bastion-blue dark:text-sky-400 mt-1 flex items-center space-x-1 font-semibold group-hover:underline">
-            <span>Review Publishing Queue &rarr;</span>
-          </div>
-        </Link>
-      </div>
-
-      {/* 3. Attention Required / Pending Items Panel */}
-      {pendingReviewCount > 0 && (
-        <div className="p-5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start md:items-center space-x-3.5">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
-              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              B
             </div>
-            <div>
-              <div className="text-sm font-bold text-amber-900 dark:text-amber-200 flex items-center space-x-2">
-                <span>Attention Required: {pendingReviewCount} Items Awaiting Sign-Off</span>
-                <span className="text-[10px] font-mono uppercase bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-300 px-1.5 py-0.5 rounded">
-                  Regulatory / Release
-                </span>
-              </div>
-              <div className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-                Draft content updates for Gold Fields Limited and Moove Digital have been submitted for Bastion staff publication sign-off.
-              </div>
-            </div>
+            <span className="text-xs font-black text-slate-900 dark:text-white tracking-tight">
+              BASTION
+            </span>
           </div>
-
-          <div className="flex items-center space-x-2 self-start md:self-auto shrink-0">
-            <Link
-              href="/admin/tasks"
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white dark:text-slate-950 font-semibold text-xs transition shadow-2xs"
-            >
-              <span>Inspect &amp; Approve</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Recently Worked On Websites (Jump Pills) */}
-      <div>
-        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5 px-1">
-          Recently Worked On Websites
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {clients.slice(0, 5).map((c) => {
-            const isGF = c.id === 'client_goldfields';
-            const site = c.websites?.[0];
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  setActiveClientId(c.id);
-                  if (site) setActiveSiteId(site.id);
-                }}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-xl border text-xs transition shadow-2xs ${
-                  c.id === activeClient?.id
-                    ? 'bg-blue-50 dark:bg-sky-950/60 border-blue-300 dark:border-sky-800 text-bastion-blue dark:text-sky-300 font-semibold ring-1 ring-blue-400/30'
-                    : 'bg-white dark:bg-[#111726] border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                }`}
-              >
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] shrink-0 ${
-                  isGF
-                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                }`}>
-                  {c.name.substring(0, 2).toUpperCase()}
-                </div>
-                <span className="truncate max-w-[150px]">{c.name}</span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {isGF ? 'Live' : 'Active'}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 5. Managed Client Websites Directory */}
-      <div className="space-y-4">
-        {/* Toolbar: Search, Sector Filters, and Grid/List toggle */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-              Managed Client Websites
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Browse, configure, and manage content across all client web properties.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Search Input */}
-            <div className="relative min-w-[220px]">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search websites or clients..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-bastion-blue"
-              />
-            </div>
-
-            {/* Grid / List View Toggle */}
-            <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111726] p-0.5">
-              <button
-                type="button"
-                onClick={() => setViewLayout('grid')}
-                className={`p-1.5 rounded-lg transition ${
-                  viewLayout === 'grid'
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                }`}
-                title="Grid View"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewLayout('list')}
-                className={`p-1.5 rounded-lg transition ${
-                  viewLayout === 'list'
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                }`}
-                title="List View"
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="hidden sm:block h-6 w-px bg-slate-300 dark:bg-slate-700" />
+          <div className="flex flex-col">
+            <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white tracking-tight">
+              Bastion Platform Intelligence
+            </span>
+            <span className="text-[11px] font-bold" style={{ color: primaryCol }}>
+              Corporate Website Management Platform &bull; Autonomous Edge Invalidation &lt;500ms
+            </span>
           </div>
         </div>
 
-        {/* Sector Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 pb-1">
-          {sectors.map((sec) => (
+        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-start">
+          {/* User Customize Dashboard Button */}
+          <button
+            type="button"
+            onClick={() => setIsCustomizeOpen(true)}
+            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+            title="Customize dashboard cards, KPIs, colors and layout"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" style={{ color: primaryCol }} />
+            <span>Customize</span>
+          </button>
+
+          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
             <button
-              key={sec.id}
               type="button"
-              onClick={() => setSelectedSector(sec.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                selectedSector === sec.id
-                  ? 'bg-bastion text-white dark:bg-slate-800 dark:text-white font-semibold shadow-2xs'
-                  : 'bg-white dark:bg-[#111726] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+              onClick={() => setPortalViewMode('agency')}
+              style={portalViewMode === 'agency' ? { backgroundColor: primaryCol } : undefined}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                portalViewMode === 'agency'
+                  ? 'text-white shadow-xs'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
-              {sec.label}
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Agency</span>
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setPortalViewMode('client')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                portalViewMode === 'client'
+                  ? 'bg-amber-500 text-white shadow-xs'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Building className="w-3.5 h-3.5" />
+              <span>Client Portal</span>
+            </button>
+          </div>
         </div>
+      </div>
 
-        {/* Website Cards / List Layout */}
-        {viewLayout === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredClients.map((client) => {
-              const isGF = client.id === 'client_goldfields';
-              const site = client.websites?.[0];
-              const siteUrl = isGF ? '/' : site ? `/sites/${site.slug}` : '/';
-              const primaryDomain = site?.primaryDomain || (isGF ? 'goldfields.com' : `${client.slug}.bastion.digital`);
+      {/* 2. Signature Hero Card with Embedded Search & Voice Composer */}
+      {dashboardPrefs.sections.heroComposer && (
+        <section className="rounded-2xl p-5 sm:p-7 shadow-xs relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80">
+          {/* Top Accent Gradient Line */}
+          <div 
+            className="absolute top-0 left-0 right-0 h-1"
+            style={{
+              background: `linear-gradient(90deg, ${primaryCol} 0%, ${dashboardPrefs.accentColor} 50%, #4F46E5 100%)`
+            }}
+          />
 
-              return (
-                <div
-                  key={client.id}
-                  className="rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs hover:shadow-md transition group flex flex-col justify-between"
+          <div className="relative z-10 max-w-3xl space-y-4">
+            <div className="space-y-1">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                Good afternoon, Malcolm. Let&apos;s manage high-impact corporate web properties.
+              </h1>
+              <p className="text-sm sm:text-base leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
+                Precision multi-tenant governance across Gold Fields Limited, Swifter Energy, and Bastion Group client properties.
+              </p>
+            </div>
+
+            {/* Search Composer Box */}
+            <div className="relative pt-0.5">
+              <form onSubmit={(e) => { e.preventDefault(); }}>
+                <div className="flex flex-col sm:flex-row items-center gap-2 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 focus-within:bg-white dark:focus-within:bg-slate-900 transition-all duration-200 shadow-2xs">
+                  <div className="flex items-center gap-2.5 px-3 flex-1 w-full relative">
+                    <Search className="w-4.5 h-4.5 shrink-0" style={{ color: primaryCol }} />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search title, client, or collection across Bastion CMS…"
+                      className="w-full py-2 pr-8 bg-transparent text-sm sm:text-base focus:outline-none font-semibold text-slate-900 dark:text-white placeholder:text-slate-400"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end px-0.5">
+                    {/* Integrated Microphone */}
+                    <button
+                      type="button"
+                      onClick={toggleListeningState}
+                      style={isListening ? { backgroundColor: primaryCol, borderColor: primaryCol } : undefined}
+                      className={`h-9 px-3 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+                        isListening
+                          ? 'text-white animate-pulse'
+                          : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold'
+                      }`}
+                    >
+                      <Mic className="w-3.5 h-3.5" style={{ color: isListening ? '#FFFFFF' : primaryCol }} />
+                      <span>{isListening ? 'Listening…' : 'Voice'}</span>
+                    </button>
+
+                    {/* Primary Search CTA */}
+                    <button
+                      type="submit"
+                      style={{ backgroundColor: primaryCol }}
+                      className="h-9 px-5 rounded-lg text-white text-xs sm:text-sm font-black flex items-center gap-1.5 transition-all active:scale-[0.98] shrink-0 hover:opacity-90 cursor-pointer shadow-md"
+                    >
+                      <span>Search CMS</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-white" />
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Understated Suggestion Chips */}
+            <div className="flex items-center gap-2 pt-0.5 flex-wrap text-xs text-slate-500">
+              <span className="font-semibold text-slate-400">Popular:</span>
+              {suggestionChips.map((chip, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSearchQuery(chip.query)}
+                  style={{ color: primaryCol }}
+                  className="font-semibold hover:underline transition-colors cursor-pointer"
                 >
-                  <div>
-                    {/* Realistic Website Preview Viewport */}
-                    <div className="h-36 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-[#0A0D14] border-b border-slate-200 dark:border-slate-800 relative p-3 flex flex-col justify-between group-hover:opacity-95 transition-opacity">
-                      {/* Browser Mockup Top Bar */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-                        </div>
-                        <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-white/70 dark:bg-black/40 px-2 py-0.5 rounded border border-slate-200/60 dark:border-slate-800/80 max-w-[170px] truncate">
-                          {primaryDomain}
-                        </div>
-                      </div>
+                  {chip.label}{idx < suggestionChips.length - 1 ? ' •' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-                      {/* Mockup Content Teaser */}
-                      <div className="space-y-1.5 my-auto text-center px-4">
-                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                          {site?.name || client.name}
-                        </div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                          {isGF
-                            ? 'Creating enduring value beyond mining &bull; 10 Global Mines'
-                            : `Corporate digital experience &bull; ${client.industry.replace('_', ' ')}`}
-                        </div>
-                      </div>
+      {/* 3. Operational Stat KPI Cards (Customizable via modal) */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Card 1: Total Websites */}
+        {dashboardPrefs.kpis.totalWebsites && (
+          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-sm transition-all duration-200">
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
+                style={{
+                  backgroundColor: `${primaryCol}15`,
+                  color: primaryCol,
+                  borderColor: `${primaryCol}30`
+                }}
+              >
+                <Sparkles className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                  {totalWebsites}
+                </div>
+                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Total Websites
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-                      {/* Status Badges */}
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="inline-flex items-center space-x-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>Live Production</span>
-                        </span>
+        {/* Card 2: Live & Published */}
+        {dashboardPrefs.kpis.liveWebsites && (
+          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-sm transition-all duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                <ShieldCheck className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                  {publishedWebsites}
+                </div>
+                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Live &amp; Healthy
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          Updated 2h ago
-                        </span>
-                      </div>
-                    </div>
+        {/* Card 3: Upcoming SENS Release */}
+        {dashboardPrefs.kpis.upcomingSens && (
+          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-sm transition-all duration-200 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                <Calendar className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                  1
+                </div>
+                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Upcoming SENS
+                </div>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              Wed 14:00
+            </span>
+          </div>
+        )}
 
-                    {/* Card Content Area */}
-                    <div className="p-5">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${
-                          isGF
-                            ? 'bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-400'
-                            : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-bastion-blue dark:text-sky-400'
-                        }`}>
+        {/* Card 4: Awaiting Sign-Off */}
+        {dashboardPrefs.kpis.awaitingSignoff && (
+          <Link
+            href="/admin/tasks"
+            className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-800 shadow-xs hover:shadow-sm transition-all duration-200 group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                <Send className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                  {pendingReviewCount}
+                </div>
+                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Awaiting Sign-Off
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {/* Optional KPI: Draft Revisions */}
+        {dashboardPrefs.kpis.draftRevisions && (
+          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                <Edit3 className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                  {draftRevisionsCount}
+                </div>
+                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Draft Revisions
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Optional KPI: Edge Latency */}
+        {dashboardPrefs.kpis.edgeLatency && (
+          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-teal-50 dark:bg-teal-950/80 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-800">
+                <Clock className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                  42ms
+                </div>
+                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Global Edge TTFB
+                </div>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200">
+              100% SLA
+            </span>
+          </div>
+        )}
+      </section>
+
+      {/* 4. Main 2-Column Split (Or Full Focus according to layoutMode preference) */}
+      <div className={`grid grid-cols-1 ${dashboardPrefs.layoutMode === 'focus' ? 'lg:grid-cols-1' : 'lg:grid-cols-12'} gap-6 items-start`}>
+        {/* Left Column: Managed For You / Corporate Client Properties */}
+        {dashboardPrefs.sections.managedCards && (
+          <div className={`${dashboardPrefs.layoutMode === 'focus' ? 'w-full' : 'lg:col-span-8'} space-y-4`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                    {searchQuery ? `Matching Properties (${filteredClients.length})` : 'Managed For You'}
+                  </h2>
+                  {searchQuery && (
+                    <span 
+                      className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold border"
+                      style={{
+                        backgroundColor: `${primaryCol}15`,
+                        color: primaryCol,
+                        borderColor: `${primaryCol}30`
+                      }}
+                    >
+                      Live Filtering
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs sm:text-sm mt-0.5 font-medium text-slate-600 dark:text-slate-400">
+                  Corporate web properties deployed on Bastion high-performance multi-tenant infrastructure.
+                </p>
+              </div>
+
+              <Link
+                href="/admin/create"
+                style={{ color: primaryCol }}
+                className="text-xs font-bold hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>Create Website</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* Client Website Cards */}
+            <div className="space-y-4">
+              {filteredClients.map((client) => {
+                const isGF = client.id === 'client_goldfields';
+                const website = client.websites?.[0];
+                const domain = client.id === 'client_goldfields' ? 'goldfields.com' : `${client.slug}.bastiongroup.co.za`;
+
+                return (
+                  <div
+                    key={client.id}
+                    className="rounded-2xl p-5 sm:p-6 transition-all duration-300 group relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 hover:border-purple-300 dark:hover:border-purple-800/80 shadow-xs hover:shadow-md hover:-translate-y-0.5"
+                  >
+                    {/* Top Accent Gradient Bar */}
+                    <div 
+                      className="absolute top-0 left-0 right-0 h-1 transition-opacity duration-300"
+                      style={{
+                        background: isGF 
+                          ? 'linear-gradient(90deg, #C99700 0%, #EAB308 100%)'
+                          : `linear-gradient(90deg, ${primaryCol} 0%, ${dashboardPrefs.accentColor} 100%)`
+                      }}
+                    />
+
+                    {/* Top Row: Monogram, Title, Verified & Live Link */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3.5 min-w-0">
+                        <div 
+                          className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border shadow-2xs"
+                          style={isGF ? {
+                            backgroundColor: 'rgba(201, 151, 0, 0.1)',
+                            color: '#C99700',
+                            borderColor: 'rgba(201, 151, 0, 0.3)'
+                          } : {
+                            backgroundColor: `${primaryCol}15`,
+                            color: primaryCol,
+                            borderColor: `${primaryCol}30`
+                          }}
+                        >
                           {client.name.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                            {client.name}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs sm:text-sm font-bold truncate text-slate-700 dark:text-slate-300">
+                              {client.name}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 border text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                              <span>Verified Corporate Tenant</span>
+                            </span>
+                          </div>
+                          <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug line-clamp-1 mt-0.5">
+                            {website?.name || `${client.name} Flagship Portal`}
                           </h3>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 capitalize truncate">
-                            {client.industry.replace('_', ' ')} &bull; 1 Website
-                          </p>
                         </div>
                       </div>
 
-                      <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 min-h-[32px]">
-                        {site?.name || `${client.name} corporate flagship portal`} with automated edge cache revalidation and brand token governance.
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Footer Actions */}
-                  <div className="p-4 pt-0 border-t border-slate-100 dark:border-slate-800/80 mt-2">
-                    <div className="flex items-center justify-between gap-2 pt-3">
-                      {/* Primary CTA: Manage Site */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveClientId(client.id);
-                          if (site) setActiveSiteId(site.id);
-                          setPortalViewMode('client');
-                        }}
-                        className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 text-xs font-semibold transition shadow-2xs"
-                      >
-                        <span>Manage Site</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Visual Editor Icon Button */}
                       <Link
-                        href="/admin/editor"
-                        onClick={() => {
-                          setActiveClientId(client.id);
-                          if (site) setActiveSiteId(site.id);
-                        }}
-                        title="Open Visual Editor"
-                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition"
-                      >
-                        <Edit3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                      </Link>
-
-                      {/* Live Link Button */}
-                      <Link
-                        href={siteUrl}
+                        href={isGF ? '/' : `/sites/${website?.slug || client.slug}`}
                         target="_blank"
-                        title="Open Live Website"
-                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition"
+                        className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-purple-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                        title="View live website"
                       >
-                        <ExternalLink className="w-4 h-4 text-slate-500 hover:text-slate-900 dark:hover:text-white" />
+                        <ExternalLink className="w-4 h-4" />
                       </Link>
                     </div>
+
+                    {/* Metadata line */}
+                    <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm flex-wrap text-slate-600 dark:text-slate-400 font-medium">
+                      <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-semibold font-mono">
+                        <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{domain}</span>
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+                      <span className="capitalize font-semibold text-slate-700 dark:text-slate-300">
+                        {client.industry.replace('_', ' ')}
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <Zap className="w-3 h-3 text-amber-500" />
+                        <span>Signed Webhook Active</span>
+                      </span>
+                    </div>
+
+                    {/* Card Footer */}
+                    <div className="mt-4 pt-3 flex items-center justify-between gap-3 flex-wrap border-t border-slate-100 dark:border-slate-800">
+                      <div 
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border"
+                        style={{
+                          backgroundColor: `${primaryCol}12`,
+                          borderColor: `${primaryCol}30`,
+                          color: primaryCol
+                        }}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>100% Platform Health</span>
+                        <span className="text-[11px] font-normal text-slate-500 ml-0.5">&bull; 42ms TTFB</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveClientId(client.id);
+                            setPortalViewMode('client');
+                          }}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition"
+                        >
+                          Client CMS Mode
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveClientId(client.id);
+                            router.push('/admin/pages');
+                          }}
+                          style={{ backgroundColor: primaryCol }}
+                          className="px-4 py-1.5 rounded-xl text-white text-xs font-bold inline-flex items-center gap-1.5 transition-all active:scale-[0.98] hover:opacity-95 shadow-xs"
+                        >
+                          <span>Manage Website</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-white" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        ) : (
-          /* List View Layout */
-          <div className="rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/80">
-            {filteredClients.map((client) => {
-              const isGF = client.id === 'client_goldfields';
-              const site = client.websites?.[0];
-              const siteUrl = isGF ? '/' : site ? `/sites/${site.slug}` : '/';
-              const primaryDomain = site?.primaryDomain || (isGF ? 'goldfields.com' : `${client.slug}.bastion.digital`);
+        )}
 
-              return (
-                <div
-                  key={client.id}
-                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
-                >
-                  <div className="flex items-center space-x-3.5 min-w-0">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${
-                      isGF
-                        ? 'bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-400'
-                        : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-bastion-blue dark:text-sky-400'
-                    }`}>
-                      {client.name.substring(0, 2).toUpperCase()}
+        {/* Right Supporting Rail: Calendar, Brand DNA Quick Launch & Health */}
+        {dashboardPrefs.layoutMode !== 'focus' && (
+          <div className="lg:col-span-4 space-y-4">
+            {/* Module 1: Next on your calendar / Publishing Pipeline */}
+            {dashboardPrefs.sections.calendarPipeline && (
+              <div className="rounded-2xl p-5 space-y-3 relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
+                <div 
+                  className="absolute top-0 left-0 right-0 h-1"
+                  style={{
+                    background: `linear-gradient(90deg, #F59E0B 0%, ${primaryCol} 100%)`
+                  }}
+                />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                      <Calendar className="w-5 h-5" />
                     </div>
-                    <div className="truncate">
-                      <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                        {client.name}
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-2 mt-0.5">
-                        <span className="font-mono text-slate-700 dark:text-slate-300">{primaryDomain}</span>
-                        <span>&bull;</span>
-                        <span className="capitalize">{client.industry.replace('_', ' ')}</span>
-                      </div>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900 dark:text-white">Next on your calendar</h3>
+                      <p className="text-xs font-semibold text-slate-500">Publishing Pipeline</p>
                     </div>
                   </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                    Wed 14:00 SAST
+                  </span>
+                </div>
 
-                  <div className="flex items-center space-x-2.5 shrink-0 self-end sm:self-center">
-                    <span className="inline-flex items-center space-x-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span>Live</span>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                    <span>Gold Fields Q3 Production Update</span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200">
+                      SENS
                     </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Gold Fields corporate relations submitted regulatory release for scheduled publishing.
+                  </p>
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveClientId(client.id);
-                        if (site) setActiveSiteId(site.id);
-                        setPortalViewMode('client');
-                      }}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold transition"
-                    >
-                      <span>Manage Site</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
+                <Link
+                  href="/admin/tasks"
+                  style={{ backgroundColor: primaryCol }}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-white hover:opacity-95 shadow-xs transition"
+                >
+                  <span>Inspect &amp; Approve Release</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
 
-                    <Link
-                      href={siteUrl}
-                      target="_blank"
-                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Link>
+            {/* Module 2: Brand DNA & Design System Extractor (Claude Design Pipeline) */}
+            {dashboardPrefs.sections.brandDnaExtractor && (
+              <div className="rounded-2xl p-5 space-y-3 relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
+                <div 
+                  className="absolute top-0 left-0 right-0 h-1"
+                  style={{
+                    background: `linear-gradient(90deg, ${primaryCol} 0%, #3B82F6 100%)`
+                  }}
+                />
+                <div className="flex items-center gap-2.5">
+                  <div 
+                    className="w-10 h-10 rounded-xl flex items-center justify-center border"
+                    style={{
+                      backgroundColor: `${primaryCol}15`,
+                      color: primaryCol,
+                      borderColor: `${primaryCol}30`
+                    }}
+                  >
+                    <Palette className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Brand DNA Extractor</h3>
+                    <p className="text-xs font-semibold text-slate-500">URL &rarr; Approved Brand Kit</p>
                   </div>
                 </div>
-              );
-            })}
+
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Crawl any corporate site to extract computed styles, SVG logos, Google Fonts, reading level, and generate WCAG-compliant theme tokens.
+                </p>
+
+                <form onSubmit={handleLaunchBrandDna} className="space-y-2">
+                  <input
+                    type="text"
+                    value={quickBrandUrl}
+                    onChange={(e) => setQuickBrandUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                  <button
+                    type="submit"
+                    style={{ backgroundColor: primaryCol }}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-white hover:opacity-95 shadow-xs transition"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Launch Brand Extractor</span>
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Module 3: Edge Invalidation & Global Status */}
+            {dashboardPrefs.sections.edgeNetworkStatus && (
+              <div className="rounded-2xl p-5 space-y-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-700 dark:text-slate-300">Global Edge Network</span>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    100% Operational
+                  </span>
+                </div>
+                <div className="space-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="flex justify-between">
+                    <span>Johannesburg Node (JNB-1)</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">18ms</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Frankfurt Edge (FRA-1)</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">42ms</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>London Edge (LHR-1)</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">46ms</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* 5. User Customization Modal */}
+      <DashboardCustomizeModal
+        isOpen={isCustomizeOpen}
+        onClose={() => setIsCustomizeOpen(false)}
+        preferences={dashboardPrefs}
+        onSavePreferences={handleSavePreferences}
+      />
     </div>
   );
 }

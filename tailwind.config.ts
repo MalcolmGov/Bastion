@@ -13,11 +13,23 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        brand: {
+          primary: "#7C3AED",
+          hover: "#6D28D9",
+          light: "#C4B5FD",
+          secondary: "#1E1B4B",
+          canvas: "#FAFAFE",
+          surface: "#FFFFFF",
+          border: "#E9D5FF",
+          text: "#1E1B4B",
+          muted: "#64748B",
+          subtle: "#94A3B8",
+        },
         bastion: {
           navy: "#0A192F",
           DEFAULT: "#0F2744",
           light: "#1B3B6F",
-          accent: "#B48C36",
+          accent: "#7C3AED",
           gold: "#D4A346",
           blue: "#2563EB",
           sky: "#0284C7"

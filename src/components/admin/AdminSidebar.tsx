@@ -13,7 +13,6 @@ import {
   Layers,
   Edit3,
   FileText,
-  Image as ImageIcon,
   Send,
   BarChart3,
   Activity,
@@ -30,10 +29,12 @@ import {
   CreditCard,
   Terminal,
   UserPlus,
-  ShieldCheck,
+  Bot,
+  ArrowRight,
+  ArrowRightLeft,
   Globe2,
-  FolderOpen,
-  ArrowRightLeft
+  SlidersHorizontal,
+  FolderOpen
 } from 'lucide-react';
 
 export function AdminSidebar() {
@@ -59,14 +60,14 @@ export function AdminSidebar() {
       : '/';
 
   return (
-    <aside className="w-64 bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-slate-800/80 flex flex-col justify-between h-screen sticky top-0 selection:bg-bastion-blue selection:text-white shrink-0 z-20 transition-colors duration-150">
-      <div>
+    <aside className="w-64 bg-white dark:bg-[#0A0D14] border-r border-slate-200/90 dark:border-slate-800/80 flex flex-col justify-between h-screen sticky top-0 selection:bg-[#7C3AED] selection:text-white shrink-0 z-20 transition-colors duration-150">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Brand Header */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between">
           <Link href="/admin" className="flex items-center space-x-2.5 min-w-0">
             {isClientPortal ? (
               <>
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center font-bold text-amber-600 dark:text-amber-400 text-xs shrink-0 shadow-xs">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center font-bold text-amber-600 dark:text-amber-400 text-xs shrink-0 shadow-xs">
                   {activeClient?.name ? activeClient.name.substring(0, 2).toUpperCase() : 'CC'}
                 </div>
                 <div className="truncate">
@@ -80,13 +81,13 @@ export function AdminSidebar() {
               </>
             ) : (
               <>
-                <div className="w-8 h-8 rounded-lg bg-bastion dark:bg-gradient-to-br dark:from-slate-800 dark:to-slate-900 border border-slate-700/30 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-xs">
-                  <span className="text-amber-400">B</span>
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#9333EA] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md shadow-purple-500/20 ring-1 ring-white/15">
+                  <span>B</span>
                 </div>
                 <div className="truncate">
                   <div className="font-bold text-sm tracking-tight text-slate-900 dark:text-white leading-tight flex items-center space-x-1.5">
                     <span>BASTION</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-blue-50 dark:bg-sky-950 text-bastion-blue dark:text-sky-400 border border-blue-200 dark:border-sky-800 font-semibold">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-purple-50 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                       AGENCY
                     </span>
                   </div>
@@ -109,10 +110,10 @@ export function AdminSidebar() {
         </div>
 
         {/* Client & Website Context Switcher */}
-        <div className="p-3 border-b border-slate-200 dark:border-slate-800/80 relative">
+        <div className="p-3 border-b border-slate-200/80 dark:border-slate-800/80 relative">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1 px-1 flex items-center justify-between">
             <span>Active Client Workspace</span>
-            <span className="text-[10px] text-bastion-blue dark:text-sky-400 font-semibold font-mono">
+            <span className="text-[10px] text-[#7C3AED] dark:text-purple-400 font-semibold font-mono">
               {clients.length} Sites
             </span>
           </div>
@@ -122,7 +123,7 @@ export function AdminSidebar() {
             className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#131A26] hover:bg-slate-100 dark:hover:bg-[#1A2333] border border-slate-200 dark:border-[#232F42] text-left transition shadow-2xs"
           >
             <div className="flex items-center space-x-2 min-w-0">
-              <Building className="w-3.5 h-3.5 text-bastion-blue dark:text-sky-400 shrink-0" />
+              <Building className="w-3.5 h-3.5 text-[#7C3AED] dark:text-purple-400 shrink-0" />
               <div className="truncate">
                 <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                   {activeClient?.name || 'Select Client'}
@@ -151,7 +152,7 @@ export function AdminSidebar() {
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition ${
                     c.id === activeClient?.id
-                      ? 'bg-blue-50 dark:bg-sky-950/60 text-bastion-blue dark:text-sky-300 font-semibold'
+                      ? 'bg-purple-50 dark:bg-purple-950/60 text-[#7C3AED] dark:text-purple-300 font-semibold'
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1E2838]'
                   }`}
                 >
@@ -159,7 +160,7 @@ export function AdminSidebar() {
                     <div className="truncate font-medium">{c.name}</div>
                     <div className="text-[10px] text-slate-400 capitalize">{c.industry.replace('_', ' ')}</div>
                   </div>
-                  {c.id === activeClient?.id && <Check className="w-3.5 h-3.5 text-bastion-blue dark:text-sky-400 shrink-0" />}
+                  {c.id === activeClient?.id && <Check className="w-3.5 h-3.5 text-[#7C3AED] dark:text-purple-400 shrink-0" />}
                 </button>
               ))}
 
@@ -167,7 +168,7 @@ export function AdminSidebar() {
                 <Link
                   href="/admin/create"
                   onClick={() => setClientMenuOpen(false)}
-                  className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-bastion-blue dark:text-sky-400 hover:bg-blue-50 dark:hover:bg-sky-950/50 transition"
+                  className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#7C3AED] dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   <span>Create New Client</span>
@@ -178,104 +179,133 @@ export function AdminSidebar() {
         </div>
 
         {/* Primary Navigation Sections */}
-        <div className="p-3 space-y-5 overflow-y-auto max-h-[calc(100vh-235px)] scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+        <div className="flex-1 p-3 space-y-4 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
           {isClientPortal ? (
-            /* ======================================================== */
-            /* CLIENT CMS WORKSPACE NAVIGATION (FOCUSED, NO CODE)      */
-            /* ======================================================== */
+            /* CLIENT CMS WORKSPACE NAVIGATION */
             <>
-              {/* Core Content Navigation */}
               <div>
                 <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center justify-between">
                   <span>{activeClient?.name || 'Website'} Content</span>
-                  <span className="text-[8px] bg-amber-50 dark:bg-amber-950/80 px-1 py-0.2 rounded text-amber-700 dark:text-amber-300 font-mono border border-amber-200 dark:border-amber-800/60">
+                  <span className="text-[9px] bg-amber-50 dark:bg-amber-950/80 px-1.5 py-0.5 rounded-full text-amber-700 dark:text-amber-300 font-bold uppercase border border-amber-200 dark:border-amber-800/60">
                     Live
                   </span>
                 </div>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <Link
                     href="/admin"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname === '/admin'
-                        ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <LayoutDashboard className="w-4 h-4 text-amber-500" />
-                    <span>Executive Overview</span>
+                    <div className="flex items-center space-x-2.5">
+                      <LayoutDashboard className="w-4 h-4 shrink-0" />
+                      <span>Executive Overview</span>
+                    </div>
+                    {pathname === '/admin' && (
+                      <span className="w-1.5 h-4 rounded-r-full bg-[#F59E0B] absolute left-0" />
+                    )}
                   </Link>
 
                   <Link
                     href="/admin/pages"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname === '/admin/pages'
-                        ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <FileText className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>Pages & Navigation</span>
+                    <div className="flex items-center space-x-2.5">
+                      <FileText className="w-4 h-4 shrink-0" />
+                      <span>Pages &amp; Navigation</span>
+                    </div>
                   </Link>
 
-                  {/* Gold Fields Specific Collections or Universal Collections */}
+                  {/* Gold Fields Collections */}
                   {isGoldFields ? (
                     <>
                       <Link
                         href="/admin/operations"
-                        className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                           pathname.startsWith('/admin/operations')
-                            ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                            ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                         }`}
                       >
-                        <Compass className="w-4 h-4 text-amber-500" />
-                        <span>Mining Operations (10)</span>
+                        <div className="flex items-center space-x-2.5">
+                          <Compass className="w-4 h-4 shrink-0 text-amber-500" />
+                          <span>Mining Operations</span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200">
+                          10
+                        </span>
                       </Link>
+
                       <Link
                         href="/admin/reports"
-                        className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                           pathname.startsWith('/admin/reports')
-                            ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                            ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                         }`}
                       >
-                        <FileSpreadsheet className="w-4 h-4 text-amber-500" />
-                        <span>Reports & Results (11)</span>
+                        <div className="flex items-center space-x-2.5">
+                          <FileSpreadsheet className="w-4 h-4 shrink-0 text-purple-500" />
+                          <span>Financial Results</span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200">
+                          11
+                        </span>
                       </Link>
+
                       <Link
                         href="/admin/news"
-                        className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                           pathname.startsWith('/admin/news')
-                            ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                            ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                         }`}
                       >
-                        <Newspaper className="w-4 h-4 text-amber-500" />
-                        <span>SENS Announcements</span>
+                        <div className="flex items-center space-x-2.5">
+                          <Newspaper className="w-4 h-4 shrink-0 text-amber-500" />
+                          <span>SENS Releases</span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200">
+                          SENS
+                        </span>
                       </Link>
+
                       <Link
                         href="/admin/sustainability"
-                        className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                           pathname.startsWith('/admin/sustainability')
-                            ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                            ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                         }`}
                       >
-                        <Leaf className="w-4 h-4 text-emerald-500" />
-                        <span>2030 ESG Targets</span>
+                        <div className="flex items-center space-x-2.5">
+                          <Leaf className="w-4 h-4 shrink-0 text-emerald-500" />
+                          <span>2030 ESG Targets</span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200">
+                          ESG
+                        </span>
                       </Link>
                     </>
                   ) : (
                     <Link
                       href="/admin/news"
-                      className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                         pathname.startsWith('/admin/news')
-                          ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                          ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                       }`}
                     >
-                      <Newspaper className="w-4 h-4 text-amber-500" />
-                      <span>News & Articles</span>
+                      <div className="flex items-center space-x-2.5">
+                        <Newspaper className="w-4 h-4 shrink-0 text-purple-500" />
+                        <span>News &amp; Articles</span>
+                      </div>
                     </Link>
                   )}
                 </div>
@@ -284,140 +314,111 @@ export function AdminSidebar() {
               {/* Authoring & Media Tools */}
               <div>
                 <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  Authoring & Assets
+                  Authoring &amp; Assets
                 </div>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <Link
                     href="/admin/editor"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname.startsWith('/admin/editor')
-                        ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <Edit3 className="w-4 h-4 text-emerald-500" />
-                    <span>Visual Page Editor</span>
+                    <div className="flex items-center space-x-2.5">
+                      <Edit3 className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <span>Visual Page Editor</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200">
+                      Studio
+                    </span>
                   </Link>
 
                   <Link
                     href="/admin/media"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname.startsWith('/admin/media')
-                        ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <ImageIcon className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>Media & Downloads</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/tasks"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/tasks')
-                        ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <Send className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>Approvals & Publishing</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Team & Support */}
-              <div>
-                <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  Team & Support
-                </div>
-                <div className="space-y-0.5">
-                  <Link
-                    href="/admin/users"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/users')
-                        ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <UserPlus className="w-4 h-4 text-amber-500" />
-                    <span>Authorized Editors</span>
-                  </Link>
-                  <Link
-                    href="/admin/settings"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/settings')
-                        ? 'bg-amber-500/10 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <Settings className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>Site Preferences</span>
+                    <div className="flex items-center space-x-2.5">
+                      <FolderOpen className="w-4 h-4 shrink-0 text-blue-500" />
+                      <span>Media Library</span>
+                    </div>
                   </Link>
                 </div>
               </div>
             </>
           ) : (
-            /* ======================================================== */
-            /* BASTION AGENCY WORKSPACE NAVIGATION                      */
-            /* ======================================================== */
+            /* BASTION AGENCY WORKSPACE NAVIGATION */
             <>
               {/* Agency Operations */}
               <div>
                 <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Agency Operations
                 </div>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <Link
                     href="/admin"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname === '/admin'
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <LayoutDashboard className="w-4 h-4 text-bastion-blue dark:text-sky-400" />
-                    <span>Overview</span>
+                    <div className="flex items-center space-x-2.5">
+                      <LayoutDashboard className="w-4 h-4 shrink-0" />
+                      <span>Overview</span>
+                    </div>
+                    {pathname === '/admin' && (
+                      <span className="w-1.5 h-4 rounded-r-full bg-[#F59E0B] absolute left-0" />
+                    )}
                   </Link>
 
                   <Link
                     href="/admin/clients"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname.startsWith('/admin/clients')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <Users className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>Clients & Websites</span>
+                    <div className="flex items-center space-x-2.5">
+                      <Users className="w-4 h-4 shrink-0 text-blue-500" />
+                      <span>Clients &amp; Websites</span>
+                    </div>
                   </Link>
 
                   <Link
                     href="/admin/create"
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname.startsWith('/admin/create')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
                     <div className="flex items-center space-x-2.5">
-                      <Sparkles className="w-4 h-4 text-indigo-500" />
+                      <Sparkles className="w-4 h-4 shrink-0 text-purple-500" />
                       <span>Create Website</span>
                     </div>
-                    <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                      New
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200">
+                      Wizard
                     </span>
                   </Link>
 
                   <Link
                     href="/admin/billing"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname.startsWith('/admin/billing')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <CreditCard className="w-4 h-4 text-emerald-500" />
-                    <span>Commercial & Billing</span>
+                    <div className="flex items-center space-x-2.5">
+                      <CreditCard className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <span>Commercial &amp; Billing</span>
+                    </div>
                   </Link>
                 </div>
               </div>
@@ -425,208 +426,218 @@ export function AdminSidebar() {
               {/* Design & Systems */}
               <div>
                 <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  Design & Systems
+                  Design &amp; Systems
                 </div>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <Link
                     href="/admin/brand"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname.startsWith('/admin/brand')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <Palette className="w-4 h-4 text-amber-500" />
-                    <span>Brand Systems</span>
+                    <div className="flex items-center space-x-2.5">
+                      <Palette className="w-4 h-4 shrink-0 text-[#7C3AED]" />
+                      <span>Brand DNA &amp; Kits</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200">
+                      DNA
+                    </span>
                   </Link>
 
                   <Link
                     href="/admin/blueprints"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
                       pathname.startsWith('/admin/blueprints')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <Layers className="w-4 h-4 text-violet-500" />
-                    <span>Templates & Blueprints</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/editor"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/editor')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <Edit3 className="w-4 h-4 text-emerald-500" />
-                    <span>Visual Website Editor</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Governance & Publishing */}
-              <div>
-                <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  Governance & Publishing
-                </div>
-                <div className="space-y-0.5">
-                  <Link
-                    href="/admin/pages"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname === '/admin/pages'
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <FileText className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>Pages & Compositions</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/media"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/media')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <ImageIcon className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>Media Library</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/tasks"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/tasks')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <Send className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>Reviews & Publishing</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/users"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/users')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <UserPlus className="w-4 h-4 text-bastion-blue dark:text-sky-400" />
-                    <span>Team & Access Control</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Infrastructure & Intelligence */}
-              <div>
-                <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  Infrastructure & Intelligence
-                </div>
-                <div className="space-y-0.5">
-                  <Link
-                    href="/admin/health"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/health')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <Activity className="w-4 h-4 text-emerald-500" />
-                    <span>Website Health</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/analytics"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/analytics')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <BarChart3 className="w-4 h-4 text-bastion-blue dark:text-sky-400" />
-                    <span>Analytics</span>
-                  </Link>
-
-                  <Link
-                    href="/admin/sandbox"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/sandbox')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
-                    }`}
-                  >
-                    <Terminal className="w-4 h-4 text-indigo-500" />
-                    <div className="flex items-center justify-between flex-1">
-                      <span>API Sandbox</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                        Live
-                      </span>
+                    <div className="flex items-center space-x-2.5">
+                      <Layers className="w-4 h-4 shrink-0 text-indigo-500" />
+                      <span>Blueprints &amp; Templates</span>
                     </div>
                   </Link>
 
                   <Link
-                    href="/admin/settings"
-                    className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
-                      pathname.startsWith('/admin/settings')
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-bastion-navy dark:text-white border border-slate-200 dark:border-slate-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#141C2A]'
+                    href="/admin/design-system"
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
+                      pathname.startsWith('/admin/design-system')
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
                     }`}
                   >
-                    <Settings className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                    <span>Headless API & Webhooks</span>
+                    <div className="flex items-center space-x-2.5">
+                      <SlidersHorizontal className="w-4 h-4 shrink-0 text-amber-500" />
+                      <span>Tokens &amp; Tokens CSS</span>
+                    </div>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Governance & Access */}
+              <div>
+                <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Governance &amp; Access
+                </div>
+                <div className="space-y-1">
+                  <Link
+                    href="/admin/tasks"
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
+                      pathname.startsWith('/admin/tasks')
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <Send className="w-4 h-4 shrink-0 text-purple-500" />
+                      <span>Reviews &amp; Publishing</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200">
+                      2
+                    </span>
+                  </Link>
+
+                  <Link
+                    href="/admin/users"
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
+                      pathname.startsWith('/admin/users')
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <UserPlus className="w-4 h-4 shrink-0 text-[#7C3AED]" />
+                      <span>Team &amp; Access Control</span>
+                    </div>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Intelligence & Infrastructure */}
+              <div>
+                <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Intelligence &amp; Infrastructure
+                </div>
+                <div className="space-y-1">
+                  <Link
+                    href="/admin/health"
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
+                      pathname.startsWith('/admin/health')
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <Activity className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <span>Website Health</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200">
+                      100%
+                    </span>
+                  </Link>
+
+                  <Link
+                    href="/admin/analytics"
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
+                      pathname.startsWith('/admin/analytics')
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <BarChart3 className="w-4 h-4 shrink-0 text-purple-500" />
+                      <span>Analytics</span>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/admin/sandbox"
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
+                      pathname.startsWith('/admin/sandbox')
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <Terminal className="w-4 h-4 shrink-0 text-indigo-500" />
+                      <span>API Sandbox</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200">
+                      Live
+                    </span>
+                  </Link>
+
+                  <Link
+                    href="/admin/settings"
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition relative ${
+                      pathname.startsWith('/admin/settings')
+                        ? 'bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-md shadow-purple-500/25 border border-[#7C3AED]'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-purple-50/80 dark:hover:bg-slate-800/80 hover:text-[#7C3AED] dark:hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <Settings className="w-4 h-4 shrink-0 text-slate-400" />
+                      <span>Headless &amp; Webhooks</span>
+                    </div>
                   </Link>
                 </div>
               </div>
             </>
           )}
         </div>
-      </div>
 
-      {/* User Footer & Mode Quick-Toggle */}
-      <div className="p-3 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-[#070B10]">
-        <div className="flex items-center justify-between px-2 py-1 mb-2">
-          <div className="flex items-center space-x-2 min-w-0">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-              isClientPortal
-                ? 'bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-400'
-                : 'bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-bastion-navy dark:text-sky-400'
-            }`}>
-              {user?.name ? user.name[0].toUpperCase() : 'B'}
-            </div>
-            <div className="truncate">
-              <div className="text-xs font-medium text-slate-900 dark:text-white truncate">
-                {user?.name || (isClientPortal ? `${activeClient?.name || 'Client'} Editor` : 'Bastion Admin')}
+        {/* Distinct Compact AI Agent Status Module (Zara CareerOS Signature) */}
+        <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80 shrink-0">
+          <div className="p-3 rounded-xl space-y-2 border shadow-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#7C3AED]/15 text-[#7C3AED]">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold text-slate-800 dark:text-white">AI Publishing Agent</span>
               </div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                {isClientPortal ? 'Client Workspace' : 'Bastion Agency'}
-              </div>
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/40">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Active &bull; 2/5</span>
+              </span>
             </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+              Signed webhooks &bull; Edge cache purge &bull; SENS guardrails
+            </p>
+
+            <Link
+              href="/admin/tasks"
+              className="w-full flex items-center justify-between py-1.5 px-2.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-[#7C3AED] to-[#9333EA] hover:opacity-95 shadow-xs transition"
+            >
+              <span>Manage Pipeline</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
 
-        {/* View Switcher Button */}
-        <button
-          type="button"
-          onClick={() => setPortalViewMode(portalViewMode === 'client' ? 'agency' : 'client')}
-          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition ${
-            portalViewMode === 'client'
-              ? 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-950/60 border-amber-300 dark:border-amber-800/50 text-amber-900 dark:text-amber-300'
-              : 'bg-white dark:bg-[#141C2A] hover:bg-slate-100 dark:hover:bg-[#1A2536] border-slate-200 dark:border-[#232F42] text-slate-700 dark:text-slate-300 shadow-2xs'
-          }`}
-        >
-          <span className="flex items-center space-x-1.5 truncate">
-            <span className={`w-2 h-2 rounded-full ${portalViewMode === 'client' ? 'bg-amber-500 animate-pulse' : 'bg-bastion-blue'}`} />
-            <span className="truncate">
-              {portalViewMode === 'client' ? 'Switch to Agency View' : 'Switch to Client View'}
+        {/* User Account / Mode Switcher Footer */}
+        <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-50/60 dark:bg-[#070B10]">
+          <button
+            type="button"
+            onClick={() => setPortalViewMode(portalViewMode === 'client' ? 'agency' : 'client')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold transition ${
+              portalViewMode === 'client'
+                ? 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 border-amber-300 dark:border-amber-800/50 text-amber-900 dark:text-amber-300'
+                : 'bg-white dark:bg-[#141C2A] hover:bg-purple-50 dark:hover:bg-[#1A2536] border-slate-200 dark:border-[#232F42] text-slate-700 dark:text-slate-300 shadow-2xs'
+            }`}
+          >
+            <span className="flex items-center space-x-2 truncate">
+              <span className={`w-2 h-2 rounded-full ${portalViewMode === 'client' ? 'bg-amber-500 animate-pulse' : 'bg-[#7C3AED]'}`} />
+              <span className="truncate">
+                {portalViewMode === 'client' ? 'Switch to Agency View' : 'Switch to Client View'}
+              </span>
             </span>
-          </span>
-          <ArrowRightLeft className="w-3 h-3 text-slate-400 shrink-0 ml-1" />
-        </button>
+            <ArrowRightLeft className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
+          </button>
+        </div>
       </div>
     </aside>
   );
