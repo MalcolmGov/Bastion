@@ -28,7 +28,8 @@ import {
   PlusCircle,
   Building,
   Check,
-  CreditCard
+  CreditCard,
+  Terminal
 } from 'lucide-react';
 
 export function AdminSidebar() {
@@ -385,6 +386,22 @@ export function AdminSidebar() {
               >
                 <BarChart3 className="w-4 h-4 text-sky-400" />
                 <span>Analytics</span>
+              </Link>
+              <Link
+                href="/admin/sandbox"
+                className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition ${
+                  pathname.startsWith('/admin/sandbox')
+                    ? 'bg-sky-950/60 text-sky-300 border border-sky-800/60 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#141C2A]'
+                }`}
+              >
+                <Terminal className="w-4 h-4 text-indigo-400" />
+                <div className="flex items-center justify-between flex-1">
+                  <span>API Sandbox</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-indigo-950 text-indigo-300 border border-indigo-800">
+                    Live
+                  </span>
+                </div>
               </Link>
               <Link
                 href="/admin/settings"
