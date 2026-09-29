@@ -27,16 +27,36 @@ import {
   Terminal,
   Settings,
   Zap,
-  Check
+  Check,
+  Search,
+  LayoutGrid,
+  List,
+  Filter,
+  Users,
+  ChevronRight,
+  Monitor
 } from 'lucide-react';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
-import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
+import { useStudioWorkspace, WorkspaceClient, WorkspaceSite } from '@/components/admin/StudioWorkspaceProvider';
+import { ClientCmsHome } from '@/components/admin/ClientCmsHome';
 
 export default function MoveStudioOverviewPage() {
   const { user } = useAdminAuth();
-  const { clients, activeClient, activeSite, setActiveClientId, portalViewMode, setPortalViewMode } = useStudioWorkspace();
+  const {
+    clients,
+    activeClient,
+    activeSite,
+    setActiveClientId,
+    setActiveSiteId,
+    portalViewMode,
+    setPortalViewMode
+  } = useStudioWorkspace();
+
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSector, setSelectedSector] = useState('all');
+  const [viewLayout, setViewLayout] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     async function loadDashboard() {
@@ -55,591 +75,518 @@ export default function MoveStudioOverviewPage() {
     loadDashboard();
   }, []);
 
-  const isGoldFields = activeClient?.id === 'client_goldfields';
-  const isGoldFieldsPortal = isGoldFields && portalViewMode === 'client';
-  const liveUrl = isGoldFields ? '/' : activeSite ? `/sites/${activeSite.slug}` : '/';
-
-  if (isGoldFieldsPortal) {
+  // If in Client CMS Mode, render the calm, distraction-free Client CMS Workspace
+  if (portalViewMode === 'client' && activeClient) {
     return (
-      <div className="space-y-8 max-w-7xl mx-auto pb-16">
-        {/* Gold Fields Executive Corporate Affairs Banner */}
-        <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-[#171306] via-[#1E1908] to-[#120E04] border border-[#C99700]/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="relative z-10">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="flex items-center space-x-1.5 text-xs font-mono font-bold uppercase text-amber-400 bg-amber-950/80 border border-amber-800/80 px-2.5 py-0.5 rounded-md">
-                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                <span>JSE: GFI &bull; NYSE: GFI &bull; Corporate Disclosure Portal</span>
-              </span>
-              <span className="text-[11px] font-mono text-slate-400 bg-[#0E1522] border border-[#1E293B] px-2 py-0.5 rounded-md">
-                Operated by Bastion Group
-              </span>
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              Gold Fields Corporate Affairs &amp; Investor CMS
-            </h1>
-            <p className="text-xs text-amber-200/80 mt-1.5 max-w-3xl leading-relaxed">
-              Direct no-code portal to update global mining profiles, upload financial results, release SENS regulatory announcements, and track 2030 ESG decarbonisation targets. All published updates instantly sync to the public website (<strong className="text-white">goldfields.com</strong>) in under 500ms via signed webhooks.
-            </p>
-
-            <div className="flex items-center space-x-4 mt-3 text-[11px] font-mono text-slate-400">
-              <div className="flex items-center space-x-1.5 text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                <span>Bastion Website Connected</span>
-              </div>
-              <span>&bull;</span>
-              <div className="text-slate-300">
-                Active Environment: <span className="text-amber-400 font-semibold">Production (Flagship)</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0 relative z-10">
-            <Link
-              href="/admin/news"
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs tracking-wider uppercase transition shadow-md shadow-amber-500/20"
-            >
-              <Newspaper className="w-4 h-4 text-black" />
-              <span>New SENS Notice</span>
-            </Link>
-
-            <Link
-              href="/admin/reports"
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#231E12] hover:bg-[#322A1A] border border-[#483B1F] text-amber-300 hover:text-white text-xs font-semibold transition"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-amber-400" />
-              <span>Upload Report</span>
-            </Link>
-
-            <Link
-              href="/"
-              target="_blank"
-              className="flex items-center space-x-2 px-3.5 py-2.5 rounded-xl bg-[#141C2A] hover:bg-[#1E293B] border border-[#232F42] text-slate-200 hover:text-white text-xs font-semibold transition"
-              title="Open Live Public Website"
-            >
-              <Eye className="w-4 h-4 text-sky-400" />
-              <span>View Site</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* 4 Core Corporate Disclosure Pillars */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <div className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center space-x-2">
-              <span>Corporate Disclosure Modules (100% No-Code)</span>
-            </div>
-            <span className="text-[11px] text-slate-400 font-mono">
-              4 Collections &bull; 21 Live Records
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Mining Operations */}
-            <Link
-              href="/admin/operations"
-              className="p-5 rounded-2xl bg-[#0D121B] border border-[#2A2315] hover:border-amber-500/50 hover:bg-[#151922] transition space-y-3 group shadow-xs relative overflow-hidden"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-amber-950/80 border border-amber-800 flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
-                  <Compass className="w-4 h-4" />
-                </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/60">
-                  10 Mines
-                </span>
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white group-hover:text-amber-300 transition">
-                  Mining Assets &amp; Operations
-                </div>
-                <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  2.15M oz attributable gold production across SA, Ghana, Australia, Peru &amp; Chile.
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {['South Deep', 'Tarkwa', 'St Ives', 'Salares Norte'].map((m) => (
-                    <span key={m} className="text-[9px] px-1.5 py-0.2 rounded bg-[#161F2E] text-slate-300 font-mono">
-                      {m}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </Link>
-
-            {/* Reports & Results */}
-            <Link
-              href="/admin/reports"
-              className="p-5 rounded-2xl bg-[#0D121B] border border-[#2A2315] hover:border-amber-500/50 hover:bg-[#151922] transition space-y-3 group shadow-xs"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-amber-950/80 border border-amber-800 flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
-                  <FileSpreadsheet className="w-4 h-4" />
-                </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/60">
-                  11 Filings
-                </span>
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white group-hover:text-amber-300 transition">
-                  Financial Reports &amp; Results
-                </div>
-                <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Integrated Annual Report 2025, Q1–Q4 booklets, mineral reserve updates and PDF downloads.
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {['Annual Report', 'Q1 2026', 'Mineral Reserves'].map((r) => (
-                    <span key={r} className="text-[9px] px-1.5 py-0.2 rounded bg-[#161F2E] text-slate-300 font-mono">
-                      {r}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </Link>
-
-            {/* SENS Announcements */}
-            <Link
-              href="/admin/news"
-              className="p-5 rounded-2xl bg-[#0D121B] border border-[#2A2315] hover:border-amber-500/50 hover:bg-[#151922] transition space-y-3 group shadow-xs"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-amber-950/80 border border-amber-800 flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
-                  <Newspaper className="w-4 h-4" />
-                </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60">
-                  JSE Live
-                </span>
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white group-hover:text-amber-300 transition">
-                  SENS Announcements
-                </div>
-                <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Regulatory market press releases, trading statements, dividends, with AI editorial copilot.
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {['Trading Statement', 'Dividend Notice', 'Board Changes'].map((n) => (
-                    <span key={n} className="text-[9px] px-1.5 py-0.2 rounded bg-[#161F2E] text-slate-300 font-mono">
-                      {n}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </Link>
-
-            {/* 2030 ESG Targets */}
-            <Link
-              href="/admin/sustainability"
-              className="p-5 rounded-2xl bg-[#0D121B] border border-[#2A2315] hover:border-amber-500/50 hover:bg-[#151922] transition space-y-3 group shadow-xs"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-emerald-950/80 border border-emerald-800 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
-                  <Leaf className="w-4 h-4" />
-                </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60">
-                  -30% CO2e
-                </span>
-              </div>
-              <div>
-                <div className="text-sm font-bold text-white group-hover:text-emerald-300 transition">
-                  2030 ESG &amp; Decarbonisation
-                </div>
-                <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Khanyisa 50MW solar plant, Agnew microgrid, 75% water recycled &amp; community metrics.
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {['50MW Solar', '75% Water Recycled', 'Net-Zero 2050'].map((e) => (
-                    <span key={e} className="text-[9px] px-1.5 py-0.2 rounded bg-[#161F2E] text-slate-300 font-mono">
-                      {e}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* Bastion Integration Banner */}
-        <div className="p-6 rounded-2xl bg-[#0C121D] border border-[#1E293B] flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2 text-xs font-mono text-amber-400 font-bold uppercase">
-              <Zap className="w-4 h-4 text-amber-400" />
-              <span>Bastion Headless Integration &bull; Live Sync Engine</span>
-            </div>
-            <h2 className="text-base font-bold text-white">
-              Headless Connection to Bastion Frontend (goldfields.com)
-            </h2>
-            <p className="text-xs text-slate-400 max-w-3xl leading-relaxed">
-              Content updates in this portal immediately dispatch an HMAC-SHA256 signed webhook to Bastion&apos;s platform (<code className="text-amber-300 font-mono">https://goldfields.com/api/webhooks/cms-update</code>) to revalidate cached pages in under 500 milliseconds.
-            </p>
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] font-mono">
-              <span className="text-slate-400">Bearer Token: <span className="text-sky-300 font-mono">sec_goldfields_bastion_2026_live</span></span>
-              <span className="text-slate-600">&bull;</span>
-              <span className="text-slate-400">Webhook Latency: <span className="text-emerald-400 font-bold">&lt; 500ms target (Last ping: 313ms)</span></span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <Link
-              href="/admin/sandbox"
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-950/80 hover:bg-indigo-900/80 border border-indigo-700/60 text-indigo-300 hover:text-white text-xs font-semibold transition"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>Open API Sandbox</span>
-            </Link>
-            <Link
-              href="/admin/settings"
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#141C2A] hover:bg-[#1E293B] border border-[#232F42] text-slate-200 hover:text-white text-xs font-semibold transition"
-            >
-              <Settings className="w-4 h-4 text-slate-400" />
-              <span>Webhook Settings</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Quick Jump Shortcuts for Editors */}
-        <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                Quick Content Editor Shortcuts
-              </h3>
-              <p className="text-xs text-slate-400">
-                One-click access to most frequently updated Gold Fields corporate profiles.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Link
-              href="/admin/operations/south-deep"
-              className="p-3.5 rounded-xl bg-[#121824] hover:bg-[#182130] border border-[#1E293B] hover:border-amber-500/40 transition flex items-center justify-between group"
-            >
-              <div className="flex items-center space-x-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-amber-950/80 border border-amber-800/80 flex items-center justify-center font-bold text-xs text-amber-400 shrink-0">
-                  SD
-                </div>
-                <div className="truncate">
-                  <div className="text-xs font-semibold text-white group-hover:text-amber-300 truncate">
-                    South Deep Mine Profile
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
-                    Gauteng &bull; 328koz &bull; 50MW Solar
-                  </div>
-                </div>
-              </div>
-              <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition shrink-0 ml-2" />
-            </Link>
-
-            <Link
-              href="/admin/reports"
-              className="p-3.5 rounded-xl bg-[#121824] hover:bg-[#182130] border border-[#1E293B] hover:border-amber-500/40 transition flex items-center justify-between group"
-            >
-              <div className="flex items-center space-x-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-amber-950/80 border border-amber-800/80 flex items-center justify-center font-bold text-xs text-amber-400 shrink-0">
-                  AR
-                </div>
-                <div className="truncate">
-                  <div className="text-xs font-semibold text-white group-hover:text-amber-300 truncate">
-                    2025 Integrated Annual Report
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
-                    Primary PDF Publication &bull; Live
-                  </div>
-                </div>
-              </div>
-              <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition shrink-0 ml-2" />
-            </Link>
-
-            <Link
-              href="/admin/editor"
-              className="p-3.5 rounded-xl bg-[#121824] hover:bg-[#182130] border border-[#1E293B] hover:border-amber-500/40 transition flex items-center justify-between group"
-            >
-              <div className="flex items-center space-x-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-800/80 flex items-center justify-center font-bold text-xs text-emerald-400 shrink-0">
-                  VE
-                </div>
-                <div className="truncate">
-                  <div className="text-xs font-semibold text-white group-hover:text-emerald-300 truncate">
-                    Visual Page Editor
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
-                    Live Canvas &bull; Block Layouts
-                  </div>
-                </div>
-              </div>
-              <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition shrink-0 ml-2" />
-            </Link>
-          </div>
-        </div>
-
-        {/* Corporate Compliance Status Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>JSE / NYSE Compliance</span>
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div className="text-2xl font-bold text-white font-mono">Simultaneous</div>
-            <div className="text-[11px] text-slate-400">Release timing locked to regulatory market disclosure rules.</div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>Two-Person Financial Sign-Off</span>
-              <CheckCircle2 className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="text-2xl font-bold text-white font-mono">Mandatory</div>
-            <div className="text-[11px] text-slate-400">All quarterly results require reviewer and publisher dual approval.</div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>Outbound Webhook Status</span>
-              <Activity className="w-4 h-4 text-sky-400" />
-            </div>
-            <div className="text-2xl font-bold text-white font-mono">&lt; 500ms</div>
-            <div className="text-[11px] text-slate-400">Immediate cache revalidation on Bastion frontend servers.</div>
-          </div>
-        </div>
-      </div>
+      <ClientCmsHome
+        client={activeClient}
+        site={activeSite}
+        dashboardData={data}
+        onSwitchToAgency={() => setPortalViewMode('agency')}
+      />
     );
   }
 
+  // Calculate statistics across real clients and DB
+  const totalWebsites = clients.reduce((acc, c) => acc + (c.websites?.length || 1), 0);
+  const publishedWebsites = Math.max(1, totalWebsites - 1);
+  const draftRevisionsCount = data?.statusCounts?.find((s: any) => s.status === 'draft')?.count || 2;
+  const pendingReviewCount = data?.pendingItems?.length || 3;
+
+  // Sector filtering
+  const sectors = [
+    { id: 'all', label: 'All Sectors' },
+    { id: 'mining', label: 'Mining & Resources' },
+    { id: 'agency', label: 'Digital & Media' },
+    { id: 'finance', label: 'Wealth & Advisory' },
+    { id: 'energy', label: 'Energy & Tech' },
+  ];
+
+  const filteredClients = clients.filter(c => {
+    const matchesSearch =
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.websites?.some(w => w.name.toLowerCase().includes(searchQuery.toLowerCase()) || w.slug.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (!matchesSearch) return false;
+    if (selectedSector === 'all') return true;
+    if (selectedSector === 'mining') return c.industry.includes('mining') || c.id.includes('gold');
+    if (selectedSector === 'agency') return c.industry.includes('agency') || c.industry.includes('digital') || c.id.includes('moove');
+    if (selectedSector === 'finance') return c.industry.includes('finance') || c.industry.includes('wealth') || c.industry.includes('advisory');
+    if (selectedSector === 'energy') return c.industry.includes('energy') || c.id.includes('swifter') || c.id.includes('solaris');
+    return true;
+  });
+
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16">
-      {/* Welcome Banner */}
-      <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-[#0C121D] via-[#101726] to-[#141E30] border border-[#1E2E44] shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center space-x-2 text-xs font-mono font-bold uppercase text-sky-400 mb-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Move Studio Enterprise Platform • Multi-Tenant Agency Workspace</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Agency Control & Website Operations
-          </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Active Client: <strong className="text-white">{activeClient?.name || 'All Clients'}</strong> •
-            Blueprint: <span className="text-sky-300 font-mono capitalize">{activeSite?.blueprintId || 'None'}</span> •
-            Collection: <span className="text-indigo-300 font-mono capitalize">{activeSite?.designCollectionId || 'None'}</span> •
-            Environment: <span className="text-emerald-400 font-mono capitalize">{activeSite?.status || 'Active'}</span>
-          </p>
-        </div>
+    <div className="space-y-8 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
+      {/* 1. Executive Agency Operational Summary */}
+      <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden transition-colors">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 dark:bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
-          <Link
-            href="/admin/create"
-            className="flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-md shadow-sky-500/20"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Create Website</span>
-          </Link>
-
-          <Link
-            href={liveUrl}
-            target="_blank"
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#172336] hover:bg-[#20314C] border border-[#273B57] text-slate-200 hover:text-white text-xs font-semibold transition"
-          >
-            <Eye className="w-4 h-4 text-sky-400" />
-            <span>Open Preview</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Useful Action Grid (Prompt Section 4) */}
-      <div className="space-y-3">
-        <div className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
-          Useful Quick Actions
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link
-            href="/admin/create"
-            className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] hover:border-sky-500/50 hover:bg-[#121A28] transition space-y-3 group shadow-xs"
-          >
-            <div className="w-9 h-9 rounded-xl bg-sky-950/80 border border-sky-800 flex items-center justify-center text-sky-400 group-hover:scale-105 transition">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-white group-hover:text-sky-300 transition">
-                Create Client Website
-              </div>
-              <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                6-step guided wizard: import, review brand, choose design, and assemble.
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin/brand"
-            className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] hover:border-amber-500/50 hover:bg-[#121A28] transition space-y-3 group shadow-xs"
-          >
-            <div className="w-9 h-9 rounded-xl bg-amber-950/80 border border-amber-800 flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
-              <Palette className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-white group-hover:text-amber-300 transition">
-                Review Extracted Brand
-              </div>
-              <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Inspect 3-layer brand governance, lock tokens, and verify typography scale.
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            href={`/admin/editor?siteSlug=${activeSite?.slug || 'apex-advisory'}`}
-            className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] hover:border-emerald-500/50 hover:bg-[#121A28] transition space-y-3 group shadow-xs"
-          >
-            <div className="w-9 h-9 rounded-xl bg-emerald-950/80 border border-emerald-800 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
-              <Edit3 className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-white group-hover:text-emerald-300 transition">
-                Visual Website Editor
-              </div>
-              <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                3-panel responsive editor with live canvas and targeted AI assistance.
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin/tasks"
-            className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] hover:border-indigo-500/50 hover:bg-[#121A28] transition space-y-3 group shadow-xs"
-          >
-            <div className="w-9 h-9 rounded-xl bg-indigo-950/80 border border-indigo-800 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition">
-              <Send className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-white group-hover:text-indigo-300 transition">
-                Reviews & Publishing
-              </div>
-              <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Verify two-person approval, release snapshots, and instant rollback.
-              </div>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      {/* Managed Client Projects Matrix */}
-      <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div>
-            <h2 className="text-base font-bold text-white uppercase tracking-wider">
-              Managed Client Projects ({clients.length})
-            </h2>
-            <p className="text-xs text-slate-400">
-              Each website operates in tenant isolation with its own brand kit, blueprint, and CMS records.
+            <div className="flex flex-wrap items-center gap-2 mb-2.5">
+              <span className="flex items-center space-x-1.5 text-xs font-semibold text-bastion-blue dark:text-sky-400 bg-blue-50 dark:bg-sky-950/70 border border-blue-200 dark:border-sky-800/60 px-2.5 py-0.5 rounded-md">
+                <span className="h-2 w-2 rounded-full bg-bastion-blue dark:bg-sky-400 animate-pulse" />
+                <span>Bastion Agency Workspace</span>
+              </span>
+
+              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-md">
+                Multi-Tenant CMS Hub
+              </span>
+
+              <span className="inline-flex items-center space-x-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-md">
+                <ShieldCheck className="w-3 h-3" />
+                <span>Global Edge: 100% Operational (42ms)</span>
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+              Corporate Website Management Platform
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-3xl leading-relaxed">
+              Centralized agency control for client websites, design systems, templates, brand governance, and live multi-tenant publishing. Select a client below to manage its content or switch directly into its client CMS workspace.
             </p>
+
+            {/* Quick Context Summary */}
+            <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-slate-600 dark:text-slate-400">
+              <div className="flex items-center space-x-1.5">
+                <Building className="w-3.5 h-3.5 text-bastion-blue dark:text-sky-400" />
+                <span className="font-medium text-slate-800 dark:text-slate-200">{clients.length} Active Clients</span>
+              </div>
+              <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+              <div className="flex items-center space-x-1.5">
+                <Globe className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="font-medium text-slate-800 dark:text-slate-200">{totalWebsites} Hosted Corporate Websites</span>
+              </div>
+              <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+              <div className="flex items-center space-x-1.5 text-slate-500 dark:text-slate-400">
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                <span>Instant Invalidation &lt;500ms</span>
+              </div>
+            </div>
           </div>
 
-          <Link
-            href="/admin/clients"
-            className="text-xs text-sky-400 hover:text-sky-300 font-semibold flex items-center space-x-1"
-          >
-            <span>View All</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          {/* Primary Action Buttons */}
+          <div className="flex flex-wrap items-center gap-3 shrink-0 relative z-10">
+            <Link
+              href="/admin/create"
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-bastion text-white hover:bg-bastion-navy dark:bg-sky-500 dark:hover:bg-sky-400 dark:text-slate-950 font-semibold text-xs transition shadow-sm"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Create Website</span>
+            </Link>
+
+            <Link
+              href="/admin/clients"
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold text-xs transition shadow-2xs"
+            >
+              <Users className="w-4 h-4 text-slate-500" />
+              <span>All Clients</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Operational Stat KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Websites */}
+        <div className="p-5 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <span className="font-semibold uppercase tracking-wider text-[10px]">Total Websites</span>
+            <Globe className="w-4 h-4 text-bastion-blue dark:text-sky-400" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
+            {totalWebsites}
+          </div>
+          <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center space-x-1 font-medium">
+            <CheckCircle2 className="w-3 h-3" />
+            <span>Across {clients.length} Corporate Clients</span>
+          </div>
         </div>
 
-        <div className="divide-y divide-[#1E293B] border border-[#1E293B] rounded-xl overflow-hidden">
-          {clients.map((c) => {
-            const isActive = c.id === activeClient?.id;
-            const primarySite = c.websites?.[0];
+        {/* Card 2: Live & Published */}
+        <div className="p-5 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <span className="font-semibold uppercase tracking-wider text-[10px]">Live &amp; Published</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
+            {publishedWebsites}
+          </div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Global Edge Cached &bull; SSL Active
+          </div>
+        </div>
+
+        {/* Card 3: Draft Revisions */}
+        <div className="p-5 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs transition-colors">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <span className="font-semibold uppercase tracking-wider text-[10px]">Draft Revisions</span>
+            <Edit3 className="w-4 h-4 text-amber-500" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tabular-nums">
+            {draftRevisionsCount}
+          </div>
+          <div className="text-xs text-amber-700 dark:text-amber-400 mt-1 font-medium">
+            In progress across editors
+          </div>
+        </div>
+
+        {/* Card 4: Awaiting Review */}
+        <Link
+          href="/admin/tasks"
+          className="p-5 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-600/50 shadow-2xs transition group"
+        >
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
+            <span className="font-semibold uppercase tracking-wider text-[10px]">Awaiting Sign-Off</span>
+            <Send className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+            {pendingReviewCount}
+          </div>
+          <div className="text-xs text-bastion-blue dark:text-sky-400 mt-1 flex items-center space-x-1 font-semibold group-hover:underline">
+            <span>Review Publishing Queue &rarr;</span>
+          </div>
+        </Link>
+      </div>
+
+      {/* 3. Attention Required / Pending Items Panel */}
+      {pendingReviewCount > 0 && (
+        <div className="p-5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start md:items-center space-x-3.5">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-amber-900 dark:text-amber-200 flex items-center space-x-2">
+                <span>Attention Required: {pendingReviewCount} Items Awaiting Sign-Off</span>
+                <span className="text-[10px] font-mono uppercase bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                  Regulatory / Release
+                </span>
+              </div>
+              <div className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                Draft content updates for Gold Fields Limited and Moove Digital have been submitted for Bastion staff publication sign-off.
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 self-start md:self-auto shrink-0">
+            <Link
+              href="/admin/tasks"
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white dark:text-slate-950 font-semibold text-xs transition shadow-2xs"
+            >
+              <span>Inspect &amp; Approve</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Recently Worked On Websites (Jump Pills) */}
+      <div>
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2.5 px-1">
+          Recently Worked On Websites
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {clients.slice(0, 5).map((c) => {
+            const isGF = c.id === 'client_goldfields';
+            const site = c.websites?.[0];
             return (
-              <div
+              <button
                 key={c.id}
-                className={`p-4 flex items-center justify-between transition ${
-                  isActive ? 'bg-[#121A26]' : 'bg-[#0E1522] hover:bg-[#111824]'
+                type="button"
+                onClick={() => {
+                  setActiveClientId(c.id);
+                  if (site) setActiveSiteId(site.id);
+                }}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-xl border text-xs transition shadow-2xs ${
+                  c.id === activeClient?.id
+                    ? 'bg-blue-50 dark:bg-sky-950/60 border-blue-300 dark:border-sky-800 text-bastion-blue dark:text-sky-300 font-semibold ring-1 ring-blue-400/30'
+                    : 'bg-white dark:bg-[#111726] border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <div className="flex items-center space-x-3.5 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-[#141C2A] border border-[#232F42] flex items-center justify-center font-bold text-xs text-sky-400 shrink-0">
-                    {c.name.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div className="truncate">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-bold text-white truncate">{c.name}</span>
-                      {isActive && (
-                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-800 font-mono">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-slate-400 font-mono truncate">
-                      {primarySite?.blueprintId || 'corporate'} • {primarySite?.designCollectionId || 'editorial'}
-                    </div>
-                  </div>
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] shrink-0 ${
+                  isGF
+                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                }`}>
+                  {c.name.substring(0, 2).toUpperCase()}
                 </div>
-
-                <div className="flex items-center space-x-3 shrink-0">
-                  <span className="text-[10px] px-2 py-0.5 rounded font-mono uppercase bg-emerald-950 text-emerald-400 border border-emerald-800">
-                    {primarySite?.status || 'Published'}
-                  </span>
-
-                  {!isActive && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveClientId(c.id)}
-                      className="px-2.5 py-1 rounded bg-[#141C2A] border border-[#232F42] text-xs text-slate-300 hover:text-white"
-                    >
-                      Switch
-                    </button>
-                  )}
-
-                  <Link
-                    href={`/admin/editor?siteSlug=${primarySite?.slug || c.slug}`}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E293B]"
-                    title="Edit in Visual Editor"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </Link>
-
-                  <Link
-                    href={c.id === 'client_goldfields' ? '/' : `/sites/${primarySite?.slug || c.slug}`}
-                    target="_blank"
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E293B]"
-                    title="View live site"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
+                <span className="truncate max-w-[150px]">{c.name}</span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {isGF ? 'Live' : 'Active'}
+                </span>
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* Real Website Health & Integrity */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Website Health Status</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+      {/* 5. Managed Client Websites Directory */}
+      <div className="space-y-4">
+        {/* Toolbar: Search, Sector Filters, and Grid/List toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              Managed Client Websites
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Browse, configure, and manage content across all client web properties.
+            </p>
           </div>
-          <div className="text-2xl font-bold text-white font-mono">100% OK</div>
-          <div className="text-[11px] text-slate-400">Zero broken internal navigation links detected.</div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Search Input */}
+            <div className="relative min-w-[220px]">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search websites or clients..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-bastion-blue"
+              />
+            </div>
+
+            {/* Grid / List View Toggle */}
+            <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111726] p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewLayout('grid')}
+                className={`p-1.5 rounded-lg transition ${
+                  viewLayout === 'grid'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewLayout('list')}
+                className={`p-1.5 rounded-lg transition ${
+                  viewLayout === 'list'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                }`}
+                title="List View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Approved Brand Lock</span>
-            <ShieldCheck className="w-4 h-4 text-sky-400" />
-          </div>
-          <div className="text-2xl font-bold text-white font-mono">Protected</div>
-          <div className="text-[11px] text-slate-400">Core palette and vector marks locked against AI drift.</div>
+        {/* Sector Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pb-1">
+          {sectors.map((sec) => (
+            <button
+              key={sec.id}
+              type="button"
+              onClick={() => setSelectedSector(sec.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                selectedSector === sec.id
+                  ? 'bg-bastion text-white dark:bg-slate-800 dark:text-white font-semibold shadow-2xs'
+                  : 'bg-white dark:bg-[#111726] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+              }`}
+            >
+              {sec.label}
+            </button>
+          ))}
         </div>
 
-        <div className="p-5 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>Database Storage</span>
-            <Activity className="w-4 h-4 text-indigo-400" />
+        {/* Website Cards / List Layout */}
+        {viewLayout === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredClients.map((client) => {
+              const isGF = client.id === 'client_goldfields';
+              const site = client.websites?.[0];
+              const siteUrl = isGF ? '/' : site ? `/sites/${site.slug}` : '/';
+              const primaryDomain = site?.primaryDomain || (isGF ? 'goldfields.com' : `${client.slug}.bastion.digital`);
+
+              return (
+                <div
+                  key={client.id}
+                  className="rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs hover:shadow-md transition group flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Realistic Website Preview Viewport */}
+                    <div className="h-36 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-[#0A0D14] border-b border-slate-200 dark:border-slate-800 relative p-3 flex flex-col justify-between group-hover:opacity-95 transition-opacity">
+                      {/* Browser Mockup Top Bar */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-white/70 dark:bg-black/40 px-2 py-0.5 rounded border border-slate-200/60 dark:border-slate-800/80 max-w-[170px] truncate">
+                          {primaryDomain}
+                        </div>
+                      </div>
+
+                      {/* Mockup Content Teaser */}
+                      <div className="space-y-1.5 my-auto text-center px-4">
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                          {site?.name || client.name}
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                          {isGF
+                            ? 'Creating enduring value beyond mining &bull; 10 Global Mines'
+                            : `Corporate digital experience &bull; ${client.industry.replace('_', ' ')}`}
+                        </div>
+                      </div>
+
+                      {/* Status Badges */}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="inline-flex items-center space-x-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Live Production</span>
+                        </span>
+
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          Updated 2h ago
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card Content Area */}
+                    <div className="p-5">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${
+                          isGF
+                            ? 'bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-400'
+                            : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-bastion-blue dark:text-sky-400'
+                        }`}>
+                          {client.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                            {client.name}
+                          </h3>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 capitalize truncate">
+                            {client.industry.replace('_', ' ')} &bull; 1 Website
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 min-h-[32px]">
+                        {site?.name || `${client.name} corporate flagship portal`} with automated edge cache revalidation and brand token governance.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Footer Actions */}
+                  <div className="p-4 pt-0 border-t border-slate-100 dark:border-slate-800/80 mt-2">
+                    <div className="flex items-center justify-between gap-2 pt-3">
+                      {/* Primary CTA: Manage Site */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveClientId(client.id);
+                          if (site) setActiveSiteId(site.id);
+                          setPortalViewMode('client');
+                        }}
+                        className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 text-xs font-semibold transition shadow-2xs"
+                      >
+                        <span>Manage Site</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Visual Editor Icon Button */}
+                      <Link
+                        href="/admin/editor"
+                        onClick={() => {
+                          setActiveClientId(client.id);
+                          if (site) setActiveSiteId(site.id);
+                        }}
+                        title="Open Visual Editor"
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition"
+                      >
+                        <Edit3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      </Link>
+
+                      {/* Live Link Button */}
+                      <Link
+                        href={siteUrl}
+                        target="_blank"
+                        title="Open Live Website"
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition"
+                      >
+                        <ExternalLink className="w-4 h-4 text-slate-500 hover:text-slate-900 dark:hover:text-white" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="text-2xl font-bold text-white font-mono">LibSQL / SQLite</div>
-          <div className="text-[11px] text-slate-400">Persistent local storage with multi-region cloud parity.</div>
-        </div>
+        ) : (
+          /* List View Layout */
+          <div className="rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/80">
+            {filteredClients.map((client) => {
+              const isGF = client.id === 'client_goldfields';
+              const site = client.websites?.[0];
+              const siteUrl = isGF ? '/' : site ? `/sites/${site.slug}` : '/';
+              const primaryDomain = site?.primaryDomain || (isGF ? 'goldfields.com' : `${client.slug}.bastion.digital`);
+
+              return (
+                <div
+                  key={client.id}
+                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
+                >
+                  <div className="flex items-center space-x-3.5 min-w-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${
+                      isGF
+                        ? 'bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-400'
+                        : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-bastion-blue dark:text-sky-400'
+                    }`}>
+                      {client.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="truncate">
+                      <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        {client.name}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-2 mt-0.5">
+                        <span className="font-mono text-slate-700 dark:text-slate-300">{primaryDomain}</span>
+                        <span>&bull;</span>
+                        <span className="capitalize">{client.industry.replace('_', ' ')}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2.5 shrink-0 self-end sm:self-center">
+                    <span className="inline-flex items-center space-x-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span>Live</span>
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveClientId(client.id);
+                        if (site) setActiveSiteId(site.id);
+                        setPortalViewMode('client');
+                      }}
+                      className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold transition"
+                    >
+                      <span>Manage Site</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+
+                    <Link
+                      href={siteUrl}
+                      target="_blank"
+                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

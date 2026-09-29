@@ -3,11 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --background: #F7F6F2;
-  --foreground: #172C3D;
+  --background: #F8FAFC;
+  --foreground: #0F172A;
   --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-manrope: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+
+.dark {
+  --background: #0A0E17;
+  --foreground: #F8FAFC;
+}
+
 
 body {
   color: var(--foreground);

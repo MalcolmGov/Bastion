@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
+  darkMode: 'class',
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -12,6 +13,15 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        bastion: {
+          navy: "#0A192F",
+          DEFAULT: "#0F2744",
+          light: "#1B3B6F",
+          accent: "#B48C36",
+          gold: "#D4A346",
+          blue: "#2563EB",
+          sky: "#0284C7"
+        },
         navy: {
           dark: "#061D32",   // Midnight footer / cinematic overlay
           DEFAULT: "#082B49",// Primary deep navy

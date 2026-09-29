@@ -481,21 +481,21 @@ function VisualWebsiteEditorContent() {
   const registeredComp = selectedSection ? COMPONENT_REGISTRY[selectedSection.componentId] : null;
 
   return (
-    <div className="h-[calc(100vh-100px)] flex flex-col bg-[#070B12] -m-6 lg:-m-8 select-none">
+    <div className="h-[calc(100vh-100px)] flex flex-col bg-slate-100 dark:bg-[#070B12] -m-6 lg:-m-8 select-none">
       {/* Top Editor Toolbar */}
-      <div className="h-14 bg-[#0A0D14] border-b border-[#1E293B] px-6 flex items-center justify-between z-30 shrink-0">
+      <div className="h-14 bg-white dark:bg-[#0A0D14] border-b border-slate-200 dark:border-[#1E293B] px-6 flex items-center justify-between z-30 shrink-0">
         <div className="flex items-center space-x-3 text-xs">
           <div className="flex items-center space-x-2">
-            <span className="font-bold text-white tracking-wide">{siteData?.name || 'Move Studio Editor'}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-sky-950 text-sky-400 border border-sky-800">
+            <span className="font-bold text-slate-900 dark:text-white tracking-wide">{siteData?.name || 'Bastion Editor'}</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-blue-50 dark:bg-sky-950 text-bastion-blue dark:text-sky-400 border border-blue-200 dark:border-sky-800">
               {collection.toUpperCase()}
             </span>
           </div>
 
-          <span className="text-slate-600">|</span>
+          <span className="text-slate-300 dark:text-slate-600">|</span>
 
           {/* Page Selector Pill */}
-          <div className="flex space-x-1 bg-[#141C2A] p-1 rounded-lg border border-[#232F42]">
+          <div className="flex space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-lg border border-slate-200 dark:border-[#232F42]">
             {['home', 'about', 'services', 'contact'].map((p) => (
               <button
                 key={p}
@@ -503,8 +503,8 @@ function VisualWebsiteEditorContent() {
                 onClick={() => setActivePageSlug(p)}
                 className={`px-2.5 py-1 rounded text-[11px] font-semibold capitalize transition ${
                   activePageSlug === p
-                    ? 'bg-sky-500 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-bastion text-white dark:bg-sky-500 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 {p}
@@ -514,7 +514,7 @@ function VisualWebsiteEditorContent() {
         </div>
 
         {/* Viewport Width Controls */}
-        <div className="flex items-center space-x-1 bg-[#141C2A] p-1 rounded-xl border border-[#232F42]">
+        <div className="flex items-center space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-xl border border-slate-200 dark:border-[#232F42]">
           <button
             type="button"
             onClick={() => setViewport('desktop')}
@@ -602,9 +602,9 @@ function VisualWebsiteEditorContent() {
       {/* 3-Panel Main Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT PANEL: Sections Outline & Tree (260px) */}
-        <div className="w-64 bg-[#0A0D14] border-r border-[#1E293B] flex flex-col justify-between shrink-0">
-          <div className="p-3 border-b border-[#1E293B] flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-300 uppercase tracking-wider text-[10px]">
+        <div className="w-64 bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-[#1E293B] flex flex-col justify-between shrink-0">
+          <div className="p-3 border-b border-slate-200 dark:border-[#1E293B] flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px]">
               Page Structure ({sections.length})
             </span>
             <button

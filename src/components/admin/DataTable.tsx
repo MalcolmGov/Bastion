@@ -48,43 +48,43 @@ export function DataTable({
     switch (status) {
       case 'published':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-950/80 text-emerald-400 border border-emerald-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span>Published</span>
           </span>
         );
       case 'in_review':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-950/80 text-amber-300 border border-amber-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
             <span>In Review</span>
           </span>
         );
       case 'approved':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-950/80 text-blue-300 border border-blue-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
             <span>Approved</span>
           </span>
         );
       case 'scheduled':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-950/80 text-purple-300 border border-purple-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
             <span>Scheduled</span>
           </span>
         );
       case 'changes_requested':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-red-950/80 text-red-300 border border-red-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-red-50 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
             <span>Changes Req.</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-800 text-gray-300 border border-gray-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
             <span>Draft</span>
           </span>
         );
@@ -92,23 +92,23 @@ export function DataTable({
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-200">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight flex items-center space-x-2">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center space-x-2">
             <span>{title}</span>
-            <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#162337] text-[#C99700] border border-[#243754]">
+            <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-blue-50 dark:bg-slate-800 text-bastion-blue dark:text-sky-300 border border-blue-200 dark:border-slate-700 font-semibold">
               {records.length} Records
             </span>
           </h1>
-          <p className="text-xs text-gray-400 mt-1">{description}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{description}</p>
         </div>
 
         {createUrl && (
           <Link
             href={createUrl}
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition shadow-md shadow-[#C99700]/20 self-start sm:self-auto"
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-bastion hover:bg-bastion-navy dark:bg-amber-500 dark:hover:bg-amber-600 text-white dark:text-slate-950 font-semibold text-xs transition shadow-sm self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
             <span>Create New</span>
@@ -117,16 +117,16 @@ export function DataTable({
       </div>
 
       {/* Filter / Search Bar */}
-      <div className="p-4 rounded-2xl bg-[#0B1019] border border-[#1C2638] flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between transition-colors">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder={`Filter ${collection}...`}
-            className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#C99700] transition"
+            className="w-full bg-slate-50 dark:bg-[#0A0D14] border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-bastion-blue transition"
           />
         </div>
 
@@ -138,8 +138,8 @@ export function DataTable({
               onClick={() => setStatusFilter(st)}
               className={`px-3 py-1.5 rounded-lg text-xs capitalize transition ${
                 statusFilter === st
-                  ? 'bg-[#C99700]/20 text-[#E6C657] border border-[#C99700]/40 font-semibold'
-                  : 'bg-[#0E1522] text-gray-400 hover:text-gray-200 border border-transparent'
+                  ? 'bg-bastion text-white dark:bg-slate-800 dark:text-white font-semibold shadow-2xs'
+                  : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
               }`}
             >
               {st.replace('_', ' ')}
@@ -149,10 +149,10 @@ export function DataTable({
       </div>
 
       {/* Table Card */}
-      <div className="bg-[#0B1019] border border-[#1C2638] rounded-2xl overflow-hidden shadow-xl">
+      <div className="bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs transition-colors">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-gray-300">
-            <thead className="bg-[#0E1522] text-gray-400 border-b border-[#1C2638] uppercase font-semibold text-[10px] tracking-wider">
+          <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+            <thead className="bg-slate-50 dark:bg-[#0A0D14] text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase font-semibold text-[10px] tracking-wider">
               <tr>
                 <th className="py-3 px-4">Title &amp; Slug</th>
                 <th className="py-3 px-4">Status</th>
@@ -161,25 +161,25 @@ export function DataTable({
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#162030]">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {filtered.length > 0 ? (
                 filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-[#0E1624] transition group">
+                  <tr key={r.id} className="hover:bg-slate-50/80 dark:hover:bg-[#151D2E] transition group">
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-white group-hover:text-[#E6C657] transition">
+                      <div className="font-semibold text-slate-900 dark:text-white group-hover:text-bastion-blue dark:group-hover:text-sky-400 transition">
                         {r.title}
                       </div>
-                      <div className="text-[11px] font-mono text-gray-500 mt-0.5">
+                      <div className="text-[11px] font-mono text-slate-400 mt-0.5">
                         /{r.collection}/{r.slug}
                       </div>
                     </td>
                     <td className="py-3.5 px-4">{getStatusBadge(r.status)}</td>
-                    <td className="py-3.5 px-4 text-gray-400">
-                      {r.owner_name || 'Sarah Jenkins'}
+                    <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400">
+                      {r.owner_name || 'Malcolm Govender'}
                     </td>
-                    <td className="py-3.5 px-4 text-gray-400 font-mono text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                       {new Date(r.updated_at).toLocaleDateString()}{' '}
-                      <span className="text-gray-600">
+                      <span className="text-slate-400 dark:text-slate-600">
                         {new Date(r.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </td>
@@ -187,16 +187,16 @@ export function DataTable({
                       <div className="flex items-center justify-end space-x-2">
                         <Link
                           href={`/admin/${collection}/${r.id}`}
-                          className="px-2.5 py-1.5 rounded-lg bg-[#141F30] hover:bg-[#1D2C44] border border-[#22334D] text-gray-200 hover:text-white transition flex items-center space-x-1"
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 transition flex items-center space-x-1 font-medium shadow-2xs"
                         >
-                          <Edit3 className="w-3 h-3 text-[#C99700]" />
+                          <Edit3 className="w-3 h-3 text-amber-500" />
                           <span>Edit</span>
                         </Link>
                         {collection === 'pages' ? (
                           <Link
                             href={r.slug === 'home' ? '/' : `/${r.slug}`}
                             target="_blank"
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-[#1A2536] transition"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                             title="Preview Public Page"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -205,7 +205,7 @@ export function DataTable({
                           <Link
                             href={`/${collection}/${r.slug}`}
                             target="_blank"
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-[#1A2536] transition"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                             title="Preview Public Page"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -217,8 +217,8 @@ export function DataTable({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-500">
-                    <FileText className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                    <FileText className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
                     <span>No records matching criteria.</span>
                   </td>
                 </tr>

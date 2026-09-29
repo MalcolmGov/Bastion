@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
+import { ThemeProvider } from '@/components/admin/ThemeProvider';
 import { AdminAuthProvider } from '@/components/admin/AdminAuthProvider';
 import { StudioWorkspaceProvider } from '@/components/admin/StudioWorkspaceProvider';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
@@ -17,30 +18,35 @@ export default function AdminRootLayout({
 
   if (isLoginPage) {
     return (
-      <AdminAuthProvider>
-        <div className="min-h-screen bg-[#070b11] text-gray-100 font-sans selection:bg-[#C99700] selection:text-black">
-          {children}
-        </div>
-      </AdminAuthProvider>
+      <ThemeProvider>
+        <AdminAuthProvider>
+          <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-[#B48C36] selection:text-white">
+            {children}
+          </div>
+        </AdminAuthProvider>
+      </ThemeProvider>
     );
   }
 
   return (
-    <AdminAuthProvider>
-      <StudioWorkspaceProvider>
-        <div className="min-h-screen bg-[#070B12] text-gray-100 flex font-sans selection:bg-[#0284C7] selection:text-white antialiased">
-          {/* Left Sticky Sidebar */}
-          <AdminSidebar />
+    <ThemeProvider>
+      <AdminAuthProvider>
+        <StudioWorkspaceProvider>
+          <div className="min-h-screen bg-slate-50 dark:bg-[#0A0E17] text-slate-900 dark:text-slate-100 flex font-sans selection:bg-[#B48C36] selection:text-white antialiased transition-colors duration-150">
+            {/* Left Sticky Sidebar */}
+            <AdminSidebar />
 
-          {/* Main Content Area */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <AdminHeader />
-            <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
-              {children}
-            </main>
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <AdminHeader />
+              <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-      </StudioWorkspaceProvider>
-    </AdminAuthProvider>
+        </StudioWorkspaceProvider>
+      </AdminAuthProvider>
+    </ThemeProvider>
   );
 }
+
