@@ -42,23 +42,44 @@ export function AdminSidebar() {
   return (
     <aside className="w-64 bg-[#0A0D14] border-r border-[#1E293B] flex flex-col justify-between h-screen sticky top-0 selection:bg-sky-500 selection:text-white shrink-0 z-20">
       <div>
-        {/* Move Studio Brand Header */}
+        {/* Brand Header — Fully White-Label */}
         <div className="p-4 border-b border-[#1E293B] flex items-center justify-between">
           <Link href="/admin" className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 via-indigo-500 to-violet-600 flex items-center justify-center font-bold text-white text-xs shadow-md shadow-sky-500/20">
-              M
-            </div>
-            <div>
-              <div className="font-bold text-sm tracking-wide text-white leading-tight flex items-center space-x-1.5">
-                <span>MOVE STUDIO</span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-sky-950 text-sky-400 border border-sky-800">
-                  PRO
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400 tracking-wider font-medium">
-                AI Website Creation Platform
-              </div>
-            </div>
+            {isGoldFields ? (
+              <>
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center font-bold text-amber-400 text-xs shadow-md shadow-amber-500/20">
+                  GF
+                </div>
+                <div>
+                  <div className="font-bold text-sm tracking-wide text-white leading-tight flex items-center space-x-1.5">
+                    <span>GOLD FIELDS</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-amber-950 text-amber-400 border border-amber-800">
+                      CMS
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 tracking-wider font-medium">
+                    Operated by Bastion Group
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 via-indigo-500 to-sky-600 flex items-center justify-center font-bold text-white text-xs shadow-md shadow-amber-500/20">
+                  B
+                </div>
+                <div>
+                  <div className="font-bold text-sm tracking-wide text-white leading-tight flex items-center space-x-1.5">
+                    <span>BASTION</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-sky-950 text-sky-400 border border-sky-800">
+                      CMS
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 tracking-wider font-medium">
+                    Corporate Content Platform
+                  </div>
+                </div>
+              </>
+            )}
           </Link>
 
           <Link
@@ -374,7 +395,7 @@ export function AdminSidebar() {
                 }`}
               >
                 <Settings className="w-4 h-4 text-slate-400" />
-                <span>Workspace & Export</span>
+                <span>Headless API & Webhooks</span>
               </Link>
             </div>
           </div>

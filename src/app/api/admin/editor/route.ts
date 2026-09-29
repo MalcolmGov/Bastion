@@ -110,6 +110,23 @@ export async function POST(req: NextRequest) {
       ]
     });
 
+    if (status === 'published') {
+      try {
+        const { dispatchContentWebhook } = await import('@/lib/webhooks/dispatcher');
+        dispatchContentWebhook({
+          event: 'page.published',
+          collection: 'pages',
+          id: compId,
+          slug: pageSlug,
+          title: title || 'Page',
+          siteId,
+          timestamp: now
+        }).catch(err => console.error('[Webhook Page Error]:', err));
+      } catch (webhookErr) {
+        console.warn('[Webhook Page Warning]:', webhookErr);
+      }
+    }
+
     return NextResponse.json({ success: true, compositionId: compId, savedAt: now });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

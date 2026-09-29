@@ -163,6 +163,22 @@ export async function POST(
         } catch (e) {
           console.warn('revalidatePath warning:', e);
         }
+
+        // Outbound Webhook to Bastion's frontend platform
+        try {
+          const { dispatchContentWebhook } = await import('@/lib/webhooks/dispatcher');
+          dispatchContentWebhook({
+            event: 'content.published',
+            collection,
+            id,
+            slug: record.slug ? String(record.slug) : undefined,
+            title: record.title ? String(record.title) : undefined,
+            siteId: record.site_id ? String(record.site_id) : 'site_goldfields_flagship',
+            timestamp: now
+          }).catch(err => console.error('[Webhook Dispatcher Error]:', err));
+        } catch (webhookErr) {
+          console.warn('[Webhook Import Warning]:', webhookErr);
+        }
         break;
       }
 

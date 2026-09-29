@@ -283,3 +283,18 @@ CREATE TABLE IF NOT EXISTS billing_docs (
 CREATE INDEX IF NOT EXISTS idx_billing_docs_client ON billing_docs(client_id);
 CREATE INDEX IF NOT EXISTS idx_billing_docs_token ON billing_docs(acceptance_token);
 
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+  id TEXT PRIMARY KEY,
+  site_id TEXT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+  event TEXT NOT NULL,
+  target_url TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  response_status INTEGER,
+  response_body TEXT,
+  latency_ms INTEGER,
+  status TEXT NOT NULL, -- success, failed
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_site ON webhook_deliveries(site_id, created_at);
+
