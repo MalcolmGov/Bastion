@@ -105,8 +105,9 @@ export function AdminSidebar() {
             ) : (
               <div className="flex items-center gap-2 min-w-0">
                 <BastionLogo 
-                  height={22} 
+                  size="sm"
                   showCmsBadge={false} 
+                  showGroupBadge={false}
                   className="text-slate-900 dark:text-white"
                 />
                 <span 

@@ -148,7 +148,7 @@ export function AdminHeader() {
             title="Bastion Group CMS"
           >
             <BastionLogo 
-              height={26} 
+              size="md"
               showCmsBadge={true}
               className="text-white hover:opacity-95"
             />

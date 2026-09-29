@@ -166,7 +166,7 @@ export default function MoveStudioOverviewPage() {
       >
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl shadow-xs border border-slate-200/80 dark:border-slate-800">
-            <BastionLogo height={16} showCmsBadge={false} className="text-slate-900 dark:text-white" />
+            <BastionLogo size="sm" showCmsBadge={false} className="text-slate-900 dark:text-white" />
           </div>
           <div className="hidden sm:block h-6 w-px bg-slate-300 dark:bg-slate-700" />
           <div className="flex flex-col">
