@@ -5,11 +5,11 @@ import { useDashboardCustomizer } from './DashboardCustomizerProvider';
 
 export interface BastionLogoProps {
   className?: string;
-  variant?: 'full' | 'monogram' | 'icon' | '3d' | 'wordmark';
+  variant?: 'full' | 'monogram' | 'icon' | 'wordmark';
   showCmsBadge?: boolean;
   showGroupBadge?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  color?: string;
+  color?: 'auto' | 'white' | 'navy' | string;
   height?: number | string;
   width?: number | string;
   animated?: boolean;
@@ -19,133 +19,140 @@ export function BastionLogo({
   className = '',
   variant = 'full',
   showCmsBadge = false,
-  showGroupBadge = true,
+  showGroupBadge = false,
   size = 'md',
-  color,
+  color = 'auto',
   height,
   width,
   animated = true
 }: BastionLogoProps) {
   const { primaryColor, accentColor } = useDashboardCustomizer();
 
-  // Determine dimensional scales
-  const sizeMap = {
-    sm: { icon: 28, text: 'text-sm', badge: 'text-[9px]', group: 'text-[9px]' },
-    md: { icon: 36, text: 'text-base sm:text-lg', badge: 'text-[10px]', group: 'text-[10px]' },
-    lg: { icon: 44, text: 'text-xl sm:text-2xl', badge: 'text-xs', group: 'text-xs' }
-  };
+  // Determine standard height based on size or explicit prop
+  const standardHeight = height || (size === 'sm' ? 22 : size === 'lg' ? 34 : 26);
+  const numericHeight = typeof standardHeight === 'number' ? standardHeight : parseInt(String(standardHeight)) || 26;
 
-  const currentScale = sizeMap[size] || sizeMap.md;
-  const iconPixelSize = height ? Math.max(28, typeof height === 'number' ? height * 1.25 : parseInt(String(height)) || 36) : currentScale.icon;
-
-  // Standalone Monogram / Icon Mode
+  // Standalone Monogram / Icon Mode (for collapsed sidebar or mobile nav)
   if (variant === 'monogram' || variant === 'icon') {
     return (
       <div 
         className={`relative inline-flex items-center justify-center select-none group ${className}`}
-        style={{ width: width || iconPixelSize, height: height || iconPixelSize }}
+        style={{ width: width || numericHeight + 10, height: height || numericHeight + 10 }}
         title="Bastion Group"
       >
         <div 
           style={{
-            boxShadow: `0 4px 16px ${primaryColor}30, 0 1px 3px rgba(0,0,0,0.5)`
+            boxShadow: `0 4px 14px ${primaryColor}25, 0 1px 2px rgba(0,0,0,0.3)`
           }}
-          className="w-full h-full rounded-xl overflow-hidden ring-1 ring-white/20 bg-slate-950 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:ring-cyan-400/50"
+          className="w-full h-full rounded-xl overflow-hidden ring-1 ring-slate-800 dark:ring-white/15 bg-slate-900 dark:bg-slate-950 flex items-center justify-center transition-all duration-300 group-hover:scale-105"
         >
-          <img 
-            src="/assets/bastion-3d-emblem.jpg" 
-            alt="Bastion 3D Monogram" 
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Wordmark only mode
-  if (variant === 'wordmark') {
-    return (
-      <div className={`inline-flex items-center gap-1.5 select-none ${className}`}>
-        <span 
-          className={`font-black tracking-tight ${color ? '' : 'text-current'} ${currentScale.text}`}
-          style={color ? { color } : undefined}
-        >
-          BASTION
-        </span>
-        {showGroupBadge && (
-          <span 
-            style={{ color: primaryColor }}
-            className={`font-black uppercase tracking-widest font-mono filter brightness-125 saturate-150 ${currentScale.group}`}
-          >
-            GROUP
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  // Full Executive 3D Logo Presentation (Matching Zara CareerOS standard)
-  return (
-    <div className={`inline-flex items-center gap-2.5 sm:gap-3 select-none ${className}`}>
-      {/* 3D Photorealistic Sculpted "B" Emblem Squircle Tile */}
-      <div 
-        style={{ 
-          width: iconPixelSize, 
-          height: iconPixelSize,
-          boxShadow: `0 4px 16px ${primaryColor}25, 0 1px 2px rgba(0,0,0,0.4)`
-        }}
-        className="relative shrink-0 rounded-xl overflow-hidden ring-1 ring-white/20 bg-slate-950 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:ring-cyan-400/50"
-      >
-        <img 
-          src="/assets/bastion-3d-emblem.jpg" 
-          alt="Bastion 3D Emblem" 
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-          loading="eager"
-        />
-        {/* Subtle glass reflection highlight */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none" />
-      </div>
-
-      {/* Pristine Modern Typography */}
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="flex flex-col select-none leading-none">
-          <div className="flex items-baseline gap-1.5">
-            <span 
-              className={`font-black tracking-tight ${color ? '' : 'text-current'} ${currentScale.text}`}
-              style={color ? { color } : undefined}
+          {/* Authentic Bastion Serif 'B' with Signature Architectural Bracket Device */}
+          <div className="relative flex items-center justify-center w-full h-full p-1.5">
+            <span className="font-serif font-black text-base text-white tracking-tight -ml-0.5">B</span>
+            <svg 
+              className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] pointer-events-none" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke={primaryColor || '#38bdf8'} 
+              strokeWidth="2.5"
+              strokeLinecap="square"
             >
-              BASTION
-            </span>
-            {showGroupBadge && (
-              <span 
-                style={{ color: primaryColor }}
-                className={`font-black uppercase tracking-widest font-mono filter brightness-125 saturate-150 ${currentScale.group}`}
-              >
-                GROUP
-              </span>
-            )}
+              <path d="M12 3h9v18h-9" />
+              <path d="M12 3v3" />
+              <path d="M12 21v-3" />
+            </svg>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Executive CMS Live Indicator Badge */}
-        {showCmsBadge && (
-          <span 
-            style={{
-              backgroundImage: `linear-gradient(135deg, ${primaryColor}1f, ${accentColor}1f)`,
-              borderColor: `${primaryColor}40`,
-              color: primaryColor,
-              boxShadow: `0 2px 8px ${primaryColor}20`
+  // Full Original Bastion Logo with Exact Signature Architectural Bracket Device
+  return (
+    <div className={`inline-flex items-center gap-2.5 sm:gap-3 select-none ${className}`}>
+      {/* Authentic Original Bastion Logo (HD Retina Scaled) */}
+      <div className="relative flex items-center shrink-0">
+        {color === 'white' ? (
+          <img 
+            src="/assets/bastion-original-white-hd.png" 
+            alt="Bastion Group" 
+            style={{ 
+              height: standardHeight, 
+              width: width || 'auto',
+              maxHeight: standardHeight
             }}
-            className={`font-black tracking-wider uppercase px-2 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1.5 shrink-0 ${currentScale.badge}`}
-          >
-            <span 
-              style={{ backgroundColor: primaryColor }}
-              className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" 
+            className="object-contain transition-opacity duration-200 hover:opacity-95"
+            loading="eager"
+          />
+        ) : color === 'navy' ? (
+          <img 
+            src="/assets/bastion-original-logo-hd.png" 
+            alt="Bastion Group" 
+            style={{ 
+              height: standardHeight, 
+              width: width || 'auto',
+              maxHeight: standardHeight
+            }}
+            className="object-contain transition-opacity duration-200 hover:opacity-95"
+            loading="eager"
+          />
+        ) : (
+          /* Auto mode: navy in light mode, pure white in dark mode */
+          <>
+            <img 
+              src="/assets/bastion-original-logo-hd.png" 
+              alt="Bastion Group" 
+              style={{ 
+                height: standardHeight, 
+                width: width || 'auto',
+                maxHeight: standardHeight
+              }}
+              className="block dark:hidden object-contain transition-opacity duration-200 hover:opacity-95"
+              loading="eager"
             />
-            <span>CMS</span>
-          </span>
+            <img 
+              src="/assets/bastion-original-white-hd.png" 
+              alt="Bastion Group" 
+              style={{ 
+                height: standardHeight, 
+                width: width || 'auto',
+                maxHeight: standardHeight
+              }}
+              className="hidden dark:block object-contain transition-opacity duration-200 hover:opacity-95"
+              loading="eager"
+            />
+          </>
         )}
       </div>
+
+      {/* Optional Group Subtext */}
+      {showGroupBadge && (
+        <span 
+          style={{ color: primaryColor }}
+          className="text-[10px] font-black uppercase tracking-widest font-mono filter brightness-110"
+        >
+          GROUP
+        </span>
+      )}
+
+      {/* Executive CMS Live Indicator Badge */}
+      {showCmsBadge && (
+        <span 
+          style={{
+            backgroundImage: `linear-gradient(135deg, ${primaryColor}22, ${accentColor}22)`,
+            borderColor: `${primaryColor}40`,
+            color: primaryColor,
+            boxShadow: `0 2px 8px ${primaryColor}15`
+          }}
+          className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1.5 shrink-0"
+        >
+          <span 
+            style={{ backgroundColor: primaryColor }}
+            className="w-1.5 h-1.5 rounded-full animate-pulse shadow-sm" 
+          />
+          <span>CMS</span>
+        </span>
+      )}
     </div>
   );
 }
