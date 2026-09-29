@@ -31,6 +31,8 @@ interface StudioWorkspaceContextType {
   setActiveSiteId: (id: string) => void;
   refreshClients: () => Promise<void>;
   isLoading: boolean;
+  portalViewMode: 'client' | 'agency';
+  setPortalViewMode: (mode: 'client' | 'agency') => void;
 }
 
 const StudioWorkspaceContext = createContext<StudioWorkspaceContextType>({
@@ -40,13 +42,16 @@ const StudioWorkspaceContext = createContext<StudioWorkspaceContextType>({
   setActiveClientId: () => {},
   setActiveSiteId: () => {},
   refreshClients: async () => {},
-  isLoading: true
+  isLoading: true,
+  portalViewMode: 'client',
+  setPortalViewMode: () => {}
 });
 
 export function StudioWorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [clients, setClients] = useState<WorkspaceClient[]>([]);
-  const [activeClientId, setActiveClientIdState] = useState<string>('client_apex_advisory');
-  const [activeSiteId, setActiveSiteIdState] = useState<string>('site_apex_strategy');
+  const [activeClientId, setActiveClientIdState] = useState<string>('client_goldfields');
+  const [activeSiteId, setActiveSiteIdState] = useState<string>('site_goldfields_flagship');
+  const [portalViewMode, setPortalViewModeState] = useState<'client' | 'agency'>('client');
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchClients = async () => {
@@ -59,14 +64,19 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
         // Restore saved client from localStorage if available
         const savedClientId = typeof window !== 'undefined' ? localStorage.getItem('move_studio_active_client') : null;
         const savedSiteId = typeof window !== 'undefined' ? localStorage.getItem('move_studio_active_site') : null;
+        const savedMode = typeof window !== 'undefined' ? localStorage.getItem('move_studio_portal_mode') as 'client' | 'agency' : null;
+
+        if (savedMode) {
+          setPortalViewModeState(savedMode);
+        }
 
         if (savedClientId && data.clients.some((c: any) => c.id === savedClientId)) {
           setActiveClientIdState(savedClientId);
           if (savedSiteId) setActiveSiteIdState(savedSiteId);
         } else if (data.clients.length > 0) {
-          // Default to Apex Advisory if present, else first client
-          const apex = data.clients.find((c: any) => c.id === 'client_apex_advisory');
-          const target = apex || data.clients[0];
+          // Default to Gold Fields if present, else first client
+          const goldfields = data.clients.find((c: any) => c.id === 'client_goldfields');
+          const target = goldfields || data.clients[0];
           setActiveClientIdState(target.id);
           if (target.websites?.[0]) {
             setActiveSiteIdState(target.websites[0].id);
@@ -102,6 +112,13 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     }
   };
 
+  const setPortalViewMode = (mode: 'client' | 'agency') => {
+    setPortalViewModeState(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('move_studio_portal_mode', mode);
+    }
+  };
+
   const activeClient = clients.find(c => c.id === activeClientId) || clients[0] || null;
   const activeSite = activeClient?.websites?.find(w => w.id === activeSiteId) || activeClient?.websites?.[0] || null;
 
@@ -114,7 +131,9 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
         setActiveClientId,
         setActiveSiteId,
         refreshClients: fetchClients,
-        isLoading
+        isLoading,
+        portalViewMode,
+        setPortalViewMode
       }}
     >
       {children}
