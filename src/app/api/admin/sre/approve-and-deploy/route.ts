@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/auth';
 import { getDb } from '@/lib/db/client';
 import { mergeFixPR, pollDeploymentStatus } from '@/lib/sre/github-pr';
+import { executeAutomatedRollback } from '@/lib/sre/rollback';
 import fs from 'fs';
 import path from 'path';
 
@@ -92,6 +93,22 @@ export async function POST(req: NextRequest) {
       probeLatencyMs = Math.round(performance.now() - probeStart);
       if (probeRes && !probeRes.ok && probeRes.status >= 500) {
         verificationPassed = false;
+        // Trigger automated emergency rollback
+        console.warn(`[Bastion SRE Guardrail] Probe failed with HTTP ${probeRes.status}. Initiating instant rollback.`);
+        await executeAutomatedRollback({
+          owner: repoOwner,
+          repo: repoName,
+          failedCommitSha: mergeResult.sha,
+          incidentId,
+          reason: `Post-deployment probe returned HTTP ${probeRes.status}`
+        });
+
+        return NextResponse.json({
+          success: false,
+          rolledBack: true,
+          probeLatencyMs,
+          message: `Post-deployment probe failed with HTTP ${probeRes.status}. Automated emergency rollback executed immediately on ${repoOwner}/${repoName}.`
+        }, { status: 502 });
       }
     } catch {
       // Nominal fallback verification

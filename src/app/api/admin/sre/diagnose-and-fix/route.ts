@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/auth/auth';
 import { getDb } from '@/lib/db/client';
 import { diagnoseAndGeneratePatch } from '@/lib/sre/engine';
 import { openFixPR } from '@/lib/sre/github-pr';
+import { validateAndSanitizePatch } from '@/lib/sre/ast-validator';
+import { dispatchWhatsAppIncidentAlert } from '@/lib/alerts/notifier';
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,13 +50,34 @@ export async function POST(req: NextRequest) {
 
     const patch = diagnosisResult.patch;
 
+    // 1.5. Pre-Flight AST Syntax Guardrail Validation
+    const astCheck = validateAndSanitizePatch({
+      filePath: patch.filePath,
+      fullNewContent: patch.fullNewContent
+    });
+
+    if (!astCheck.valid) {
+      console.warn('[Bastion SRE AST Guardrail] Syntax validation failed:', astCheck.errors);
+      return NextResponse.json(
+        {
+          error: `Pre-flight AST validation failed: ${astCheck.errors.slice(0, 2).join('; ')}. AI generation halted to protect repository integrity.`
+        },
+        { status: 422 }
+      );
+    }
+
+    const finalContent = astCheck.repairedCode || patch.fullNewContent;
+    if (astCheck.wasRepaired) {
+      patch.fullNewContent = finalContent;
+    }
+
     // 2. Open GitHub PR via GitHub API
     const prResult = await openFixPR({
       owner: repoOwner,
       repo: repoName,
       baseBranch: 'main',
       fileChanges: {
-        [patch.filePath]: patch.fullNewContent
+        [patch.filePath]: finalContent
       },
       title: diagnosisResult.prTitle,
       body: diagnosisResult.prBody
@@ -64,6 +87,21 @@ export async function POST(req: NextRequest) {
     const prUrl = prResult.pr_url || null;
     const prBranch = prResult.branch || null;
     const prStatus = prResult.success ? 'open' : 'failed';
+
+    // Dispatch WhatsApp Incident Alert with 1-Click Mobile Approval Link
+    let alertResult: any = null;
+    if (prResult.success && prNumber) {
+      alertResult = await dispatchWhatsAppIncidentAlert({
+        incidentId: incident.id,
+        title: incident.title,
+        severity: incident.severity,
+        affectedRoute: incident.affected_routes,
+        repoOwner,
+        repoName,
+        prNumber,
+        prUrl: prUrl || undefined
+      });
+    }
 
     // 3. Update Incident in DB
     const timeline = incident.timeline_json ? JSON.parse(incident.timeline_json) : [];
