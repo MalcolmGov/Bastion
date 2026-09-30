@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   ResponsiveContainer,
@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 
 interface ExecutiveAnalyticsDashboardProps {
+  clients?: any[];
   primaryColor?: string;
   accentColor?: string;
 }
@@ -53,13 +54,15 @@ const vitalsTimeline = [
   { time: '23:59', ttfb: 42, lcp: 0.71, jnb: 18, fra: 42, lhr: 46, cacheHit: 99.4 },
 ];
 
-// 2. Multi-Tenant Sector & Website Distribution
-const sectorDistribution = [
-  { name: 'Mining & Resources', value: 3, percentage: 28, color: '#C99700', client: 'Gold Fields Limited' },
-  { name: 'Wealth & Advisory', value: 3, percentage: 27, color: '#2563EB', client: 'Meridian Capital' },
-  { name: 'Digital & Creative', value: 2, percentage: 18, color: '#7C3AED', client: 'Bastion Group' },
-  { name: 'Clean Energy & Tech', value: 2, percentage: 18, color: '#10B981', client: 'Swifter Energy' },
-  { name: 'Legal & Governance', value: 1, percentage: 9, color: '#EC4899', client: 'Apex Advisory' },
+// 2. Multi-Tenant Client Fleet Distribution (Actual Client Companies)
+const defaultClientCompanies = [
+  { name: 'Gold Fields Limited', value: 2, percentage: 18, color: '#C99700', client: 'Gold Fields Limited' },
+  { name: 'Bastion Group', value: 2, percentage: 18, color: '#7C3AED', client: 'Bastion Group' },
+  { name: 'Meridian Strategic Capital', value: 2, percentage: 18, color: '#2563EB', client: 'Meridian Strategic Capital' },
+  { name: 'Swifter Technologies', value: 2, percentage: 18, color: '#0284C7', client: 'Swifter Technologies' },
+  { name: 'Solaris Clean Energy', value: 1, percentage: 9, color: '#10B981', client: 'Solaris Clean Energy' },
+  { name: 'Valence Private Wealth', value: 1, percentage: 9, color: '#6366F1', client: 'Valence Private Wealth' },
+  { name: 'Apex Advisory Partners', value: 1, percentage: 10, color: '#EC4899', client: 'Apex Advisory Partners' },
 ];
 
 // 3. Corporate Traffic Velocity & Investor Analytics (14-day timeline)
@@ -82,6 +85,7 @@ const edgeNodes = [
 ];
 
 export function ExecutiveAnalyticsDashboard({
+  clients,
   primaryColor = '#7C3AED',
   accentColor = '#9333EA'
 }: ExecutiveAnalyticsDashboardProps) {
@@ -92,6 +96,27 @@ export function ExecutiveAnalyticsDashboard({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const fleetData = useMemo(() => {
+    if (clients && clients.length > 0) {
+      const totalSites = clients.reduce((acc, c) => acc + (c.websites?.length || 1), 0);
+      const colors = ['#C99700', '#7C3AED', '#2563EB', '#0284C7', '#10B981', '#6366F1', '#EC4899', '#F59E0B'];
+      return clients.map((c, i) => {
+        const siteCount = c.websites?.length || 1;
+        return {
+          name: c.name,
+          value: siteCount,
+          percentage: Math.max(1, Math.round((siteCount / Math.max(1, totalSites)) * 100)),
+          color: colors[i % colors.length],
+        };
+      });
+    }
+    return defaultClientCompanies;
+  }, [clients]);
+
+  const totalFleetSites = useMemo(() => {
+    return fleetData.reduce((acc, c) => acc + c.value, 0);
+  }, [fleetData]);
 
   return (
     <section className="space-y-6">
@@ -320,11 +345,11 @@ export function ExecutiveAnalyticsDashboard({
                     <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
                       <span>Multi-Tenant Client Fleet</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                        11 Live Sites
+                        {totalFleetSites} Live Sites
                       </span>
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      Sector portfolio &amp; multi-tenant tenant distribution
+                      Corporate client portfolio &amp; multi-tenant web property distribution
                     </p>
                   </div>
                 </div>
@@ -338,7 +363,7 @@ export function ExecutiveAnalyticsDashboard({
                 </Link>
               </div>
 
-              {/* Donut Chart + Sector Legend */}
+              {/* Donut Chart + Client Companies Legend */}
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
                 {/* Donut Visual */}
                 <div className="sm:col-span-6 h-52 flex items-center justify-center relative">
@@ -346,13 +371,13 @@ export function ExecutiveAnalyticsDashboard({
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={sectorDistribution}
+                          data={fleetData}
                           innerRadius={55}
                           outerRadius={78}
                           paddingAngle={3}
                           dataKey="value"
                         >
-                          {sectorDistribution.map((entry, index) => (
+                          {fleetData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -379,24 +404,24 @@ export function ExecutiveAnalyticsDashboard({
 
                   {/* Centered KPI inside Donut */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">11</span>
+                    <span className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{totalFleetSites}</span>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sites</span>
                   </div>
                 </div>
 
-                {/* Sector Legend */}
+                {/* Client Companies Legend */}
                 <div className="sm:col-span-6 space-y-2">
-                  {sectorDistribution.map((sec) => (
-                    <div key={sec.name} className="flex items-center justify-between text-xs">
+                  {fleetData.map((clientItem) => (
+                    <div key={clientItem.name} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: sec.color }} />
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: clientItem.color }} />
                         <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                          {sec.name}
+                          {clientItem.name}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 tabular-nums">
-                        <span className="font-bold text-slate-900 dark:text-white">{sec.value}</span>
-                        <span className="text-[11px] text-slate-400">({sec.percentage}%)</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{clientItem.value}</span>
+                        <span className="text-[11px] text-slate-400">({clientItem.percentage}%)</span>
                       </div>
                     </div>
                   ))}

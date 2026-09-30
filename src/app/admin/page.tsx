@@ -309,66 +309,8 @@ export default function MoveStudioOverviewPage() {
         </section>
       )}
 
-      {/* 3. Quick Action Launchpad */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Link
-          href="/admin/create"
-          className="p-3.5 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/80 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-800/80 shadow-2xs hover:shadow-xs transition group flex items-center gap-3"
-        >
-          <div 
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
-            style={{ backgroundColor: `${primaryCol}15`, color: primaryCol, borderColor: `${primaryCol}30` }}
-          >
-            <PlusCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">New Client Website</div>
-            <div className="text-[11px] text-slate-500">Launch 4-Step Wizard</div>
-          </div>
-        </Link>
-
-        <Link
-          href="/admin/brand"
-          className="p-3.5 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/80 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-800/80 shadow-2xs hover:shadow-xs transition group flex items-center gap-3"
-        >
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-            <Palette className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Brand DNA Extractor</div>
-            <div className="text-[11px] text-slate-500">URL &rarr; Design Tokens</div>
-          </div>
-        </Link>
-
-        <Link
-          href="/admin/clients"
-          className="p-3.5 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/80 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-800/80 shadow-2xs hover:shadow-xs transition group flex items-center gap-3"
-        >
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-            <Building className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Clients &amp; Websites</div>
-            <div className="text-[11px] text-slate-500">11 Managed Properties</div>
-          </div>
-        </Link>
-
-        <Link
-          href="/admin/tasks"
-          className="p-3.5 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/80 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-800/80 shadow-2xs hover:shadow-xs transition group flex items-center gap-3"
-        >
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-            <Send className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Publishing Pipeline</div>
-            <div className="text-[11px] text-slate-500">SENS Approvals</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* 4. UPGRADED RECHARTS VISUAL EXECUTIVE ANALYTICS DASHBOARD */}
-      <ExecutiveAnalyticsDashboard primaryColor={primaryCol} accentColor={accentColor} />
+      {/* 3. UPGRADED RECHARTS VISUAL EXECUTIVE ANALYTICS DASHBOARD */}
+      <ExecutiveAnalyticsDashboard clients={clients} primaryColor={primaryCol} accentColor={accentColor} />
 
       {/* 5. Clean & Decluttered Client Snapshot + Supporting Rail */}
       <div className={`grid grid-cols-1 ${dashboardPrefs.layoutMode === 'focus' ? 'lg:grid-cols-1' : 'lg:grid-cols-12'} gap-6 items-start`}>

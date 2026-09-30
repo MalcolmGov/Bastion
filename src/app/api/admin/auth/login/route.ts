@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     // Set cookie
     response.cookies.set('gf_studio_session', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production' && req.nextUrl.protocol === 'https:',
       sameSite: 'lax',
       path: '/',
       maxAge: 7 * 24 * 60 * 60 // 7 days

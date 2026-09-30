@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -30,11 +30,23 @@ import {
   Cpu,
   Pickaxe,
   TrendingUp,
-  SunMedium
+  SunMedium,
+  GitBranch,
+  Code2,
+  Key,
+  ChevronRight
 } from 'lucide-react';
 import { BLUEPRINTS } from '@/lib/studio/blueprints';
 import { DESIGN_COLLECTIONS } from '@/lib/studio/collections';
 import type { BlueprintId, DesignCollectionId, DiscoveredPage } from '@/lib/studio/types';
+
+function GitHubIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+    </svg>
+  );
+}
 
 function WebsiteCreationWizardContent() {
   const router = useRouter();
@@ -44,7 +56,7 @@ function WebsiteCreationWizardContent() {
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   // Step A: Setup
-  const [startPath, setStartPath] = useState<'import' | 'pack' | 'brief'>('import');
+  const [startPath, setStartPath] = useState<'import' | 'pack' | 'brief' | 'github'>('import');
   const [clientName, setClientName] = useState('');
   const [websiteName, setWebsiteName] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
@@ -54,6 +66,20 @@ function WebsiteCreationWizardContent() {
   const [conversionAction, setConversionAction] = useState('');
   const [designIntent, setDesignIntent] = useState<'conservative' | 'bold'>('bold');
   const [language, setLanguage] = useState('English (UK)');
+
+  // GitHub Repository & Developer Integration
+  const [githubConnected, setGithubConnected] = useState(false);
+  const [githubUser, setGithubUser] = useState<any>(null);
+  const [githubRepos, setGithubRepos] = useState<any[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState('MalcolmGov/Goldfields');
+  const [customRepoInput, setCustomRepoInput] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState('main');
+  const [isExtractingRepo, setIsExtractingRepo] = useState(false);
+  const [repoExtractionResult, setRepoExtractionResult] = useState<any>(null);
+  const [showPatModal, setShowPatModal] = useState(false);
+  const [patInput, setPatInput] = useState('');
+  const [isConnectingPat, setIsConnectingPat] = useState(false);
+  const [linkRepoExpanded, setLinkRepoExpanded] = useState(false);
 
   // Brand & Content Pack Uploads (Option 2)
   const [uploadedLogo, setUploadedLogo] = useState<string | null>(null);
@@ -122,6 +148,178 @@ function WebsiteCreationWizardContent() {
       });
     }
     setUploadedDocs((prev) => [...prev, ...newDocs]);
+  };
+
+  // Check and load GitHub integration status on mount
+  useEffect(() => {
+    async function loadGitHub() {
+      try {
+        const res = await fetch('/api/admin/github/repos');
+        if (res.ok) {
+          const data = await res.json();
+          setGithubConnected(data.isConnected);
+          setGithubUser(data.user);
+          if (data.repos && data.repos.length > 0) {
+            setGithubRepos(data.repos);
+            if (!selectedRepo) {
+              setSelectedRepo(data.repos[0].full_name);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load GitHub integration:', err);
+      }
+    }
+    loadGitHub();
+  }, []);
+
+  const handleConnectOAuth = async () => {
+    try {
+      const res = await fetch('/api/admin/github/connect');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      }
+    } catch (err) {
+      console.error('Failed to initiate GitHub OAuth:', err);
+    }
+  };
+
+  const handleSavePat = async () => {
+    if (!patInput.trim()) return;
+    setIsConnectingPat(true);
+    try {
+      const res = await fetch('/api/admin/github/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: patInput.trim() })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGithubConnected(true);
+        setGithubUser(data.user);
+        setShowPatModal(false);
+        setPatInput('');
+        const reposRes = await fetch('/api/admin/github/repos');
+        if (reposRes.ok) {
+          const repoData = await reposRes.json();
+          setGithubRepos(repoData.repos || []);
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to verify GitHub token.');
+      }
+    } catch (err: any) {
+      alert(`Connection Error: ${err.message}`);
+    } finally {
+      setIsConnectingPat(false);
+    }
+  };
+
+  const handleDisconnectGitHub = async () => {
+    if (!confirm('Disconnect GitHub account from Bastion Platform?')) return;
+    try {
+      await fetch('/api/admin/github/status', { method: 'DELETE' });
+      setGithubConnected(false);
+      setGithubUser(null);
+    } catch (err) {
+      console.warn('Failed to disconnect GitHub:', err);
+    }
+  };
+
+  const handleExtractFromRepo = async () => {
+    const targetRepo = customRepoInput.trim() || selectedRepo.trim();
+    if (!targetRepo) {
+      setExtractError('Please specify or select a GitHub repository.');
+      return;
+    }
+
+    setIsExtractingRepo(true);
+    setExtractError(null);
+
+    try {
+      const res = await fetch('/api/admin/github/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo: targetRepo, branch: selectedBranch.trim() })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to extract code from repository');
+
+      const ext = data.extraction;
+      setRepoExtractionResult(ext);
+
+      // Auto-fill Client Organization Name if empty
+      const repoCleanName = (ext.repoFullName.split('/')[1] || targetRepo)
+        .replace(/[-_]/g, ' ')
+        .replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+      if (!clientName.trim()) {
+        setClientName(repoCleanName);
+      }
+      if (!websiteName.trim()) {
+        setWebsiteName(`${clientName.trim() || repoCleanName} Flagship`);
+      }
+
+      setPrimaryBrandColor(ext.brandTokens.primaryColor);
+      setAccentBrandColor(ext.brandTokens.accentColor);
+
+      setExtractedBrand({
+        nameCandidate: clientName.trim() || repoCleanName,
+        taglineCandidate: `${clientName.trim() || repoCleanName} — Digital Corporate Platform`,
+        logos: ext.discoveredLogos.map((l: any) => ({
+          url: l.url || '/assets/bastion-original-logo-hd.png',
+          name: l.name,
+          status: 'approved'
+        })),
+        colors: ext.brandTokens.palette.map((p: any) => ({
+          name: p.name,
+          hex: p.hex,
+          value: p.hex,
+          status: 'approved'
+        })),
+        typography: {
+          headingFont: ext.brandTokens.typography.headingFont,
+          bodyFont: ext.brandTokens.typography.bodyFont,
+          headingWeight: '700',
+          scaleRatio: 1.25,
+          status: 'approved'
+        },
+        toneOfVoice: 'Engineered, institutional, and high-performance',
+        approvedFacts: [
+          `Source repository: ${ext.repoFullName} on branch ${ext.branch}.`,
+          `Detected framework: ${ext.framework}.`,
+          `Extracted ${ext.components.length} UI components and ${ext.pagesFound.length} page structures.`
+        ]
+      });
+
+      setExtractedContent({
+        tagline: `${clientName.trim() || repoCleanName} — Enterprise Excellence`,
+        businessSummary: `Extracted from repository ${ext.repoFullName}. Production-ready multi-tenant web application.`,
+        servicesFound: ext.components.map((c: any) => ({
+          title: c.name,
+          description: `Component extracted from ${c.path} (${c.category})`
+        })),
+        contactInfoFound: {
+          email: 'developer@bastiongroup.co.za',
+          address: 'Sandton Corporate Precinct, Johannesburg'
+        },
+        navigationFound: ext.pagesFound.map((p: any) => ({
+          label: p.title,
+          url: p.route
+        })),
+        socialLinks: [
+          { platform: 'github', url: `https://github.com/${ext.repoFullName}` }
+        ]
+      });
+    } catch (err: any) {
+      setExtractError(err.message);
+    } finally {
+      setIsExtractingRepo(false);
+    }
   };
 
   // Handle Option 1: URL Extraction (Step 1 -> Step 2)
@@ -474,6 +672,14 @@ function WebsiteCreationWizardContent() {
           { num: 5, label: 'Assembly' },
           { num: 6, label: 'Review' }
         ]
+      : startPath === 'github'
+      ? [
+          { num: 1, label: 'Repository' },
+          { num: 3, label: 'Code & Brand Review' },
+          { num: 4, label: 'Design' },
+          { num: 5, label: 'Assembly' },
+          { num: 6, label: 'Review' }
+        ]
       : [
           { num: 1, label: 'Setup' },
           { num: 2, label: 'Scope' },
@@ -509,7 +715,11 @@ function WebsiteCreationWizardContent() {
         {/* Stepper Bar */}
         <div
           className={`grid gap-2 pt-2 ${
-            startPath === 'brief' ? 'grid-cols-4' : startPath === 'pack' ? 'grid-cols-5' : 'grid-cols-6'
+            startPath === 'brief'
+              ? 'grid-cols-4'
+              : startPath === 'pack' || startPath === 'github'
+              ? 'grid-cols-5'
+              : 'grid-cols-6'
           }`}
         >
           {stepsHeader.map((s) => (
@@ -542,7 +752,7 @@ function WebsiteCreationWizardContent() {
           </div>
 
           {/* Starting Paths Selector */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <button
               type="button"
               onClick={() => {
@@ -594,9 +804,28 @@ function WebsiteCreationWizardContent() {
               }`}
             >
               <FileText className="w-6 h-6 text-emerald-400 mb-3" />
-              <div className="text-sm font-bold">3. Start from Business Brief</div>
+              <div className="text-sm font-bold">3. Start from Brief</div>
               <div className="text-xs text-slate-400 mt-1 leading-relaxed">
                 Define client industry, core goals, and target audience from scratch.
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStartPath('github');
+                setExtractError(null);
+              }}
+              className={`p-5 rounded-xl border text-left transition cursor-pointer ${
+                startPath === 'github'
+                  ? 'bg-purple-950/50 border-purple-500 ring-1 ring-purple-500 text-white'
+                  : 'bg-[#141C2A] border-[#1E293B] text-slate-300 hover:border-slate-700'
+              }`}
+            >
+              <GitHubIcon className="w-6 h-6 text-purple-400 mb-3" />
+              <div className="text-sm font-bold">4. GitHub Repository Code</div>
+              <div className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Connect developer repo to extract AST components, brand tokens, and client code into CMS.
               </div>
             </button>
           </div>
@@ -1084,6 +1313,315 @@ function WebsiteCreationWizardContent() {
             </div>
           )}
 
+          {/* PATH 4 FORM: GITHUB REPOSITORY CODE */}
+          {startPath === 'github' && (
+            <div className="space-y-6 pt-4 border-t border-[#1E293B]">
+              {/* GitHub Developer Account Status Banner */}
+              <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-950/60 border border-purple-700/60 flex items-center justify-center text-purple-400 shrink-0">
+                    <GitHubIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        Developer GitHub Integration
+                      </span>
+                      {githubConnected ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                          Connected
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800">
+                          Not Connected
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {githubConnected && githubUser
+                        ? `Connected as @${githubUser.username} (${githubUser.name || 'Developer'})`
+                        : 'Connect via OAuth or Personal Access Token (PAT) to read repositories.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  {githubConnected ? (
+                    <button
+                      type="button"
+                      onClick={handleDisconnectGitHub}
+                      className="px-3 py-1.5 rounded-lg border border-rose-800 text-rose-400 hover:bg-rose-950/40 text-xs font-medium transition cursor-pointer"
+                    >
+                      Disconnect
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleConnectOAuth}
+                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer"
+                      >
+                        <GitHubIcon className="w-3.5 h-3.5" />
+                        <span>OAuth Connect</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowPatModal(true)}
+                        className="px-3 py-1.5 rounded-lg border border-purple-700 text-purple-300 hover:bg-purple-950/40 text-xs font-medium flex items-center space-x-1.5 transition cursor-pointer"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>Token (PAT)</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Repo & Branch Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Select Developer GitHub Repository
+                  </label>
+                  {githubRepos && githubRepos.length > 0 ? (
+                    <div className="space-y-2">
+                      <select
+                        value={selectedRepo}
+                        onChange={(e) => {
+                          setSelectedRepo(e.target.value);
+                          setCustomRepoInput('');
+                        }}
+                        className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-purple-500 font-mono"
+                      >
+                        {githubRepos.map((repo) => (
+                          <option key={repo.id || repo.full_name} value={repo.full_name}>
+                            {repo.full_name} {repo.private ? '(Private)' : '(Public)'}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex items-center space-x-2 text-[11px] text-slate-400">
+                        <span>Or specify custom repo:</span>
+                        <input
+                          type="text"
+                          placeholder="e.g. MalcolmGov/Goldfields"
+                          value={customRepoInput}
+                          onChange={(e) => setCustomRepoInput(e.target.value)}
+                          className="flex-1 px-2.5 py-1 rounded-lg bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. MalcolmGov/Goldfields"
+                      value={customRepoInput || selectedRepo}
+                      onChange={(e) => {
+                        setCustomRepoInput(e.target.value);
+                        setSelectedRepo(e.target.value);
+                      }}
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm font-mono placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Repository Branch
+                  </label>
+                  <div className="relative">
+                    <GitBranch className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="main"
+                      value={selectedBranch}
+                      onChange={(e) => setSelectedBranch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm font-mono placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Organization & Website Target */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Target Client Organization
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Gold Fields Limited"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Target Website Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Gold Fields Corporate Portal"
+                    value={websiteName}
+                    onChange={(e) => setWebsiteName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Extract Trigger Button */}
+              <div className="p-4 rounded-xl bg-purple-950/30 border border-purple-800/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-purple-200">
+                  <div className="font-semibold text-white flex items-center space-x-1.5">
+                    <Code2 className="w-4 h-4 text-purple-400" />
+                    <span>Deep Code &amp; Component Extraction</span>
+                  </div>
+                  <p className="text-purple-300/80 mt-0.5">
+                    Parses package.json, tailwind configs, React AST components, brand tokens, and routing structure directly from the repository.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={isExtractingRepo}
+                  onClick={handleExtractFromRepo}
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg shrink-0 flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isExtractingRepo ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Parsing Repository...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Extract Code &amp; Brand DNA</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Extraction Telemetry Card */}
+              {repoExtractionResult && (
+                <div className="p-5 rounded-xl bg-[#141C2A] border border-purple-700/60 space-y-4 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      <span className="text-sm font-bold text-white">
+                        Repository Code &amp; Assets Successfully Indexed
+                      </span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-700">
+                      {repoExtractionResult.framework}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="p-3 rounded-lg bg-[#0E1522] border border-[#232F42]">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">UI Components</div>
+                      <div className="text-base font-bold text-white mt-1">
+                        {repoExtractionResult.components.length}
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                        {repoExtractionResult.components.slice(0, 2).map((c: any) => c.name).join(', ')}...
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#0E1522] border border-[#232F42]">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">Pages / Routes</div>
+                      <div className="text-base font-bold text-white mt-1">
+                        {repoExtractionResult.pagesFound.length}
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                        {repoExtractionResult.pagesFound.slice(0, 2).map((p: any) => p.route).join(', ')}...
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#0E1522] border border-[#232F42]">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">Brand Palette</div>
+                      <div className="flex items-center space-x-1 mt-1.5">
+                        <div
+                          className="w-4 h-4 rounded-full border border-slate-700"
+                          style={{ backgroundColor: repoExtractionResult.brandTokens.primaryColor }}
+                          title={`Primary: ${repoExtractionResult.brandTokens.primaryColor}`}
+                        />
+                        <div
+                          className="w-4 h-4 rounded-full border border-slate-700"
+                          style={{ backgroundColor: repoExtractionResult.brandTokens.accentColor }}
+                          title={`Accent: ${repoExtractionResult.brandTokens.accentColor}`}
+                        />
+                        {repoExtractionResult.brandTokens.palette.slice(0, 3).map((p: any, i: number) => (
+                          <div
+                            key={i}
+                            className="w-4 h-4 rounded-full border border-slate-700"
+                            style={{ backgroundColor: p.hex }}
+                            title={p.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#0E1522] border border-[#232F42]">
+                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">Logos &amp; Icons</div>
+                      <div className="text-base font-bold text-white mt-1">
+                        {repoExtractionResult.discoveredLogos.length} Assets
+                      </div>
+                      <div className="text-[10px] text-emerald-400 mt-0.5">
+                        Brand SVGs extracted
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Optional Developer GitHub Repo Link for all paths */}
+          {startPath !== 'github' && (
+            <div className="pt-2 border-t border-[#1E293B]/60">
+              <button
+                type="button"
+                onClick={() => setLinkRepoExpanded(!linkRepoExpanded)}
+                className="text-xs text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition cursor-pointer"
+              >
+                <GitHubIcon className="w-3.5 h-3.5 text-purple-400" />
+                <span>Link GitHub Repository (Optional for Developers)</span>
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${linkRepoExpanded ? 'rotate-90' : ''}`} />
+              </button>
+
+              {linkRepoExpanded && (
+                <div className="mt-3 p-4 rounded-xl bg-[#141C2A] border border-[#232F42] grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Developer Repository
+                    </label>
+                    <select
+                      value={selectedRepo}
+                      onChange={(e) => setSelectedRepo(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[#0E1522] border border-[#232F42] text-white text-xs font-mono"
+                    >
+                      {githubRepos.map((r) => (
+                        <option key={r.full_name} value={r.full_name}>
+                          {r.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                      Branch
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedBranch}
+                      onChange={(e) => setSelectedBranch(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[#0E1522] border border-[#232F42] text-white text-xs font-mono"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {extractError && (
             <div className="p-4 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -1132,6 +1670,23 @@ function WebsiteCreationWizardContent() {
                 className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2 cursor-pointer"
               >
                 <span>Synthesize Brand &amp; Continue to Design</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {startPath === 'github' && (
+              <button
+                type="button"
+                disabled={isExtractingRepo}
+                onClick={async () => {
+                  if (!repoExtractionResult) {
+                    await handleExtractFromRepo();
+                  }
+                  setCurrentStep(3);
+                }}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+              >
+                <span>Continue to Code &amp; Brand Review</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}
@@ -1528,6 +2083,71 @@ function WebsiteCreationWizardContent() {
               <span>Launch Visual Editor</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* GitHub Personal Access Token (PAT) Modal */}
+      {showPatModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0E1522] border border-[#232F42] rounded-2xl max-w-md w-full p-6 space-y-5 animate-scaleUp">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-lg bg-purple-950 border border-purple-800 flex items-center justify-center text-purple-400">
+                  <Key className="w-4 h-4" />
+                </div>
+                <h3 className="text-base font-bold text-white">Connect via GitHub PAT</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPatModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Generate a classic or fine-grained Personal Access Token on GitHub with <code className="text-purple-300 bg-purple-950/60 px-1 py-0.5 rounded">repo</code> and <code className="text-purple-300 bg-purple-950/60 px-1 py-0.5 rounded">read:org</code> scopes to connect client repositories.
+            </p>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Personal Access Token
+              </label>
+              <input
+                type="password"
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                value={patInput}
+                onChange={(e) => setPatInput(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm font-mono focus:outline-none focus:border-purple-500 placeholder-slate-600"
+              />
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-[#1E293B]">
+              <button
+                type="button"
+                onClick={() => setShowPatModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isConnectingPat || !patInput.trim()}
+                onClick={handleSavePat}
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer"
+              >
+                {isConnectingPat ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <span>Verify &amp; Connect</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
