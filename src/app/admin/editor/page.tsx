@@ -43,15 +43,19 @@ import {
   Minimize2,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Globe,
   CalendarCheck,
-  Check
+  Check,
+  Key
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
 import { SectionLibraryDrawer } from '@/components/studio/SectionLibraryDrawer';
 import { DynamicZonesBuilder } from '@/components/studio/DynamicZonesBuilder';
 import { InEditorContentAgent } from '@/components/studio/InEditorContentAgent';
+import { MultiModelAiCodingChat } from '@/components/studio/MultiModelAiCodingChat';
+import { ApiKeysTab } from '@/components/studio/ApiKeysTab';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, getLocaleMeta } from '@/lib/i18n/locales';
 import type { SectionInstance, DesignCollectionId, BackgroundPatternType } from '@/lib/studio/types';
@@ -180,8 +184,9 @@ function VisualWebsiteEditorContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
 
-  // Inspector Active Tab: 'content' | 'design' | 'ai'
-  const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai'>('content');
+  // Inspector Active Tab: 'content' | 'design' | 'ai' | 'keys'
+  const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai' | 'keys'>('content');
+  const [isLocaleMenuOpen, setIsLocaleMenuOpen] = useState(false);
 
   // Dynamic Zones Builder Left Panel Mode: 'dynamic_zones' | 'outline'
   const [leftPanelMode, setLeftPanelMode] = useState<'dynamic_zones' | 'outline'>('dynamic_zones');
@@ -399,6 +404,22 @@ function VisualWebsiteEditorContent() {
           ...s.props,
           [field]: val
         }
+      };
+    });
+    updateSections(updated);
+  };
+
+  const handleMultiplePropsChange = (newProps: Record<string, any>, newStyles?: Record<string, any>) => {
+    if (!selectedSectionId) return;
+    const updated = sections.map(s => {
+      if (s.id !== selectedSectionId) return s;
+      return {
+        ...s,
+        props: {
+          ...s.props,
+          ...newProps
+        },
+        styles: newStyles ? { ...s.styles, ...newStyles } : s.styles
       };
     });
     updateSections(updated);
@@ -722,25 +743,46 @@ function VisualWebsiteEditorContent() {
             ))}
           </div>
 
-          {/* Multi-Locale (i18n) Switcher */}
-          <div className="hidden xl:flex items-center space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-lg border border-slate-200 dark:border-[#232F42] shrink-0">
-            <Globe className="w-3.5 h-3.5 text-slate-400 ml-1.5 mr-0.5" />
-            {SUPPORTED_LOCALES.map((loc) => (
-              <button
-                key={loc.code}
-                type="button"
-                onClick={() => setSelectedLocale(loc.code)}
-                title={`${loc.name} (${loc.region})`}
-                className={`px-2 py-0.5 rounded text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer ${
-                  selectedLocale === loc.code
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <span>{loc.flag}</span>
-                <span className="uppercase">{loc.code}</span>
-              </button>
-            ))}
+          {/* Compact Multi-Locale (i18n) Dropdown */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsLocaleMenuOpen(!isLocaleMenuOpen)}
+              title="Change active preview locale"
+              className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-[#141C2A] hover:bg-slate-200 dark:hover:bg-[#1E293B] border border-slate-200 dark:border-[#232F42] text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5 text-slate-400" />
+              <span>{getLocaleMeta(selectedLocale).flag}</span>
+              <span className="uppercase font-mono">{selectedLocale}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+
+            {isLocaleMenuOpen && (
+              <div className="absolute left-0 mt-1 w-44 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-50 animate-in fade-in-50 zoom-in-95">
+                <div className="px-3 py-1 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800/60">
+                  Select Language
+                </div>
+                {SUPPORTED_LOCALES.map((loc) => (
+                  <button
+                    key={loc.code}
+                    type="button"
+                    onClick={() => {
+                      setSelectedLocale(loc.code);
+                      setIsLocaleMenuOpen(false);
+                    }}
+                    className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/70 transition cursor-pointer ${
+                      selectedLocale === loc.code ? 'text-sky-500 font-bold bg-sky-50/50 dark:bg-sky-950/30' : 'text-slate-600 dark:text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span>{loc.flag}</span>
+                      <span>{loc.name}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400 uppercase">{loc.code}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -859,6 +901,23 @@ function VisualWebsiteEditorContent() {
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSaving ? 'Saving...' : 'Save Draft'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsRightPanelOpen(true);
+              setInspectorTab('keys');
+            }}
+            title="Manage AI API Keys (Claude, OpenAI, Gemini, DeepSeek, Qwen)"
+            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer border ${
+              inspectorTab === 'keys' && isRightPanelOpen
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-xs'
+                : 'bg-slate-100 dark:bg-[#141C2A] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#232F42] hover:text-white hover:border-slate-600'
+            }`}
+          >
+            <Key className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden md:inline">API Keys</span>
           </button>
 
           <button
@@ -1113,82 +1172,100 @@ function VisualWebsiteEditorContent() {
         <div className={`${
           isRightPanelOpen ? 'w-96' : 'w-0 border-l-0'
         } transition-all duration-300 ease-in-out bg-[#0A0D14] border-l border-[#1E293B] flex flex-col justify-between shrink-0 overflow-y-auto overflow-x-hidden`}>
-          {selectedSection ? (
-            <div className="p-4 space-y-5 w-96">
-              {/* Header */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1.5 text-xs text-sky-400 font-bold uppercase tracking-wider truncate">
-                    <Sliders className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">Block: {selectedSection.componentId.replace('_', ' ')}</span>
-                  </div>
-                  <div className="flex items-center space-x-1 shrink-0">
+          <div className="p-4 space-y-4 w-96">
+            {/* Header */}
+            <div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5 text-xs text-sky-400 font-bold uppercase tracking-wider truncate">
+                  <Sliders className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">
+                    {selectedSection ? `Block: ${selectedSection.componentId.replace('_', ' ')}` : 'Inspector & AI Studio'}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-1 shrink-0">
+                  {selectedSection && (
                     <button
                       type="button"
                       onClick={handleResetSectionStyles}
                       title="Reset styling to blueprint defaults"
-                      className="px-2 py-0.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition text-[10px] flex items-center space-x-1"
+                      className="px-2 py-0.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition text-[10px] flex items-center space-x-1 cursor-pointer"
                     >
                       <RotateCcw className="w-3 h-3" />
                       <span>Reset</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsRightPanelOpen(false)}
-                      title="Collapse Inspector"
-                      className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="text-[11px] text-slate-400 mt-0.5">
-                  Customize content copy, layout variants, colors, and gradients.
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsRightPanelOpen(false)}
+                    title="Collapse Inspector"
+                    className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-
-              {/* Navigation Tabs: Content | Styles & Colors | AI Copilot */}
-              <div className="flex p-1 rounded-xl bg-[#141C2A] border border-[#232F42] text-xs">
-                <button
-                  type="button"
-                  onClick={() => setInspectorTab('content')}
-                  className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition ${
-                    inspectorTab === 'content'
-                      ? 'bg-sky-500 text-white shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Content</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInspectorTab('design')}
-                  className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition ${
-                    inspectorTab === 'design'
-                      ? 'bg-sky-500 text-white shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Palette className="w-3.5 h-3.5" />
-                  <span>Colors & Style</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInspectorTab('ai')}
-                  className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition ${
-                    inspectorTab === 'ai'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>AI Copilot</span>
-                </button>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                {selectedSection
+                  ? 'Customize content copy, layout variants, colors, and gradients.'
+                  : 'Select a block on canvas or configure AI coding models & credentials.'}
               </div>
+            </div>
 
-              {/* TAB 1: CONTENT & COPY */}
-              {inspectorTab === 'content' && (
+            {/* Navigation Tabs: Content | Design | AI Polish | API Keys */}
+            <div className="flex p-1 rounded-xl bg-[#141C2A] border border-[#232F42] text-xs gap-1">
+              <button
+                type="button"
+                onClick={() => setInspectorTab('content')}
+                className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
+                  inspectorTab === 'content'
+                    ? 'bg-sky-500 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Content</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInspectorTab('design')}
+                className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
+                  inspectorTab === 'design'
+                    ? 'bg-sky-500 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Palette className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Design</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInspectorTab('ai')}
+                className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
+                  inspectorTab === 'ai'
+                    ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>AI Polish</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInspectorTab('keys')}
+                className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
+                  inspectorTab === 'keys'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Key className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Keys</span>
+              </button>
+            </div>
+
+            {/* TAB 1: CONTENT & COPY */}
+            {inspectorTab === 'content' && (
+              selectedSection ? (
                 <div className="space-y-4 animate-in fade-in duration-150">
                   {/* AI Translation & Multi-Locale Bar */}
                   <div className="p-3 rounded-xl bg-gradient-to-r from-purple-950/40 via-sky-950/40 to-slate-900 border border-purple-500/30 flex items-center justify-between gap-2 shadow-xs">
@@ -1702,10 +1779,16 @@ function VisualWebsiteEditorContent() {
                     </div>
                   )}
                 </div>
-              )}
+              ) : (
+                <div className="p-8 text-center text-xs text-slate-500">
+                  Select a section in the preview canvas to inspect its properties.
+                </div>
+              )
+            )}
 
-              {/* TAB 2: DESIGN & COLORS */}
-              {inspectorTab === 'design' && (
+            {/* TAB 2: DESIGN & COLORS */}
+            {inspectorTab === 'design' && (
+              selectedSection ? (
                 <div className="space-y-5 animate-in fade-in duration-150">
                   {/* Background Mode Toggle */}
                   <div className="space-y-1.5">
@@ -2167,23 +2250,38 @@ function VisualWebsiteEditorContent() {
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* TAB 3: AI CONTENT AGENT */}
-              {inspectorTab === 'ai' && (
-                <div className="animate-in fade-in duration-150">
-                  <InEditorContentAgent
-                    section={selectedSection}
-                    onApplyField={handlePropChange}
-                  />
+              ) : (
+                <div className="p-8 text-center text-xs text-slate-500">
+                  Select a section in the preview canvas to customize colors and styling.
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="p-8 text-center text-xs text-slate-500">
-              Select a section in the preview canvas to inspect its properties.
-            </div>
-          )}
+              )
+            )}
+
+            {/* TAB 3: MULTI-MODEL AI CODING & POLISH CHAT */}
+            {inspectorTab === 'ai' && (
+              <div className="animate-in fade-in duration-150">
+                <MultiModelAiCodingChat
+                  section={selectedSection}
+                  onApplyField={handlePropChange}
+                  onApplyMultipleProps={handleMultiplePropsChange}
+                  onSwitchToKeysTab={() => setInspectorTab('keys')}
+                  pageContext={{
+                    pageSlug: activePageSlug,
+                    siteName: siteData?.name || 'Gold Fields / Bastion',
+                    totalSections: sections.length
+                  }}
+                  brandKit={brandKit}
+                />
+              </div>
+            )}
+
+            {/* TAB 4: API KEYS CREDENTIAL MANAGEMENT */}
+            {inspectorTab === 'keys' && (
+              <div className="animate-in fade-in duration-150">
+                <ApiKeysTab />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
