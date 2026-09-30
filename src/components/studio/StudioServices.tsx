@@ -26,17 +26,32 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
   const isImmersive = collection === 'immersive';
   const isEditorial = collection === 'editorial';
 
+  const isDarkMode = Boolean(
+    styles?.theme === 'dark' ||
+    (styles as any)?.theme === 'dark' ||
+    styles?.backgroundColor?.includes('5, 8, 15') ||
+    styles?.backgroundColor === '#0A0D14' ||
+    styles?.backgroundColor === '#09090B' ||
+    styles?.backgroundColor === '#070B12' ||
+    styles?.backgroundColor === '#05080F'
+  );
+
+  const effectiveBg = styles?.backgroundColor || (isDarkMode ? '#090D16' : undefined);
+  const effectiveTextColor = styles?.textColor || (isDarkMode ? '#F8FAFC' : undefined);
+
   const sectionStyle: React.CSSProperties = {
-    ...(styles?.backgroundType === 'solid' && styles.backgroundColor ? { backgroundColor: styles.backgroundColor } : {}),
+    ...(effectiveBg ? { backgroundColor: effectiveBg } : {}),
     ...(styles?.backgroundType === 'gradient' && styles.gradient ? { background: styles.gradient } : {}),
-    ...(styles?.textColor ? { color: styles.textColor } : {}),
-    ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+    ...(effectiveTextColor ? { color: effectiveTextColor } : {}),
+    ...(styles?.borderColor ? { borderColor: styles.borderColor } : (isDarkMode ? { borderColor: 'rgba(255, 255, 255, 0.08)' } : {})),
   };
 
-  const hasCustomBg = styles?.backgroundType === 'solid' || styles?.backgroundType === 'gradient';
+  const hasCustomBg = Boolean(effectiveBg || styles?.backgroundType === 'gradient');
   const paddingClass = styles?.paddingY || 'py-20 md:py-28';
 
-  const defaultBgClass = isImmersive
+  const defaultBgClass = isDarkMode
+    ? 'bg-[#090D16] text-[#F8FAFC] border-b border-white/10'
+    : isImmersive
     ? 'bg-[#09090B] text-white border-b border-[#27272A]'
     : isEditorial
     ? 'bg-[#F7F6F2] text-[#172C3D] border-b border-[#E2E7EA]'
@@ -45,7 +60,7 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
   return (
     <section
       style={sectionStyle}
-      className={`relative overflow-hidden ${paddingClass} px-6 transition-colors ${!hasCustomBg ? defaultBgClass : 'border-b border-white/10'}`}
+      className={`relative overflow-hidden ${paddingClass} px-6 transition-colors ${!hasCustomBg ? defaultBgClass : (isDarkMode ? 'border-b border-white/10' : 'border-b border-slate-200')}`}
     >
       <StudioBackgroundFx
         pattern={styles?.backgroundPattern}
@@ -85,10 +100,10 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
             <div
               key={idx}
               className={`p-7 rounded-2xl flex flex-col justify-between transition group ${
-                hasCustomBg
-                  ? 'bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.08]'
+                hasCustomBg || isDarkMode
+                  ? 'bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.08] text-white shadow-sm'
                   : isImmersive
-                  ? 'bg-[#141416] border border-[#27272A] hover:border-amber-600/50'
+                  ? 'bg-[#141416] border border-[#27272A] hover:border-amber-600/50 text-white'
                   : isEditorial
                   ? 'bg-white border border-[#E2E7EA] rounded-none shadow-sm'
                   : 'bg-slate-50 border border-slate-200/80 hover:bg-white hover:shadow-md'

@@ -33,6 +33,7 @@ import {
   Grid,
   CircleDot,
   Sun,
+  Moon,
   Star,
   Waves,
   Ban,
@@ -160,6 +161,9 @@ function VisualWebsiteEditorContent() {
   // Responsive Viewport: 'desktop' | 'tablet' | 'mobile'
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
+  // Canvas Theme: 'auto' | 'light' | 'dark'
+  const [canvasTheme, setCanvasTheme] = useState<'auto' | 'light' | 'dark'>('auto');
+
   // Active page
   const [activePageSlug, setActivePageSlug] = useState('home');
 
@@ -167,6 +171,22 @@ function VisualWebsiteEditorContent() {
   const [siteData, setSiteData] = useState<any>(null);
   const [brandKit, setBrandKit] = useState<any>(null);
   const [sections, setSections] = useState<SectionInstance[]>([]);
+
+  // Compute if canvas should render in dark theme
+  const isCanvasDark =
+    canvasTheme === 'dark' ||
+    (canvasTheme === 'auto' &&
+      sections.some(
+        s =>
+          s.styles?.theme === 'dark' ||
+          (s.styles as any)?.theme === 'dark' ||
+          s.styles?.backgroundColor?.includes('5, 8, 15') ||
+          s.styles?.backgroundColor === '#0A0D14' ||
+          s.styles?.backgroundColor === '#09090B' ||
+          s.styles?.backgroundColor === '#070B12' ||
+          s.styles?.backgroundColor === '#05080F'
+      ));
+
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [focusedFieldPath, setFocusedFieldPath] = useState<string | null>(null);
 
@@ -484,12 +504,32 @@ function VisualWebsiteEditorContent() {
     updateSections(updated);
   };
 
-  const handleMultiplePropsChange = (newProps: Record<string, any>, newStyles?: Record<string, any>) => {
-    const targetId = selectedSectionId || (sections.length > 0 ? sections[0].id : null);
+  const handleMultiplePropsChange = (newProps: Record<string, any>, newStyles?: Record<string, any>, explicitTargetId?: string) => {
+    let targetId: string | null | undefined = explicitTargetId;
+
+    if (!targetId || !sections.some(s => s.id === targetId)) {
+      if (newProps?.brandName || newProps?.logoDarkUrl || newProps?.logoUrl || newProps?.allLinks) {
+        const headerSec = sections.find(s => s.componentId === 'header');
+        if (headerSec) targetId = headerSec.id;
+      } else if (newProps?.copyright || newProps?.officeAddress || newProps?.socialLinks) {
+        const footerSec = sections.find(s => s.componentId === 'footer');
+        if (footerSec) targetId = footerSec.id;
+      } else if (newProps?.services) {
+        const servicesSec = sections.find(s => s.componentId === 'services_grid');
+        if (servicesSec) targetId = servicesSec.id;
+      }
+    }
+
+    if (!targetId) {
+      targetId = selectedSectionId || (sections.length > 0 ? sections[0].id : null);
+    }
     if (!targetId) return;
 
-    if (!selectedSectionId) {
-      setSelectedSectionId(targetId);
+    setSelectedSectionId(targetId);
+
+    // If newStyles targets dark theme, activate dark canvas wrapper
+    if (newStyles?.theme === 'dark' || newStyles?.backgroundColor?.includes('5, 8, 15') || newStyles?.backgroundColor === '#0A0D14' || newStyles?.backgroundColor === '#070B12') {
+      setCanvasTheme('dark');
     }
 
     const updated = sections.map(s => {
@@ -510,6 +550,49 @@ function VisualWebsiteEditorContent() {
         ...s,
         props: mergedProps,
         styles: newStyles ? { ...(s.styles || {}), ...newStyles } : s.styles
+      };
+    });
+
+    updateSections(updated);
+  };
+
+  const handleApplyDarkThemeToAllSections = () => {
+    setCanvasTheme('dark');
+    const updated = sections.map(s => {
+      const darkStyles: Record<string, any> = {
+        theme: 'dark',
+        textColor: '#F8FAFC',
+        borderColor: 'rgba(255, 255, 255, 0.08)'
+      };
+
+      if (s.componentId === 'header') {
+        darkStyles.backgroundColor = 'rgba(5, 8, 15, 0.85)';
+        darkStyles.backgroundType = 'solid';
+        darkStyles.backdropBlur = '16px';
+        darkStyles.bottomAccentLine = 'linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.5) 50%, transparent 100%)';
+        darkStyles.brandTextColor = '#F8FAFC';
+      } else if (s.componentId === 'hero') {
+        darkStyles.backgroundColor = '#070B12';
+        darkStyles.backgroundType = 'solid';
+        darkStyles.headingColor = '#FFFFFF';
+        darkStyles.accentColor = '#38BDF8';
+      } else if (s.componentId === 'services_grid') {
+        darkStyles.backgroundColor = '#090D16';
+        darkStyles.backgroundType = 'solid';
+      } else if (s.componentId === 'cta') {
+        darkStyles.backgroundColor = '#070B12';
+        darkStyles.backgroundType = 'solid';
+      } else if (s.componentId === 'footer') {
+        darkStyles.backgroundColor = '#05080F';
+        darkStyles.backgroundType = 'solid';
+      } else {
+        darkStyles.backgroundColor = '#070B12';
+        darkStyles.backgroundType = 'solid';
+      }
+
+      return {
+        ...s,
+        styles: { ...(s.styles || {}), ...darkStyles }
       };
     });
 
@@ -913,6 +996,21 @@ function VisualWebsiteEditorContent() {
             </button>
           </div>
 
+          {/* Canvas Theme Toggle (Light / Dark) */}
+          <button
+            type="button"
+            onClick={() => setCanvasTheme(isCanvasDark ? 'light' : 'dark')}
+            title={isCanvasDark ? 'Switch Canvas Preview to Light Mode' : 'Switch Canvas Preview to Dark Mode'}
+            className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
+              isCanvasDark
+                ? 'bg-slate-800 border-slate-700 text-sky-300 hover:text-white'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            {isCanvasDark ? <Moon className="w-3.5 h-3.5 text-sky-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
+            <span className="hidden md:inline">{isCanvasDark ? 'Dark Canvas' : 'Light Canvas'}</span>
+          </button>
+
           {/* Panel Visibility & Focus Controls */}
           <div className="flex items-center space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-xl border border-slate-200 dark:border-[#232F42]">
             <button
@@ -1247,7 +1345,9 @@ function VisualWebsiteEditorContent() {
           )}
 
           <div
-            className={`transition-all duration-300 shadow-2xl bg-white text-slate-900 overflow-hidden rounded-xl border border-slate-700/60 ${
+            className={`transition-all duration-300 shadow-2xl ${
+              isCanvasDark ? 'bg-[#05080F] text-slate-100 border-slate-800' : 'bg-white text-slate-900 border-slate-700/60'
+            } overflow-hidden rounded-xl border ${
               viewport === 'desktop'
                 ? 'w-full max-w-[1280px]'
                 : viewport === 'tablet'
@@ -2402,6 +2502,7 @@ function VisualWebsiteEditorContent() {
                 section={selectedSection}
                 onApplyField={handlePropChange}
                 onApplyMultipleProps={handleMultiplePropsChange}
+                onApplyDarkThemeToAllSections={handleApplyDarkThemeToAllSections}
                 onSwitchToKeysTab={() => setInspectorTab('keys')}
                 pageContext={{
                   pageSlug: activePageSlug,

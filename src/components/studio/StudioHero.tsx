@@ -26,15 +26,29 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
   const isEditorial = collection === 'editorial';
   const isImmersive = collection === 'immersive';
 
+  // Resolve custom styles & dark theme
+  const isDarkMode = Boolean(
+    styles?.theme === 'dark' ||
+    (styles as any)?.theme === 'dark' ||
+    styles?.backgroundColor?.includes('5, 8, 15') ||
+    styles?.backgroundColor === '#0A0D14' ||
+    styles?.backgroundColor === '#09090B' ||
+    styles?.backgroundColor === '#070B12' ||
+    styles?.backgroundColor === '#05080F'
+  );
+
+  const effectiveBg = styles?.backgroundColor || (isDarkMode ? '#070B12' : undefined);
+  const effectiveTextColor = styles?.textColor || (isDarkMode ? '#F8FAFC' : undefined);
+
   // Custom inline styles resolution
   const heroStyle: React.CSSProperties = {
-    ...(styles?.backgroundType === 'solid' && styles.backgroundColor ? { backgroundColor: styles.backgroundColor } : {}),
+    ...(effectiveBg ? { backgroundColor: effectiveBg } : {}),
     ...(styles?.backgroundType === 'gradient' && styles.gradient ? { background: styles.gradient } : {}),
-    ...(styles?.textColor ? { color: styles.textColor } : {}),
-    ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+    ...(effectiveTextColor ? { color: effectiveTextColor } : {}),
+    ...(styles?.borderColor ? { borderColor: styles.borderColor } : (isDarkMode ? { borderColor: 'rgba(255, 255, 255, 0.08)' } : {})),
   };
 
-  const hasCustomBg = styles?.backgroundType === 'solid' || styles?.backgroundType === 'gradient';
+  const hasCustomBg = Boolean(effectiveBg || styles?.backgroundType === 'gradient');
   const paddingClass = styles?.paddingY || (variant === 'immersive_full' || isImmersive ? 'py-28' : 'py-20 md:py-28');
 
   if (variant === 'immersive_full' || isImmersive) {
@@ -196,7 +210,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
   return (
     <section
       style={heroStyle}
-      className={`${!hasCustomBg ? 'bg-[#F8FAFC] text-[#0F172A]' : ''} ${paddingClass} px-6 border-b border-black/10 relative overflow-hidden`}
+      className={`${!hasCustomBg ? (isDarkMode ? 'bg-[#070B12] text-[#F8FAFC]' : 'bg-[#F8FAFC] text-[#0F172A]') : ''} ${paddingClass} px-6 ${isDarkMode ? 'border-b border-white/10' : 'border-b border-black/10'} relative overflow-hidden`}
     >
       <StudioBackgroundFx
         pattern={styles?.backgroundPattern}
@@ -208,7 +222,9 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
           {props.badge && (
             <div
               style={styles?.accentColor ? { borderColor: styles.accentColor, color: styles.accentColor } : undefined}
-              className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/70 border border-current text-xs font-semibold tracking-wide"
+              className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full ${
+                isDarkMode ? 'bg-white/10 border border-white/20 text-slate-200' : 'bg-white/70 border border-current text-xs'
+              } text-xs font-semibold tracking-wide`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
               <span>{props.badge}</span>
@@ -216,7 +232,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
           )}
 
           <h1
-            style={styles?.headingColor ? { color: styles.headingColor } : undefined}
+            style={styles?.headingColor ? { color: styles.headingColor } : (isDarkMode ? { color: '#FFFFFF' } : undefined)}
             className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.12]"
           >
             {props.title}
@@ -224,7 +240,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
 
           {props.subtitle && (
             <p
-              style={styles?.textColor ? { color: styles.textColor } : undefined}
+              style={styles?.textColor ? { color: styles.textColor } : (isDarkMode ? { color: '#CBD5E1' } : undefined)}
               className="text-lg md:text-xl font-normal leading-relaxed max-w-3xl opacity-85"
             >
               {props.subtitle}
@@ -249,7 +265,11 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
               <a
                 href={props.secondaryCta.href || '#'}
                 onClick={isEditor ? (e) => e.preventDefault() : undefined}
-                className="px-5 py-3 rounded-lg border border-current opacity-80 hover:opacity-100 hover:bg-black/5 transition text-sm font-semibold"
+                className={`px-5 py-3 rounded-lg border transition text-sm font-semibold ${
+                  isDarkMode
+                    ? 'border-white/20 text-slate-200 hover:text-white hover:border-white/40 hover:bg-white/5'
+                    : 'border-current opacity-80 hover:opacity-100 hover:bg-black/5'
+                }`}
               >
                 <span>{props.secondaryCta.label}</span>
               </a>
@@ -259,16 +279,25 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
 
         {/* 4-Pillar Metric Strip */}
         {props.stats && props.stats.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-current/10">
+          <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t ${isDarkMode ? 'border-white/10' : 'border-current/10'}`}>
             {props.stats.map((st, idx) => (
-              <div key={idx} className="bg-white/80 backdrop-blur-xs p-5 rounded-xl border border-current/10 shadow-xs">
+              <div
+                key={idx}
+                className={`${
+                  isDarkMode
+                    ? 'bg-white/[0.04] border border-white/10 backdrop-blur-md'
+                    : 'bg-white/80 border border-current/10 backdrop-blur-xs'
+                } p-5 rounded-xl shadow-xs`}
+              >
                 <div
                   style={styles?.headingColor ? { color: styles.headingColor } : undefined}
-                  className="text-2xl sm:text-3xl font-bold tracking-tight font-mono text-slate-900"
+                  className={`text-2xl sm:text-3xl font-bold tracking-tight font-mono ${
+                    isDarkMode ? 'text-white' : 'text-slate-900'
+                  }`}
                 >
                   {st.value}
                 </div>
-                <div className="text-xs text-slate-500 font-medium mt-1">
+                <div className={`text-xs font-medium mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                   {st.label}
                 </div>
               </div>
