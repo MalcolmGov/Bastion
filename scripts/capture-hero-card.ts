@@ -43,8 +43,8 @@ async function capture() {
   await page.screenshot({ path: overviewDarkPath, fullPage: false });
   console.log(`Saved: ${overviewDarkPath}`);
 
-  // 5. Capture close-up of the hero card itself
-  const heroElement = await page.$('section');
+  // 5. Capture close-up of the hero card with glowing motion border and back shadow
+  const heroElement = (await page.$('div.group:has(section)')) || (await page.$('section'));
   if (heroElement) {
     const heroCardPath = path.join(ARTIFACT_DIR, 'hero_greeting_card_closeup.png');
     await heroElement.screenshot({ path: heroCardPath });
@@ -64,15 +64,23 @@ async function capture() {
     }
   }
 
-  // 7. Light Mode check
+  // 7. Light Mode check (where user uploaded their screenshot)
   await page.evaluate(() => {
-    localStorage.setItem('theme', 'light');
+    localStorage.setItem('bastion_theme', 'light');
     document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
   });
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 800));
   const overviewLightPath = path.join(ARTIFACT_DIR, 'hero_greeting_card_polished_light.png');
   await page.screenshot({ path: overviewLightPath, fullPage: false });
   console.log(`Saved: ${overviewLightPath}`);
+
+  const lightHeroElement = (await page.$('div.group:has(section)')) || (await page.$('section'));
+  if (lightHeroElement) {
+    const lightHeroCardPath = path.join(ARTIFACT_DIR, 'hero_glowing_border_light.png');
+    await lightHeroElement.screenshot({ path: lightHeroCardPath });
+    console.log(`Saved: ${lightHeroCardPath}`);
+  }
 
   await browser.close();
   console.log('Screenshots completed successfully.');

@@ -165,7 +165,43 @@ export default function MoveStudioOverviewPage() {
     <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
       {/* Signature Hero Card with Embedded Search & Voice Composer */}
       {dashboardPrefs.sections.heroComposer && (
-        <section className="rounded-3xl p-6 sm:p-8 lg:p-9 shadow-xl relative overflow-hidden backdrop-blur-2xl bg-white/95 dark:bg-[#0B101B]/95 border border-slate-200/80 dark:border-slate-800/80 transition-all duration-300">
+        <div className="relative group">
+          {/* 1. Ambient Diffused Back Shadow / Glow Card */}
+          <div 
+            className="absolute -inset-1 sm:-inset-1.5 rounded-[32px] blur-2xl opacity-65 dark:opacity-45 transition-all duration-700 pointer-events-none animate-pulse-slow"
+            style={{
+              background: `radial-gradient(ellipse at 20% 50%, ${primaryCol}60 0%, transparent 60%), radial-gradient(ellipse at 80% 50%, ${dashboardPrefs.accentColor}50 0%, transparent 60%), linear-gradient(135deg, ${primaryCol}40 0%, #3B82F635 30%, #06B6D430 60%, ${dashboardPrefs.accentColor}40 100%)`
+            }}
+          />
+
+          {/* 2. Glowing Popping Gradient Motion Border Frame */}
+          <div 
+            className="relative p-[2px] rounded-[30px] overflow-hidden shadow-2xl transition-all duration-300"
+            style={{
+              background: `linear-gradient(115deg, ${primaryCol}, #3B82F6, #06B6D4, #10B981, #F59E0B, #EC4899, ${primaryCol})`
+            }}
+          >
+            {/* Continuous Motion Layer for the Gradient Border */}
+            <div 
+              className="absolute inset-0 animate-gradient-border pointer-events-none"
+              style={{
+                background: `linear-gradient(115deg, ${primaryCol}, #3B82F6, #06B6D4, #10B981, #F59E0B, #EC4899, ${primaryCol})`,
+                backgroundSize: '300% 300%'
+              }}
+            />
+
+            {/* Rotating Conic Light Sheen Traveling Around the Border Perimeter */}
+            <div className="absolute inset-[-150%] pointer-events-none opacity-50 mix-blend-overlay">
+              <div 
+                className="w-full h-full animate-border-spin"
+                style={{
+                  background: 'conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 270deg, rgba(255, 255, 255, 0.95) 315deg, transparent 360deg)'
+                }}
+              />
+            </div>
+
+            {/* 3. Hero Card Content Surface */}
+            <section className="rounded-[28px] p-6 sm:p-8 lg:p-9 relative overflow-hidden backdrop-blur-2xl bg-white/95 dark:bg-[#0B101B]/95 transition-all duration-300">
           {/* Animated Aurora Glow Orbs */}
           <div 
             className="absolute -top-28 -right-28 w-96 h-96 rounded-full blur-3xl pointer-events-none animate-pulse-slow"
@@ -367,7 +403,9 @@ export default function MoveStudioOverviewPage() {
               </button>
             </div>
           </div>
-        </section>
+            </section>
+          </div>
+        </div>
       )}
 
       {/* 3. UPGRADED RECHARTS VISUAL EXECUTIVE ANALYTICS DASHBOARD */}
