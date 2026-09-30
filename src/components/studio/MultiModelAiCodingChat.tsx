@@ -22,10 +22,12 @@ import {
   Trash2,
   Undo2,
   Code2,
-  CheckCheck
+  CheckCheck,
+  Moon
 } from 'lucide-react';
 import type { SectionInstance } from '@/lib/studio/types';
 import { getStoredApiKeys, StoredApiKeys } from './ApiKeysTab';
+import { repairAndExtractChanges, ParsedAiChanges } from '@/lib/studio/aiJsonRepair';
 
 export interface MultiModelAiCodingChatProps {
   section: SectionInstance | null | undefined;
@@ -221,6 +223,7 @@ const MODEL_OPTIONS = [
 ];
 
 const QUICK_PROMPTS = [
+  { label: '🌓 Dark Mode', prompt: 'Convert this block to an ultra-modern dark theme with translucent glass background (rgba(5, 8, 15, 0.85)), high-contrast crisp text (#F8FAFC), subtle white borders, and luminous accent lines.' },
   { label: '✨ Polish Copy', prompt: 'Polish the headline, subtitle, and body copy to make it punchy, executive, and investor-ready.' },
   { label: '💎 Glassmorphism & Depth', prompt: 'Upgrade the section styles with a modern dark glassmorphic gradient, sleek border contrast, and luxury gold/sky accent.' },
   { label: '📱 Perfect Mobile Spacing', prompt: 'Optimize the layout hierarchy, padding, and text readability for flawless mobile and tablet viewing.' },
@@ -241,6 +244,7 @@ export function MultiModelAiCodingChat({
   const [inputPrompt, setInputPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
   const [storedKeys, setStoredKeys] = useState<StoredApiKeys>({});
   const [autoApply, setAutoApply] = useState<boolean>(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -258,7 +262,19 @@ export function MultiModelAiCodingChat({
       const savedChat = localStorage.getItem(storageKey);
       if (savedChat) {
         const parsed = JSON.parse(savedChat);
-        if (Array.isArray(parsed)) setMessages(parsed);
+        if (Array.isArray(parsed)) {
+          // Re-hydrate and repair any assistant messages that might have unparsed or truncated JSON
+          const healed = parsed.map((m: ChatMessage) => {
+            if (m.role === 'assistant' && (!m.parsedChanges || (!m.parsedChanges.props && !m.parsedChanges.styles)) && m.content) {
+              const repaired = repairAndExtractChanges(m.content);
+              if (repaired) {
+                return { ...m, parsedChanges: repaired };
+              }
+            }
+            return m;
+          });
+          setMessages(healed);
+        }
       }
     } catch (e) {
       console.warn('Could not load chat history from localStorage', e);
@@ -307,6 +323,24 @@ export function MultiModelAiCodingChat({
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleApplyDarkPreset = () => {
+    if (!section) return;
+    const darkStyles = {
+      theme: 'dark',
+      backgroundType: 'solid',
+      backgroundColor: 'rgba(5, 8, 15, 0.85)',
+      textColor: '#F8FAFC',
+      headingColor: '#FFFFFF',
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      backdropBlur: '16px'
+    };
+    if (onApplyMultipleProps) {
+      onApplyMultipleProps({}, darkStyles);
+    }
+    setAppliedNotice(`✓ Applied Dark Mode glassmorphic theme to ${section?.componentId.toUpperCase()}!`);
+    setTimeout(() => setAppliedNotice(null), 4000);
   };
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -363,10 +397,16 @@ export function MultiModelAiCodingChat({
         return;
       }
 
+      // Recover changes using client-side repair engine if needed
+      let parsedChanges = data.parsedChanges;
+      if ((!parsedChanges || (!parsedChanges.props && !parsedChanges.styles)) && data.replyText) {
+        parsedChanges = repairAndExtractChanges(data.replyText);
+      }
+
       let wasAutoApplied = false;
       let snapshot: any = null;
 
-      if (data.parsedChanges && (data.parsedChanges.props || data.parsedChanges.styles) && section) {
+      if (parsedChanges && (parsedChanges.props || parsedChanges.styles) && section) {
         snapshot = {
           sectionId: section.id,
           props: JSON.parse(JSON.stringify(section.props || {})),
@@ -375,13 +415,15 @@ export function MultiModelAiCodingChat({
 
         if (autoApply) {
           if (onApplyMultipleProps) {
-            onApplyMultipleProps(data.parsedChanges.props || {}, data.parsedChanges.styles || {});
-          } else if (data.parsedChanges.props) {
-            Object.entries(data.parsedChanges.props).forEach(([field, val]) => {
+            onApplyMultipleProps(parsedChanges.props || {}, parsedChanges.styles || {});
+          } else if (parsedChanges.props) {
+            Object.entries(parsedChanges.props).forEach(([field, val]) => {
               onApplyField(field, val);
             });
           }
           wasAutoApplied = true;
+          setAppliedNotice(`✓ Auto-applied updates to ${section?.props?.title || section?.componentId.toUpperCase()}!`);
+          setTimeout(() => setAppliedNotice(null), 4000);
         }
       }
 
@@ -393,7 +435,7 @@ export function MultiModelAiCodingChat({
         provider: selectedModel.badge,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         targetSectionTitle: section?.props?.title || section?.componentId,
-        parsedChanges: data.parsedChanges || undefined,
+        parsedChanges: parsedChanges || undefined,
         previousSnapshot: snapshot,
         applied: wasAutoApplied
       };
@@ -423,6 +465,9 @@ export function MultiModelAiCodingChat({
       });
     }
 
+    setAppliedNotice(`✓ Successfully applied updates to ${section?.props?.title || section?.componentId.toUpperCase()}!`);
+    setTimeout(() => setAppliedNotice(null), 4000);
+
     setMessages(prev =>
       prev.map((m, idx) => (idx === msgIndex ? { ...m, applied: true, previousSnapshot: snapshot } : m))
     );
@@ -435,6 +480,9 @@ export function MultiModelAiCodingChat({
     if (onApplyMultipleProps) {
       onApplyMultipleProps(msg.previousSnapshot.props || {}, msg.previousSnapshot.styles || {});
     }
+
+    setAppliedNotice(`↺ Reverted changes on ${section?.props?.title || section?.componentId.toUpperCase()}`);
+    setTimeout(() => setAppliedNotice(null), 4000);
 
     setMessages(prev =>
       prev.map((m, idx) => (idx === msgIndex ? { ...m, applied: false } : m))
@@ -572,6 +620,14 @@ export function MultiModelAiCodingChat({
         ref={chatScrollRef}
         className="flex-1 overflow-y-auto p-3 space-y-3 bg-[#0A0D14]/70"
       >
+        {/* Real-time Confirmation Notice */}
+        {appliedNotice && (
+          <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs flex items-center space-x-2 animate-in fade-in duration-200 sticky top-0 z-20 shadow-md">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="font-semibold">{appliedNotice}</span>
+          </div>
+        )}
+
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shadow-inner">
@@ -634,83 +690,148 @@ export function MultiModelAiCodingChat({
                     : 'bg-[#141C2A] text-slate-200 border border-[#232F42] rounded-tl-xs text-left shadow-xs'
                 }`}
               >
-                {/* Clean reply text without raw json block if parsed */}
-                <div className="whitespace-pre-wrap">
-                  {msg.content.replace(/```(?:json)?[\s\S]*?```/g, '').trim()}
-                </div>
+                {/* Clean prose presentation */}
+                {(() => {
+                  if (msg.role === 'user') {
+                    return <div className="whitespace-pre-wrap">{msg.content}</div>;
+                  }
+
+                  let prose = msg.content
+                    .replace(/```(?:json)?[\s\S]*?```/g, '')
+                    .replace(/```(?:json)?[\s\S]*$/g, '')
+                    .replace(/\{\s*"props"[\s\S]*$/g, '')
+                    .replace(/^"props"[\s\S]*$/gm, '')
+                    .replace(/^"styles"[\s\S]*$/gm, '')
+                    .trim();
+
+                  if (!prose) {
+                    prose = msg.parsedChanges?.summary || '✨ Synthesized design, layout, and styling specifications.';
+                  }
+
+                  return (
+                    <div className="whitespace-pre-wrap leading-relaxed">
+                      {prose}
+                    </div>
+                  );
+                })()}
 
                 {/* Structured Diff Card & Apply / Revert Actions */}
-                {msg.parsedChanges && (
-                  <div className="mt-3 pt-3 border-t border-[#232F42] space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center space-x-1">
-                        <Zap className="w-3 h-3" />
-                        <span>Proposed Canvas Changes</span>
-                      </span>
-                      {msg.applied ? (
+                {(() => {
+                  const effectiveChanges = msg.parsedChanges || (msg.role === 'assistant' ? repairAndExtractChanges(msg.content) : null);
+                  if (!effectiveChanges) {
+                    if (msg.role === 'assistant') {
+                      return (
+                        <div className="mt-2.5 pt-2 border-t border-[#232F42] flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400">Quick styling:</span>
+                          <button
+                            type="button"
+                            onClick={handleApplyDarkPreset}
+                            className="text-[10px] px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold flex items-center space-x-1 cursor-pointer transition shadow-xs"
+                          >
+                            <Moon className="w-3 h-3" />
+                            <span>Apply Dark Mode Preset</span>
+                          </button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }
+
+                  const isDarkTheme = Boolean(
+                    effectiveChanges.styles?.theme === 'dark' ||
+                    effectiveChanges.styles?.backgroundColor?.includes('5, 8, 15') ||
+                    effectiveChanges.styles?.backgroundColor === '#0A0D14'
+                  );
+
+                  return (
+                    <div className="mt-3 pt-3 border-t border-[#232F42] space-y-2.5">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-1.5">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
-                            <CheckCheck className="w-3 h-3 text-emerald-400" />
-                            <span>Applied to Canvas</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center space-x-1">
+                            <Zap className="w-3 h-3" />
+                            <span>Proposed Canvas Changes</span>
                           </span>
-                          {msg.previousSnapshot && (
-                            <button
-                              type="button"
-                              onClick={() => handleRevertChanges(idx)}
-                              title="Revert to prior snapshot"
-                              className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center space-x-1 cursor-pointer"
-                            >
-                              <Undo2 className="w-2.5 h-2.5" />
-                              <span>Revert</span>
-                            </button>
+                          {isDarkTheme && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center space-x-1">
+                              <Moon className="w-2.5 h-2.5" />
+                              <span>Dark Theme</span>
+                            </span>
                           )}
                         </div>
-                      ) : null}
-                    </div>
-
-                    {msg.parsedChanges.summary && (
-                      <div className="text-[11px] text-slate-300 italic bg-[#0A0D14] px-2.5 py-1.5 rounded-lg border border-[#1E293B]">
-                        &ldquo;{msg.parsedChanges.summary}&rdquo;
-                      </div>
-                    )}
-
-                    {/* Preview of changed fields */}
-                    <div className="space-y-1.5 bg-[#0A0D14] p-2.5 rounded-xl border border-[#1E293B] text-[11px]">
-                      {msg.parsedChanges.props &&
-                        Object.entries(msg.parsedChanges.props).map(([k, v]) => (
-                          <div key={k} className="flex items-start space-x-2">
-                            <span className="font-mono text-sky-400 shrink-0 font-semibold">{k}:</span>
-                            <span className="text-slate-200 truncate">
-                              {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                        {msg.applied ? (
+                          <div className="flex items-center space-x-1.5">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+                              <CheckCheck className="w-3 h-3 text-emerald-400" />
+                              <span>Applied to Canvas</span>
                             </span>
+                            {msg.previousSnapshot && (
+                              <button
+                                type="button"
+                                onClick={() => handleRevertChanges(idx)}
+                                title="Revert to prior snapshot"
+                                className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center space-x-1 cursor-pointer"
+                              >
+                                <Undo2 className="w-2.5 h-2.5" />
+                                <span>Revert</span>
+                              </button>
+                            )}
                           </div>
-                        ))}
-                      {msg.parsedChanges.styles && (
-                        <div className="pt-1.5 border-t border-slate-800 space-y-1">
-                          <span className="font-mono text-purple-400 font-semibold block text-[10px]">styles:</span>
-                          {Object.entries(msg.parsedChanges.styles).map(([sk, sv]) => (
-                            <div key={sk} className="flex items-center space-x-2 text-[10px] font-mono text-purple-300">
-                              <span className="text-slate-400">{sk}:</span>
-                              <span>{String(sv)}</span>
-                            </div>
-                          ))}
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleApplyChanges(idx, effectiveChanges)}
+                            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-[11px] shadow-sm flex items-center space-x-1.5 transition cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>✓ Apply to Canvas</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {effectiveChanges.summary && (
+                        <div className="text-[11px] text-slate-300 italic bg-[#0A0D14] px-2.5 py-1.5 rounded-lg border border-[#1E293B]">
+                          &ldquo;{effectiveChanges.summary}&rdquo;
                         </div>
                       )}
-                    </div>
 
-                    {/* 1-Click Apply to Canvas Button */}
-                    {!msg.applied && (
-                      <button
-                        type="button"
-                        onClick={() => handleApplyChanges(idx, msg.parsedChanges)}
-                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-md flex items-center justify-center space-x-2 transition cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>✓ Apply Changes to Canvas</span>
-                      </button>
-                    )}
-                  </div>
-                )}
+                      {/* Preview of changed fields (compact scrollable box) */}
+                      <div className="space-y-1.5 bg-[#0A0D14] p-2.5 rounded-xl border border-[#1E293B] text-[11px] max-h-44 overflow-y-auto">
+                        {effectiveChanges.props &&
+                          Object.entries(effectiveChanges.props).map(([k, v]) => (
+                            <div key={k} className="flex items-start space-x-2">
+                              <span className="font-mono text-sky-400 shrink-0 font-semibold">{k}:</span>
+                              <span className="text-slate-200 truncate">
+                                {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                              </span>
+                            </div>
+                          ))}
+                        {effectiveChanges.styles && (
+                          <div className="pt-1.5 border-t border-slate-800 space-y-1">
+                            <span className="font-mono text-purple-400 font-semibold block text-[10px]">styles:</span>
+                            {Object.entries(effectiveChanges.styles).map(([sk, sv]) => (
+                              <div key={sk} className="flex items-center space-x-2 text-[10px] font-mono text-purple-300">
+                                <span className="text-slate-400">{sk}:</span>
+                                <span>{String(sv)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bottom Full-width Apply Button if not yet applied */}
+                      {!msg.applied && (
+                        <button
+                          type="button"
+                          onClick={() => handleApplyChanges(idx, effectiveChanges)}
+                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-md flex items-center justify-center space-x-2 transition cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>✓ Apply Changes to Canvas</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ))

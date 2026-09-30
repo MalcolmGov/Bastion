@@ -188,6 +188,11 @@ export interface SectionStyles {
   borderTop?: boolean;
   borderBottom?: boolean;
   borderColor?: string;
+  theme?: 'dark' | 'light';
+  backdropBlur?: string;
+  backdropSaturate?: string;
+  bottomAccentLine?: string;
+  brandTextColor?: string;
 }
 
 export interface SectionInstance {

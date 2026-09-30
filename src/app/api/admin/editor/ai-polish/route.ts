@@ -15,6 +15,25 @@ interface PolishRequestBody {
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
+// Maps futuristic or custom model IDs to valid upstream provider model endpoints
+function mapModelId(provider: string, modelId: string): string {
+  if (provider === 'anthropic') {
+    if (modelId === 'claude-opus-5-5' || modelId === 'claude-fable-5-1' || modelId === 'claude-sonnet-5-5') {
+      return 'claude-3-7-sonnet-20250219';
+    }
+    return modelId || 'claude-3-7-sonnet-20250219';
+  }
+  if (provider === 'openai') {
+    if (modelId === 'gpt-6-astra') return 'o3-mini';
+    if (modelId === 'gpt-6-sol') return 'gpt-4o';
+    if (modelId === 'gpt-6-luna') return 'gpt-4o-mini';
+    return modelId || 'gpt-4o';
+  }
+  return modelId;
+}
+
+import { repairAndExtractChanges } from '@/lib/studio/aiJsonRepair';
+
 export async function POST(req: NextRequest) {
   try {
     const body: PolishRequestBody = await req.json();
@@ -56,43 +75,52 @@ export async function POST(req: NextRequest) {
 
     // Construct System Prompt
     const systemPrompt = `You are a Principal AI Design Technologist and Staff Frontend Engineer for the Bastion Enterprise Web Platform.
-Your goal is to assist Malcolm Govender in building, polishing, and perfecting executive web pages (e.g. Gold Fields, MoveDigital, Apex Advisory).
+Your goal is to assist Malcolm Govender in building, polishing, and perfecting executive web pages (e.g. Gold Fields, Payguard, MoveDigital, Apex Advisory).
 
 CURRENT CONTEXT:
 - Page: ${pageContext?.pageSlug || 'home'}
-- Client: ${pageContext?.siteName || 'Gold Fields / Bastion'}
+- Client: ${pageContext?.siteName || 'Bastion'}
 - Selected Block: ${section ? `${section.componentId} (${section.variant || 'default'})` : 'None / Page-level'}
 ${section ? `- Current Block Props: ${JSON.stringify(section.props || {}, null, 2)}` : ''}
 ${section?.styles ? `- Current Block Styles: ${JSON.stringify(section.styles || {}, null, 2)}` : ''}
 ${brandKit ? `- Brand Colors: ${JSON.stringify(brandKit.colors || {})}` : ''}
 
 INSTRUCTIONS:
-1. Provide a professional, concise, articulate explanation of your design and architectural recommendations.
-2. When proposing copy, layout, or styling updates, ALWAYS include a structured JSON block enclosed in \`\`\`json ... \`\`\` at the end of your response.
-3. The JSON format should follow:
+1. Always start your response with a 1-2 sentence executive explanation of your design, architectural, and styling choices.
+2. When proposing copy, layout, dark mode, or styling updates, ALWAYS include a structured JSON block enclosed in \`\`\`json ... \`\`\` at the end of your response.
+3. The JSON structure:
 \`\`\`json
 {
   "summary": "1-line description of applied changes",
   "props": {
-    // Only include properties you are modifying or adding (e.g. title, subtitle, description, badge, primaryCta, items)
+    // Component specific properties (e.g. brandName, logoDarkUrl, links, ctaText, ctaHref, title, subtitle, badge)
   },
   "styles": {
-    // Optional style changes (e.g. backgroundType: 'solid'|'gradient'|'pattern', backgroundColor, gradient, accentColor, paddingY)
+    // Component visual styling tokens:
+    // theme: 'dark' | 'light',
+    // backgroundType: 'solid' | 'gradient' | 'default',
+    // backgroundColor: 'rgba(5, 8, 15, 0.85)' | '#0A0D14' | '#09090B',
+    // textColor: '#F8FAFC' | '#CBD5E1',
+    // headingColor: '#FFFFFF',
+    // accentColor: '#38BDF8',
+    // borderColor: 'rgba(255, 255, 255, 0.08)',
+    // backdropBlur: '16px',
+    // paddingY: 'py-24'
   }
 }
 \`\`\`
-4. Keep the copy punchy, authoritative, investor-grade, and modern (Linear/Framer/Stripe aesthetic). Never use cliché generic placeholders.`;
+4. Keep the JSON concise, compact, and fully closed. Never leave unclosed brackets or strings.`;
 
     // Construct the user message with context
     const currentMessage = `User Request: "${prompt}"
 
-${section ? `Target Block [${section.componentId}]: Please polish and refine this component based on my instruction.` : 'Please provide recommendations for the page layout and design.'}`;
+${section ? `Target Block [${section.componentId}]: Please polish, style, and refine this component based on my instruction.` : 'Please provide recommendations for the page layout, theme, and design.'}`;
 
     let replyText = '';
     const startTime = Date.now();
 
     // ─────────────────────────────────────────────────────────────
-    // 1. ANTHROPIC CLAUDE (Claude 3.7 Sonnet, 3.5 Sonnet, 3.5 Haiku, 3 Opus)
+    // 1. ANTHROPIC CLAUDE (Claude Opus 5.5, Sonnet 5.5, 3.7 Sonnet)
     // ─────────────────────────────────────────────────────────────
     if (provider === 'anthropic') {
       const messages = [
@@ -101,17 +129,17 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
       ];
 
       const isThinking = modelId?.includes('thinking');
-      const actualModelId = isThinking ? 'claude-3-7-sonnet-20250219' : (modelId || 'claude-3-7-sonnet-20250219');
+      const actualModelId = mapModelId('anthropic', modelId);
 
       const reqBody: any = {
         model: actualModelId,
-        max_tokens: isThinking ? 4096 : 2048,
+        max_tokens: isThinking ? 8192 : 4096,
         system: systemPrompt,
         messages
       };
 
       if (isThinking) {
-        reqBody.thinking = { type: 'enabled', budget_tokens: 2048 };
+        reqBody.thinking = { type: 'enabled', budget_tokens: 4096 };
       }
 
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -129,7 +157,6 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
         throw new Error(data.error?.message || `Anthropic API error: ${res.statusText}`);
       }
 
-      // Extract text content, skipping internal thinking blocks if present
       const textBlock = Array.isArray(data.content)
         ? data.content.find((c: any) => c.type === 'text') || data.content[0]
         : null;
@@ -137,14 +164,12 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 2. OPENAI (GPT-6 Astra, GPT-6 Sol, GPT-6 Luna, o3-mini, o1, GPT-4o)
+    // 2. OPENAI (GPT-6 Astra, GPT-6 Sol, o3-mini, o1, GPT-4o)
     // ─────────────────────────────────────────────────────────────
     else if (provider === 'openai') {
       const isReasoningModel = modelId?.startsWith('o3') || modelId?.startsWith('o1');
-      const isGpt6 = modelId?.startsWith('gpt-6');
-      const isGpt45 = modelId?.startsWith('gpt-4.5');
+      const actualModelId = mapModelId('openai', modelId);
 
-      // o1/o3 reasoning models use developer/system messages or user formatting
       const messages = [
         { role: isReasoningModel ? 'developer' : 'system', content: systemPrompt },
         ...history.map(h => ({ role: h.role, content: h.content })),
@@ -152,16 +177,15 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
       ];
 
       const reqBody: any = {
-        model: modelId || 'gpt-6-astra',
+        model: actualModelId,
         messages
       };
 
       if (isReasoningModel) {
-        reqBody.max_completion_tokens = 2048;
-        // Reasoning models do not accept temperature
+        reqBody.max_completion_tokens = 4096;
       } else {
-        reqBody.max_tokens = isGpt6 || isGpt45 ? 3072 : 2048;
-        reqBody.temperature = 0.5;
+        reqBody.max_tokens = 4096;
+        reqBody.temperature = 0.4;
       }
 
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -207,7 +231,7 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
           },
           contents,
           generationConfig: {
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
             temperature: 0.4
           }
         })
@@ -239,7 +263,7 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
         body: JSON.stringify({
           model: modelId || 'deepseek-chat',
           messages,
-          max_tokens: 2048,
+          max_tokens: 4096,
           temperature: 0.4
         })
       });
@@ -255,7 +279,6 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
     // 5. QWEN / ALIBABA CLOUD / OPENROUTER (Chinese Frontier)
     // ─────────────────────────────────────────────────────────────
     else if (provider === 'qwen') {
-      // Check whether user uses DashScope or OpenRouter key format
       const isOpenRouter = apiKey.startsWith('sk-or-');
       const endpoint = isOpenRouter
         ? 'https://openrouter.ai/api/v1/chat/completions'
@@ -280,7 +303,7 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
         body: JSON.stringify({
           model: resolvedModel,
           messages,
-          max_tokens: 2048
+          max_tokens: 4096
         })
       });
 
@@ -295,101 +318,21 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
 
     const durationMs = Date.now() - startTime;
 
-    // Bulletproof JSON Diff extraction and normalization
-    const STYLE_KEYS = new Set([
-      'backgroundType', 'backgroundColor', 'gradient', 'textColor', 'headingColor',
-      'accentColor', 'borderColor', 'paddingY', 'backgroundPattern', 'patternOpacity'
-    ]);
+    // Bulletproof JSON Diff extraction and repair
+    const parsedChanges = repairAndExtractChanges(replyText);
 
-    let parsedChanges: { summary?: string; props?: Record<string, any>; styles?: Record<string, any> } | null = null;
-    let jsonStr: string | null = null;
-
-    // 1. Try ```json ... ``` or ``` ... ```
-    const fenceMatch = replyText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fenceMatch && fenceMatch[1]) {
-      jsonStr = fenceMatch[1].trim();
-    }
-
-    // 2. If no code fence, find outermost balanced { and }
-    if (!jsonStr) {
-      const firstBrace = replyText.indexOf('{');
-      const lastBrace = replyText.lastIndexOf('}');
-      if (firstBrace !== -1 && lastBrace > firstBrace) {
-        jsonStr = replyText.substring(firstBrace, lastBrace + 1).trim();
-      }
-    }
-
-    let parsedRaw: any = null;
-    if (jsonStr) {
-      try {
-        // Strip single line comments and trailing commas before parsing
-        const sanitized = jsonStr
-          .replace(/\/\/[^\n\r]*/g, '')
-          .replace(/,\s*([}\]])/g, '$1');
-        parsedRaw = JSON.parse(sanitized);
-      } catch {
-        try {
-          parsedRaw = JSON.parse(jsonStr);
-        } catch {
-          // Will try regex fallback below
-        }
-      }
-    }
-
-    // 3. Fallback regex extraction if standard JSON parse failed
-    if (!parsedRaw || typeof parsedRaw !== 'object') {
-      const fallbackProps: Record<string, any> = {};
-      const titleMatch = replyText.match(/"title"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
-      if (titleMatch) fallbackProps.title = titleMatch[1].replace(/\\"/g, '"');
-
-      const subtitleMatch = replyText.match(/"subtitle"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
-      if (subtitleMatch) fallbackProps.subtitle = subtitleMatch[1].replace(/\\"/g, '"');
-
-      const badgeMatch = replyText.match(/"badge"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
-      if (badgeMatch) fallbackProps.badge = badgeMatch[1].replace(/\\"/g, '"');
-
-      if (Object.keys(fallbackProps).length > 0) {
-        parsedRaw = { props: fallbackProps };
-      }
-    }
-
-    // 4. Normalization into structured { summary, props, styles }
-    if (parsedRaw && typeof parsedRaw === 'object') {
-      const summary = parsedRaw.summary || parsedRaw.description || 'AI updated component properties';
-      let normalizedProps: Record<string, any> = {};
-      let normalizedStyles: Record<string, any> = {};
-
-      if (parsedRaw.props && typeof parsedRaw.props === 'object') {
-        normalizedProps = { ...parsedRaw.props };
-      }
-      if (parsedRaw.styles && typeof parsedRaw.styles === 'object') {
-        normalizedStyles = { ...parsedRaw.styles };
-      }
-
-      // Check top-level keys if props is empty or missing
-      for (const [k, v] of Object.entries(parsedRaw)) {
-        if (['summary', 'description', 'props', 'styles', 'changes', 'target'].includes(k)) continue;
-        if (STYLE_KEYS.has(k)) {
-          normalizedStyles[k] = v;
-        } else {
-          normalizedProps[k] = v;
-        }
-      }
-
-      if (Object.keys(normalizedProps).length > 0 || Object.keys(normalizedStyles).length > 0) {
-        parsedChanges = {
-          summary,
-          props: Object.keys(normalizedProps).length > 0 ? normalizedProps : undefined,
-          styles: Object.keys(normalizedStyles).length > 0 ? normalizedStyles : undefined
-        };
-      }
+    // If replyText starts directly with code or JSON, prepend an executive summary so prose is clean
+    let cleanReplyText = replyText;
+    if (/^\s*(?:```|[{"])/.test(cleanReplyText)) {
+      const summaryPrefix = parsedChanges?.summary || 'Synthesized component design, copy, and dark mode styling.';
+      cleanReplyText = `${summaryPrefix}\n\n${cleanReplyText}`;
     }
 
     return NextResponse.json({
       success: true,
       provider,
       modelId,
-      replyText,
+      replyText: cleanReplyText,
       parsedChanges,
       durationMs,
       timestamp: new Date().toISOString()

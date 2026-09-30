@@ -30,33 +30,54 @@ export function StudioHeader({ props, styles, collection = 'contemporary', varia
   const primaryLinks = (props.links && props.links.length > 0 ? props.links : allNavItems).slice(0, 5);
   const overflowLinks = allNavItems.filter(item => !primaryLinks.some(p => p.label.toLowerCase() === item.label.toLowerCase()));
 
-  // Resolve custom styles
+  // Resolve custom styles & dark theme
+  const isDarkMode = Boolean(
+    styles?.theme === 'dark' ||
+    (styles as any)?.theme === 'dark' ||
+    styles?.backgroundColor?.includes('5, 8, 15') ||
+    styles?.backgroundColor === '#0A0D14' ||
+    styles?.backgroundColor === '#09090B'
+  );
+
+  const effectiveBg = styles?.backgroundColor || (isDarkMode ? 'rgba(5, 8, 15, 0.85)' : undefined);
+  const effectiveTextColor = styles?.textColor || (styles as any)?.brandTextColor || (isDarkMode ? '#F8FAFC' : undefined);
+  const effectiveLogo = (isDarkMode && (props as any)?.logoDarkUrl) ? (props as any).logoDarkUrl : props.logoUrl;
+
   const headerStyle: React.CSSProperties = {
-    ...(styles?.backgroundType === 'solid' && styles.backgroundColor ? { backgroundColor: styles.backgroundColor } : {}),
+    ...(effectiveBg ? { backgroundColor: effectiveBg } : {}),
     ...(styles?.backgroundType === 'gradient' && styles.gradient ? { background: styles.gradient } : {}),
-    ...(styles?.textColor ? { color: styles.textColor } : {}),
+    ...(effectiveTextColor ? { color: effectiveTextColor } : {}),
     ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+    ...((styles as any)?.backdropBlur ? { backdropFilter: `blur(${(styles as any).backdropBlur})` } : {}),
   };
 
-  const defaultBgClass = isImmersive
+  const defaultBgClass = isDarkMode
+    ? 'bg-[#05080F]/90 border-b border-white/10 text-white'
+    : isImmersive
     ? 'bg-[#09090B]/90 border-b border-[#27272A] text-white'
     : isEditorial
     ? 'bg-[#F7F6F2]/95 border-b border-[#E2E7EA] text-[#082B49]'
     : 'bg-white/95 border-b border-slate-200 text-slate-900';
 
-  const hasCustomBg = styles?.backgroundType === 'solid' || styles?.backgroundType === 'gradient';
+  const hasCustomBg = Boolean(effectiveBg || styles?.gradient || isDarkMode);
 
   return (
     <header
       style={headerStyle}
-      className={`sticky top-0 z-40 transition-colors backdrop-blur-md ${!hasCustomBg ? defaultBgClass : 'border-b border-white/10'}`}
+      className={`sticky top-0 z-40 transition-colors backdrop-blur-md relative ${!hasCustomBg ? defaultBgClass : 'border-b border-white/10'}`}
     >
+      {(styles as any)?.bottomAccentLine && (
+        <div
+          className="absolute bottom-0 left-0 right-0 h-[1px] pointer-events-none"
+          style={{ background: (styles as any).bottomAccentLine }}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Brand Logo / Title */}
         <div className="flex items-center space-x-3 shrink-0">
-          {props.logoUrl ? (
+          {effectiveLogo ? (
             <img
-              src={props.logoUrl}
+              src={effectiveLogo}
               alt={props.brandName}
               className="h-9 max-h-9 w-auto max-w-[190px] object-contain transition group-hover:opacity-90"
             />
