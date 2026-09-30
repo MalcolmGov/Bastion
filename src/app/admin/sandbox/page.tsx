@@ -18,7 +18,12 @@ import {
   Sparkles,
   FileJson,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  BookOpen,
+  FileCode2,
+  GitBranch,
+  Boxes,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 
@@ -92,10 +97,180 @@ const ENDPOINTS: EndpointOption[] = [
   },
 ];
 
+interface GraphQLPreset {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  query: string;
+  variables?: string;
+}
+
+const GRAPHQL_PRESETS: GraphQLPreset[] = [
+  {
+    id: 'page_tree',
+    name: 'Full Page & Dynamic Zones Tree',
+    description: 'Deep population of dynamic zone component blocks, media assets with focal points, and bundled release info.',
+    category: 'Pages & Blueprints',
+    query: `query GetFullPageTree {
+  page(slug: "home") {
+    id
+    slug
+    title
+    layoutCollection
+    version
+    status
+    locale
+    dynamicZones {
+      id
+      blockType
+      order
+      isEnabled
+      featuredMedia {
+        id
+        filename
+        url
+        mimeType
+        focalPoint {
+          x
+          y
+        }
+      }
+    }
+    featuredMedia {
+      id
+      url
+    }
+    bundledRelease {
+      id
+      name
+      status
+      itemCount
+      items {
+        title
+        action
+      }
+    }
+  }
+}`
+  },
+  {
+    id: 'ops_deep',
+    name: '10 Global Mining Assets with Coordinates',
+    description: 'Attributable gold ounces, environmental infrastructure, and featured imagery.',
+    category: 'Mining & Ops',
+    query: `query GetMiningOperations {
+  operations(limit: 10) {
+    id
+    slug
+    title
+    country
+    status
+    metrics
+    infrastructure
+    featuredMedia {
+      id
+      filename
+      url
+      focalPoint {
+        x
+        y
+      }
+    }
+  }
+}`
+  },
+  {
+    id: 'releases_deep',
+    name: 'Content Releases & Change Bundles',
+    description: 'Scheduled batch publications, staging status, and included item snapshots.',
+    category: 'Governance & Releases',
+    query: `query GetContentReleases {
+  releases {
+    id
+    name
+    status
+    scheduledAt
+    publishedAt
+    itemCount
+    items {
+      id
+      itemType
+      title
+      action
+      changesSummary
+    }
+  }
+}`
+  },
+  {
+    id: 'dam_assets',
+    name: 'Enterprise DAM Assets & Focal Points',
+    description: 'Digital asset management catalog with AI focal point coordinates (x, y) and metadata.',
+    category: 'Media DAM',
+    query: `query GetDigitalAssets {
+  mediaAssets(folderId: "corporate", limit: 15) {
+    id
+    filename
+    url
+    mimeType
+    sizeBytes
+    folderId
+    focalPoint {
+      x
+      y
+    }
+    tags
+  }
+}`
+  },
+  {
+    id: 'investor_reports',
+    name: 'Investor Financial PDF Disclosures',
+    description: 'Annual reports, quarterly financials, and direct JSE/NYSE document links.',
+    category: 'Financial & Regulatory',
+    query: `query GetInvestorReports {
+  reports(limit: 10) {
+    id
+    slug
+    title
+    year
+    category
+    fileUrl
+    fileSize
+    status
+  }
+}`
+  },
+  {
+    id: 'regulatory_news',
+    name: 'Regulatory SENS News & Announcements',
+    description: 'Time-sensitive market releases with categories, summaries, and media.',
+    category: 'Financial & Regulatory',
+    query: `query GetRegulatoryNews {
+  news(limit: 10) {
+    id
+    slug
+    title
+    category
+    summary
+    publishedAt
+    featuredMedia {
+      url
+    }
+  }
+}`
+  }
+];
+
 export default function BastionDeveloperSandboxPage() {
   const { activeClient } = useStudioWorkspace();
   const isGoldFields = activeClient?.id === 'client_goldfields';
 
+  // Mode: REST vs GraphQL
+  const [sandboxMode, setSandboxMode] = useState<'rest' | 'graphql'>('rest');
+
+  // REST State
   const [selectedEndpoint, setSelectedEndpoint] = useState<EndpointOption>(ENDPOINTS[0]);
   const [includeAuth, setIncludeAuth] = useState(true);
   const [apiKey, setApiKey] = useState('sec_goldfields_bastion_2026_live');
@@ -111,10 +286,61 @@ export default function BastionDeveloperSandboxPage() {
   const [activeCodeTab, setActiveCodeTab] = useState<'curl' | 'nextjs' | 'fetch' | 'webhook'>('nextjs');
   const [activeViewTab, setActiveViewTab] = useState<'json' | 'preview' | 'docs'>('json');
 
+  // GraphQL State
+  const [selectedGqlPreset, setSelectedGqlPreset] = useState<GraphQLPreset>(GRAPHQL_PRESETS[0]);
+  const [gqlQuery, setGqlQuery] = useState(GRAPHQL_PRESETS[0].query);
+  const [gqlVariables, setGqlVariables] = useState('{}');
+  const [gqlLoading, setGqlLoading] = useState(false);
+  const [gqlResponse, setGqlResponse] = useState<any>(null);
+  const [gqlStatus, setGqlStatus] = useState<number | null>(null);
+  const [gqlLatencyMs, setGqlLatencyMs] = useState<number | null>(null);
+  const [activeGqlTab, setActiveGqlTab] = useState<'response' | 'schema' | 'snippets'>('response');
+  const [activeGqlClient, setActiveGqlClient] = useState<'apollo' | 'fetch' | 'urql'>('apollo');
+
   // Load initial response on mount
   useEffect(() => {
     executeRequest();
   }, [selectedEndpoint]);
+
+  const executeGraphQLQuery = async () => {
+    setGqlLoading(true);
+    setGqlStatus(null);
+    setGqlLatencyMs(null);
+
+    const startTime = performance.now();
+    try {
+      let parsedVars: any = undefined;
+      try {
+        if (gqlVariables.trim()) parsedVars = JSON.parse(gqlVariables);
+      } catch {
+        // ignore
+      }
+
+      const res = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(includeAuth ? { 'Authorization': `Bearer ${apiKey}` } : {})
+        },
+        body: JSON.stringify({
+          query: gqlQuery,
+          variables: parsedVars
+        })
+      });
+
+      const duration = Math.round(performance.now() - startTime);
+      const data = await res.json();
+      setGqlStatus(res.status);
+      setGqlLatencyMs(duration);
+      setGqlResponse(data);
+    } catch (err: any) {
+      setGqlStatus(500);
+      setGqlLatencyMs(Math.round(performance.now() - startTime));
+      setGqlResponse({ errors: [{ message: err.message }] });
+    } finally {
+      setGqlLoading(false);
+    }
+  };
 
   const executeRequest = async () => {
     setIsLoading(true);
@@ -278,7 +504,72 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true, revalidated: collection });
+} catch (e: any) {
+  return NextResponse.json({ error: e.message }, { status: 500 });
 }`;
+  };
+
+  const getGqlApolloSnippet = () => {
+    return `// Apollo Client Integration (Next.js / React)
+import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
+
+export const apolloClient = new ApolloClient({
+  uri: 'https://cms.goldfields.com/api/graphql',
+  cache: new InMemoryCache(),
+  headers: {
+    Authorization: 'Bearer ${apiKey}',
+  },
+});
+
+export const QUERY = gql\`
+${gqlQuery.trim()}
+\`;
+
+export async function fetchBastionContent() {
+  const { data } = await apolloClient.query({
+    query: QUERY,
+    variables: ${gqlVariables.trim() || '{}'}
+  });
+  return data;
+}`;
+  };
+
+  const getGqlFetchSnippet = () => {
+    return `// Native Fetch GraphQL Request
+export async function fetchGraphQL() {
+  const response = await fetch('https://cms.goldfields.com/api/graphql', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${apiKey}',
+    },
+    body: JSON.stringify({
+      query: \`${gqlQuery.trim()}\`,
+      variables: ${gqlVariables.trim() || '{}'},
+    }),
+    next: { revalidate: 60 } // Next.js ISR cache
+  });
+
+  const { data, errors } = await response.json();
+  if (errors) {
+    console.error('GraphQL Errors:', errors);
+    throw new Error(errors[0].message);
+  }
+  return data;
+}`;
+  };
+
+  const getGqlUrqlSnippet = () => {
+    return `// urql GraphQL Client
+import { createClient, cacheExchange, fetchExchange } from 'urql';
+
+export const client = createClient({
+  url: 'https://cms.goldfields.com/api/graphql',
+  exchanges: [cacheExchange, fetchExchange],
+  fetchOptions: () => ({
+    headers: { authorization: 'Bearer ${apiKey}' },
+  }),
+});`;
   };
 
   return (
@@ -305,18 +596,71 @@ export async function POST(req: NextRequest) {
         <div className="flex items-center space-x-3">
           <button
             type="button"
-            onClick={executeRequest}
-            disabled={isLoading}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center space-x-2 transition"
+            onClick={sandboxMode === 'graphql' ? executeGraphQLQuery : executeRequest}
+            disabled={sandboxMode === 'graphql' ? gqlLoading : isLoading}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg flex items-center space-x-2 transition cursor-pointer ${
+              sandboxMode === 'graphql'
+                ? 'bg-gradient-to-r from-purple-500 to-sky-500 hover:from-purple-400 hover:to-sky-400 text-white shadow-purple-500/20'
+                : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-amber-500/20'
+            }`}
           >
-            {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-black" />}
-            <span>Execute Request</span>
+            {(sandboxMode === 'graphql' ? gqlLoading : isLoading) ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Play className={`w-4 h-4 ${sandboxMode === 'graphql' ? 'fill-white' : 'fill-black'}`} />
+            )}
+            <span>{sandboxMode === 'graphql' ? 'Execute GraphQL' : 'Execute Request'}</span>
           </button>
         </div>
       </div>
 
-      {/* Main Sandbox Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Protocol Switcher: REST vs GraphQL */}
+      <div className="flex items-center justify-between flex-wrap gap-3 p-1.5 rounded-2xl bg-white dark:bg-[#0D121B] border border-slate-200 dark:border-[#1E293B] shadow-xs">
+        <div className="flex items-center space-x-1">
+          <button
+            type="button"
+            onClick={() => setSandboxMode('rest')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition cursor-pointer ${
+              sandboxMode === 'rest'
+                ? 'bg-amber-500/10 text-amber-500 border border-amber-500/30 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Database className="w-4 h-4" />
+            <span>REST Headless Content API</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+              v1.0
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSandboxMode('graphql');
+              if (!gqlResponse) executeGraphQLQuery();
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition cursor-pointer ${
+              sandboxMode === 'graphql'
+                ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Boxes className="w-4 h-4 text-purple-400" />
+            <span>GraphQL Explorer &amp; Relations DSL</span>
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-linear-to-r from-purple-500/20 to-sky-500/20 text-purple-300 border border-purple-500/40">
+              Sanity &amp; Strapi 5 Parity
+            </span>
+          </button>
+        </div>
+
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-mono px-3">
+          {sandboxMode === 'rest' ? 'GET /api/content/[collection]' : 'POST /api/graphql (Deep Population)'}
+        </div>
+      </div>
+
+      {sandboxMode === 'rest' ? (
+        /* Main Sandbox Grid */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Endpoint Picker & Params */}
         <div className="lg:col-span-4 space-y-4">
           <div className="p-4 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-3">
@@ -672,6 +1016,329 @@ export async function POST(req: NextRequest) {
           )}
         </div>
       </div>
+      ) : (
+        /* GraphQL Explorer & Relations Playground (Sanity & Strapi 5 Parity) */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in">
+          {/* Left Column: Preset Selector & Interactive Query Editor (5 cols) */}
+          <div className="lg:col-span-5 space-y-4">
+            {/* 1. Presets Selector */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0D121B] border border-slate-200 dark:border-[#1E293B] space-y-3 shadow-xs">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Boxes className="w-3.5 h-3.5 text-purple-400" />
+                  <span>GraphQL Presets (Deep Population)</span>
+                </span>
+                <span className="text-purple-400 font-mono text-[10px]">{GRAPHQL_PRESETS.length} Presets</span>
+              </div>
+
+              <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+                {GRAPHQL_PRESETS.map((preset) => {
+                  const isSelected = selectedGqlPreset.id === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedGqlPreset(preset);
+                        setGqlQuery(preset.query);
+                        if (preset.variables) setGqlVariables(preset.variables);
+                      }}
+                      className={`w-full p-2.5 rounded-xl text-left border transition flex flex-col space-y-1 cursor-pointer ${
+                        isSelected
+                          ? 'bg-purple-950/40 border-purple-500/60 ring-1 ring-purple-500/40 text-white'
+                          : 'bg-slate-50 dark:bg-[#141C2A] border-slate-200 dark:border-[#232F42] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold truncate">{preset.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">
+                          {preset.category}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 line-clamp-1">{preset.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Interactive Query Editor */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0D121B] border border-slate-200 dark:border-[#1E293B] space-y-3 shadow-xs">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Code2 className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Query Editor (GraphQL SDL)</span>
+                </span>
+                <div className="flex items-center space-x-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      copyToClipboard(gqlQuery, 'gql_query');
+                    }}
+                    className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+                    title="Copy Query"
+                  >
+                    {copiedCode === 'gql_query' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
+                <textarea
+                  value={gqlQuery}
+                  onChange={(e) => setGqlQuery(e.target.value)}
+                  rows={14}
+                  spellCheck={false}
+                  className="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-purple-300 font-mono text-xs leading-relaxed focus:outline-hidden focus:ring-1 focus:ring-purple-500 resize-y"
+                  placeholder="Enter GraphQL query..."
+                />
+              </div>
+
+              {/* Variables */}
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-bold uppercase text-slate-400 flex items-center justify-between">
+                  <span>Variables (JSON)</span>
+                  <span className="text-[9px] text-slate-500 font-mono">Optional</span>
+                </div>
+                <textarea
+                  value={gqlVariables}
+                  onChange={(e) => setGqlVariables(e.target.value)}
+                  rows={2}
+                  spellCheck={false}
+                  className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-mono text-xs focus:outline-hidden focus:ring-1 focus:ring-purple-500 resize-none"
+                  placeholder="{}"
+                />
+              </div>
+
+              {/* Run Query Button */}
+              <button
+                type="button"
+                onClick={executeGraphQLQuery}
+                disabled={gqlLoading}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 via-indigo-500 to-sky-500 hover:from-purple-400 hover:to-sky-400 text-white font-bold text-xs shadow-lg shadow-purple-500/20 flex items-center justify-center space-x-2 transition cursor-pointer disabled:opacity-50"
+              >
+                {gqlLoading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Play className="w-4 h-4 fill-white" />
+                )}
+                <span>Execute GraphQL Query (Deep Population)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Execution Telemetry & Tabs (7 cols) */}
+          <div className="lg:col-span-7 space-y-4">
+            {/* Telemetry Header */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0D121B] border border-slate-200 dark:border-[#1E293B] flex flex-wrap items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center space-x-2 text-xs">
+                <span
+                  className={`px-2 py-0.5 rounded font-mono font-bold ${
+                    gqlStatus === 200
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                  }`}
+                >
+                  {gqlStatus ? `${gqlStatus} OK` : 'Ready'}
+                </span>
+                {gqlLatencyMs !== null && (
+                  <span className="flex items-center space-x-1 text-slate-400 font-mono text-[11px]">
+                    <Zap className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{gqlLatencyMs}ms</span>
+                  </span>
+                )}
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/30 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-sky-400" />
+                  <span>Deep Relations Populated</span>
+                </span>
+              </div>
+
+              {/* Sub-tabs */}
+              <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] gap-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setActiveGqlTab('response')}
+                  className={`px-3 py-1 rounded-lg font-medium transition cursor-pointer flex items-center space-x-1.5 ${
+                    activeGqlTab === 'response'
+                      ? 'bg-white dark:bg-[#1E293B] text-purple-400 shadow-xs font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <FileJson className="w-3.5 h-3.5" />
+                  <span>Response JSON</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveGqlTab('schema')}
+                  className={`px-3 py-1 rounded-lg font-medium transition cursor-pointer flex items-center space-x-1.5 ${
+                    activeGqlTab === 'schema'
+                      ? 'bg-white dark:bg-[#1E293B] text-sky-400 shadow-xs font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Schema Types</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveGqlTab('snippets')}
+                  className={`px-3 py-1 rounded-lg font-medium transition cursor-pointer flex items-center space-x-1.5 ${
+                    activeGqlTab === 'snippets'
+                      ? 'bg-white dark:bg-[#1E293B] text-emerald-400 shadow-xs font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Code2 className="w-3.5 h-3.5" />
+                  <span>Client Code</span>
+                </button>
+              </div>
+            </div>
+
+            {/* TAB 1: RESPONSE JSON */}
+            {activeGqlTab === 'response' && (
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3 min-h-[460px] shadow-inner relative">
+                <div className="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-900 font-mono">
+                  <span>POST /api/graphql &bull; Response Payload</span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(JSON.stringify(gqlResponse, null, 2), 'gql_resp')}
+                    className="flex items-center space-x-1 text-slate-400 hover:text-white transition cursor-pointer"
+                  >
+                    {copiedCode === 'gql_resp' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedCode === 'gql_resp' ? 'Copied' : 'Copy JSON'}</span>
+                  </button>
+                </div>
+
+                <pre className="p-2 font-mono text-[11px] text-emerald-400 leading-relaxed overflow-x-auto max-h-[520px]">
+                  {gqlResponse ? JSON.stringify(gqlResponse, null, 2) : '// Click "Execute GraphQL Query" to run'}
+                </pre>
+              </div>
+            )}
+
+            {/* TAB 2: SCHEMA TYPES DOCUMENTATION */}
+            {activeGqlTab === 'schema' && (
+              <div className="p-5 rounded-2xl bg-white dark:bg-[#0D121B] border border-slate-200 dark:border-[#1E293B] space-y-4 max-h-[580px] overflow-y-auto">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-sky-400" />
+                    <span>Registered GraphQL Schema &amp; Deep Relations</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Strongly typed entities with automated resolution of dynamic zones, DAM focal points, and bundled releases.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 text-xs">
+                  {/* Page Type */}
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-purple-400">type Page</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">Core Content Model</span>
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-300 space-y-1">
+                      <div>id: <span className="text-sky-400">ID!</span>, slug: <span className="text-sky-400">String!</span>, title: <span className="text-sky-400">String!</span></div>
+                      <div>layoutCollection: <span className="text-sky-400">String!</span>, status: <span className="text-sky-400">String!</span>, locale: <span className="text-sky-400">String</span></div>
+                      <div className="text-purple-300 font-bold">dynamicZones: [DynamicZoneBlock!]! <span className="text-[10px] text-slate-500 font-normal">&larr; Deep Relation</span></div>
+                      <div className="text-sky-300 font-bold">featuredMedia: MediaAsset <span className="text-[10px] text-slate-500 font-normal">&larr; Deep Relation</span></div>
+                      <div className="text-emerald-300 font-bold">bundledRelease: ContentRelease <span className="text-[10px] text-slate-500 font-normal">&larr; Deep Relation</span></div>
+                    </div>
+                  </div>
+
+                  {/* DynamicZoneBlock */}
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-sky-400">type DynamicZoneBlock</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-sky-500/10 text-sky-400">Polymorphic Block</span>
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-300 space-y-1">
+                      <div>id: <span className="text-sky-400">ID!</span>, blockType: <span className="text-sky-400">String!</span> (hero, metrics_grid, split_feature, etc.)</div>
+                      <div>order: <span className="text-sky-400">Int!</span>, isEnabled: <span className="text-sky-400">Boolean!</span>, data: <span className="text-sky-400">JSON</span></div>
+                      <div className="text-sky-300 font-bold">featuredMedia: MediaAsset <span className="text-[10px] text-slate-500 font-normal">&larr; Deep Relation (Focal Point)</span></div>
+                    </div>
+                  </div>
+
+                  {/* MediaAsset */}
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-emerald-400">type MediaAsset</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">Enterprise DAM</span>
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-300 space-y-1">
+                      <div>id: <span className="text-sky-400">ID!</span>, filename: <span className="text-sky-400">String!</span>, url: <span className="text-sky-400">String!</span></div>
+                      <div>mimeType: <span className="text-sky-400">String!</span>, sizeBytes: <span className="text-sky-400">Int</span>, folderId: <span className="text-sky-400">String</span></div>
+                      <div className="text-emerald-300 font-bold">focalPoint: FocalPoint &#123; x: Float!, y: Float! &#125;</div>
+                    </div>
+                  </div>
+
+                  {/* ContentRelease */}
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-amber-400">type ContentRelease</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">Release Governance</span>
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-300 space-y-1">
+                      <div>id: <span className="text-sky-400">ID!</span>, name: <span className="text-sky-400">String!</span>, status: <span className="text-sky-400">String!</span></div>
+                      <div>itemCount: <span className="text-sky-400">Int!</span>, scheduledAt: <span className="text-sky-400">String</span>, publishedAt: <span className="text-sky-400">String</span></div>
+                      <div className="text-amber-300 font-bold">items: [ReleaseItem!]! <span className="text-[10px] text-slate-500 font-normal">&larr; Deep Relation</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: CLIENT INTEGRATION CODE */}
+            {activeGqlTab === 'snippets' && (
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#0D121B] border border-slate-200 dark:border-[#1E293B] space-y-4 min-h-[460px]">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1E293B] pb-3 text-xs">
+                  <div className="flex space-x-2">
+                    {[
+                      { id: 'apollo', label: 'Apollo Client (Next.js)' },
+                      { id: 'fetch', label: 'Native Fetch' },
+                      { id: 'urql', label: 'urql GraphQL' }
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveGqlClient(tab.id as any)}
+                        className={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
+                          activeGqlClient === tab.id
+                            ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const snippet =
+                        activeGqlClient === 'apollo'
+                          ? getGqlApolloSnippet()
+                          : activeGqlClient === 'fetch'
+                          ? getGqlFetchSnippet()
+                          : getGqlUrqlSnippet();
+                      copyToClipboard(snippet, 'gql_snippet');
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-white flex items-center space-x-1 font-mono cursor-pointer"
+                  >
+                    {copiedCode === 'gql_snippet' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedCode === 'gql_snippet' ? 'Copied' : 'Copy Code'}</span>
+                  </button>
+                </div>
+
+                <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-sky-300 leading-relaxed overflow-x-auto max-h-[460px]">
+                  {activeGqlClient === 'apollo' && getGqlApolloSnippet()}
+                  {activeGqlClient === 'fetch' && getGqlFetchSnippet()}
+                  {activeGqlClient === 'urql' && getGqlUrqlSnippet()}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

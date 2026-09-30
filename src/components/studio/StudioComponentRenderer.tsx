@@ -1,6 +1,18 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import {
+  Edit3,
+  Sparkles,
+  MoveUp,
+  MoveDown,
+  Copy,
+  Trash2,
+  Sliders,
+  Check,
+  Eye,
+  CornerDownRight
+} from 'lucide-react';
 import type { SectionInstance, DesignCollectionId } from '@/lib/studio/types';
 import { StudioHeader } from './StudioHeader';
 import { StudioHero } from './StudioHero';
@@ -23,7 +35,14 @@ interface RendererProps {
   collection: DesignCollectionId;
   isEditor?: boolean;
   onSelectSection?: (sectionId: string) => void;
+  onSelectField?: (sectionId: string, fieldPath: string) => void;
+  onMoveUp?: (sectionId: string) => void;
+  onMoveDown?: (sectionId: string) => void;
+  onDuplicate?: (sectionId: string) => void;
+  onDelete?: (sectionId: string) => void;
+  onAiPolish?: (sectionId: string) => void;
   isSelected?: boolean;
+  focusedFieldPath?: string | null;
 }
 
 export function StudioComponentRenderer({
@@ -31,8 +50,16 @@ export function StudioComponentRenderer({
   collection,
   isEditor = false,
   onSelectSection,
-  isSelected = false
+  onSelectField,
+  onMoveUp,
+  onMoveDown,
+  onDuplicate,
+  onDelete,
+  onAiPolish,
+  isSelected = false,
+  focusedFieldPath
 }: RendererProps) {
+  const [hoveredField, setHoveredField] = useState<string | null>(null);
   if (!section.visible && !isEditor) {
     return null;
   }
@@ -93,21 +120,143 @@ export function StudioComponentRenderer({
       );
   }
 
+  const handleElementClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelectSection?.(section.id);
+
+    const target = e.target as HTMLElement;
+    const cmsFieldElement = target.closest('[data-cms-field]') as HTMLElement;
+    if (cmsFieldElement) {
+      const field = cmsFieldElement.getAttribute('data-cms-field');
+      if (field) {
+        onSelectField?.(section.id, field);
+        return;
+      }
+    }
+
+    const tag = target.tagName.toLowerCase();
+    if (tag === 'h1' || tag === 'h2' || tag === 'h3' || target.closest('h1, h2, h3')) {
+      onSelectField?.(section.id, 'title');
+    } else if (tag === 'p' || target.closest('p')) {
+      onSelectField?.(section.id, 'subtitle');
+    } else if (tag === 'button' || tag === 'a' || target.closest('button, a')) {
+      onSelectField?.(section.id, 'primaryCta');
+    } else if (tag === 'img' || target.closest('img')) {
+      onSelectField?.(section.id, 'image');
+    } else {
+      onSelectField?.(section.id, 'title');
+    }
+  };
+
   if (isEditor) {
     return (
       <div
-        onClick={() => onSelectSection?.(section.id)}
-        className={`relative transition cursor-pointer ${
+        onClick={handleElementClick}
+        className={`relative transition duration-200 group/block ${
           isSelected
-            ? 'ring-2 ring-sky-500 ring-offset-2 ring-offset-slate-900 z-10'
-            : 'hover:ring-1 hover:ring-sky-300'
+            ? 'ring-2 ring-sky-500 shadow-[0_0_30px_rgba(14,165,233,0.3)] z-10'
+            : 'hover:ring-1 hover:ring-sky-400/80 cursor-pointer'
         } ${!section.visible ? 'opacity-40 grayscale' : ''}`}
       >
+        {/* Floating Executive Quick Action Toolbar on Active Block */}
         {isSelected && (
-          <div className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded bg-sky-600 text-white font-mono text-[10px] uppercase font-bold shadow-md">
-            Active Block: {section.componentId}
+          <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-auto">
+            {/* Left Block Pill */}
+            <div className="flex items-center space-x-2 bg-slate-900/90 text-white px-3 py-1.5 rounded-xl border border-sky-500/50 shadow-xl backdrop-blur-md text-[11px] font-bold">
+              <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+              <span className="uppercase tracking-wider">Block: {section.componentId.replace('_', ' ')}</span>
+              {focusedFieldPath && (
+                <>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-sky-300 font-mono text-[10px] flex items-center gap-1">
+                    <Edit3 className="w-3 h-3 text-sky-400" />
+                    {focusedFieldPath}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Right Quick Actions Bar */}
+            <div className="flex items-center space-x-1 bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-xl backdrop-blur-md text-white text-xs">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAiPolish?.(section.id);
+                }}
+                title="AI Polish Copy with Bastion Content Agent"
+                className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold flex items-center space-x-1 transition shadow-xs cursor-pointer"
+              >
+                <Sparkles className="w-3 h-3 text-indigo-200" />
+                <span>AI Polish</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectField?.(section.id, 'title');
+                }}
+                title="Jump to Inspector"
+                className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold flex items-center space-x-1 transition cursor-pointer"
+              >
+                <Sliders className="w-3 h-3 text-sky-400" />
+                <span className="hidden sm:inline">Inspector</span>
+              </button>
+
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5" />
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveUp?.(section.id);
+                }}
+                title="Move Block Up"
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer"
+              >
+                <MoveUp className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveDown?.(section.id);
+                }}
+                title="Move Block Down"
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer"
+              >
+                <MoveDown className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate?.(section.id);
+                }}
+                title="Duplicate Block"
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(section.id);
+                }}
+                title="Delete Block"
+                className="p-1 rounded-lg hover:bg-rose-900/50 text-slate-400 hover:text-rose-400 transition cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
+
         {renderedContent}
       </div>
     );

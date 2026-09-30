@@ -164,6 +164,7 @@ function VisualWebsiteEditorContent() {
   const [brandKit, setBrandKit] = useState<any>(null);
   const [sections, setSections] = useState<SectionInstance[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [focusedFieldPath, setFocusedFieldPath] = useState<string | null>(null);
 
   // Undo / Redo history
   const [history, setHistory] = useState<SectionInstance[][]>([]);
@@ -317,6 +318,40 @@ function VisualWebsiteEditorContent() {
     if (selectedSectionId === id) {
       setSelectedSectionId(updated[0]?.id || null);
     }
+  };
+
+  const handleMoveUpById = (sectionId: string) => {
+    const idx = sections.findIndex(s => s.id === sectionId);
+    if (idx > 0) handleMoveSection(idx, 'up');
+  };
+
+  const handleMoveDownById = (sectionId: string) => {
+    const idx = sections.findIndex(s => s.id === sectionId);
+    if (idx !== -1 && idx < sections.length - 1) handleMoveSection(idx, 'down');
+  };
+
+  const handleDuplicateById = (sectionId: string) => {
+    const idx = sections.findIndex(s => s.id === sectionId);
+    if (idx !== -1) handleDuplicateSection(idx);
+  };
+
+  const handleSelectField = (sectionId: string, fieldPath: string) => {
+    setSelectedSectionId(sectionId);
+    setFocusedFieldPath(fieldPath);
+    if (!isRightPanelOpen) setIsRightPanelOpen(true);
+    setInspectorTab('content');
+
+    setTimeout(() => {
+      const el = document.getElementById(`field-${fieldPath}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+        el.classList.add('ring-2', 'ring-cyan-400');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-cyan-400');
+        }, 1500);
+      }
+    }, 120);
   };
 
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
@@ -1055,9 +1090,19 @@ function VisualWebsiteEditorContent() {
                 collection={collection}
                 isEditor={true}
                 isSelected={sec.id === selectedSectionId}
+                focusedFieldPath={sec.id === selectedSectionId ? focusedFieldPath : null}
                 onSelectSection={(id) => {
                   setSelectedSectionId(id);
                   if (!isRightPanelOpen) setIsRightPanelOpen(true);
+                }}
+                onSelectField={handleSelectField}
+                onMoveUp={handleMoveUpById}
+                onMoveDown={handleMoveDownById}
+                onDuplicate={handleDuplicateById}
+                onDelete={handleDeleteSection}
+                onAiPolish={(id) => {
+                  setSelectedSectionId(id);
+                  setIsContentAgentModalOpen(true);
                 }}
               />
             ))}
@@ -1201,13 +1246,14 @@ function VisualWebsiteEditorContent() {
                         Badge / Eyebrow Tag
                       </label>
                       <input
+                        id="field-eyebrow"
                         type="text"
                         value={selectedSection.props.eyebrow !== undefined ? (selectedSection.props.eyebrow || '') : (selectedSection.props.badge || '')}
                         onChange={(e) => {
                           if (selectedSection.props.eyebrow !== undefined) handlePropChange('eyebrow', e.target.value);
                           else handlePropChange('badge', e.target.value);
                         }}
-                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500"
+                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500 transition-all"
                       />
                     </div>
                   )}
@@ -1219,10 +1265,11 @@ function VisualWebsiteEditorContent() {
                         Section Headline
                       </label>
                       <textarea
+                        id="field-title"
                         rows={3}
                         value={selectedSection.props.title || ''}
                         onChange={(e) => handlePropChange('title', e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500"
+                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500 transition-all"
                       />
                     </div>
                   )}
@@ -1234,20 +1281,21 @@ function VisualWebsiteEditorContent() {
                         Supporting Subtitle / Paragraph
                       </label>
                       <textarea
+                        id="field-subtitle"
                         rows={3}
                         value={selectedSection.props.subtitle !== undefined ? (selectedSection.props.subtitle || '') : (selectedSection.props.description || '')}
                         onChange={(e) => {
                           if (selectedSection.props.subtitle !== undefined) handlePropChange('subtitle', e.target.value);
                           else handlePropChange('description', e.target.value);
                         }}
-                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500"
+                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500 transition-all"
                       />
                     </div>
                   )}
 
                   {/* Primary CTA */}
                   {selectedSection.props.primaryCta && (
-                    <div className="space-y-2 p-3 rounded-xl bg-[#141C2A] border border-[#232F42]">
+                    <div id="field-primaryCta" className="space-y-2 p-3 rounded-xl bg-[#141C2A] border border-[#232F42] transition-all">
                       <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wide">
                         Primary CTA Button
                       </div>
