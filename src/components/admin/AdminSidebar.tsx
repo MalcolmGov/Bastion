@@ -430,6 +430,23 @@ export function AdminSidebar() {
                     </span>
                   </Link>
 
+                  <Link href="/admin/editor" {...getNavItemProps(pathname.startsWith('/admin/editor'))}>
+                    <div className="flex items-center space-x-2.5">
+                      <Edit3 className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <span>Visual Page Editor</span>
+                    </div>
+                    <span 
+                      style={{
+                        backgroundColor: `${primaryColor}15`,
+                        color: primaryColor,
+                        borderColor: `${primaryColor}30`
+                      }}
+                      className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border"
+                    >
+                      Zones
+                    </span>
+                  </Link>
+
                   <Link href="/admin/blueprints" {...getNavItemProps(pathname.startsWith('/admin/blueprints'))}>
                     <div className="flex items-center space-x-2.5">
                       <Layers className="w-4 h-4 shrink-0 text-indigo-500" />
@@ -503,6 +520,16 @@ export function AdminSidebar() {
                       Live
                     </span>
                   </Link>
+
+                  <a href="/api/mcp" target="_blank" {...getNavItemProps(false)}>
+                    <div className="flex items-center space-x-2.5">
+                      <Bot className="w-4 h-4 shrink-0 text-amber-500" />
+                      <span>MCP Server Hub</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200">
+                      MCP
+                    </span>
+                  </a>
 
                   <Link href="/admin/settings" {...getNavItemProps(pathname.startsWith('/admin/settings'))}>
                     <div className="flex items-center space-x-2.5">
