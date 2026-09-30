@@ -42,7 +42,10 @@ import {
   Maximize2,
   Minimize2,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Globe,
+  CalendarCheck,
+  Check
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
@@ -50,6 +53,7 @@ import { SectionLibraryDrawer } from '@/components/studio/SectionLibraryDrawer';
 import { DynamicZonesBuilder } from '@/components/studio/DynamicZonesBuilder';
 import { InEditorContentAgent } from '@/components/studio/InEditorContentAgent';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE, getLocaleMeta } from '@/lib/i18n/locales';
 import type { SectionInstance, DesignCollectionId, BackgroundPatternType } from '@/lib/studio/types';
 
 const SOLID_SWATCHES = [
@@ -206,6 +210,19 @@ function VisualWebsiteEditorContent() {
   const [customGradDir, setCustomGradDir] = useState('135deg');
   const [customGradFrom, setCustomGradFrom] = useState('#09090B');
   const [customGradTo, setCustomGradTo] = useState('#0F172A');
+
+  // Multi-Locale (i18n) Engine State
+  const [selectedLocale, setSelectedLocale] = useState<string>(DEFAULT_LOCALE);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationNotice, setTranslationNotice] = useState<string | null>(null);
+
+  // Content Releases Bundling State
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
+  const [availableReleases, setAvailableReleases] = useState<any[]>([]);
+  const [selectedReleaseId, setSelectedReleaseId] = useState<string>('');
+  const [releaseNote, setReleaseNote] = useState('');
+  const [isAddingToRelease, setIsAddingToRelease] = useState(false);
+  const [releaseStatusMsg, setReleaseStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Fetch composition from API
   useEffect(() => {
@@ -463,6 +480,117 @@ function VisualWebsiteEditorContent() {
     }
   };
 
+  // Open Content Release Bundling Modal
+  const handleOpenReleaseModal = async () => {
+    setIsReleaseModalOpen(true);
+    setReleaseStatusMsg(null);
+    try {
+      const res = await fetch(`/api/admin/releases?siteId=${siteData?.id || siteSlug}`);
+      if (res.ok) {
+        const data = await res.json();
+        const nonPublished = (data.releases || []).filter((r: any) => r.status !== 'published');
+        setAvailableReleases(nonPublished);
+        if (nonPublished.length > 0 && !selectedReleaseId) {
+          setSelectedReleaseId(nonPublished[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load releases:', err);
+    }
+  };
+
+  // Bundle Page Composition into Content Release
+  const handleConfirmAddToRelease = async () => {
+    if (!selectedReleaseId) {
+      setReleaseStatusMsg({ type: 'error', text: 'Please select a release to bundle into.' });
+      return;
+    }
+
+    try {
+      setIsAddingToRelease(true);
+      setReleaseStatusMsg(null);
+
+      const targetRelease = availableReleases.find(r => r.id === selectedReleaseId);
+      const res = await fetch(`/api/admin/releases/${selectedReleaseId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemType: 'page',
+          itemId: `${siteData?.id || siteSlug}:${activePageSlug}`,
+          title: `${siteData?.name || 'Website'} - ${activePageSlug.toUpperCase()} (${selectedLocale.toUpperCase()})`,
+          action: 'publish',
+          changesSummary: releaseNote.trim() || `Bundled ${sections.length} blocks in ${selectedLocale.toUpperCase()} locale`,
+          snapshot: { sections, locale: selectedLocale }
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add item to release');
+
+      setReleaseStatusMsg({
+        type: 'success',
+        text: `Successfully bundled "${activePageSlug.toUpperCase()}" into ${targetRelease?.name || 'release'}!`
+      });
+      setTimeout(() => {
+        setIsReleaseModalOpen(false);
+        setReleaseStatusMsg(null);
+        setReleaseNote('');
+      }, 1800);
+    } catch (err: any) {
+      setReleaseStatusMsg({ type: 'error', text: err.message });
+    } finally {
+      setIsAddingToRelease(false);
+    }
+  };
+
+  // In-Editor AI Translation for the Selected Section
+  const handleTranslateSection = async (targetLocale: string) => {
+    if (!selectedSection) return;
+
+    try {
+      setIsTranslating(true);
+      setTranslationNotice(null);
+
+      const fieldsToTranslate: Record<string, string> = {};
+      if (selectedSection.props.title) fieldsToTranslate.title = selectedSection.props.title;
+      if (selectedSection.props.subtitle) fieldsToTranslate.subtitle = selectedSection.props.subtitle;
+      if (selectedSection.props.description) fieldsToTranslate.description = selectedSection.props.description;
+      if (selectedSection.props.badge) fieldsToTranslate.badge = selectedSection.props.badge;
+      if (selectedSection.props.eyebrow) fieldsToTranslate.eyebrow = selectedSection.props.eyebrow;
+      if (selectedSection.props.ctaText) fieldsToTranslate.ctaText = selectedSection.props.ctaText;
+
+      const res = await fetch('/api/admin/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetLocale,
+          sourceLocale: 'en',
+          fields: fieldsToTranslate,
+          context: 'Bastion Corporate Website & Disclosures'
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Translation failed');
+
+      if (data.translatedFields) {
+        const updatedProps = { ...selectedSection.props };
+        Object.entries(data.translatedFields).forEach(([k, v]) => {
+          updatedProps[k] = v;
+        });
+
+        const updatedSections = sections.map(s => s.id === selectedSection.id ? { ...s, props: updatedProps } : s);
+        updateSections(updatedSections);
+        setTranslationNotice(`Translated into ${data.targetLocaleName || targetLocale.toUpperCase()}! Financial metrics preserved.`);
+        setTimeout(() => setTranslationNotice(null), 4000);
+      }
+    } catch (err: any) {
+      setTranslationNotice(`Translation error: ${err.message}`);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const handleAIAction = async (action: string) => {
     if (!selectedSection) return;
     setAiLoading(true);
@@ -555,6 +683,27 @@ function VisualWebsiteEditorContent() {
                 }`}
               >
                 {p}
+              </button>
+            ))}
+          </div>
+
+          {/* Multi-Locale (i18n) Switcher */}
+          <div className="hidden xl:flex items-center space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-lg border border-slate-200 dark:border-[#232F42] shrink-0">
+            <Globe className="w-3.5 h-3.5 text-slate-400 ml-1.5 mr-0.5" />
+            {SUPPORTED_LOCALES.map((loc) => (
+              <button
+                key={loc.code}
+                type="button"
+                onClick={() => setSelectedLocale(loc.code)}
+                title={`${loc.name} (${loc.region})`}
+                className={`px-2 py-0.5 rounded text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer ${
+                  selectedLocale === loc.code
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>{loc.flag}</span>
+                <span className="uppercase">{loc.code}</span>
               </button>
             ))}
           </div>
@@ -671,10 +820,20 @@ function VisualWebsiteEditorContent() {
             type="button"
             onClick={handleSaveDraft}
             disabled={isSaving}
-            className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5"
+            className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5 cursor-pointer"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSaving ? 'Saving...' : 'Save Draft'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenReleaseModal}
+            title="Bundle page into scheduled or draft release"
+            className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5 cursor-pointer"
+          >
+            <CalendarCheck className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Add to Release</span>
           </button>
 
           <a
@@ -986,6 +1145,37 @@ function VisualWebsiteEditorContent() {
               {/* TAB 1: CONTENT & COPY */}
               {inspectorTab === 'content' && (
                 <div className="space-y-4 animate-in fade-in duration-150">
+                  {/* AI Translation & Multi-Locale Bar */}
+                  <div className="p-3 rounded-xl bg-gradient-to-r from-purple-950/40 via-sky-950/40 to-slate-900 border border-purple-500/30 flex items-center justify-between gap-2 shadow-xs">
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <Globe className="w-4 h-4 text-purple-400 shrink-0" />
+                      <div className="truncate">
+                        <div className="text-[11px] font-bold text-white flex items-center gap-1.5 truncate">
+                          <span>{getLocaleMeta(selectedLocale).flag} {getLocaleMeta(selectedLocale).name}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          {selectedLocale === 'en' ? 'Preserves AISC, EBITDA & SENS' : `Translating into ${selectedLocale.toUpperCase()}`}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isTranslating}
+                      onClick={() => handleTranslateSection(selectedLocale === 'en' ? 'es' : selectedLocale)}
+                      className="px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold flex items-center space-x-1.5 transition cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
+                    >
+                      <Sparkles className="w-3 h-3 text-purple-200" />
+                      <span>{isTranslating ? 'Translating...' : selectedLocale === 'en' ? 'Translate (ES)' : `Translate (${selectedLocale.toUpperCase()})`}</span>
+                    </button>
+                  </div>
+
+                  {translationNotice && (
+                    <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[11px] font-medium flex items-center space-x-2 animate-in fade-in">
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>{translationNotice}</span>
+                    </div>
+                  )}
+
                   {/* Layout Variant Dropdown */}
                   {registeredComp?.variants && registeredComp.variants.length > 0 && (
                     <div className="space-y-1.5">
@@ -1966,6 +2156,117 @@ function VisualWebsiteEditorContent() {
               onClose={() => setIsContentAgentModalOpen(false)}
               isModal={true}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Add To Release Bundling Modal */}
+      {isReleaseModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#111726] border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 text-white">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <CalendarCheck className="w-5 h-5 text-purple-400" />
+                <h3 className="text-base font-bold">Bundle Page into Content Release</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReleaseModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-white cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Bundle the current <strong className="text-white">{activePageSlug.toUpperCase()}</strong> page layout ({sections.length} blocks, {getLocaleMeta(selectedLocale).name}) into an atomic release for scheduled deployment.
+            </p>
+
+            {releaseStatusMsg && (
+              <div className={`p-3 rounded-xl text-xs flex items-center space-x-2 ${
+                releaseStatusMsg.type === 'success'
+                  ? 'bg-emerald-950/80 border border-emerald-500/40 text-emerald-300'
+                  : 'bg-rose-950/80 border border-rose-500/40 text-rose-300'
+              }`}>
+                {releaseStatusMsg.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                <span>{releaseStatusMsg.text}</span>
+              </div>
+            )}
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Select Target Release
+                </label>
+                {availableReleases.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-[#0A0D14] border border-slate-800 text-slate-400 text-center">
+                    No active draft or scheduled releases found.
+                    <a href="/admin/releases" target="_blank" className="text-purple-400 font-bold ml-1 underline">
+                      Create one in Releases Manager
+                    </a>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedReleaseId}
+                    onChange={(e) => setSelectedReleaseId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#0A0D14] border border-slate-800 text-white focus:outline-none focus:border-purple-500"
+                  >
+                    {availableReleases.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} [{r.status.toUpperCase()}] &bull; {r.itemCount || 0} items bundled
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Revision Summary / Embargo Notes
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Updated executive metrics and multi-lingual banners"
+                  value={releaseNote}
+                  onChange={(e) => setReleaseNote(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-[#0A0D14] border border-slate-800 text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#0A0D14] border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
+                <div className="flex justify-between">
+                  <span>Bundled Page:</span>
+                  <span className="text-white font-mono">{activePageSlug}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Selected Locale:</span>
+                  <span className="text-purple-300 font-semibold">{getLocaleMeta(selectedLocale).flag} {getLocaleMeta(selectedLocale).name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Dynamic Blocks:</span>
+                  <span className="text-white font-mono">{sections.length}</span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsReleaseModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-800 text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isAddingToRelease || availableReleases.length === 0}
+                  onClick={handleConfirmAddToRelease}
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-xs flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  <span>{isAddingToRelease ? 'Bundling...' : 'Bundle Page Into Release'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

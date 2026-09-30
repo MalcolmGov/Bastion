@@ -38,7 +38,8 @@ import {
   SlidersHorizontal,
   FolderOpen,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  CalendarCheck
 } from 'lucide-react';
 
 export function AdminSidebar() {
@@ -480,10 +481,11 @@ export function AdminSidebar() {
               <div>
                 {!isCollapsed && (
                   <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Governance
+                    Governance &amp; Releases
                   </div>
                 )}
                 <div className="space-y-1">
+                  {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'), 'Drops', 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800')}
                   {renderItem('/admin/tasks', 'Approvals & Sign-Off', Send, pathname.startsWith('/admin/tasks'), 'Queue', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                   {renderItem('/admin/users', 'Authorized Editors', Users, pathname.startsWith('/admin/users'))}
                 </div>
@@ -530,10 +532,11 @@ export function AdminSidebar() {
               <div>
                 {!isCollapsed && (
                   <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Governance &amp; Access
+                    Governance &amp; Releases
                   </div>
                 )}
                 <div className="space-y-1">
+                  {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'), 'Drops', 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800')}
                   {renderItem('/admin/tasks', 'Reviews & Publishing', Send, pathname.startsWith('/admin/tasks'), '2', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                   {renderItem('/admin/users', 'Team & Access Control', UserPlus, pathname.startsWith('/admin/users'))}
                 </div>

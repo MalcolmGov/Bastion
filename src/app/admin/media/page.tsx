@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
+import { FocalPointPicker } from '@/components/studio/FocalPointPicker';
 import {
   Image as ImageIcon,
   Search,
@@ -14,12 +15,17 @@ import {
   Shield,
   Layers,
   UploadCloud,
-  X
+  X,
+  Folder,
+  FolderOpen,
+  Target
 } from 'lucide-react';
 
 export default function AdminMediaPage() {
   const { user } = useAdminAuth();
   const [assets, setAssets] = useState<any[]>([]);
+  const [folders, setFolders] = useState<any[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [formatFilter, setFormatFilter] = useState('all');
@@ -30,13 +36,17 @@ export default function AdminMediaPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [uploadAlt, setUploadAlt] = useState('');
+  const [uploadFolder, setUploadFolder] = useState('corporate');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  // Edit state
+  // Edit metadata & focal point state
   const [editAlt, setEditAlt] = useState('');
   const [editCaption, setEditCaption] = useState('');
+  const [editFolderId, setEditFolderId] = useState('corporate');
+  const [editFocalX, setEditFocalX] = useState(0.5);
+  const [editFocalY, setEditFocalY] = useState(0.5);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -45,18 +55,22 @@ export default function AdminMediaPage() {
       const q = new URLSearchParams();
       if (search) q.set('search', search);
       if (formatFilter !== 'all') q.set('mime', formatFilter);
+      if (selectedFolder !== 'all') q.set('folder', selectedFolder);
 
       const res = await fetch(`/api/admin/media?${q.toString()}`);
       if (res.ok) {
         const json = await res.json();
         setAssets(json.assets || []);
+        if (json.folders && json.folders.length > 0) {
+          setFolders(json.folders);
+        }
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [search, formatFilter]);
+  }, [search, formatFilter, selectedFolder]);
 
   useEffect(() => {
     loadAssets();
@@ -66,6 +80,9 @@ export default function AdminMediaPage() {
     setSelectedAsset(asset);
     setEditAlt(asset.alt_text || '');
     setEditCaption(asset.caption || '');
+    setEditFolderId(asset.folder_id || 'corporate');
+    setEditFocalX(typeof asset.focal_x === 'number' ? asset.focal_x : 0.5);
+    setEditFocalY(typeof asset.focal_y === 'number' ? asset.focal_y : 0.5);
     setSaveSuccess(false);
   };
 
@@ -85,13 +102,23 @@ export default function AdminMediaPage() {
         body: JSON.stringify({
           id: selectedAsset.id,
           alt_text: editAlt,
-          caption: editCaption
+          caption: editCaption,
+          folder_id: editFolderId,
+          focal_x: editFocalX,
+          focal_y: editFocalY
         })
       });
 
       if (res.ok) {
         setSaveSuccess(true);
-        setSelectedAsset({ ...selectedAsset, alt_text: editAlt, caption: editCaption });
+        setSelectedAsset({
+          ...selectedAsset,
+          alt_text: editAlt,
+          caption: editCaption,
+          folder_id: editFolderId,
+          focal_x: editFocalX,
+          focal_y: editFocalY
+        });
         loadAssets();
         setTimeout(() => setSaveSuccess(false), 3000);
       }
@@ -113,6 +140,7 @@ export default function AdminMediaPage() {
       const formData = new FormData();
       formData.append('file', fileToUpload);
       if (uploadAlt) formData.append('alt_text', uploadAlt);
+      if (uploadFolder) formData.append('folder_id', uploadFolder);
 
       const res = await fetch('/api/admin/media/upload', {
         method: 'POST',
@@ -146,53 +174,67 @@ export default function AdminMediaPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto select-none">
       {/* Header */}
       <div className="p-6 rounded-2xl bg-[#0B1019] border border-[#1C2638] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 text-xs text-[#C99700] uppercase font-bold tracking-wider mb-1">
             <ImageIcon className="w-4 h-4" />
-            <span>Digital Asset Management &amp; WCAG Compliance</span>
+            <span>Digital Asset Management (DAM) &bull; Focal Point Cropping</span>
           </div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Corporate Media Library</h1>
+          <h1 className="text-xl font-bold text-white tracking-tight">Corporate Media Lake</h1>
           <p className="text-xs text-gray-400 mt-1">
-            High-resolution photography, 3D renders, investor booklets, diagrams, and vector assets with accessibility auditing.
+            Subject-aware hotspot cropping, folder categorization, and automated multi-aspect ratio rendering.
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <div className="text-xs font-mono text-gray-400 bg-[#080D14] border border-[#1E2B3E] px-3.5 py-2 rounded-xl">
-            Cataloged Assets: <span className="text-[#C99700] font-bold">{assets.length}</span>
-          </div>
-
-          <button
-            onClick={() => setShowUpload(!showUpload)}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition shadow-md shadow-[#C99700]/20"
-          >
-            <UploadCloud className="w-4 h-4" />
-            <span>{showUpload ? 'Close Upload' : 'Upload Asset'}</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowUpload(!showUpload)}
+          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition shadow-md shadow-[#C99700]/20 flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
+        >
+          <UploadCloud className="w-4 h-4" />
+          <span>Upload Media Asset</span>
+        </button>
       </div>
 
-      {/* Upload Panel */}
+      {/* Upload Drawer / Form */}
       {showUpload && (
         <form
           onSubmit={handleUploadSubmit}
-          className="p-6 rounded-2xl bg-[#0E1524] border border-[#243754] space-y-4 animate-fadeIn shadow-2xl"
+          className="p-6 rounded-2xl bg-[#0F1726] border border-[#23354E] space-y-4 animate-in fade-in duration-200"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <UploadCloud className="w-4 h-4 text-[#C99700]" />
-              <span className="font-bold text-sm text-white">Upload New Asset (Cloud &amp; Local Auto-Sync)</span>
-            </div>
-            <span className="text-[11px] text-gray-400 font-mono">Vercel Blob / Local Storage</span>
+          <div className="flex items-center justify-between border-b border-[#23354E] pb-3">
+            <span className="font-bold text-sm text-white">Upload New Asset</span>
+            <button
+              type="button"
+              onClick={() => setShowUpload(false)}
+              className="p-1 rounded-lg text-gray-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                Select File (Images, Vectors, or PDF Reports)
+                Target Folder
+              </label>
+              <select
+                value={uploadFolder}
+                onChange={(e) => setUploadFolder(e.target.value)}
+                className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#C99700]"
+              >
+                <option value="corporate">Corporate &amp; Board</option>
+                <option value="operations">Operations &amp; Facilities</option>
+                <option value="sustainability">Sustainability &amp; ESG</option>
+                <option value="brand">Brand DNA &amp; Logos</option>
+                <option value="sens">SENS &amp; Disclosures</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                Select File (JPG, PNG, SVG, PDF)
               </label>
               <input
                 type="file"
@@ -204,7 +246,7 @@ export default function AdminMediaPage() {
 
             <div>
               <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                Initial WCAG Alt Text (Accessibility)
+                Initial Alt Text (WCAG)
               </label>
               <input
                 type="text"
@@ -224,7 +266,7 @@ export default function AdminMediaPage() {
 
           {uploadSuccess && (
             <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs">
-              Asset uploaded and cataloged in Gold Fields Media Library!
+              Asset uploaded and cataloged in Bastion Media Lake!
             </div>
           )}
 
@@ -239,7 +281,7 @@ export default function AdminMediaPage() {
             <button
               type="submit"
               disabled={isUploading || !fileToUpload}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition disabled:opacity-50 cursor-pointer"
             >
               {isUploading ? 'Uploading & Processing...' : 'Upload Asset'}
             </button>
@@ -247,39 +289,83 @@ export default function AdminMediaPage() {
         </form>
       )}
 
-      {/* Filter / Search Bar */}
-      <div className="p-4 rounded-2xl bg-[#0B1019] border border-[#1C2638] flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-gray-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && loadAssets()}
-            placeholder="Search assets by filename or alt text..."
-            className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#C99700]"
-          />
-        </div>
+      {/* DAM Folder Tabs & Search Bar */}
+      <div className="p-4 rounded-2xl bg-[#0B1019] border border-[#1C2638] space-y-3">
+        {/* Folder Navigation Chips */}
+        <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs">
+          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+            <Folder className="w-3.5 h-3.5 text-[#C99700]" />
+            <span>Folders:</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectedFolder('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
+              selectedFolder === 'all'
+                ? 'bg-sky-500 text-white shadow-xs'
+                : 'bg-[#141C2A] text-gray-400 hover:text-white hover:bg-[#1A2536]'
+            }`}
+          >
+            <span>All Assets</span>
+            <span className="text-[10px] opacity-75 font-mono">({assets.length})</span>
+          </button>
 
-        <div className="flex flex-wrap gap-1.5">
           {[
-            { id: 'all', label: 'All Files' },
-            { id: 'image', label: 'Images (JPG/PNG)' },
-            { id: 'svg', label: 'Vectors (SVG)' },
-            { id: 'pdf', label: 'Documents (PDF)' }
-          ].map((f) => (
+            { id: 'corporate', name: 'Corporate & Board', slug: 'corporate' },
+            { id: 'operations', name: 'Operations & Facilities', slug: 'operations' },
+            { id: 'sustainability', name: 'Sustainability & ESG', slug: 'sustainability' },
+            { id: 'brand', name: 'Brand DNA & Logos', slug: 'brand' },
+            { id: 'sens', name: 'SENS & Disclosures', slug: 'sens' }
+          ].map((fld) => (
             <button
-              key={f.id}
-              onClick={() => setFormatFilter(f.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs transition ${
-                formatFilter === f.id
-                  ? 'bg-[#C99700]/20 text-[#E6C657] border border-[#C99700]/40 font-semibold'
-                  : 'bg-[#0E1522] text-gray-400 hover:text-gray-200'
+              key={fld.id}
+              type="button"
+              onClick={() => setSelectedFolder(fld.slug)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
+                selectedFolder === fld.slug
+                  ? 'bg-sky-500 text-white shadow-xs'
+                  : 'bg-[#141C2A] text-gray-400 hover:text-white hover:bg-[#1A2536]'
               }`}
             >
-              {f.label}
+              <span>{fld.name}</span>
             </button>
           ))}
+        </div>
+
+        {/* Filter / Search Bar */}
+        <div className="pt-2 border-t border-[#1C2638] flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && loadAssets()}
+              placeholder="Search assets by filename or alt text..."
+              className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#C99700]"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { id: 'all', label: 'All Formats' },
+              { id: 'image', label: 'Images (JPG/PNG)' },
+              { id: 'svg', label: 'Vectors (SVG)' },
+              { id: 'pdf', label: 'Documents (PDF)' }
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFormatFilter(f.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+                  formatFilter === f.id
+                    ? 'bg-[#C99700]/20 text-[#E6C657] border border-[#C99700]/40 font-semibold'
+                    : 'bg-[#0E1522] text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -288,20 +374,30 @@ export default function AdminMediaPage() {
         {assets.map((asset) => {
           const isPdf = asset.mime_type?.includes('pdf') || asset.filename.endsWith('.pdf');
           const isImage = !isPdf;
+          const fx = Math.round((asset.focal_x ?? 0.5) * 100);
+          const fy = Math.round((asset.focal_y ?? 0.5) * 100);
 
           return (
             <div
               key={asset.id}
               onClick={() => handleSelect(asset)}
-              className="group bg-[#0B1019] border border-[#1C2638] hover:border-[#C99700]/50 rounded-2xl overflow-hidden cursor-pointer transition flex flex-col justify-between"
+              className="group bg-[#0B1019] border border-[#1C2638] hover:border-sky-500/70 rounded-2xl overflow-hidden cursor-pointer transition flex flex-col justify-between"
             >
               <div className="relative aspect-square w-full bg-[#070B12] flex items-center justify-center overflow-hidden">
                 {isImage ? (
-                  <img
-                    src={asset.url}
-                    alt={asset.alt_text || asset.filename}
-                    className="object-cover w-full h-full group-hover:scale-105 transition duration-300"
-                  />
+                  <>
+                    <img
+                      src={asset.url}
+                      alt={asset.alt_text || asset.filename}
+                      className="object-cover w-full h-full group-hover:scale-105 transition duration-300"
+                      style={{ objectPosition: `${fx}% ${fy}%` }}
+                    />
+                    {/* Focal point indicator dot on hover */}
+                    <div
+                      className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full bg-sky-400 ring-2 ring-white opacity-0 group-hover:opacity-100 transition pointer-events-none"
+                      style={{ left: `${fx}%`, top: `${fy}%` }}
+                    />
+                  </>
                 ) : (
                   <div className="flex flex-col items-center justify-center p-4 text-center">
                     <FileText className="w-10 h-10 text-red-400 mb-1" />
@@ -309,18 +405,24 @@ export default function AdminMediaPage() {
                   </div>
                 )}
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
-                  <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/80 text-[#C99700] border border-[#C99700]/30 backdrop-blur-sm">
+                  <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/80 text-sky-300 border border-sky-500/30 backdrop-blur-sm">
                     {asset.mime_type.split('/')[1] || 'asset'}
                   </span>
                 </div>
               </div>
 
               <div className="p-3 border-t border-[#1C2638]">
-                <div className="text-xs font-semibold text-white truncate group-hover:text-[#D4AF37] transition">
+                <div className="text-xs font-semibold text-white truncate group-hover:text-sky-400 transition">
                   {asset.filename}
                 </div>
-                <div className="text-[10px] text-gray-500 font-mono mt-0.5">
-                  {(asset.size_bytes / 1024).toFixed(1)} KB
+                <div className="text-[10px] text-gray-500 font-mono mt-0.5 flex items-center justify-between">
+                  <span>{(asset.size_bytes / 1024).toFixed(1)} KB</span>
+                  {isImage && (
+                    <span className="text-sky-400/80 font-mono text-[9px] flex items-center gap-0.5">
+                      <Target className="w-2.5 h-2.5" />
+                      <span>{fx}:{fy}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -328,70 +430,93 @@ export default function AdminMediaPage() {
         })}
       </div>
 
-      {/* Asset Inspection Modal */}
+      {/* Asset Inspection & Focal Point Modal */}
       {selectedAsset && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0B1019] border border-[#1E2B3E] rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl space-y-4">
+          <div className="bg-[#0B1019] border border-[#1E2B3E] rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl space-y-4">
             {/* Modal Header */}
             <div className="p-4 border-b border-[#1E2B3E] flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <ImageIcon className="w-4 h-4 text-[#C99700]" />
-                <span className="font-bold text-sm text-white">{selectedAsset.filename}</span>
+                <ImageIcon className="w-4 h-4 text-sky-400" />
+                <span className="font-bold text-sm text-white truncate max-w-md">{selectedAsset.filename}</span>
               </div>
               <button
                 onClick={() => setSelectedAsset(null)}
-                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-[#1A2536]"
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-[#1A2536] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              {/* Preview */}
-              <div className="relative rounded-xl overflow-hidden bg-[#070B12] border border-[#1A2536] max-h-72 flex items-center justify-center">
-                {!selectedAsset.mime_type?.includes('pdf') ? (
-                  <img
-                    src={selectedAsset.url}
-                    alt={selectedAsset.alt_text}
-                    className="max-h-72 object-contain"
+            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              {/* Interactive Focal Point Picker for Images */}
+              {!selectedAsset.mime_type?.includes('pdf') ? (
+                <div className="p-4 rounded-xl bg-[#080D14] border border-[#1C2638]">
+                  <FocalPointPicker
+                    imageUrl={selectedAsset.url}
+                    initialX={editFocalX}
+                    initialY={editFocalY}
+                    onChange={(x, y) => {
+                      setEditFocalX(x);
+                      setEditFocalY(y);
+                    }}
                   />
-                ) : (
-                  <div className="py-12 flex flex-col items-center">
-                    <FileText className="w-16 h-16 text-red-400 mb-2" />
-                    <span className="text-sm font-semibold text-white">Document Asset (PDF)</span>
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="py-12 flex flex-col items-center bg-[#070B12] rounded-xl border border-[#1A2536]">
+                  <FileText className="w-16 h-16 text-red-400 mb-2" />
+                  <span className="text-sm font-semibold text-white">Document Asset (PDF)</span>
+                </div>
+              )}
 
-              {/* URL & Quick Copy */}
-              <div>
-                <label className="block text-[11px] uppercase font-bold text-gray-400 mb-1">
-                  Public CDN / Asset URL
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={selectedAsset.url}
-                    className="flex-1 bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs font-mono text-gray-300"
-                  />
-                  <button
-                    onClick={() => handleCopy(selectedAsset.url)}
-                    className="px-3 py-2 rounded-xl bg-[#142033] hover:bg-[#1C2C44] border border-[#22334D] text-xs font-semibold text-[#E6C657] transition flex items-center space-x-1"
+              {/* Folder Assignment & URL */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] uppercase font-bold text-gray-400 mb-1">
+                    Assign to Folder
+                  </label>
+                  <select
+                    value={editFolderId}
+                    onChange={(e) => setEditFolderId(e.target.value)}
+                    className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
                   >
-                    {copiedUrl === selectedAsset.url ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy URL</span>
-                      </>
-                    )}
-                  </button>
+                    <option value="corporate">Corporate &amp; Board</option>
+                    <option value="operations">Operations &amp; Facilities</option>
+                    <option value="sustainability">Sustainability &amp; ESG</option>
+                    <option value="brand">Brand DNA &amp; Logos</option>
+                    <option value="sens">SENS &amp; Disclosures</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] uppercase font-bold text-gray-400 mb-1">
+                    Public CDN Asset URL
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={selectedAsset.url}
+                      className="flex-1 bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs font-mono text-gray-300 truncate"
+                    />
+                    <button
+                      onClick={() => handleCopy(selectedAsset.url)}
+                      className="px-3 py-2 rounded-xl bg-[#142033] hover:bg-[#1C2C44] border border-[#22334D] text-xs font-semibold text-sky-300 transition flex items-center space-x-1 cursor-pointer"
+                    >
+                      {copiedUrl === selectedAsset.url ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -408,7 +533,7 @@ export default function AdminMediaPage() {
                   value={editAlt}
                   onChange={(e) => setEditAlt(e.target.value)}
                   placeholder="Describe image content for accessibility..."
-                  className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#C99700]"
+                  className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500"
                 />
               </div>
 
@@ -421,14 +546,14 @@ export default function AdminMediaPage() {
                   rows={2}
                   value={editCaption}
                   onChange={(e) => setEditCaption(e.target.value)}
-                  className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#C99700] resize-none"
+                  className="w-full bg-[#080D14] border border-[#202C3F] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 resize-none"
                 />
               </div>
 
               {saveSuccess && (
                 <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs flex items-center space-x-1.5">
                   <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Asset metadata updated successfully!</span>
+                  <span>Asset metadata and focal point updated successfully!</span>
                 </div>
               )}
             </div>
@@ -441,16 +566,16 @@ export default function AdminMediaPage() {
                 rel="noreferrer"
                 className="text-xs text-gray-400 hover:text-white flex items-center space-x-1"
               >
-                <span>Open Raw Asset</span>
+                <span>Open Raw File</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
 
               <button
                 onClick={handleSaveMetadata}
                 disabled={isSaving}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B38728] hover:from-[#E5BE48] hover:to-[#C49534] text-black font-semibold text-xs transition shadow-md shadow-[#C99700]/20 disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs transition shadow-md shadow-sky-950/50 disabled:opacity-50 cursor-pointer"
               >
-                {isSaving ? 'Saving...' : 'Update Metadata'}
+                {isSaving ? 'Saving...' : 'Save Changes & Focal Point'}
               </button>
             </div>
           </div>

@@ -4,6 +4,8 @@
  * In-Editor Content Agent transformations, and GitHub integration safety.
  */
 
+export {};
+
 const BASE_URL = 'http://localhost:3010';
 
 interface TestResult {

@@ -68,6 +68,10 @@ export async function ensureDbReady(): Promise<Client> {
         // Run Move Studio multi-tenant migrations and seeds
         const { runMoveStudioMigrations } = await import('@/lib/studio/seedMultiTenant');
         await runMoveStudioMigrations(raw);
+
+        // Run Phase 2 migrations (Content Releases, Media Folders, Translations)
+        const { runPhase2Migrations } = await import('@/lib/db/phase2Migrations');
+        await runPhase2Migrations(raw);
       } catch (err) {
         console.error('[DB] Error inspecting database tables:', err);
         try {
@@ -75,6 +79,8 @@ export async function ensureDbReady(): Promise<Client> {
           await seedEssentialUsers(raw);
           const { runMoveStudioMigrations } = await import('@/lib/studio/seedMultiTenant');
           await runMoveStudioMigrations(raw);
+          const { runPhase2Migrations } = await import('@/lib/db/phase2Migrations');
+          await runPhase2Migrations(raw);
         } catch (innerErr) {
           console.error('[DB] Schema init fallback error:', innerErr);
         }
