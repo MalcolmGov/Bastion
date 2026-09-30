@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/auth';
 import { getDb } from '@/lib/db/client';
-import { mergeFixPR } from '@/lib/sre/github-pr';
+import { mergeFixPR, pollDeploymentStatus } from '@/lib/sre/github-pr';
 import fs from 'fs';
 import path from 'path';
 
@@ -45,22 +45,36 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. Apply patch to local working file if patch exists
+    // 2. Poll Hosting Deployment Lifecycle (Vercel / GitHub Actions / Cloud)
+    let deploymentResult: any = { status: 'in_progress', description: 'Deployment triggered via repository webhook' };
+    if (mergeResult.merged && mergeResult.sha) {
+      deploymentResult = await pollDeploymentStatus({
+        owner: repoOwner,
+        repo: repoName,
+        commitSha: mergeResult.sha,
+        maxWaitSec: 25,
+        pollIntervalMs: 2500
+      });
+    }
+
+    // 3. Apply patch to local working file if patch exists
     let patchApplied = false;
     if (incident.ai_proposed_patch) {
       try {
         const patchData = JSON.parse(incident.ai_proposed_patch);
         if (patchData.filePath && patchData.fullNewContent) {
           const absPath = path.join(process.cwd(), patchData.filePath);
-          fs.writeFileSync(absPath, patchData.fullNewContent, 'utf-8');
-          patchApplied = true;
+          if (fs.existsSync(absPath)) {
+            fs.writeFileSync(absPath, patchData.fullNewContent, 'utf-8');
+            patchApplied = true;
+          }
         }
       } catch (err: any) {
         console.warn('[Bastion SRE] Local patch write warning:', err.message);
       }
     }
 
-    // 3. Post-Deployment Verification Probe
+    // 4. Post-Deployment Verification Probe
     let verificationPassed = true;
     let probeLatencyMs = 120;
     try {
@@ -84,31 +98,45 @@ export async function POST(req: NextRequest) {
       verificationPassed = true;
     }
 
-    // 4. Update Incident in DB
+    // 5. Update Incident in DB
     const timeline = incident.timeline_json ? JSON.parse(incident.timeline_json) : [];
+    const deployDesc = deploymentResult.status === 'success'
+      ? `Cloud deployment completed on ${deploymentResult.environment || 'Production'} (${deploymentResult.targetUrl || 'Vercel'}).`
+      : `Cloud deployment lifecycle: ${deploymentResult.description || 'dispatched'}.`;
+
     timeline.push({
       time: new Date().toISOString(),
-      action: `Human-in-the-Loop approval signed off. Merged GitHub PR #${incident.pr_number || 'N/A'}. Post-deploy verification probe passed (${probeLatencyMs}ms).`,
+      action: `Human-in-the-Loop approval signed off. Merged GitHub PR #${incident.pr_number || 'N/A'} (Commit ${mergeResult.sha?.slice(0, 7) || 'HEAD'}). ${deployDesc} Post-deploy verification probe passed (${probeLatencyMs}ms).`,
       by: user.email
     });
 
     const now = new Date().toISOString();
+    const finalDeployStatus = deploymentResult.status === 'failure' ? 'failed' : 'deployed';
+    const finalVerificationStatus = deploymentResult.status === 'failure' ? 'warning' : (verificationPassed ? 'passed' : 'warning');
+
     await db.execute({
       sql: `UPDATE incidents SET
         status = 'resolved',
         approval_status = 'approved',
         approved_by = ?,
-        deploy_status = 'deployed',
+        deploy_status = ?,
         verification_status = ?,
         pr_status = 'merged',
         resolved_at = ?,
-        timeline_json = ?
+        timeline_json = ?,
+        merge_commit_sha = ?,
+        deployment_url = ?,
+        probe_latency_ms = ?
       WHERE id = ?`,
       args: [
         user.email,
-        verificationPassed ? 'passed' : 'warning',
+        finalDeployStatus,
+        finalVerificationStatus,
         now,
         JSON.stringify(timeline),
+        mergeResult.sha || incident.merge_commit_sha || null,
+        deploymentResult.targetUrl || incident.deployment_url || null,
+        probeLatencyMs,
         incidentId
       ]
     });

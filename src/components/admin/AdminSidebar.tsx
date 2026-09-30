@@ -36,7 +36,8 @@ import {
   FolderOpen,
   PanelLeftClose,
   PanelLeftOpen,
-  CalendarCheck
+  CalendarCheck,
+  ShieldAlert
 } from 'lucide-react';
 
 export function AdminSidebar() {
@@ -418,6 +419,7 @@ export function AdminSidebar() {
                   </div>
                 )}
                 <div className="space-y-1">
+                  {renderItem('/admin/incidents', 'Incidents & SRE Audit', ShieldAlert, pathname.startsWith('/admin/incidents'), 'SRE', 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200')}
                   {renderItem('/admin/health', 'Website Health', Activity, pathname.startsWith('/admin/health'), '100%', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
                   {renderItem('/admin/analytics', 'Analytics', BarChart3, pathname.startsWith('/admin/analytics'))}
                   {renderItem('/admin/sandbox', 'API Sandbox', Terminal, pathname.startsWith('/admin/sandbox'), 'Live', 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200')}

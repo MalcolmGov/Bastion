@@ -251,3 +251,83 @@ export async function closeFixPR({
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Poll GitHub Deployments API to verify real cloud hosting (e.g. Vercel / GitHub Actions)
+ * build & rollout status following a PR merge.
+ */
+export async function pollDeploymentStatus({
+  owner = 'MalcolmGov',
+  repo = 'MoveDigital',
+  commitSha,
+  maxWaitSec = 40,
+  pollIntervalMs = 2500
+}: {
+  owner?: string;
+  repo?: string;
+  commitSha?: string;
+  maxWaitSec?: number;
+  pollIntervalMs?: number;
+}): Promise<{
+  status: 'success' | 'failure' | 'in_progress' | 'unknown';
+  targetUrl?: string;
+  description?: string;
+  environment?: string;
+}> {
+  const token = getGitHubToken();
+  if (!token) return { status: 'unknown', description: 'No GitHub token available' };
+
+  const startTime = Date.now();
+  while (Date.now() - startTime < maxWaitSec * 1000) {
+    try {
+      const depRes = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/deployments?per_page=5`, {
+        headers: headers(token)
+      });
+
+      if (depRes.ok) {
+        const deployments = await depRes.json();
+        const matched = commitSha
+          ? deployments.find((d: any) => d.sha === commitSha)
+          : deployments[0];
+
+        if (matched) {
+          const statusRes = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/deployments/${matched.id}/statuses`, {
+            headers: headers(token)
+          });
+
+          if (statusRes.ok) {
+            const statuses = await statusRes.json();
+            if (statuses.length > 0) {
+              const latest = statuses[0];
+              if (latest.state === 'success') {
+                return {
+                  status: 'success',
+                  targetUrl: latest.environment_url || latest.target_url,
+                  description: latest.description || 'Cloud deployment completed successfully',
+                  environment: latest.environment || 'Production'
+                };
+              }
+              if (latest.state === 'failure' || latest.state === 'error') {
+                return {
+                  status: 'failure',
+                  targetUrl: latest.target_url,
+                  description: latest.description || 'Cloud deployment build failed',
+                  environment: latest.environment || 'Production'
+                };
+              }
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Bastion SRE Deployment Poll Warning]:', err.message);
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+
+  return {
+    status: 'in_progress',
+    description: 'Cloud deployment build queued/running asynchronously on host (Vercel/Actions)'
+  };
+}
+

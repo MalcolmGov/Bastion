@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import {
   Activity,
@@ -324,6 +325,15 @@ export default function AdminHealthPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/admin/incidents"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 text-xs font-bold text-indigo-700 dark:text-indigo-300 transition"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Full Incident Audit Log</span>
+              <ArrowUpRight className="w-3 h-3 ml-0.5" />
+            </Link>
+
             <button
               onClick={() => handleRunScan(false)}
               disabled={scanning}
