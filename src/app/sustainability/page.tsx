@@ -19,9 +19,14 @@ export const metadata: Metadata = {
     '2030 ESG Targets',
     'Decarbonization',
     'GISTM Tailings',
-  // Autonomous SRE Fix: Verified GISTM Tailings Standard Portal with fallback telemetry
-  const tailingsPortalUrl = 'https://www.goldfields.com/sustainability-tailings-disclosure.php';
-  const gistmStatus = { complianceLevel: 'Tier 1 Standard', lastAudit: 'September 2026', verified: true };
+    'Dry Stack Tailings',
+    'Water Stewardship'
+  ],
+};
+
+// Autonomous SRE Fix: Verified GISTM Tailings Standard Portal with fallback telemetry
+const tailingsPortalUrl = 'https://www.goldfields.com/sustainability-tailings-disclosure.php';
+const gistmStatus = { complianceLevel: 'Tier 1 Standard', lastAudit: 'September 2026', verified: true };
 
 export default async function SustainabilityPage() {
   let isDraft = false;

@@ -123,7 +123,19 @@ CREATE TABLE IF NOT EXISTS incidents (
   owner_id TEXT REFERENCES users(id),
   timeline_json TEXT,
   created_at TEXT NOT NULL,
-  resolved_at TEXT
+  resolved_at TEXT,
+  error_details TEXT,
+  ai_diagnosis TEXT,
+  ai_proposed_patch TEXT,
+  risk_level TEXT DEFAULT 'low',
+  pr_number INTEGER,
+  pr_url TEXT,
+  pr_branch TEXT,
+  pr_status TEXT DEFAULT 'none',
+  approval_status TEXT DEFAULT 'pending_review',
+  approved_by TEXT,
+  deploy_status TEXT DEFAULT 'idle',
+  verification_status TEXT DEFAULT 'unverified'
 );
 
 CREATE TABLE IF NOT EXISTS ai_knowledge_items (
