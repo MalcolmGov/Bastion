@@ -5,6 +5,7 @@
  */
 
 import { getDb } from '@/lib/db/client';
+import { execSync } from 'child_process';
 
 export interface GitHubUser {
   login: string;
@@ -62,7 +63,20 @@ export interface RepoExtractionResult {
 }
 
 /**
- * Initializes the developer_github_integrations table in studio.db
+ * Checks if the local system has an active GitHub CLI (gh) login
+ */
+export function getLocalGitHubCliToken(): string | null {
+  try {
+    const token = execSync('gh auth token', { encoding: 'utf-8', timeout: 3000 }).trim();
+    if (token && token.length > 10) return token;
+  } catch {
+    // gh CLI not available or not logged in
+  }
+  return null;
+}
+
+/**
+ * Initializes the developer_github_integrations and github_oauth_configs tables
  */
 export async function ensureGitHubSchema(): Promise<void> {
   const db = getDb();
@@ -80,10 +94,62 @@ export async function ensureGitHubSchema(): Promise<void> {
       last_used_at TEXT NOT NULL
     )
   `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS github_oauth_configs (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      client_secret TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
 }
 
 /**
- * Retrieves the currently active GitHub integration from the database
+ * Saves GitHub OAuth App Client ID and Secret in DB
+ */
+export async function saveGitHubOAuthConfig(clientId: string, clientSecret: string): Promise<void> {
+  await ensureGitHubSchema();
+  const db = getDb();
+  await db.execute(`DELETE FROM github_oauth_configs`);
+  await db.execute({
+    sql: `INSERT INTO github_oauth_configs (id, client_id, client_secret, updated_at) VALUES ('primary', ?, ?, ?)`,
+    args: [clientId.trim(), clientSecret.trim(), new Date().toISOString()]
+  });
+}
+
+/**
+ * Gets GitHub OAuth App credentials (from DB or process.env)
+ */
+export async function getGitHubOAuthConfig(): Promise<{ clientId: string; clientSecret: string } | null> {
+  // Check env first
+  const envId = process.env.GITHUB_CLIENT_ID?.trim();
+  const envSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
+  if (envId && envSecret && !envId.toLowerCase().includes('bastionappid')) {
+    return { clientId: envId, clientSecret: envSecret };
+  }
+
+  // Check DB
+  try {
+    await ensureGitHubSchema();
+    const db = getDb();
+    const res = await db.execute(`SELECT client_id, client_secret FROM github_oauth_configs LIMIT 1`);
+    if (res.rows.length > 0) {
+      const row = res.rows[0];
+      const id = String(row.client_id || '').trim();
+      const sec = String(row.client_secret || '').trim();
+      if (id && sec && !id.toLowerCase().includes('bastionappid')) {
+        return { clientId: id, clientSecret: sec };
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to read github_oauth_configs:', err);
+  }
+
+  return null;
+}
+
+/**
+ * Retrieves the currently active GitHub integration from the database or environment
  */
 export async function getActiveGitHubIntegration(): Promise<{
   isConnected: boolean;
@@ -102,20 +168,22 @@ export async function getActiveGitHubIntegration(): Promise<{
     `);
 
     if (res.rows.length === 0) {
-      // Check if an env variable GITHUB_TOKEN is available as developer fallback
-      if (process.env.GITHUB_TOKEN) {
-        return {
-          isConnected: true,
-          user: {
-            login: 'developer-env',
-            id: 1,
-            avatar_url: 'https://avatars.githubusercontent.com/u/9919?s=200&v=4',
-            name: 'Bastion Platform Developer',
-            html_url: 'https://github.com'
-          },
-          token: process.env.GITHUB_TOKEN,
-          connectedAt: new Date().toISOString()
-        };
+      // Check if local gh CLI or GITHUB_TOKEN is available
+      const cliToken = process.env.GITHUB_TOKEN || getLocalGitHubCliToken();
+      if (cliToken) {
+        try {
+          const ghUser = await fetchGitHubUser(cliToken);
+          // Persist so subsequent queries are instant
+          await saveGitHubIntegration(ghUser, cliToken, 'usr_developer_local');
+          return {
+            isConnected: true,
+            user: ghUser,
+            token: cliToken,
+            connectedAt: new Date().toISOString()
+          };
+        } catch (cliErr) {
+          console.warn('Could not auto-connect local GitHub CLI token:', cliErr);
+        }
       }
 
       return { isConnected: false, user: null };
@@ -188,22 +256,25 @@ export async function disconnectGitHub(): Promise<void> {
 /**
  * Builds the GitHub OAuth authorization URL
  */
-export function getGitHubOAuthUrl(origin: string): string {
-  const clientId = process.env.GITHUB_CLIENT_ID || 'Iv23liBastionAppId';
+export async function getGitHubOAuthUrl(origin: string): Promise<string | null> {
+  const config = await getGitHubOAuthConfig();
+  if (!config || !config.clientId) {
+    return null;
+  }
   const redirectUri = `${origin}/api/admin/github/callback`;
   const scope = 'read:user,repo,read:org';
-  return `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
+  return `https://github.com/login/oauth/authorize?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
 }
 
 /**
  * Exchanges GitHub OAuth code for an access token
  */
 export async function exchangeOAuthCode(code: string, origin: string): Promise<string> {
-  const clientId = process.env.GITHUB_CLIENT_ID || '';
-  const clientSecret = process.env.GITHUB_CLIENT_SECRET || '';
+  const config = await getGitHubOAuthConfig();
+  const clientId = config?.clientId || process.env.GITHUB_CLIENT_ID || '';
+  const clientSecret = config?.clientSecret || process.env.GITHUB_CLIENT_SECRET || '';
 
   if (!clientId || !clientSecret) {
-    // If OAuth app credentials are not set on Hetzner/dev, return the mock/direct token
     return `gho_bastion_${code}`;
   }
 

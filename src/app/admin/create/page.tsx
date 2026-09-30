@@ -77,6 +77,12 @@ function WebsiteCreationWizardContent() {
   const [isExtractingRepo, setIsExtractingRepo] = useState(false);
   const [repoExtractionResult, setRepoExtractionResult] = useState<any>(null);
   const [showPatModal, setShowPatModal] = useState(false);
+  const [oauthModalTab, setOauthModalTab] = useState<'local' | 'pat' | 'oauth_app'>('local');
+  const [cliAvailable, setCliAvailable] = useState(false);
+  const [cliUser, setCliUser] = useState<string | null>(null);
+  const [oauthClientId, setOauthClientId] = useState('');
+  const [oauthClientSecret, setOauthClientSecret] = useState('');
+  const [isSavingOAuth, setIsSavingOAuth] = useState(false);
   const [patInput, setPatInput] = useState('');
   const [isConnectingPat, setIsConnectingPat] = useState(false);
   const [linkRepoExpanded, setLinkRepoExpanded] = useState(false);
@@ -166,6 +172,18 @@ function WebsiteCreationWizardContent() {
             }
           }
         }
+
+        const connectRes = await fetch('/api/admin/github/connect');
+        if (connectRes.ok) {
+          const connectData = await connectRes.json();
+          setCliAvailable(connectData.hasLocalCli);
+          setCliUser(connectData.localCliUser);
+          if (connectData.hasLocalCli) {
+            setOauthModalTab('local');
+          } else {
+            setOauthModalTab('pat');
+          }
+        }
       } catch (err) {
         console.warn('Failed to load GitHub integration:', err);
       }
@@ -178,12 +196,89 @@ function WebsiteCreationWizardContent() {
       const res = await fetch('/api/admin/github/connect');
       if (res.ok) {
         const data = await res.json();
-        if (data.url) {
+        setCliAvailable(data.hasLocalCli);
+        setCliUser(data.localCliUser);
+        if (data.configured && data.url) {
           window.location.href = data.url;
+        } else {
+          // OAuth App credentials not configured on GitHub yet
+          // Open smart modal with 1-click CLI connect or PAT or OAuth App configuration
+          setOauthModalTab(data.hasLocalCli ? 'local' : 'pat');
+          setShowPatModal(true);
         }
+      } else {
+        setShowPatModal(true);
       }
     } catch (err) {
       console.error('Failed to initiate GitHub OAuth:', err);
+      setShowPatModal(true);
+    }
+  };
+
+  const handleConnectLocalCli = async () => {
+    setIsConnectingPat(true);
+    try {
+      const res = await fetch('/api/admin/github/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'local_cli' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGithubConnected(true);
+        setGithubUser(data.user);
+        setShowPatModal(false);
+        const reposRes = await fetch('/api/admin/github/repos');
+        if (reposRes.ok) {
+          const repoData = await reposRes.json();
+          setGithubRepos(repoData.repos || []);
+          if (repoData.repos?.length > 0) {
+            setSelectedRepo(repoData.repos[0].full_name);
+          }
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to connect local GitHub CLI.');
+      }
+    } catch (err: any) {
+      alert(`Connection Error: ${err.message}`);
+    } finally {
+      setIsConnectingPat(false);
+    }
+  };
+
+  const handleSaveOAuthConfig = async () => {
+    if (!oauthClientId.trim() || !oauthClientSecret.trim()) {
+      alert('Please provide both GitHub Client ID and Client Secret.');
+      return;
+    }
+    setIsSavingOAuth(true);
+    try {
+      const res = await fetch('/api/admin/github/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_oauth',
+          clientId: oauthClientId.trim(),
+          clientSecret: oauthClientSecret.trim()
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          alert('OAuth credentials saved successfully!');
+          setShowPatModal(false);
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to save OAuth App credentials.');
+      }
+    } catch (err: any) {
+      alert(`Save Error: ${err.message}`);
+    } finally {
+      setIsSavingOAuth(false);
     }
   };
 
@@ -206,6 +301,9 @@ function WebsiteCreationWizardContent() {
         if (reposRes.ok) {
           const repoData = await reposRes.json();
           setGithubRepos(repoData.repos || []);
+          if (repoData.repos?.length > 0) {
+            setSelectedRepo(repoData.repos[0].full_name);
+          }
         }
       } else {
         const err = await res.json();
@@ -2087,16 +2185,19 @@ function WebsiteCreationWizardContent() {
         </div>
       )}
 
-      {/* GitHub Personal Access Token (PAT) Modal */}
+      {/* GitHub Developer Connection & Setup Modal */}
       {showPatModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0E1522] border border-[#232F42] rounded-2xl max-w-md w-full p-6 space-y-5 animate-scaleUp">
+          <div className="bg-[#0E1522] border border-[#232F42] rounded-2xl max-w-lg w-full p-6 space-y-5 animate-scaleUp">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-lg bg-purple-950 border border-purple-800 flex items-center justify-center text-purple-400">
-                  <Key className="w-4 h-4" />
+                <div className="w-9 h-9 rounded-xl bg-purple-950 border border-purple-800 flex items-center justify-center text-purple-400">
+                  <GitHubIcon className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-white">Connect via GitHub PAT</h3>
+                <div>
+                  <h3 className="text-base font-bold text-white">Connect Developer GitHub</h3>
+                  <p className="text-[11px] text-slate-400">Link repository access for code, AST &amp; brand extraction</p>
+                </div>
               </div>
               <button
                 type="button"
@@ -2107,47 +2208,232 @@ function WebsiteCreationWizardContent() {
               </button>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Generate a classic or fine-grained Personal Access Token on GitHub with <code className="text-purple-300 bg-purple-950/60 px-1 py-0.5 rounded">repo</code> and <code className="text-purple-300 bg-purple-950/60 px-1 py-0.5 rounded">read:org</code> scopes to connect client repositories.
-            </p>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+            {/* Modal Tabs */}
+            <div className="flex border-b border-[#1E293B] space-x-2">
+              {cliAvailable && (
+                <button
+                  type="button"
+                  onClick={() => setOauthModalTab('local')}
+                  className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition ${
+                    oauthModalTab === 'local'
+                      ? 'border-purple-500 text-purple-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  ⚡ Local CLI (1-Click)
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setOauthModalTab('pat')}
+                className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition ${
+                  oauthModalTab === 'pat'
+                    ? 'border-purple-500 text-purple-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
                 Personal Access Token
-              </label>
-              <input
-                type="password"
-                placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                value={patInput}
-                onChange={(e) => setPatInput(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm font-mono focus:outline-none focus:border-purple-500 placeholder-slate-600"
-              />
+              </button>
+              <button
+                type="button"
+                onClick={() => setOauthModalTab('oauth_app')}
+                className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition ${
+                  oauthModalTab === 'oauth_app'
+                    ? 'border-purple-500 text-purple-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Configure OAuth App
+              </button>
             </div>
 
-            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-[#1E293B]">
-              <button
-                type="button"
-                onClick={() => setShowPatModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isConnectingPat || !patInput.trim()}
-                onClick={handleSavePat}
-                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer"
-              >
-                {isConnectingPat ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Verifying...</span>
-                  </>
-                ) : (
-                  <span>Verify &amp; Connect</span>
-                )}
-              </button>
-            </div>
+            {/* TAB 1: LOCAL CLI (1-CLICK) */}
+            {oauthModalTab === 'local' && cliAvailable && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-purple-950/40 border border-purple-800/60 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                      Active GitHub CLI Detected
+                    </span>
+                  </div>
+                  <p className="text-xs text-purple-200 leading-relaxed">
+                    Found authenticated GitHub CLI for <strong className="text-white">@{cliUser || 'MalcolmGov'}</strong> on your workstation. Connect instantly without generating manual tokens or registering an OAuth app.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPatModal(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isConnectingPat}
+                    onClick={handleConnectLocalCli}
+                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer shadow-lg"
+                  >
+                    {isConnectingPat ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Connecting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <GitHubIcon className="w-4 h-4" />
+                        <span>Connect @{cliUser || 'MalcolmGov'} (1-Click)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: PERSONAL ACCESS TOKEN (PAT) */}
+            {oauthModalTab === 'pat' && (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Generate a classic or fine-grained token with <code className="text-purple-300 bg-purple-950/60 px-1 py-0.5 rounded">repo</code> and <code className="text-purple-300 bg-purple-950/60 px-1 py-0.5 rounded">read:org</code> scopes to connect client repositories.
+                </p>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400">Need a token?</span>
+                  <a
+                    href="https://github.com/settings/tokens/new?description=Bastion%20Studio%20Platform&scopes=repo,read:org,read:user"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-400 hover:text-purple-300 font-semibold inline-flex items-center space-x-1"
+                  >
+                    <span>Generate on GitHub (Pre-scoped)</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Personal Access Token
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    value={patInput}
+                    onChange={(e) => setPatInput(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm font-mono focus:outline-none focus:border-purple-500 placeholder-slate-600"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-3 border-t border-[#1E293B]">
+                  <button
+                    type="button"
+                    onClick={() => setShowPatModal(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isConnectingPat || !patInput.trim()}
+                    onClick={handleSavePat}
+                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer shadow-lg"
+                  >
+                    {isConnectingPat ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <span>Verify &amp; Connect Token</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: CONFIGURE GITHUB OAUTH APP */}
+            {oauthModalTab === 'oauth_app' && (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  To enable team-wide 1-click OAuth login, register an OAuth App in your GitHub organization or personal settings.
+                </p>
+
+                <div className="p-3 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-white">1. Register GitHub App</span>
+                    <a
+                      href="https://github.com/settings/applications/new"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-400 hover:text-purple-300 font-semibold inline-flex items-center space-x-1"
+                    >
+                      <span>Open Registration Form</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-slate-400">Authorization callback URL to copy:</div>
+                    <div className="mt-1 px-2.5 py-1.5 rounded bg-[#0E1522] border border-slate-700 text-purple-300 font-mono text-[11px] select-all truncate">
+                      {typeof window !== 'undefined' ? `${window.location.origin}/api/admin/github/callback` : '/api/admin/github/callback'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                      Client ID
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ov23lixxxxxxxxxxxxxx"
+                      value={oauthClientId}
+                      onChange={(e) => setOauthClientId(e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono focus:outline-none focus:border-purple-500 placeholder-slate-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                      Client Secret
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      value={oauthClientSecret}
+                      onChange={(e) => setOauthClientSecret(e.target.value)}
+                      className="w-full px-4 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono focus:outline-none focus:border-purple-500 placeholder-slate-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-3 border-t border-[#1E293B]">
+                  <button
+                    type="button"
+                    onClick={() => setShowPatModal(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSavingOAuth || !oauthClientId.trim() || !oauthClientSecret.trim()}
+                    onClick={handleSaveOAuthConfig}
+                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer shadow-lg"
+                  >
+                    {isSavingOAuth ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <span>Save &amp; Authorize OAuth</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

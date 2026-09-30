@@ -40,6 +40,8 @@ import {
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
 import { SectionLibraryDrawer } from '@/components/studio/SectionLibraryDrawer';
+import { DynamicZonesBuilder } from '@/components/studio/DynamicZonesBuilder';
+import { InEditorContentAgent } from '@/components/studio/InEditorContentAgent';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import type { SectionInstance, DesignCollectionId, BackgroundPatternType } from '@/lib/studio/types';
 
@@ -168,6 +170,10 @@ function VisualWebsiteEditorContent() {
 
   // Inspector Active Tab: 'content' | 'design' | 'ai'
   const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai'>('content');
+
+  // Dynamic Zones Builder Left Panel Mode: 'dynamic_zones' | 'outline'
+  const [leftPanelMode, setLeftPanelMode] = useState<'dynamic_zones' | 'outline'>('dynamic_zones');
+  const [isContentAgentModalOpen, setIsContentAgentModalOpen] = useState(false);
 
   // Gradient Custom Builder State
   const [customGradDir, setCustomGradDir] = useState('135deg');
@@ -601,87 +607,147 @@ function VisualWebsiteEditorContent() {
 
       {/* 3-Panel Main Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* LEFT PANEL: Sections Outline & Tree (260px) */}
-        <div className="w-64 bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-[#1E293B] flex flex-col justify-between shrink-0">
-          <div className="p-3 border-b border-slate-200 dark:border-[#1E293B] flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px]">
-              Page Structure ({sections.length})
-            </span>
+        {/* LEFT PANEL: Dynamic Zones Manager / Outline Tree (320px) */}
+        <div className="w-80 bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-[#1E293B] flex flex-col justify-between shrink-0">
+          {/* View Mode Switcher Header */}
+          <div className="p-2.5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0E1522] flex items-center justify-between text-xs">
+            <div className="flex items-center space-x-1 bg-[#141C2A] p-0.5 rounded-lg border border-[#232F42]">
+              <button
+                type="button"
+                onClick={() => setLeftPanelMode('dynamic_zones')}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition flex items-center space-x-1 ${
+                  leftPanelMode === 'dynamic_zones'
+                    ? 'bg-sky-500 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Layers className="w-3 h-3" />
+                <span>Dynamic Zones</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeftPanelMode('outline')}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition flex items-center space-x-1 ${
+                  leftPanelMode === 'outline'
+                    ? 'bg-sky-500 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <FileText className="w-3 h-3" />
+                <span>Tree</span>
+              </button>
+            </div>
+
             <button
               type="button"
-              onClick={() => setIsLibraryOpen(true)}
-              className="px-2 py-1 rounded bg-sky-500/20 hover:bg-sky-500 border border-sky-400/30 hover:border-sky-400 text-sky-300 hover:text-white text-[10px] font-bold flex items-center space-x-1 transition shadow-xs"
-              title="Add Section"
+              onClick={() => setIsContentAgentModalOpen(true)}
+              title="Open Bastion AI Content Agent"
+              className="px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition text-[10px] font-bold flex items-center space-x-1"
             >
-              <Plus className="w-3 h-3" />
-              <span>Add Block</span>
+              <Sparkles className="w-3 h-3" />
+              <span>AI Agent</span>
             </button>
           </div>
 
-          <div className="flex-1 p-2 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
-            {sections.map((sec, idx) => {
-              const isSelected = sec.id === selectedSectionId;
-              return (
-                <div
-                  key={sec.id}
-                  onClick={() => setSelectedSectionId(sec.id)}
-                  className={`p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-center justify-between group ${
-                    isSelected
-                      ? 'bg-sky-950/70 border-sky-500 text-white ring-1 ring-sky-500'
-                      : 'bg-[#141C2A] border-[#1E293B] text-slate-400 hover:text-slate-200'
-                  }`}
+          {/* DYNAMIC ZONES VIEW */}
+          {leftPanelMode === 'dynamic_zones' ? (
+            <div className="flex-1 overflow-hidden">
+              <DynamicZonesBuilder
+                sections={sections}
+                selectedSectionId={selectedSectionId}
+                onSelectSection={setSelectedSectionId}
+                onUpdateSections={updateSections}
+                onOpenLibrary={() => setIsLibraryOpen(true)}
+                onOpenContentAgent={(secId) => {
+                  setSelectedSectionId(secId);
+                  setIsContentAgentModalOpen(true);
+                }}
+              />
+            </div>
+          ) : (
+            /* COMPACT TREE OUTLINE VIEW */
+            <div className="flex-1 flex flex-col justify-between overflow-hidden">
+              <div className="p-3 border-b border-slate-200 dark:border-[#1E293B] flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px]">
+                  Page Structure ({sections.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsLibraryOpen(true)}
+                  className="px-2 py-1 rounded bg-sky-500/20 hover:bg-sky-500 border border-sky-400/30 hover:border-sky-400 text-sky-300 hover:text-white text-[10px] font-bold flex items-center space-x-1 transition shadow-xs"
+                  title="Add Section"
                 >
-                  <div className="flex items-center space-x-2 truncate">
-                    <span className="font-mono text-[10px] text-slate-500">0{idx + 1}</span>
-                    <span className="font-medium truncate capitalize">
-                      {sec.componentId.replace('_', ' ')}
-                    </span>
-                  </div>
+                  <Plus className="w-3 h-3" />
+                  <span>Add Block</span>
+                </button>
+              </div>
 
-                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleMoveSection(idx, 'up'); }}
-                      className="p-1 hover:text-white text-slate-400"
+              <div className="flex-1 p-2 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
+                {sections.map((sec, idx) => {
+                  const isSelected = sec.id === selectedSectionId;
+                  return (
+                    <div
+                      key={sec.id}
+                      onClick={() => setSelectedSectionId(sec.id)}
+                      className={`p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-center justify-between group ${
+                        isSelected
+                          ? 'bg-sky-950/70 border-sky-500 text-white ring-1 ring-sky-500'
+                          : 'bg-[#141C2A] border-[#1E293B] text-slate-400 hover:text-slate-200'
+                      }`}
                     >
-                      <MoveUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleMoveSection(idx, 'down'); }}
-                      className="p-1 hover:text-white text-slate-400"
-                    >
-                      <MoveDown className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleToggleVisibility(sec.id); }}
-                      className="p-1 hover:text-white text-slate-400"
-                    >
-                      {sec.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3 text-rose-400" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleDeleteSection(sec.id); }}
-                      className="p-1 hover:text-rose-400 text-slate-500"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                      <div className="flex items-center space-x-2 truncate">
+                        <span className="font-mono text-[10px] text-slate-500">0{idx + 1}</span>
+                        <span className="font-medium truncate capitalize">
+                          {sec.componentId.replace('_', ' ')}
+                        </span>
+                      </div>
 
-            {/* Quick Add Section Button */}
-            <button
-              type="button"
-              onClick={() => setIsLibraryOpen(true)}
-              className="w-full mt-2 py-2.5 px-3 rounded-xl border border-dashed border-sky-500/40 hover:border-sky-400 bg-sky-500/5 hover:bg-sky-500/10 text-sky-300 hover:text-white text-xs font-semibold flex items-center justify-center space-x-1.5 transition"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Section Block</span>
-            </button>
-          </div>
+                      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleMoveSection(idx, 'up'); }}
+                          className="p-1 hover:text-white text-slate-400"
+                        >
+                          <MoveUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleMoveSection(idx, 'down'); }}
+                          className="p-1 hover:text-white text-slate-400"
+                        >
+                          <MoveDown className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleToggleVisibility(sec.id); }}
+                          className="p-1 hover:text-white text-slate-400"
+                        >
+                          {sec.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3 text-rose-400" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSection(sec.id); }}
+                          className="p-1 hover:text-rose-400 text-slate-500"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Quick Add Section Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsLibraryOpen(true)}
+                  className="w-full mt-2 py-2.5 px-3 rounded-xl border border-dashed border-sky-500/40 hover:border-sky-400 bg-sky-500/5 hover:bg-sky-500/10 text-sky-300 hover:text-white text-xs font-semibold flex items-center justify-center space-x-1.5 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Section Block</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* CENTER CANVAS: Responsive Live Website Preview */}
@@ -1722,75 +1788,13 @@ function VisualWebsiteEditorContent() {
                 </div>
               )}
 
-              {/* TAB 3: AI COPILOT */}
+              {/* TAB 3: AI CONTENT AGENT */}
               {inspectorTab === 'ai' && (
-                <div className="p-4 rounded-xl bg-[#131A26] border border-[#222E42] space-y-4 animate-in fade-in duration-150">
-                  <div className="flex items-center space-x-1.5 text-xs font-bold text-indigo-400">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Targeted AI Copilot</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      disabled={aiLoading}
-                      onClick={() => handleAIAction('improve_headline')}
-                      className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
-                    >
-                      ⚡ Improve Headline
-                    </button>
-                    <button
-                      type="button"
-                      disabled={aiLoading}
-                      onClick={() => handleAIAction('shorten_paragraph')}
-                      className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
-                    >
-                      ✂️ Shorten Text
-                    </button>
-                    <button
-                      type="button"
-                      disabled={aiLoading}
-                      onClick={() => handleAIAction('rewrite_brand_voice')}
-                      className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
-                    >
-                      🎯 Brand Voice Rewrite
-                    </button>
-                    <button
-                      type="button"
-                      disabled={aiLoading}
-                      onClick={() => handleAIAction('suggest_layout_variant')}
-                      className="p-2 rounded-lg bg-[#0E1522] border border-[#222E42] text-[10px] font-semibold text-slate-300 hover:text-white hover:border-indigo-500 transition text-left"
-                    >
-                      📐 Suggest Variant
-                    </button>
-                  </div>
-
-                  {/* Natural Language Prompt */}
-                  <div className="pt-2">
-                    <div className="flex space-x-1.5">
-                      <input
-                        type="text"
-                        value={aiPrompt}
-                        onChange={(e) => setAiPrompt(e.target.value)}
-                        placeholder="e.g. Move case studies above contact..."
-                        className="flex-1 px-3 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-[11px] focus:outline-none focus:border-indigo-500"
-                      />
-                      <button
-                        type="button"
-                        disabled={aiLoading || !aiPrompt.trim()}
-                        onClick={() => handleAIAction('natural_language_refine')}
-                        className="p-2 rounded-lg bg-indigo-600 text-white disabled:opacity-40 hover:bg-indigo-500"
-                      >
-                        <Send className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {aiNotice && (
-                    <div className="p-2.5 rounded-lg bg-indigo-950/50 border border-indigo-800 text-indigo-300 text-[10px] leading-relaxed">
-                      {aiNotice}
-                    </div>
-                  )}
+                <div className="animate-in fade-in duration-150">
+                  <InEditorContentAgent
+                    section={selectedSection}
+                    onApplyField={handlePropChange}
+                  />
                 </div>
               )}
             </div>
@@ -1808,6 +1812,20 @@ function VisualWebsiteEditorContent() {
         onClose={() => setIsLibraryOpen(false)}
         onSelectComponent={handleInsertSection}
       />
+
+      {/* Full Bastion AI Content Agent Modal */}
+      {isContentAgentModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
+            <InEditorContentAgent
+              section={selectedSection}
+              onApplyField={handlePropChange}
+              onClose={() => setIsContentAgentModalOpen(false)}
+              isModal={true}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
