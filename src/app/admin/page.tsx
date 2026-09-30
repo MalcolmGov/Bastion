@@ -41,13 +41,16 @@ import {
   Lock,
   X,
   SlidersHorizontal,
-  Clock
+  Clock,
+  TrendingUp,
+  BarChart3
 } from 'lucide-react';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import { useStudioWorkspace, WorkspaceClient, WorkspaceSite } from '@/components/admin/StudioWorkspaceProvider';
 import { ClientCmsHome } from '@/components/admin/ClientCmsHome';
 import { useDashboardCustomizer } from '@/components/admin/DashboardCustomizerProvider';
 import { BastionLogo } from '@/components/admin/BastionLogo';
+import { ExecutiveAnalyticsDashboard } from '@/components/admin/ExecutiveAnalyticsDashboard';
 
 export default function MoveStudioOverviewPage() {
   const router = useRouter();
@@ -72,7 +75,6 @@ export default function MoveStudioOverviewPage() {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSector, setSelectedSector] = useState('all');
   const [isListening, setIsListening] = useState(false);
   const [quickBrandUrl, setQuickBrandUrl] = useState('');
 
@@ -140,23 +142,9 @@ export default function MoveStudioOverviewPage() {
     { label: 'Signed Webhooks', query: 'Webhooks' }
   ];
 
-  const filteredClients = clients.filter(c => {
-    const matchesSearch =
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.websites?.some(w => w.name.toLowerCase().includes(searchQuery.toLowerCase()) || w.slug.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    if (!matchesSearch) return false;
-    if (selectedSector === 'all') return true;
-    if (selectedSector === 'mining') return c.industry.includes('mining') || c.id.includes('gold');
-    if (selectedSector === 'agency') return c.industry.includes('agency') || c.industry.includes('digital') || c.id.includes('bastion');
-    if (selectedSector === 'finance') return c.industry.includes('finance') || c.industry.includes('wealth') || c.industry.includes('advisory');
-    if (selectedSector === 'energy') return c.industry.includes('energy') || c.id.includes('swifter') || c.id.includes('solaris');
-    return true;
-  });
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
-      {/* 1. Top Intelligence Strip & Customizer Trigger (Zara CareerOS Signature) */}
+      {/* 1. Top Intelligence Strip & Customizer Trigger */}
       <div 
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:px-4 sm:py-2.5 rounded-2xl border shadow-xs transition-all duration-300"
         style={{
@@ -231,7 +219,6 @@ export default function MoveStudioOverviewPage() {
       {/* 2. Signature Hero Card with Embedded Search & Voice Composer */}
       {dashboardPrefs.sections.heroComposer && (
         <section className="rounded-2xl p-5 sm:p-7 shadow-xs relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80">
-          {/* Top Accent Gradient Line */}
           <div 
             className="absolute top-0 left-0 right-0 h-1"
             style={{
@@ -242,10 +229,10 @@ export default function MoveStudioOverviewPage() {
           <div className="relative z-10 max-w-3xl space-y-4">
             <div className="space-y-1">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                Good afternoon, Malcolm. Let&apos;s manage high-impact corporate web properties.
+                Good afternoon, Malcolm. Let&apos;s govern high-impact corporate web properties.
               </h1>
               <p className="text-sm sm:text-base leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
-                Precision multi-tenant governance across Gold Fields Limited, Swifter Energy, and Bastion Group client properties.
+                Autonomous edge invalidation, website vitals, and multi-tenant performance across all corporate client environments.
               </p>
             </div>
 
@@ -322,312 +309,205 @@ export default function MoveStudioOverviewPage() {
         </section>
       )}
 
-      {/* 3. Operational Stat KPI Cards (Customizable via modal) */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {/* Card 1: Total Websites */}
-        {dashboardPrefs.kpis.totalWebsites && (
-          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-sm transition-all duration-200">
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
-                style={{
-                  backgroundColor: `${primaryCol}15`,
-                  color: primaryCol,
-                  borderColor: `${primaryCol}30`
-                }}
-              >
-                <Sparkles className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
-                  {totalWebsites}
-                </div>
-                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Total Websites
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Card 2: Live & Published */}
-        {dashboardPrefs.kpis.liveWebsites && (
-          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-sm transition-all duration-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                <ShieldCheck className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
-                  {publishedWebsites}
-                </div>
-                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Live &amp; Healthy
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Card 3: Upcoming SENS Release */}
-        {dashboardPrefs.kpis.upcomingSens && (
-          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-sm transition-all duration-200 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                <Calendar className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
-                  1
-                </div>
-                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Upcoming SENS
-                </div>
-              </div>
-            </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-              Wed 14:00
-            </span>
-          </div>
-        )}
-
-        {/* Card 4: Awaiting Sign-Off */}
-        {dashboardPrefs.kpis.awaitingSignoff && (
-          <Link
-            href="/admin/tasks"
-            className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-800 shadow-xs hover:shadow-sm transition-all duration-200 group"
+      {/* 3. Quick Action Launchpad */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Link
+          href="/admin/create"
+          className="p-3.5 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/80 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-800/80 shadow-2xs hover:shadow-xs transition group flex items-center gap-3"
+        >
+          <div 
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
+            style={{ backgroundColor: `${primaryCol}15`, color: primaryCol, borderColor: `${primaryCol}30` }}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                <Send className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
-                  {pendingReviewCount}
-                </div>
-                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Awaiting Sign-Off
-                </div>
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {/* Optional KPI: Draft Revisions */}
-        {dashboardPrefs.kpis.draftRevisions && (
-          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                <Edit3 className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
-                  {draftRevisionsCount}
-                </div>
-                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Draft Revisions
-                </div>
-              </div>
-            </div>
+            <PlusCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
           </div>
-        )}
-
-        {/* Optional KPI: Edge Latency */}
-        {dashboardPrefs.kpis.edgeLatency && (
-          <div className="p-3.5 sm:p-4 rounded-xl text-left border bg-white dark:bg-[#0F141C] border-slate-200/80 dark:border-slate-800 shadow-xs flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-teal-50 dark:bg-teal-950/80 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-800">
-                <Clock className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums">
-                  42ms
-                </div>
-                <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Global Edge TTFB
-                </div>
-              </div>
-            </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200">
-              100% SLA
-            </span>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">New Client Website</div>
+            <div className="text-[11px] text-slate-500">Launch 4-Step Wizard</div>
           </div>
-        )}
-      </section>
+        </Link>
 
-      {/* 4. Main 2-Column Split (Or Full Focus according to layoutMode preference) */}
+        <Link
+          href="/admin/brand"
+          className="p-3.5 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/80 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-800/80 shadow-2xs hover:shadow-xs transition group flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+            <Palette className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Brand DNA Extractor</div>
+            <div className="text-[11px] text-slate-500">URL &rarr; Design Tokens</div>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/clients"
+          className="p-3.5 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/80 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-800/80 shadow-2xs hover:shadow-xs transition group flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+            <Building className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Clients &amp; Websites</div>
+            <div className="text-[11px] text-slate-500">11 Managed Properties</div>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/tasks"
+          className="p-3.5 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/80 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-800/80 shadow-2xs hover:shadow-xs transition group flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+            <Send className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Publishing Pipeline</div>
+            <div className="text-[11px] text-slate-500">SENS Approvals</div>
+          </div>
+        </Link>
+      </div>
+
+      {/* 4. UPGRADED RECHARTS VISUAL EXECUTIVE ANALYTICS DASHBOARD */}
+      <ExecutiveAnalyticsDashboard primaryColor={primaryCol} accentColor={accentColor} />
+
+      {/* 5. Clean & Decluttered Client Snapshot + Supporting Rail */}
       <div className={`grid grid-cols-1 ${dashboardPrefs.layoutMode === 'focus' ? 'lg:grid-cols-1' : 'lg:grid-cols-12'} gap-6 items-start`}>
-        {/* Left Column: Managed For You / Corporate Client Properties */}
-        {dashboardPrefs.sections.managedCards && (
-          <div className={`${dashboardPrefs.layoutMode === 'focus' ? 'w-full' : 'lg:col-span-8'} space-y-4`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                    {searchQuery ? `Matching Properties (${filteredClients.length})` : 'Managed For You'}
-                  </h2>
-                  {searchQuery && (
-                    <span 
-                      className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold border"
-                      style={{
+        
+        {/* Left Column: Decluttered Snapshot of Corporate Clients */}
+        <div className={`${dashboardPrefs.layoutMode === 'focus' ? 'w-full' : 'lg:col-span-8'} space-y-4`}>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                  Corporate Clients &amp; Flagship Properties
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  {clients.length} Tenants
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                High-performance corporate web properties deployed on Bastion multi-tenant infrastructure.
+              </p>
+            </div>
+
+            <Link
+              href="/admin/clients"
+              style={{ color: primaryCol }}
+              className="text-xs font-bold hover:underline flex items-center gap-1 shrink-0"
+            >
+              <span>View All Properties</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Compact Client Summary Rows */}
+          <div className="space-y-3">
+            {clients.slice(0, 4).map((client) => {
+              const isGF = client.id === 'client_goldfields';
+              const website = client.websites?.[0];
+              const domain = client.id === 'client_goldfields' ? 'goldfields.com' : `${client.slug}.bastiongroup.co.za`;
+
+              return (
+                <div
+                  key={client.id}
+                  className="rounded-xl p-4 transition-all duration-200 backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 hover:border-purple-300 dark:hover:border-purple-800/80 shadow-2xs hover:shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border"
+                      style={isGF ? {
+                        backgroundColor: 'rgba(201, 151, 0, 0.1)',
+                        color: '#C99700',
+                        borderColor: 'rgba(201, 151, 0, 0.3)'
+                      } : {
                         backgroundColor: `${primaryCol}15`,
                         color: primaryCol,
                         borderColor: `${primaryCol}30`
                       }}
                     >
-                      Live Filtering
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs sm:text-sm mt-0.5 font-medium text-slate-600 dark:text-slate-400">
-                  Corporate web properties deployed on Bastion high-performance multi-tenant infrastructure.
-                </p>
-              </div>
-
-              <Link
-                href="/admin/create"
-                style={{ color: primaryCol }}
-                className="text-xs font-bold hover:underline flex items-center gap-1 shrink-0"
-              >
-                <span>Create Website</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {/* Client Website Cards */}
-            <div className="space-y-4">
-              {filteredClients.map((client) => {
-                const isGF = client.id === 'client_goldfields';
-                const website = client.websites?.[0];
-                const domain = client.id === 'client_goldfields' ? 'goldfields.com' : `${client.slug}.bastiongroup.co.za`;
-
-                return (
-                  <div
-                    key={client.id}
-                    className="rounded-2xl p-5 sm:p-6 transition-all duration-300 group relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 hover:border-purple-300 dark:hover:border-purple-800/80 shadow-xs hover:shadow-md hover:-translate-y-0.5"
-                  >
-                    {/* Top Accent Gradient Bar */}
-                    <div 
-                      className="absolute top-0 left-0 right-0 h-1 transition-opacity duration-300"
-                      style={{
-                        background: isGF 
-                          ? 'linear-gradient(90deg, #C99700 0%, #EAB308 100%)'
-                          : `linear-gradient(90deg, ${primaryCol} 0%, ${dashboardPrefs.accentColor} 100%)`
-                      }}
-                    />
-
-                    {/* Top Row: Monogram, Title, Verified & Live Link */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3.5 min-w-0">
-                        <div 
-                          className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border shadow-2xs"
-                          style={isGF ? {
-                            backgroundColor: 'rgba(201, 151, 0, 0.1)',
-                            color: '#C99700',
-                            borderColor: 'rgba(201, 151, 0, 0.3)'
-                          } : {
-                            backgroundColor: `${primaryCol}15`,
-                            color: primaryCol,
-                            borderColor: `${primaryCol}30`
-                          }}
-                        >
-                          {client.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs sm:text-sm font-bold truncate text-slate-700 dark:text-slate-300">
-                              {client.name}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 border text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60">
-                              <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                              <span>Verified Corporate Tenant</span>
-                            </span>
-                          </div>
-                          <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug line-clamp-1 mt-0.5">
-                            {website?.name || `${client.name} Flagship Portal`}
-                          </h3>
-                        </div>
-                      </div>
-
-                      <Link
-                        href={isGF ? '/' : `/sites/${website?.slug || client.slug}`}
-                        target="_blank"
-                        className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-purple-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                        title="View live website"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Link>
+                      {client.name.substring(0, 2).toUpperCase()}
                     </div>
 
-                    {/* Metadata line */}
-                    <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm flex-wrap text-slate-600 dark:text-slate-400 font-medium">
-                      <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-semibold font-mono">
-                        <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>{domain}</span>
-                      </span>
-                      <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-                      <span className="capitalize font-semibold text-slate-700 dark:text-slate-300">
-                        {client.industry.replace('_', ' ')}
-                      </span>
-                      <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-amber-500" />
-                        <span>Signed Webhook Active</span>
-                      </span>
-                    </div>
-
-                    {/* Card Footer */}
-                    <div className="mt-4 pt-3 flex items-center justify-between gap-3 flex-wrap border-t border-slate-100 dark:border-slate-800">
-                      <div 
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border"
-                        style={{
-                          backgroundColor: `${primaryCol}12`,
-                          borderColor: `${primaryCol}30`,
-                          color: primaryCol
-                        }}
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>100% Platform Health</span>
-                        <span className="text-[11px] font-normal text-slate-500 ml-0.5">&bull; 42ms TTFB</span>
-                      </div>
-
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveClientId(client.id);
-                            setPortalViewMode('client');
-                          }}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition"
-                        >
-                          Client CMS Mode
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveClientId(client.id);
-                            router.push('/admin/pages');
-                          }}
-                          style={{ backgroundColor: primaryCol }}
-                          className="px-4 py-1.5 rounded-xl text-white text-xs font-bold inline-flex items-center gap-1.5 transition-all active:scale-[0.98] hover:opacity-95 shadow-xs"
-                        >
-                          <span>Manage Website</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-white" />
-                        </button>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {client.name}
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded font-mono bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200">
+                          100% SLA
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 font-mono mt-0.5 truncate">
+                        <span>{domain}</span>
+                        <span>&bull;</span>
+                        <span className="capitalize">{client.industry.replace('_', ' ')}</span>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
-        {/* Right Supporting Rail: Calendar, Brand DNA Quick Launch & Health */}
+                  <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveClientId(client.id);
+                        setPortalViewMode('client');
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                    >
+                      Client CMS
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveClientId(client.id);
+                        router.push('/admin/pages');
+                      }}
+                      style={{ backgroundColor: primaryCol }}
+                      className="px-3 py-1.5 rounded-lg text-white text-xs font-bold inline-flex items-center gap-1 transition-all active:scale-[0.98] shadow-2xs hover:opacity-95 cursor-pointer"
+                    >
+                      <span>Manage</span>
+                      <ArrowRight className="w-3 h-3 text-white" />
+                    </button>
+
+                    <Link
+                      href={isGF ? '/' : `/sites/${website?.slug || client.slug}`}
+                      target="_blank"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                      title="Open live site"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Helpful Navigation Prompt to Clients & Websites */}
+          <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="text-xs font-black text-purple-900 dark:text-purple-300">
+                Managed For You Corporate Properties have moved
+              </div>
+              <p className="text-[11px] text-purple-700 dark:text-purple-400 font-medium">
+                Access full environment lists, client branding tokens, custom domain DNS records, and visual editor links.
+              </p>
+            </div>
+            <Link
+              href="/admin/clients"
+              className="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shrink-0 shadow-2xs transition"
+            >
+              <span>Go to Clients &amp; Websites</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Right Rail: SENS Calendar, Brand DNA Quick Launch, and Edge Network */}
         {dashboardPrefs.layoutMode !== 'focus' && (
           <div className="lg:col-span-4 space-y-4">
-            {/* Module 1: Next on your calendar / Publishing Pipeline */}
+            {/* Calendar Pipeline */}
             {dashboardPrefs.sections.calendarPipeline && (
               <div className="rounded-2xl p-5 space-y-3 relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
                 <div 
@@ -659,7 +539,7 @@ export default function MoveStudioOverviewPage() {
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Gold Fields corporate relations submitted regulatory release for scheduled publishing.
+                    Corporate relations submitted regulatory release for scheduled publishing.
                   </p>
                 </div>
 
@@ -674,7 +554,7 @@ export default function MoveStudioOverviewPage() {
               </div>
             )}
 
-            {/* Module 2: Brand DNA & Design System Extractor (Claude Design Pipeline) */}
+            {/* Brand DNA Quick Launch */}
             {dashboardPrefs.sections.brandDnaExtractor && (
               <div className="rounded-2xl p-5 space-y-3 relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
                 <div 
@@ -700,8 +580,8 @@ export default function MoveStudioOverviewPage() {
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Crawl any corporate site to extract computed styles, SVG logos, Google Fonts, reading level, and generate WCAG-compliant theme tokens.
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                  Crawl any corporate site to extract computed styles, SVG logos, Google Fonts, and generate WCAG-compliant theme tokens.
                 </p>
 
                 <form onSubmit={handleLaunchBrandDna} className="space-y-2">
@@ -710,12 +590,12 @@ export default function MoveStudioOverviewPage() {
                     value={quickBrandUrl}
                     onChange={(e) => setQuickBrandUrl(e.target.value)}
                     placeholder="https://example.com"
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500 font-medium"
                   />
                   <button
                     type="submit"
                     style={{ backgroundColor: primaryCol }}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-white hover:opacity-95 shadow-xs transition"
+                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-white hover:opacity-95 shadow-xs transition cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Launch Brand Extractor</span>
@@ -724,7 +604,7 @@ export default function MoveStudioOverviewPage() {
               </div>
             )}
 
-            {/* Module 3: Edge Invalidation & Global Status */}
+            {/* Edge Network Status */}
             {dashboardPrefs.sections.edgeNetworkStatus && (
               <div className="rounded-2xl p-5 space-y-2.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between text-xs">

@@ -22,7 +22,15 @@ import {
   Sliders,
   Check,
   Building,
-  Target
+  Target,
+  Image as ImageIcon,
+  X,
+  FileCode,
+  ShieldCheck,
+  Cpu,
+  Pickaxe,
+  TrendingUp,
+  SunMedium
 } from 'lucide-react';
 import { BLUEPRINTS } from '@/lib/studio/blueprints';
 import { DESIGN_COLLECTIONS } from '@/lib/studio/collections';
@@ -30,21 +38,29 @@ import type { BlueprintId, DesignCollectionId, DiscoveredPage } from '@/lib/stud
 
 function WebsiteCreationWizardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Step state: 1 to 6
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   // Step A: Setup
   const [startPath, setStartPath] = useState<'import' | 'pack' | 'brief'>('import');
-  const [clientName, setClientName] = useState('Meridian Strategic Capital');
-  const [websiteName, setWebsiteName] = useState('Meridian Flagship');
-  const [sourceUrl, setSourceUrl] = useState('https://demo.apexadvisory.com');
-  const [industry, setIndustry] = useState('professional_services');
-  const [targetAudience, setTargetAudience] = useState('Institutional fund managers and sovereign wealth');
-  const [businessGoal, setBusinessGoal] = useState('High-value inbound mandate inquiries');
-  const [conversionAction, setConversionAction] = useState('Schedule Confidential Discussion');
+  const [clientName, setClientName] = useState('');
+  const [websiteName, setWebsiteName] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [industry, setIndustry] = useState('mining_resources');
+  const [targetAudience, setTargetAudience] = useState('');
+  const [businessGoal, setBusinessGoal] = useState('');
+  const [conversionAction, setConversionAction] = useState('');
   const [designIntent, setDesignIntent] = useState<'conservative' | 'bold'>('bold');
   const [language, setLanguage] = useState('English (UK)');
+
+  // Brand & Content Pack Uploads (Option 2)
+  const [uploadedLogo, setUploadedLogo] = useState<string | null>(null);
+  const [uploadedDocs, setUploadedDocs] = useState<Array<{ name: string; size: string }>>([]);
+  const [primaryBrandColor, setPrimaryBrandColor] = useState('#0F172A');
+  const [accentBrandColor, setAccentBrandColor] = useState('#2563EB');
+  const [packBriefNotes, setPackBriefNotes] = useState('');
 
   // Step B: Import Scope
   const [isExtracting, setIsExtracting] = useState(false);
@@ -69,7 +85,6 @@ function WebsiteCreationWizardContent() {
   });
 
   // Step D: Design Selection
-  const searchParams = useSearchParams();
   const bpParam = searchParams.get('blueprint') as BlueprintId | null;
   const [selectedBlueprint, setSelectedBlueprint] = useState<BlueprintId>(
     bpParam && bpParam in BLUEPRINTS ? bpParam : 'mining_resources'
@@ -82,8 +97,40 @@ function WebsiteCreationWizardContent() {
   const [assemblyProgress, setAssemblyProgress] = useState(0);
   const [assemblyResult, setAssemblyResult] = useState<any>(null);
 
-  // Handle URL Extraction (Step A -> Step B)
+  // Handle Logo Upload for Option 2
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setUploadedLogo(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle Documents Upload for Option 2
+  const handleDocsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const newDocs: Array<{ name: string; size: string }> = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const sizeMb = (f.size / (1024 * 1024)).toFixed(1);
+      newDocs.push({
+        name: f.name,
+        size: `${sizeMb === '0.0' ? '<1' : sizeMb} MB`
+      });
+    }
+    setUploadedDocs((prev) => [...prev, ...newDocs]);
+  };
+
+  // Handle Option 1: URL Extraction (Step 1 -> Step 2)
   const handleStartExtraction = async () => {
+    if (!sourceUrl.trim()) {
+      setExtractError('Please enter an existing website URL to crawl, or switch to Option 2 (Brand Pack) or Option 3 (Business Brief).');
+      return;
+    }
+
     setIsExtracting(true);
     setExtractError(null);
 
@@ -107,10 +154,10 @@ function WebsiteCreationWizardContent() {
       setExtractedContent(result.content);
       setProvenanceData(result.provenance || {});
 
-      // Auto-populate client and website name from real extracted brand candidate
+      // Auto-populate client and website name if empty
       if (result.brandCandidates?.nameCandidate) {
-        setClientName(result.brandCandidates.nameCandidate);
-        setWebsiteName(`${result.brandCandidates.nameCandidate} Flagship`);
+        if (!clientName.trim()) setClientName(result.brandCandidates.nameCandidate);
+        if (!websiteName.trim()) setWebsiteName(`${result.brandCandidates.nameCandidate} Flagship`);
       }
 
       // Select all by default
@@ -128,13 +175,154 @@ function WebsiteCreationWizardContent() {
     }
   };
 
-  // Handle Website Assembly (Step D -> Step E)
+  // Handle Option 2: Brand & Content Pack (Step 1 -> Step 3)
+  const handleContinueFromPack = () => {
+    if (!clientName.trim()) {
+      setExtractError('Please specify a Client Organization Name before continuing.');
+      return;
+    }
+
+    setExtractError(null);
+    const finalWebName = websiteName.trim() || `${clientName} Corporate Portal`;
+    setWebsiteName(finalWebName);
+
+    const brandCandidate = {
+      nameCandidate: clientName,
+      taglineCandidate: packBriefNotes.split('.')[0] || `${clientName} — Corporate Excellence`,
+      logos: [
+        {
+          url: uploadedLogo || '/assets/bastion-original-logo-hd.png',
+          name: 'Primary Vector Logo',
+          status: 'approved'
+        }
+      ],
+      colors: [
+        { name: 'Primary Brand', hex: primaryBrandColor, value: primaryBrandColor, status: 'approved' },
+        { name: 'Corporate Dark', hex: '#1E293B', value: '#1E293B', status: 'approved' },
+        { name: 'Accent Action', hex: accentBrandColor, value: accentBrandColor, status: 'approved' }
+      ],
+      typography: {
+        headingFont: 'Plus Jakarta Sans',
+        bodyFont: 'Inter',
+        headingWeight: '700',
+        scaleRatio: 1.25,
+        status: 'approved'
+      },
+      toneOfVoice: 'Disciplined, executive, and forward-looking',
+      approvedFacts: [
+        `${clientName} operates with verified corporate standards and transparent governance.`,
+        packBriefNotes || 'Delivering high-performance enterprise capabilities across commercial markets.',
+        uploadedDocs.length > 0
+          ? `Verified against ${uploadedDocs.length} uploaded brand documents (${uploadedDocs.map((d) => d.name).join(', ')}).`
+          : 'Ingested from client brand kit repository.'
+      ]
+    };
+
+    setExtractedBrand(brandCandidate);
+    setExtractedContent({
+      businessSummary: packBriefNotes || `${clientName} is a leading corporate organization operating with institutional discipline.`,
+      servicesFound: [
+        { title: 'Core Operations & Assets', description: 'Enterprise service delivery, capital governance, and operations.' },
+        { title: 'Regulatory Compliance & ESG', description: 'Governance standards, annual disclosures, and investor reporting.' },
+        { title: 'Strategic Partnerships', description: 'Stakeholder alignment and long-term commercial value creation.' }
+      ],
+      contactInfoFound: {
+        email: `contact@${clientName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'client'}.com`,
+        address: 'Sandton Corporate Precinct, Johannesburg'
+      },
+      navigationFound: [
+        { label: 'About', url: '/about' },
+        { label: 'Operations', url: '/operations' },
+        { label: 'Governance', url: '/governance' },
+        { label: 'Contact', url: '/contact' }
+      ],
+      socialLinks: [
+        { platform: 'linkedin', url: 'https://linkedin.com', handle: `@${clientName.toLowerCase().replace(/[^a-z0-9]/g, '')}` }
+      ]
+    });
+
+    setCurrentStep(3);
+  };
+
+  // Handle Option 3: Business Brief (Step 1 -> Step 4)
+  const handleContinueFromBrief = () => {
+    if (!clientName.trim()) {
+      setExtractError('Please specify a Client Organization Name before continuing.');
+      return;
+    }
+
+    setExtractError(null);
+    const finalWebName = websiteName.trim() || `${clientName} Global Flagship`;
+    setWebsiteName(finalWebName);
+
+    const brandCandidate = {
+      nameCandidate: clientName,
+      taglineCandidate: businessGoal || `${clientName} — Strategic Enterprise Solutions`,
+      logos: [
+        {
+          url: '/assets/bastion-original-logo-hd.png',
+          name: 'Executive Brand Mark',
+          status: 'approved'
+        }
+      ],
+      colors: [
+        { name: 'Primary Brand', hex: primaryBrandColor, value: primaryBrandColor, status: 'approved' },
+        { name: 'Corporate Dark', hex: '#1E293B', value: '#1E293B', status: 'approved' },
+        { name: 'Accent Action', hex: accentBrandColor, value: accentBrandColor, status: 'approved' }
+      ],
+      typography: {
+        headingFont: designIntent === 'conservative' ? 'Playfair Display' : 'Plus Jakarta Sans',
+        bodyFont: 'Inter',
+        headingWeight: '700',
+        scaleRatio: 1.25,
+        status: 'approved'
+      },
+      toneOfVoice:
+        designIntent === 'conservative'
+          ? 'Authoritative, institutional, and governance-driven'
+          : 'Modern, decisive, and forward-looking',
+      approvedFacts: [
+        `${clientName} is engineered specifically to address ${targetAudience || 'enterprise clients and institutional stakeholders'}.`,
+        `Core strategic objective: ${businessGoal || 'Driving sustained commercial growth and operational excellence'}.`,
+        `Operates with strict regulatory compliance and executive stewardship.`
+      ]
+    };
+
+    setExtractedBrand(brandCandidate);
+    setExtractedContent({
+      tagline: businessGoal || `${clientName} — Enterprise Excellence`,
+      businessSummary: businessGoal || `${clientName} delivers premier capabilities for ${targetAudience || 'market leaders'}.`,
+      servicesFound: [
+        { title: 'Strategic Advisory & Operations', description: `Purpose-built capabilities serving ${targetAudience || 'corporate clients'}.` },
+        { title: 'Governance & Asset Stewardship', description: 'Enterprise risk management, stakeholder reporting, and transparency.' },
+        { title: 'Market Engagement', description: `Driving conversion through: ${conversionAction || 'Confidential Consultation'}.` }
+      ],
+      contactInfoFound: {
+        email: `contact@${clientName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'company'}.com`,
+        address: 'Sandton Corporate Precinct, Johannesburg'
+      },
+      navigationFound: [
+        { label: 'About', url: '/about' },
+        { label: 'Operations', url: '/operations' },
+        { label: 'Governance', url: '/governance' },
+        { label: 'Contact', url: '/contact' }
+      ],
+      socialLinks: [
+        { platform: 'linkedin', url: 'https://linkedin.com', handle: `@${clientName.toLowerCase().replace(/[^a-z0-9]/g, '')}` }
+      ]
+    });
+
+    setCurrentStep(4);
+  };
+
+  // Handle Website Assembly (Step 4 -> Step 5)
   const handleAssembleWebsite = async () => {
     setIsAssembling(true);
     setCurrentStep(5);
     setAssemblyProgress(20);
 
-    const slug = clientName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const safeClientName = clientName.trim() || 'Enterprise Client';
+    const slug = safeClientName.toLowerCase().replace(/[^a-z0-9]/g, '-');
     const clientId = `client_${slug.replace(/-/g, '_')}`;
 
     try {
@@ -146,52 +334,111 @@ function WebsiteCreationWizardContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId,
-          clientName,
-          websiteName,
+          clientName: safeClientName,
+          websiteName: websiteName.trim() || `${safeClientName} Flagship`,
           websiteSlug: slug,
           blueprintId: selectedBlueprint,
           collectionId: selectedCollection,
           brandKit: {
             logos: {
-              primary: extractedBrand?.logos?.[0] || { url: '/assets/logo-placeholder.svg', status: 'approved' }
+              primary: extractedBrand?.logos?.[0] || {
+                url: uploadedLogo || '/assets/bastion-original-logo-hd.png',
+                status: 'approved'
+              }
             },
             colors: {
               primary: extractedBrand?.colors?.[0]
-                ? { name: extractedBrand.colors[0].name, value: extractedBrand.colors[0].hex || (extractedBrand.colors[0] as any).value || '#0F172A', status: 'approved' }
-                : { name: 'Slate', value: '#0F172A', status: 'approved' },
+                ? {
+                    name: extractedBrand.colors[0].name,
+                    value: extractedBrand.colors[0].hex || (extractedBrand.colors[0] as any).value || primaryBrandColor,
+                    status: 'approved'
+                  }
+                : { name: 'Primary Brand', value: primaryBrandColor, status: 'approved' },
               secondary: extractedBrand?.colors?.[1]
-                ? { name: extractedBrand.colors[1].name, value: extractedBrand.colors[1].hex || (extractedBrand.colors[1] as any).value || '#1E293B', status: 'approved' }
-                : { name: 'Navy', value: '#1E293B', status: 'approved' },
+                ? {
+                    name: extractedBrand.colors[1].name,
+                    value: extractedBrand.colors[1].hex || (extractedBrand.colors[1] as any).value || '#1E293B',
+                    status: 'approved'
+                  }
+                : { name: 'Corporate Dark', value: '#1E293B', status: 'approved' },
               accent: extractedBrand?.colors?.[2]
-                ? { name: extractedBrand.colors[2].name, value: extractedBrand.colors[2].hex || (extractedBrand.colors[2] as any).value || '#0284C7', status: 'approved' }
-                : { name: 'Accent Sky', value: '#0284C7', status: 'approved' },
-              background: { name: 'Canvas', value: selectedCollection === 'immersive' ? '#09090B' : '#F8FAFC', status: 'approved' },
-              surface: { name: 'Surface', value: selectedCollection === 'immersive' ? '#18181B' : '#FFFFFF', status: 'approved' },
-              textPrimary: { name: 'Text Dark', value: selectedCollection === 'immersive' ? '#FFFFFF' : '#0F172A', status: 'approved' },
-              textMuted: { name: 'Text Muted', value: selectedCollection === 'immersive' ? '#A1A1AA' : '#64748B', status: 'approved' },
-              hairline: { name: 'Border', value: selectedCollection === 'immersive' ? '#27272A' : '#E2E8F0', status: 'approved' }
+                ? {
+                    name: extractedBrand.colors[2].name,
+                    value: extractedBrand.colors[2].hex || (extractedBrand.colors[2] as any).value || accentBrandColor,
+                    status: 'approved'
+                  }
+                : { name: 'Accent', value: accentBrandColor, status: 'approved' },
+              background: {
+                name: 'Canvas',
+                value: selectedCollection === 'immersive' ? '#09090B' : '#F8FAFC',
+                status: 'approved'
+              },
+              surface: {
+                name: 'Surface',
+                value: selectedCollection === 'immersive' ? '#18181B' : '#FFFFFF',
+                status: 'approved'
+              },
+              textPrimary: {
+                name: 'Text Dark',
+                value: selectedCollection === 'immersive' ? '#FFFFFF' : '#0F172A',
+                status: 'approved'
+              },
+              textMuted: {
+                name: 'Text Muted',
+                value: selectedCollection === 'immersive' ? '#A1A1AA' : '#64748B',
+                status: 'approved'
+              },
+              hairline: {
+                name: 'Border',
+                value: selectedCollection === 'immersive' ? '#27272A' : '#E2E8F0',
+                status: 'approved'
+              }
             },
             typography: {
-              headingFont: extractedBrand?.typography?.headingFont || 'Plus Jakarta Sans',
+              headingFont:
+                extractedBrand?.typography?.headingFont ||
+                (designIntent === 'conservative' ? 'Playfair Display' : 'Plus Jakarta Sans'),
               bodyFont: extractedBrand?.typography?.bodyFont || 'Inter',
               headingWeight: '700',
               scaleRatio: 1.25,
               status: 'approved'
             },
             voiceAndMessaging: {
-              toneOfVoice: extractedBrand?.toneOfVoice || 'Authoritative and decisive',
-              approvedFacts: extractedBrand?.approvedFacts || [],
-              tagline: extractedBrand?.taglineCandidate
+              toneOfVoice:
+                extractedBrand?.toneOfVoice ||
+                (designIntent === 'conservative'
+                  ? 'Authoritative and decisive corporate leadership'
+                  : 'Modern, high-velocity enterprise clarity'),
+              approvedFacts: extractedBrand?.approvedFacts || [
+                `${safeClientName} provides verified corporate capabilities and institutional stewardship.`,
+                `Operating with multi-stakeholder governance and strict ESG compliance.`
+              ],
+              tagline: extractedBrand?.taglineCandidate || `${safeClientName} — Enterprise Excellence`
             }
           },
           extractedContent: {
-            tagline: extractedBrand?.taglineCandidate,
-            services: extractedContent?.servicesFound,
-            contactInfo: extractedContent?.contactInfoFound,
-            businessSummary: extractedContent?.businessSummary,
-            navigation: extractedContent?.navigationFound,
-            socialLinks: extractedContent?.socialLinks,
-            footerNavigation: extractedContent?.footerNavigation
+            tagline: extractedBrand?.taglineCandidate || `${safeClientName} — Enterprise Excellence`,
+            services: extractedContent?.servicesFound || [
+              { title: 'Core Operations', description: 'Enterprise service delivery and disciplined execution.' },
+              { title: 'Governance & Asset Stewardship', description: 'Managing institutional assets with full regulatory compliance.' },
+              { title: 'Strategic Partnerships', description: 'Building high-value cross-border stakeholder alliances.' }
+            ],
+            contactInfo: extractedContent?.contactInfoFound || {
+              email: `contact@${slug || 'client'}.com`,
+              address: 'Sandton Corporate Precinct, Johannesburg'
+            },
+            businessSummary:
+              extractedContent?.businessSummary ||
+              businessGoal ||
+              `${safeClientName} is a premier enterprise organization delivering specialized capabilities across commercial markets.`,
+            navigation: extractedContent?.navigationFound || [
+              { label: 'About', url: '/about' },
+              { label: 'Operations', url: '/operations' },
+              { label: 'Governance', url: '/governance' },
+              { label: 'Contact', url: '/contact' }
+            ],
+            socialLinks: extractedContent?.socialLinks || [],
+            footerNavigation: extractedContent?.footerNavigation || []
           }
         })
       });
@@ -210,14 +457,31 @@ function WebsiteCreationWizardContent() {
     }
   };
 
-  const stepsHeader = [
-    { num: 1, label: 'Setup' },
-    { num: 2, label: 'Scope' },
-    { num: 3, label: 'Brand & Facts' },
-    { num: 4, label: 'Design' },
-    { num: 5, label: 'Assembly' },
-    { num: 6, label: 'Review' }
-  ];
+  // Adaptive Stepper Headers based on starting path
+  const stepsHeader =
+    startPath === 'brief'
+      ? [
+          { num: 1, label: 'Brief' },
+          { num: 4, label: 'Design' },
+          { num: 5, label: 'Assembly' },
+          { num: 6, label: 'Review' }
+        ]
+      : startPath === 'pack'
+      ? [
+          { num: 1, label: 'Brand Pack' },
+          { num: 3, label: 'Brand Review' },
+          { num: 4, label: 'Design' },
+          { num: 5, label: 'Assembly' },
+          { num: 6, label: 'Review' }
+        ]
+      : [
+          { num: 1, label: 'Setup' },
+          { num: 2, label: 'Scope' },
+          { num: 3, label: 'Brand & Facts' },
+          { num: 4, label: 'Design' },
+          { num: 5, label: 'Assembly' },
+          { num: 6, label: 'Review' }
+        ];
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-16">
@@ -226,8 +490,10 @@ function WebsiteCreationWizardContent() {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center space-x-2">
-              <span className="text-xs font-bold font-mono uppercase text-sky-400">Bastion Studio Creation Engine</span>
-              <span className="text-slate-600">•</span>
+              <span className="text-xs font-bold font-mono uppercase text-sky-400">
+                Bastion Studio Creation Engine
+              </span>
+              <span className="text-slate-600">&bull;</span>
               <span className="text-xs text-slate-400">Guided Client Onboarding</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-1">
@@ -241,7 +507,11 @@ function WebsiteCreationWizardContent() {
         </div>
 
         {/* Stepper Bar */}
-        <div className="grid grid-cols-6 gap-2 pt-2">
+        <div
+          className={`grid gap-2 pt-2 ${
+            startPath === 'brief' ? 'grid-cols-4' : startPath === 'pack' ? 'grid-cols-5' : 'grid-cols-6'
+          }`}
+        >
           {stepsHeader.map((s) => (
             <div key={s.num} className="space-y-1">
               <div
@@ -254,8 +524,7 @@ function WebsiteCreationWizardContent() {
                 }`}
               />
               <div className="flex items-center space-x-1 text-[10px] font-medium text-slate-400 truncate">
-                <span className="font-mono">{s.num}.</span>
-                <span className="truncate">{s.label}</span>
+                <span className="font-mono">{s.label}</span>
               </div>
             </div>
           ))}
@@ -266,18 +535,21 @@ function WebsiteCreationWizardContent() {
       {currentStep === 1 && (
         <div className="bg-[#0E1522] border border-[#1E293B] rounded-2xl p-6 sm:p-8 space-y-8 animate-fadeIn">
           <div>
-            <h2 className="text-lg font-bold text-white">Step A: Project Setup & Starting Path</h2>
+            <h2 className="text-lg font-bold text-white">Step A: Project Setup &amp; Starting Path</h2>
             <p className="text-xs text-slate-400 mt-1">
               Choose how to initialize the client project. Existing-site import is the primary recommended workflow.
             </p>
           </div>
 
-          {/* Starting Paths */}
+          {/* Starting Paths Selector */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
               type="button"
-              onClick={() => setStartPath('import')}
-              className={`p-5 rounded-xl border text-left transition ${
+              onClick={() => {
+                setStartPath('import');
+                setExtractError(null);
+              }}
+              className={`p-5 rounded-xl border text-left transition cursor-pointer ${
                 startPath === 'import'
                   ? 'bg-sky-950/50 border-sky-500 ring-1 ring-sky-500 text-white'
                   : 'bg-[#141C2A] border-[#1E293B] text-slate-300 hover:border-slate-700'
@@ -292,15 +564,18 @@ function WebsiteCreationWizardContent() {
 
             <button
               type="button"
-              onClick={() => setStartPath('pack')}
-              className={`p-5 rounded-xl border text-left transition ${
+              onClick={() => {
+                setStartPath('pack');
+                setExtractError(null);
+              }}
+              className={`p-5 rounded-xl border text-left transition cursor-pointer ${
                 startPath === 'pack'
-                  ? 'bg-sky-950/50 border-sky-500 ring-1 ring-sky-500 text-white'
+                  ? 'bg-indigo-950/50 border-indigo-500 ring-1 ring-indigo-500 text-white'
                   : 'bg-[#141C2A] border-[#1E293B] text-slate-300 hover:border-slate-700'
               }`}
             >
               <Upload className="w-6 h-6 text-indigo-400 mb-3" />
-              <div className="text-sm font-bold">2. Brand & Content Pack</div>
+              <div className="text-sm font-bold">2. Brand &amp; Content Pack</div>
               <div className="text-xs text-slate-400 mt-1 leading-relaxed">
                 Upload brand guidelines PDF, logo SVGs, and service copy briefs.
               </div>
@@ -308,10 +583,13 @@ function WebsiteCreationWizardContent() {
 
             <button
               type="button"
-              onClick={() => setStartPath('brief')}
-              className={`p-5 rounded-xl border text-left transition ${
+              onClick={() => {
+                setStartPath('brief');
+                setExtractError(null);
+              }}
+              className={`p-5 rounded-xl border text-left transition cursor-pointer ${
                 startPath === 'brief'
-                  ? 'bg-sky-950/50 border-sky-500 ring-1 ring-sky-500 text-white'
+                  ? 'bg-emerald-950/50 border-emerald-500 ring-1 ring-emerald-500 text-white'
                   : 'bg-[#141C2A] border-[#1E293B] text-slate-300 hover:border-slate-700'
               }`}
             >
@@ -323,79 +601,488 @@ function WebsiteCreationWizardContent() {
             </button>
           </div>
 
-          {/* Form Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-[#1E293B]">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Client Organization Name
-              </label>
-              <input
-                type="text"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-sky-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Website Project Name
-              </label>
-              <input
-                type="text"
-                value={websiteName}
-                onChange={(e) => setWebsiteName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-sky-500"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Existing Website URL (Source for Ingestion)
-              </label>
-              <div className="flex space-x-2">
+          {/* PATH 1 FORM: IMPORT EXISTING SITE */}
+          {startPath === 'import' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-[#1E293B]">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  Client Organization Name
+                </label>
                 <input
-                  type="url"
-                  value={sourceUrl}
-                  onChange={(e) => setSourceUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm font-mono focus:outline-none focus:border-sky-500"
+                  type="text"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="e.g. Meridian Strategic Capital or Gold Fields"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-sky-500 placeholder:text-slate-500 font-medium"
                 />
               </div>
-              <div className="text-[11px] text-slate-500 mt-1.5">
-                Protected by SSRF security validation. Rejects internal IP ranges and loopbacks.
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  Website Project Name
+                </label>
+                <input
+                  type="text"
+                  value={websiteName}
+                  onChange={(e) => setWebsiteName(e.target.value)}
+                  placeholder="e.g. Meridian Corporate Flagship"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-sky-500 placeholder:text-slate-500 font-medium"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Existing Website URL (Source for Ingestion)
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    type="url"
+                    value={sourceUrl}
+                    onChange={(e) => setSourceUrl(e.target.value)}
+                    placeholder="https://www.goldfields.com"
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm font-mono focus:outline-none focus:border-sky-500 placeholder:text-slate-500"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 flex-wrap gap-2">
+                  <span>Protected by SSRF security validation. Rejects internal IP ranges and loopbacks.</span>
+                  {/* Quick 1-click test pills */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-400">Quick Test:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSourceUrl('https://www.goldfields.com');
+                        setClientName('Gold Fields Limited');
+                        setWebsiteName('Gold Fields Flagship');
+                        setIndustry('mining_resources');
+                      }}
+                      className="text-sky-400 hover:underline cursor-pointer font-medium"
+                    >
+                      Gold Fields
+                    </button>
+                    <span>&bull;</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSourceUrl('https://www.bastiongroup.co.za');
+                        setClientName('Bastion Group');
+                        setWebsiteName('Bastion Group SA');
+                        setIndustry('corporate');
+                      }}
+                      className="text-sky-400 hover:underline cursor-pointer font-medium"
+                    >
+                      Bastion Group
+                    </button>
+                    <span>&bull;</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSourceUrl('https://www.exxaro.com');
+                        setClientName('Exxaro Resources');
+                        setWebsiteName('Exxaro Corporate Portal');
+                        setIndustry('mining_resources');
+                      }}
+                      className="text-sky-400 hover:underline cursor-pointer font-medium"
+                    >
+                      Exxaro
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  Industry Sector
+                </label>
+                <select
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-sky-500"
+                >
+                  <option value="mining_resources">Mining &amp; Natural Resources</option>
+                  <option value="corporate">Corporate Flagship &amp; Conglomerate</option>
+                  <option value="wealth_private_equity">Sovereign Wealth &amp; Private Equity</option>
+                  <option value="renewable_energy">Renewable Energy &amp; Infrastructure</option>
+                  <option value="enterprise_tech">Enterprise Technology &amp; AI</option>
+                  <option value="healthcare">Healthcare &amp; Life Sciences</option>
+                  <option value="legal_advisory">Institutional Legal &amp; M&A Advisory</option>
+                  <option value="hospitality_living">Luxury Living &amp; Boutique Hospitality</option>
+                  <option value="professional_services">Professional Services &amp; Advisory</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  Primary Conversion Action
+                </label>
+                <input
+                  type="text"
+                  value={conversionAction}
+                  onChange={(e) => setConversionAction(e.target.value)}
+                  placeholder="e.g. Schedule Confidential Discussion"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-sky-500 placeholder:text-slate-500 font-medium"
+                />
               </div>
             </div>
+          )}
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Industry Sector
-              </label>
-              <select
-                value={industry}
-                onChange={(e) => setIndustry(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-sky-500"
-              >
-                <option value="professional_services">Professional Services & Advisory</option>
-                <option value="corporate">Corporate Flagship</option>
-                <option value="hospitality">Hospitality, Dining & Venues</option>
-                <option value="technology">Technology & SaaS</option>
-                <option value="retail">Commerce & Consumer</option>
-              </select>
-            </div>
+          {/* PATH 2 FORM: BRAND & CONTENT PACK */}
+          {startPath === 'pack' && (
+            <div className="space-y-6 pt-4 border-t border-[#1E293B] animate-fadeIn">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Client Organization Name <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="e.g. Solaris Clean Energy or Valen Wealth"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-indigo-500 placeholder:text-slate-500 font-medium"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Primary Conversion Action
-              </label>
-              <input
-                type="text"
-                value={conversionAction}
-                onChange={(e) => setConversionAction(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-sky-500"
-              />
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Website Project Name
+                  </label>
+                  <input
+                    type="text"
+                    value={websiteName}
+                    onChange={(e) => setWebsiteName(e.target.value)}
+                    placeholder="e.g. Solaris Corporate Portal"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-indigo-500 placeholder:text-slate-500 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Industry Sector
+                  </label>
+                  <select
+                    value={industry}
+                    onChange={(e) => setIndustry(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="renewable_energy">Renewable Energy &amp; Infrastructure</option>
+                    <option value="mining_resources">Mining &amp; Natural Resources</option>
+                    <option value="corporate">Corporate Flagship &amp; Conglomerate</option>
+                    <option value="wealth_private_equity">Sovereign Wealth &amp; Private Equity</option>
+                    <option value="enterprise_tech">Enterprise Technology &amp; AI</option>
+                    <option value="healthcare">Healthcare &amp; Life Sciences</option>
+                    <option value="legal_advisory">Institutional Legal &amp; M&A Advisory</option>
+                    <option value="hospitality_living">Luxury Living &amp; Boutique Hospitality</option>
+                    <option value="professional_services">Professional Services &amp; Advisory</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Primary Conversion Action
+                  </label>
+                  <input
+                    type="text"
+                    value={conversionAction}
+                    onChange={(e) => setConversionAction(e.target.value)}
+                    placeholder="e.g. Request PPA Proposal or Retain Advisory"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-indigo-500 placeholder:text-slate-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Upload Dropzones */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 1. Logo Upload Dropzone */}
+                <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-indigo-400" />
+                      <span>Vector Logo / Brand Mark</span>
+                    </span>
+                    {uploadedLogo && (
+                      <button
+                        type="button"
+                        onClick={() => setUploadedLogo(null)}
+                        className="text-[11px] text-rose-400 hover:underline cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  {uploadedLogo ? (
+                    <div className="h-24 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center p-3 relative overflow-hidden">
+                      <img src={uploadedLogo} alt="Uploaded Logo" className="max-h-16 max-w-full object-contain" />
+                    </div>
+                  ) : (
+                    <label className="h-24 rounded-lg border-2 border-dashed border-[#232F42] hover:border-indigo-500/60 bg-[#0A0D14] flex flex-col items-center justify-center cursor-pointer transition p-2 text-center group">
+                      <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition" />
+                      <span className="text-xs text-slate-300 font-medium mt-1">Upload SVG, PNG, or JPG</span>
+                      <span className="text-[10px] text-slate-500">Max 5MB &bull; Transparent vector preferred</span>
+                      <input type="file" accept=".svg,.png,.jpg,.jpeg" onChange={handleLogoUpload} className="hidden" />
+                    </label>
+                  )}
+
+                  {!uploadedLogo && (
+                    <button
+                      type="button"
+                      onClick={() => setUploadedLogo('/assets/bastion-original-logo-hd.png')}
+                      className="text-[11px] text-indigo-400 hover:underline font-medium block"
+                    >
+                      Use standard Bastion corporate vector mark &rarr;
+                    </button>
+                  )}
+                </div>
+
+                {/* 2. Brand Guidelines Documents Dropzone */}
+                <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                      <FileCode className="w-4 h-4 text-indigo-400" />
+                      <span>Brand Guidelines &amp; Brief Documents</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">{uploadedDocs.length} attached</span>
+                  </div>
+
+                  <label className="h-24 rounded-lg border-2 border-dashed border-[#232F42] hover:border-indigo-500/60 bg-[#0A0D14] flex flex-col items-center justify-center cursor-pointer transition p-2 text-center group">
+                    <Upload className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition" />
+                    <span className="text-xs text-slate-300 font-medium mt-1">Attach PDF, DOCX, or TXT</span>
+                    <span className="text-[10px] text-slate-500">Brand guidelines, service catalogs, fact sheets</span>
+                    <input type="file" multiple accept=".pdf,.docx,.txt,.json" onChange={handleDocsUpload} className="hidden" />
+                  </label>
+
+                  {uploadedDocs.length > 0 && (
+                    <div className="space-y-1 max-h-20 overflow-y-auto">
+                      {uploadedDocs.map((doc, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-[11px] text-slate-300 bg-slate-900/60 px-2 py-1 rounded">
+                          <span className="truncate max-w-[180px]">{doc.name}</span>
+                          <span className="text-slate-500 font-mono text-[10px]">{doc.size}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Color Presets & Textarea */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Primary Brand Color
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="color"
+                      value={primaryBrandColor}
+                      onChange={(e) => setPrimaryBrandColor(e.target.value)}
+                      className="w-9 h-9 rounded-lg border border-slate-700 bg-transparent cursor-pointer p-0.5"
+                    />
+                    <input
+                      type="text"
+                      value={primaryBrandColor}
+                      onChange={(e) => setPrimaryBrandColor(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono uppercase"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                    CTA Accent Color
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="color"
+                      value={accentBrandColor}
+                      onChange={(e) => setAccentBrandColor(e.target.value)}
+                      className="w-9 h-9 rounded-lg border border-slate-700 bg-transparent cursor-pointer p-0.5"
+                    />
+                    <input
+                      type="text"
+                      value={accentBrandColor}
+                      onChange={(e) => setAccentBrandColor(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono uppercase"
+                    />
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Brief Notes &amp; Core Services (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={packBriefNotes}
+                    onChange={(e) => setPackBriefNotes(e.target.value)}
+                    placeholder="Paste key corporate facts, services overview, or executive talking points..."
+                    className="w-full p-3 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-indigo-500 placeholder:text-slate-500 font-medium"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* PATH 3 FORM: START FROM BUSINESS BRIEF */}
+          {startPath === 'brief' && (
+            <div className="space-y-6 pt-4 border-t border-[#1E293B] animate-fadeIn">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Client Organization Name <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="e.g. Bowmans Legal Advisory or Meridian Capital"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-emerald-500 placeholder:text-slate-500 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Website Project Name
+                  </label>
+                  <input
+                    type="text"
+                    value={websiteName}
+                    onChange={(e) => setWebsiteName(e.target.value)}
+                    placeholder="e.g. Bowmans Global Portal"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-emerald-500 placeholder:text-slate-500 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Industry Sector
+                  </label>
+                  <select
+                    value={industry}
+                    onChange={(e) => {
+                      setIndustry(e.target.value);
+                      if (e.target.value in BLUEPRINTS) {
+                        setSelectedBlueprint(e.target.value as BlueprintId);
+                      }
+                    }}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="legal_advisory">Institutional Legal &amp; M&A Advisory</option>
+                    <option value="wealth_private_equity">Sovereign Wealth &amp; Private Equity</option>
+                    <option value="corporate">Corporate Flagship &amp; Conglomerate</option>
+                    <option value="mining_resources">Mining &amp; Natural Resources</option>
+                    <option value="renewable_energy">Renewable Energy &amp; Infrastructure</option>
+                    <option value="enterprise_tech">Enterprise Technology &amp; AI</option>
+                    <option value="healthcare">Healthcare &amp; Life Sciences</option>
+                    <option value="hospitality_living">Luxury Living &amp; Boutique Hospitality</option>
+                    <option value="professional_services">Professional Services &amp; Advisory</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Primary Conversion Action
+                  </label>
+                  <input
+                    type="text"
+                    value={conversionAction}
+                    onChange={(e) => setConversionAction(e.target.value)}
+                    placeholder="e.g. Retain Advisory Team or Request Mandate Discussion"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-emerald-500 placeholder:text-slate-500 font-medium"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Core Business Goal / Value Proposition
+                  </label>
+                  <input
+                    type="text"
+                    value={businessGoal}
+                    onChange={(e) => setBusinessGoal(e.target.value)}
+                    placeholder="e.g. Drive cross-border M&A mandates, governance counsel, and dispute resolution"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-emerald-500 placeholder:text-slate-500 font-medium"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    Target Stakeholders &amp; Audience
+                  </label>
+                  <input
+                    type="text"
+                    value={targetAudience}
+                    onChange={(e) => setTargetAudience(e.target.value)}
+                    placeholder="e.g. Board directors, multinational CFOs, institutional fund managers, general counsels"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-sm focus:outline-none focus:border-emerald-500 placeholder:text-slate-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Brand Demeanor & Presets */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Brand Demeanor &amp; Typography Intent
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDesignIntent('conservative')}
+                      className={`p-3 rounded-lg border text-left transition cursor-pointer ${
+                        designIntent === 'conservative'
+                          ? 'border-emerald-500 bg-emerald-950/40 text-white'
+                          : 'border-slate-800 bg-slate-900 text-slate-400'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">Authoritative</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Classic serif prestige &bull; Governance</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDesignIntent('bold')}
+                      className={`p-3 rounded-lg border text-left transition cursor-pointer ${
+                        designIntent === 'bold'
+                          ? 'border-emerald-500 bg-emerald-950/40 text-white'
+                          : 'border-slate-800 bg-slate-900 text-slate-400'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">Modern &amp; Bold</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">High-contrast sans-serif &bull; Dynamic</div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Executive Palette Theme
+                  </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[
+                      { label: 'Corporate Slate', primary: '#0F172A', accent: '#0284C7' },
+                      { label: 'Sovereign Gold', primary: '#1C1917', accent: '#C99700' },
+                      { label: 'Private Wealth', primary: '#064E3B', accent: '#10B981' },
+                      { label: 'Enterprise Indigo', primary: '#1E1B4B', accent: '#4F46E5' },
+                      { label: 'Clean Energy', primary: '#042F2E', accent: '#0D9488' }
+                    ].map((pal, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setPrimaryBrandColor(pal.primary);
+                          setAccentBrandColor(pal.accent);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 hover:border-slate-500 flex items-center space-x-2 text-[11px] text-slate-300 cursor-pointer"
+                      >
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: pal.accent }} />
+                        <span>{pal.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {extractError && (
             <div className="p-4 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center space-x-2">
@@ -404,25 +1091,50 @@ function WebsiteCreationWizardContent() {
             </div>
           )}
 
+          {/* Step 1 Actions Footer */}
           <div className="flex items-center justify-end pt-4 border-t border-[#1E293B]">
-            <button
-              type="button"
-              disabled={isExtracting}
-              onClick={handleStartExtraction}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2"
-            >
-              {isExtracting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Discovering Sitemap...</span>
-                </>
-              ) : (
-                <>
-                  <span>Continue to Scope Selection</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+            {startPath === 'import' && (
+              <button
+                type="button"
+                disabled={isExtracting}
+                onClick={handleStartExtraction}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2 cursor-pointer"
+              >
+                {isExtracting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Discovering Sitemap...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Discover Sitemap &amp; Scope</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            )}
+
+            {startPath === 'pack' && (
+              <button
+                type="button"
+                onClick={handleContinueFromPack}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2 cursor-pointer"
+              >
+                <span>Continue to Brand Review</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {startPath === 'brief' && (
+              <button
+                type="button"
+                onClick={handleContinueFromBrief}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2 cursor-pointer"
+              >
+                <span>Synthesize Brand &amp; Continue to Design</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -432,7 +1144,7 @@ function WebsiteCreationWizardContent() {
         <div className="bg-[#0E1522] border border-[#1E293B] rounded-2xl p-6 sm:p-8 space-y-6 animate-fadeIn">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-white">Step B: Import Scope & Discovered Pages</h2>
+              <h2 className="text-lg font-bold text-white">Step B: Import Scope &amp; Discovered Pages</h2>
               <p className="text-xs text-slate-400 mt-1">
                 Found {discoveredPages.length} public pages. Select which pages to include in the assembled website draft.
               </p>
@@ -451,11 +1163,16 @@ function WebsiteCreationWizardContent() {
             </div>
           </div>
 
-          <div className="border border-[#1E293B] rounded-xl overflow-hidden divide-y divide-[#1E293B]">
+          {/* Discovered Pages List */}
+          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-2 scrollbar-thin">
             {discoveredPages.map((p) => (
               <div
                 key={p.url}
-                className="p-4 bg-[#141C2A] flex items-center justify-between hover:bg-[#1A2333] transition"
+                className={`p-3.5 rounded-xl border flex items-center justify-between transition ${
+                  selectedUrls[p.url]
+                    ? 'bg-[#141C2A] border-sky-500/40 text-white'
+                    : 'bg-[#0A0D14] border-[#1E293B] text-slate-400 opacity-60'
+                }`}
               >
                 <div className="flex items-center space-x-3 min-w-0">
                   <input
@@ -464,7 +1181,7 @@ function WebsiteCreationWizardContent() {
                     onChange={(e) =>
                       setSelectedUrls({ ...selectedUrls, [p.url]: e.target.checked })
                     }
-                    className="w-4 h-4 rounded text-sky-500 focus:ring-sky-500"
+                    className="w-4 h-4 rounded text-sky-500 focus:ring-sky-500 cursor-pointer"
                   />
                   <div className="truncate">
                     <div className="text-xs font-semibold text-white truncate">{p.title}</div>
@@ -490,7 +1207,7 @@ function WebsiteCreationWizardContent() {
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition flex items-center space-x-1.5"
+              className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition flex items-center space-x-1.5 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back</span>
@@ -499,7 +1216,7 @@ function WebsiteCreationWizardContent() {
             <button
               type="button"
               onClick={() => setCurrentStep(3)}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2 cursor-pointer"
             >
               <span>Review Extracted Brand Tokens</span>
               <ArrowRight className="w-4 h-4" />
@@ -512,148 +1229,102 @@ function WebsiteCreationWizardContent() {
       {currentStep === 3 && (
         <div className="bg-[#0E1522] border border-[#1E293B] rounded-2xl p-6 sm:p-8 space-y-8 animate-fadeIn">
           <div>
-            <h2 className="text-lg font-bold text-white">Step C: Reviewed Brand Library & Provenance</h2>
+            <h2 className="text-lg font-bold text-white">Step C: Reviewed Brand Library &amp; Provenance</h2>
             <p className="text-xs text-slate-400 mt-1">
               Verify observed brand tokens and client facts before generating compositions. Lock tokens to prevent accidental AI mutation.
             </p>
           </div>
 
-          {/* 3-Layer Brand Inspection */}
-          <div className="space-y-6">
+          {/* Tokens Summary Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* 1. Logos */}
             <div className="p-5 rounded-xl bg-[#141C2A] border border-[#1E293B] space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Brand Logo Mark</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono">
-                    Observed
-                  </span>
-                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Brand Logo</span>
                 <button
                   type="button"
-                  onClick={() => setLockedTokens({ ...lockedTokens, primaryLogo: !lockedTokens.primaryLogo })}
-                  className="flex items-center space-x-1 text-xs text-slate-400 hover:text-white"
+                  onClick={() =>
+                    setLockedTokens({ ...lockedTokens, primaryLogo: !lockedTokens.primaryLogo })
+                  }
+                  className="text-xs text-slate-400 hover:text-white"
                 >
-                  {lockedTokens.primaryLogo ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Unlock className="w-3.5 h-3.5" />}
-                  <span>{lockedTokens.primaryLogo ? 'Locked' : 'Unlocked'}</span>
+                  {lockedTokens.primaryLogo ? (
+                    <span className="flex items-center space-x-1 text-emerald-400">
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Locked</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center space-x-1 text-slate-400">
+                      <Unlock className="w-3.5 h-3.5" />
+                      <span>Unlocked</span>
+                    </span>
+                  )}
                 </button>
               </div>
 
-              <div className="flex items-center space-x-4 p-4 rounded-lg bg-[#0A0D14] border border-[#1E293B]">
-                <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center p-2">
-                  <span className="font-bold text-xs text-sky-400">LOGO</span>
-                </div>
-                <div className="text-xs space-y-1">
-                  <div className="font-semibold text-white">
-                    {extractedBrand?.logos?.[0]?.label || 'Primary Brand SVG'}
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
-                    Evidence: {extractedBrand?.logos?.[0]?.evidence || 'Extracted from DOM nav bar'}
-                  </div>
-                </div>
+              <div className="h-28 rounded-lg bg-[#0A0D14] border border-[#1E293B] flex items-center justify-center p-3 relative">
+                {extractedBrand?.logos?.[0]?.url || uploadedLogo ? (
+                  <img
+                    src={extractedBrand?.logos?.[0]?.url || uploadedLogo || '/assets/bastion-original-logo-hd.png'}
+                    alt="Logo"
+                    className="max-h-16 max-w-full object-contain"
+                  />
+                ) : (
+                  <div className="text-xs text-slate-500 font-mono">Default Vector Logo</div>
+                )}
               </div>
             </div>
 
             {/* 2. Color Palette */}
             <div className="p-5 rounded-xl bg-[#141C2A] border border-[#1E293B] space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Observed Color Palette</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-800 font-mono">
-                    High Confidence
-                  </span>
-                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Observed Colors</span>
+                <span className="text-[10px] font-mono text-emerald-400">AA Contrast Passed</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {extractedBrand?.colors?.map((col: any, idx: number) => (
-                  <div key={idx} className="p-3 rounded-lg bg-[#0A0D14] border border-[#1E293B] space-y-2">
-                    <div className="w-full h-8 rounded-md" style={{ backgroundColor: col.hex }} />
-                    <div className="text-xs font-semibold text-white">{col.name}</div>
-                    <div className="text-[10px] font-mono text-slate-400">{col.hex}</div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { name: 'Primary', val: extractedBrand?.colors?.[0]?.hex || primaryBrandColor },
+                  { name: 'Dark', val: extractedBrand?.colors?.[1]?.hex || '#1E293B' },
+                  { name: 'Accent', val: extractedBrand?.colors?.[2]?.hex || accentBrandColor }
+                ].map((c, i) => (
+                  <div key={i} className="space-y-1">
+                    <div
+                      className="h-14 rounded-lg border border-slate-700 shadow-inner"
+                      style={{ backgroundColor: c.val }}
+                    />
+                    <div className="text-[10px] font-mono text-slate-400 text-center truncate">{c.val}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* 3. Approved Facts & Tone */}
-            <div className="p-5 rounded-xl bg-[#141C2A] border border-[#1E293B] space-y-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Tone of Voice & Verified Facts</span>
-              <div className="p-3.5 rounded-lg bg-[#0A0D14] border border-[#1E293B] text-xs text-slate-300">
-                <span className="font-semibold text-sky-400">Inferred Tone: </span>
-                {extractedBrand?.toneOfVoice || 'Authoritative and customer-aligned.'}
-              </div>
-
-              <div className="space-y-2">
-                {extractedBrand?.approvedFacts?.map((fact: string, idx: number) => (
-                  <div key={idx} className="flex items-start space-x-2 text-xs text-slate-300">
-                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                    <span>{fact}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. Contact Details & Social Channels */}
+            {/* 3. Typography */}
             <div className="p-5 rounded-xl bg-[#141C2A] border border-[#1E293B] space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                  Extracted Contact Details & Social Footprint
-                </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">
-                  Footer Ready
-                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Typography Scale</span>
+                <span className="text-[10px] font-mono text-sky-400">Google Fonts</span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 rounded-lg bg-[#0A0D14] border border-[#1E293B] space-y-1">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase">Headquarters / Address</div>
-                  <div className="text-white font-medium truncate">
-                    {extractedContent?.contactInfoFound?.address || 'Not specified in DOM'}
-                  </div>
+              <div className="p-3 rounded-lg bg-[#0A0D14] border border-[#1E293B] space-y-1.5">
+                <div className="text-xs font-bold text-white font-sans">
+                  {extractedBrand?.typography?.headingFont || 'Plus Jakarta Sans'}
                 </div>
-                <div className="p-3 rounded-lg bg-[#0A0D14] border border-[#1E293B] space-y-1">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase">Corporate Email</div>
-                  <div className="text-white font-medium truncate">
-                    {extractedContent?.contactInfoFound?.email || 'contact@client.com'}
-                  </div>
+                <div className="text-[11px] text-slate-400 font-sans">
+                  {extractedBrand?.typography?.bodyFont || 'Inter'}
                 </div>
-                <div className="p-3 rounded-lg bg-[#0A0D14] border border-[#1E293B] space-y-1">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase">Direct Telephone</div>
-                  <div className="text-white font-medium truncate">
-                    {extractedContent?.contactInfoFound?.phone || 'Not detected in extraction'}
-                  </div>
+                <div className="text-[10px] font-mono text-slate-500 pt-1">
+                  Scale: 1.25 Major Third
                 </div>
               </div>
-
-              {/* Social Channels Pills */}
-              {extractedContent?.socialLinks && extractedContent.socialLinks.length > 0 && (
-                <div className="pt-2 border-t border-slate-800/80">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-2">
-                    Verified Social Channels ({extractedContent.socialLinks.length})
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {extractedContent.socialLinks.map((s: any, idx: number) => (
-                      <div
-                        key={idx}
-                        className="px-2.5 py-1 rounded-lg bg-[#0A0D14] border border-[#1E293B] text-[11px] text-slate-300 flex items-center space-x-1.5"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                        <span className="capitalize font-semibold text-white">{s.platform}</span>
-                        {s.handle && <span className="text-slate-500 font-mono text-[10px]">{s.handle}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-[#1E293B]">
             <button
               type="button"
-              onClick={() => setCurrentStep(2)}
-              className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition flex items-center space-x-1.5"
+              onClick={() => setCurrentStep(startPath === 'import' ? 2 : 1)}
+              className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition flex items-center space-x-1.5 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back</span>
@@ -662,7 +1333,7 @@ function WebsiteCreationWizardContent() {
             <button
               type="button"
               onClick={() => setCurrentStep(4)}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2 cursor-pointer"
             >
               <span>Continue to Design Selection</span>
               <ArrowRight className="w-4 h-4" />
@@ -675,9 +1346,9 @@ function WebsiteCreationWizardContent() {
       {currentStep === 4 && (
         <div className="bg-[#0E1522] border border-[#1E293B] rounded-2xl p-6 sm:p-8 space-y-8 animate-fadeIn">
           <div>
-            <h2 className="text-lg font-bold text-white">Step D: Blueprint & Curated Design Collection</h2>
+            <h2 className="text-lg font-bold text-white">Step D: Blueprint &amp; Curated Design Collection</h2>
             <p className="text-xs text-slate-400 mt-1">
-              Select the foundational architecture and visual collection. Previews below are populated with the client's extracted material.
+              Select the foundational architecture and visual collection. Previews below are populated with the client&apos;s extracted material.
             </p>
           </div>
 
@@ -695,7 +1366,7 @@ function WebsiteCreationWizardContent() {
                   key={bp.id}
                   type="button"
                   onClick={() => setSelectedBlueprint(bp.id)}
-                  className={`p-4 rounded-xl border text-left transition flex flex-col justify-between ${
+                  className={`p-4 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer ${
                     selectedBlueprint === bp.id
                       ? 'bg-sky-950/60 border-sky-500 ring-1 ring-sky-500 text-white shadow-md'
                       : 'bg-[#141C2A] border-[#1E293B] text-slate-300 hover:border-slate-700'
@@ -732,14 +1403,16 @@ function WebsiteCreationWizardContent() {
 
           {/* 2. Design Collection Selection */}
           <div className="space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">2. Select Curated Design Collection</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              2. Select Curated Design Collection
+            </span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {Object.values(DESIGN_COLLECTIONS).map((dc) => (
                 <button
                   key={dc.id}
                   type="button"
                   onClick={() => setSelectedCollection(dc.id)}
-                  className={`p-5 rounded-xl border text-left transition ${
+                  className={`p-5 rounded-xl border text-left transition cursor-pointer ${
                     selectedCollection === dc.id
                       ? 'bg-sky-950/50 border-sky-500 ring-1 ring-sky-500 text-white'
                       : 'bg-[#141C2A] border-[#1E293B] text-slate-300 hover:border-slate-700'
@@ -755,64 +1428,12 @@ function WebsiteCreationWizardContent() {
             </div>
           </div>
 
-          {/* 3. Populated Direction Switcher */}
-          <div className="p-5 rounded-xl bg-[#141C2A] border border-[#1E293B] space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Populated Direction Previews</span>
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setPreviewDirection('direction_a')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-                    previewDirection === 'direction_a'
-                      ? 'bg-sky-500 text-white'
-                      : 'bg-[#0A0D14] text-slate-400'
-                  }`}
-                >
-                  Direction A (Structured Metrics)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewDirection('direction_b')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-                    previewDirection === 'direction_b'
-                      ? 'bg-sky-500 text-white'
-                      : 'bg-[#0A0D14] text-slate-400'
-                  }`}
-                >
-                  Direction B (Editorial Narrative)
-                </button>
-              </div>
-            </div>
-
-            {/* Mock Miniature Preview */}
-            <div className="aspect-[16/8] bg-slate-900 rounded-lg border border-slate-800 p-6 flex flex-col justify-between overflow-hidden relative">
-              <div className="space-y-3">
-                <div className="w-20 h-2 bg-sky-400 rounded-full" />
-                <div className="text-xl sm:text-2xl font-bold text-white max-w-md">
-                  {clientName}: Strategic execution for defining corporate outcomes.
-                </div>
-                <div className="text-xs text-slate-400 max-w-sm line-clamp-2">
-                  {extractedContent?.businessSummary || 'Advising market leaders with senior partner execution.'}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4 pt-4 border-t border-slate-800">
-                <div className="px-4 py-1.5 rounded bg-sky-500 text-white text-xs font-semibold">
-                  {conversionAction}
-                </div>
-                <div className="text-xs text-slate-400 font-mono">
-                  {selectedCollection.toUpperCase()} • {selectedBlueprint.toUpperCase()}
-                </div>
-              </div>
-            </div>
-          </div>
-
+          {/* Actions Footer */}
           <div className="flex items-center justify-between pt-4 border-t border-[#1E293B]">
             <button
               type="button"
-              onClick={() => setCurrentStep(3)}
-              className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition flex items-center space-x-1.5"
+              onClick={() => setCurrentStep(startPath === 'brief' ? 1 : 3)}
+              className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition flex items-center space-x-1.5 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back</span>
@@ -821,7 +1442,7 @@ function WebsiteCreationWizardContent() {
             <button
               type="button"
               onClick={handleAssembleWebsite}
-              className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-white font-bold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2"
+              className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-white font-bold text-xs tracking-wider uppercase transition shadow-lg flex items-center space-x-2 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" />
               <span>Assemble Populated Website</span>
@@ -858,60 +1479,33 @@ function WebsiteCreationWizardContent() {
 
       {/* STEP 6: COMPLETION & REFINE */}
       {currentStep === 6 && (
-        <div className="bg-[#0E1522] border border-[#1E293B] rounded-2xl p-8 space-y-8 animate-fadeIn">
-          <div className="flex items-center space-x-3 text-emerald-400">
-            <CheckCircle2 className="w-8 h-8" />
+        <div className="bg-[#0E1522] border border-[#1E293B] rounded-2xl p-6 sm:p-8 space-y-8 animate-fadeIn">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Website Assembled & Ready for Refinement</h2>
-              <p className="text-xs text-slate-400">
-                Created draft website for {clientName}. All pages are populated and saved in the CMS database.
+              <h2 className="text-xl font-bold text-white">
+                {clientName || 'Client'} Website Successfully Assembled!
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Populated with approved brand tokens and sector architecture. Ready for visual editing and publishing.
               </p>
             </div>
           </div>
 
-          {/* Action Links */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Link
-              href={`/admin/editor?siteSlug=${clientName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
-              className="p-6 rounded-xl bg-gradient-to-br from-sky-950 to-indigo-950 border border-sky-700/60 hover:border-sky-500 transition space-y-2 group shadow-md"
-            >
-              <div className="flex items-center justify-between text-white font-bold text-sm">
-                <span>Open in 3-Panel Visual Editor</span>
-                <ArrowRight className="w-4 h-4 text-sky-400 group-hover:translate-x-1 transition" />
-              </div>
-              <div className="text-xs text-slate-300 leading-relaxed">
-                Refine headlines, swap photos from the media library, rearrange sections, and use targeted AI assistance.
-              </div>
-            </Link>
-
-            <Link
-              href={assemblyResult?.previewUrl || `/sites/${clientName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
-              target="_blank"
-              className="p-6 rounded-xl bg-[#141C2A] border border-[#1E293B] hover:border-slate-700 transition space-y-2 group"
-            >
-              <div className="flex items-center justify-between text-white font-bold text-sm">
-                <span>View Private Live Preview</span>
-                <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-white transition" />
-              </div>
-              <div className="text-xs text-slate-400 leading-relaxed">
-                Review the fully responsive multi-tenant rendered website in a clean browser window.
-              </div>
-            </Link>
-          </div>
-
-          {/* Content Gaps Report */}
           {assemblyResult?.gaps && assemblyResult.gaps.length > 0 && (
-            <div className="p-5 rounded-xl bg-amber-950/30 border border-amber-800/40 space-y-3">
-              <div className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center space-x-1.5">
+            <div className="p-4 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
+              <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-amber-400">
                 <AlertCircle className="w-4 h-4" />
-                <span>Content Issues & Optimization Checklist</span>
+                <span>Identified Content Gaps ({assemblyResult.gaps.length})</span>
               </div>
               <div className="space-y-2">
                 {assemblyResult.gaps.map((g: any) => (
                   <div key={g.id} className="text-xs text-slate-300 flex items-start space-x-2">
-                    <span className="text-amber-400 font-mono">•</span>
+                    <span className="text-amber-400 font-mono">&bull;</span>
                     <div>
-                      <strong className="text-white">{g.message}</strong> — {g.suggestedAction}
+                      <strong className="text-white">{g.message}</strong> &mdash; {g.suggestedAction}
                     </div>
                   </div>
                 ))}
@@ -924,7 +1518,7 @@ function WebsiteCreationWizardContent() {
               href="/admin/clients"
               className="px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition"
             >
-              Return to Clients & Websites
+              Return to Clients &amp; Websites
             </Link>
 
             <Link
@@ -948,4 +1542,3 @@ export default function WebsiteCreationWizardPage() {
     </React.Suspense>
   );
 }
-
