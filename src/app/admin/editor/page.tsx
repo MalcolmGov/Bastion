@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Monitor,
@@ -212,6 +212,81 @@ function VisualWebsiteEditorContent() {
     }
   };
 
+  // Resizable Panel Widths (Mouse Drag & Expand/Collapse)
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(320);
+  const [rightPanelWidth, setRightPanelWidth] = useState<number>(440);
+  const [isDraggingLeft, setIsDraggingLeft] = useState(false);
+  const [isDraggingRight, setIsDraggingRight] = useState(false);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+
+  // Restore saved panel widths from localStorage
+  useEffect(() => {
+    try {
+      const savedLeft = localStorage.getItem('bastion_editor_left_panel_width');
+      if (savedLeft) {
+        const val = parseInt(savedLeft, 10);
+        if (!isNaN(val) && val >= 220 && val <= 600) setLeftPanelWidth(val);
+      }
+      const savedRight = localStorage.getItem('bastion_editor_right_panel_width');
+      if (savedRight) {
+        const val = parseInt(savedRight, 10);
+        if (!isNaN(val) && val >= 320 && val <= 850) setRightPanelWidth(val);
+      }
+    } catch {}
+  }, []);
+
+  // Global mousemove and mouseup listeners for smooth panel dragging
+  useEffect(() => {
+    if (!isDraggingLeft && !isDraggingRight) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!editorContainerRef.current) return;
+      const rect = editorContainerRef.current.getBoundingClientRect();
+
+      if (isDraggingLeft) {
+        const newWidth = Math.round(e.clientX - rect.left);
+        if (newWidth < 140) {
+          setIsLeftPanelOpen(false);
+        } else {
+          setIsLeftPanelOpen(true);
+          const clamped = Math.max(220, Math.min(600, newWidth));
+          setLeftPanelWidth(clamped);
+          try { localStorage.setItem('bastion_editor_left_panel_width', String(clamped)); } catch {}
+        }
+      } else if (isDraggingRight) {
+        const newWidth = Math.round(rect.right - e.clientX);
+        if (newWidth < 160) {
+          setIsRightPanelOpen(false);
+        } else {
+          setIsRightPanelOpen(true);
+          const clamped = Math.max(340, Math.min(850, newWidth));
+          setRightPanelWidth(clamped);
+          try { localStorage.setItem('bastion_editor_right_panel_width', String(clamped)); } catch {}
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingLeft(false);
+      setIsDraggingRight(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isDraggingLeft, isDraggingRight]);
+
   // Gradient Custom Builder State
   const [customGradDir, setCustomGradDir] = useState('135deg');
   const [customGradFrom, setCustomGradFrom] = useState('#09090B');
@@ -410,18 +485,34 @@ function VisualWebsiteEditorContent() {
   };
 
   const handleMultiplePropsChange = (newProps: Record<string, any>, newStyles?: Record<string, any>) => {
-    if (!selectedSectionId) return;
+    const targetId = selectedSectionId || (sections.length > 0 ? sections[0].id : null);
+    if (!targetId) return;
+
+    if (!selectedSectionId) {
+      setSelectedSectionId(targetId);
+    }
+
     const updated = sections.map(s => {
-      if (s.id !== selectedSectionId) return s;
+      if (s.id !== targetId) return s;
+
+      const mergedProps: Record<string, any> = { ...s.props };
+      for (const [k, v] of Object.entries(newProps || {})) {
+        if (v !== undefined && v !== null) {
+          if (typeof v === 'object' && !Array.isArray(v) && typeof mergedProps[k] === 'object' && !Array.isArray(mergedProps[k])) {
+            mergedProps[k] = { ...mergedProps[k], ...v };
+          } else {
+            mergedProps[k] = v;
+          }
+        }
+      }
+
       return {
         ...s,
-        props: {
-          ...s.props,
-          ...newProps
-        },
-        styles: newStyles ? { ...s.styles, ...newStyles } : s.styles
+        props: mergedProps,
+        styles: newStyles ? { ...(s.styles || {}), ...newStyles } : s.styles
       };
     });
+
     updateSections(updated);
   };
 
@@ -942,13 +1033,16 @@ function VisualWebsiteEditorContent() {
       </div>
 
       {/* 3-Panel Main Area */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* LEFT PANEL: Dynamic Zones Manager / Outline Tree (320px) */}
-        <div className={`${
-          isLeftPanelOpen ? 'w-80' : 'w-0 border-r-0'
-        } transition-all duration-300 ease-in-out bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-[#1E293B] flex flex-col justify-between shrink-0 overflow-hidden`}>
+      <div ref={editorContainerRef} className={`flex-1 flex overflow-hidden relative ${isDraggingLeft || isDraggingRight ? 'select-none' : ''}`}>
+        {/* LEFT PANEL: Dynamic Zones Manager / Outline Tree */}
+        <div
+          style={{ width: isLeftPanelOpen ? leftPanelWidth : 0 }}
+          className={`${
+            isLeftPanelOpen ? '' : 'border-r-0'
+          } ${isDraggingLeft ? '' : 'transition-[width] duration-200 ease-out'} bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-[#1E293B] flex flex-col justify-between shrink-0 overflow-hidden relative`}
+        >
           {/* View Mode Switcher Header */}
-          <div className="p-2.5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0E1522] flex items-center justify-between text-xs w-80">
+          <div className="p-2.5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0E1522] flex items-center justify-between text-xs w-full">
             <div className="flex items-center space-x-1 bg-[#141C2A] p-0.5 rounded-lg border border-[#232F42]">
               <button
                 type="button"
@@ -999,7 +1093,7 @@ function VisualWebsiteEditorContent() {
 
           {/* DYNAMIC ZONES VIEW */}
           {leftPanelMode === 'dynamic_zones' ? (
-            <div className="flex-1 overflow-hidden w-80">
+            <div className="flex-1 overflow-hidden w-full">
               <DynamicZonesBuilder
                 sections={sections}
                 selectedSectionId={selectedSectionId}
@@ -1018,7 +1112,7 @@ function VisualWebsiteEditorContent() {
             </div>
           ) : (
             /* COMPACT TREE OUTLINE VIEW */
-            <div className="flex-1 flex flex-col justify-between overflow-hidden w-80">
+            <div className="flex-1 flex flex-col justify-between overflow-hidden w-full">
               <div className="p-3 border-b border-slate-200 dark:border-[#1E293B] flex items-center justify-between text-xs">
                 <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px]">
                   Page Structure ({sections.length})
@@ -1105,6 +1199,25 @@ function VisualWebsiteEditorContent() {
           )}
         </div>
 
+        {/* LEFT SPLITTER RESIZE HANDLE (Drag & Expand/Collapse) */}
+        {isLeftPanelOpen && (
+          <div
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsDraggingLeft(true);
+            }}
+            onDoubleClick={() => setLeftPanelWidth(320)}
+            title="Drag to resize Dynamic Zones panel • Double-click to reset (320px)"
+            className={`w-2.5 -ml-1.5 z-30 cursor-col-resize flex items-center justify-center transition-colors group relative hover:bg-sky-500/25 active:bg-sky-500/40 select-none ${
+              isDraggingLeft ? 'bg-sky-500/50' : ''
+            }`}
+          >
+            <div className={`w-0.5 h-8 rounded-full bg-slate-700/80 group-hover:bg-sky-400 group-hover:h-16 transition-all ${
+              isDraggingLeft ? 'bg-sky-400 h-16 shadow-xs' : ''
+            }`} />
+          </div>
+        )}
+
         {/* CENTER CANVAS: Responsive Live Website Preview */}
         <div className="flex-1 bg-[#05070B] overflow-y-auto p-6 flex justify-center items-start relative min-w-0">
           {/* Floating trigger to re-open left blocks panel */}
@@ -1168,11 +1281,33 @@ function VisualWebsiteEditorContent() {
           </div>
         </div>
 
-        {/* RIGHT PANEL: Selected Section Inspector & Design Studio (w-96, 384px) */}
-        <div className={`${
-          isRightPanelOpen ? 'w-96' : 'w-0 border-l-0'
-        } transition-all duration-300 ease-in-out bg-[#0A0D14] border-l border-[#1E293B] flex flex-col justify-between shrink-0 overflow-y-auto overflow-x-hidden`}>
-          <div className="p-4 space-y-4 w-96">
+        {/* RIGHT SPLITTER RESIZE HANDLE (Drag & Expand/Collapse) */}
+        {isRightPanelOpen && (
+          <div
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsDraggingRight(true);
+            }}
+            onDoubleClick={() => setRightPanelWidth(440)}
+            title="Drag to resize Inspector & AI Studio • Double-click to reset (440px)"
+            className={`w-2.5 -mr-1.5 z-30 cursor-col-resize flex items-center justify-center transition-colors group relative hover:bg-sky-500/25 active:bg-sky-500/40 select-none ${
+              isDraggingRight ? 'bg-sky-500/50' : ''
+            }`}
+          >
+            <div className={`w-0.5 h-8 rounded-full bg-slate-700/80 group-hover:bg-sky-400 group-hover:h-16 transition-all ${
+              isDraggingRight ? 'bg-sky-400 h-16 shadow-xs' : ''
+            }`} />
+          </div>
+        )}
+
+        {/* RIGHT PANEL: Selected Section Inspector & Design Studio */}
+        <div
+          style={{ width: isRightPanelOpen ? rightPanelWidth : 0 }}
+          className={`${
+            isRightPanelOpen ? '' : 'border-l-0'
+          } ${isDraggingRight ? '' : 'transition-[width] duration-200 ease-out'} bg-[#0A0D14] border-l border-[#1E293B] flex flex-col justify-between shrink-0 overflow-y-auto overflow-x-hidden relative`}
+        >
+          <div className="p-4 space-y-4 w-full">
             {/* Header */}
             <div>
               <div className="flex items-center justify-between">
@@ -1214,6 +1349,7 @@ function VisualWebsiteEditorContent() {
             {/* Navigation Tabs: Content | Design | AI Polish | API Keys */}
             <div className="flex p-1 rounded-xl bg-[#141C2A] border border-[#232F42] text-xs gap-1">
               <button
+                id="tab-btn-content"
                 type="button"
                 onClick={() => setInspectorTab('content')}
                 className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
@@ -1226,6 +1362,7 @@ function VisualWebsiteEditorContent() {
                 <span className="hidden sm:inline">Content</span>
               </button>
               <button
+                id="tab-btn-design"
                 type="button"
                 onClick={() => setInspectorTab('design')}
                 className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
@@ -1238,6 +1375,7 @@ function VisualWebsiteEditorContent() {
                 <span className="hidden sm:inline">Design</span>
               </button>
               <button
+                id="tab-btn-ai"
                 type="button"
                 onClick={() => setInspectorTab('ai')}
                 className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
@@ -1250,6 +1388,7 @@ function VisualWebsiteEditorContent() {
                 <span>AI Polish</span>
               </button>
               <button
+                id="tab-btn-keys"
                 type="button"
                 onClick={() => setInspectorTab('keys')}
                 className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
@@ -2257,30 +2396,26 @@ function VisualWebsiteEditorContent() {
               )
             )}
 
-            {/* TAB 3: MULTI-MODEL AI CODING & POLISH CHAT */}
-            {inspectorTab === 'ai' && (
-              <div className="animate-in fade-in duration-150">
-                <MultiModelAiCodingChat
-                  section={selectedSection}
-                  onApplyField={handlePropChange}
-                  onApplyMultipleProps={handleMultiplePropsChange}
-                  onSwitchToKeysTab={() => setInspectorTab('keys')}
-                  pageContext={{
-                    pageSlug: activePageSlug,
-                    siteName: siteData?.name || 'Gold Fields / Bastion',
-                    totalSections: sections.length
-                  }}
-                  brandKit={brandKit}
-                />
-              </div>
-            )}
+            {/* TAB 3: MULTI-MODEL AI CODING & POLISH CHAT (Kept mounted to preserve conversation history) */}
+            <div className={inspectorTab === 'ai' ? 'block animate-in fade-in duration-150' : 'hidden'}>
+              <MultiModelAiCodingChat
+                section={selectedSection}
+                onApplyField={handlePropChange}
+                onApplyMultipleProps={handleMultiplePropsChange}
+                onSwitchToKeysTab={() => setInspectorTab('keys')}
+                pageContext={{
+                  pageSlug: activePageSlug,
+                  siteName: siteData?.name || 'Gold Fields / Bastion',
+                  totalSections: sections.length
+                }}
+                brandKit={brandKit}
+              />
+            </div>
 
-            {/* TAB 4: API KEYS CREDENTIAL MANAGEMENT */}
-            {inspectorTab === 'keys' && (
-              <div className="animate-in fade-in duration-150">
-                <ApiKeysTab />
-              </div>
-            )}
+            {/* TAB 4: API KEYS CREDENTIAL MANAGEMENT (Kept mounted) */}
+            <div className={inspectorTab === 'keys' ? 'block animate-in fade-in duration-150' : 'hidden'}>
+              <ApiKeysTab />
+            </div>
           </div>
         </div>
       </div>

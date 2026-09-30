@@ -295,14 +295,93 @@ ${section ? `Target Block [${section.componentId}]: Please polish and refine thi
 
     const durationMs = Date.now() - startTime;
 
-    // Parse structured JSON diff if present in markdown code block
+    // Bulletproof JSON Diff extraction and normalization
+    const STYLE_KEYS = new Set([
+      'backgroundType', 'backgroundColor', 'gradient', 'textColor', 'headingColor',
+      'accentColor', 'borderColor', 'paddingY', 'backgroundPattern', 'patternOpacity'
+    ]);
+
     let parsedChanges: { summary?: string; props?: Record<string, any>; styles?: Record<string, any> } | null = null;
-    const jsonMatch = replyText.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMatch && jsonMatch[1]) {
+    let jsonStr: string | null = null;
+
+    // 1. Try ```json ... ``` or ``` ... ```
+    const fenceMatch = replyText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fenceMatch && fenceMatch[1]) {
+      jsonStr = fenceMatch[1].trim();
+    }
+
+    // 2. If no code fence, find outermost balanced { and }
+    if (!jsonStr) {
+      const firstBrace = replyText.indexOf('{');
+      const lastBrace = replyText.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        jsonStr = replyText.substring(firstBrace, lastBrace + 1).trim();
+      }
+    }
+
+    let parsedRaw: any = null;
+    if (jsonStr) {
       try {
-        parsedChanges = JSON.parse(jsonMatch[1]);
-      } catch (parseErr) {
-        console.warn('Could not parse JSON diff from model output:', parseErr);
+        // Strip single line comments and trailing commas before parsing
+        const sanitized = jsonStr
+          .replace(/\/\/[^\n\r]*/g, '')
+          .replace(/,\s*([}\]])/g, '$1');
+        parsedRaw = JSON.parse(sanitized);
+      } catch {
+        try {
+          parsedRaw = JSON.parse(jsonStr);
+        } catch {
+          // Will try regex fallback below
+        }
+      }
+    }
+
+    // 3. Fallback regex extraction if standard JSON parse failed
+    if (!parsedRaw || typeof parsedRaw !== 'object') {
+      const fallbackProps: Record<string, any> = {};
+      const titleMatch = replyText.match(/"title"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+      if (titleMatch) fallbackProps.title = titleMatch[1].replace(/\\"/g, '"');
+
+      const subtitleMatch = replyText.match(/"subtitle"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+      if (subtitleMatch) fallbackProps.subtitle = subtitleMatch[1].replace(/\\"/g, '"');
+
+      const badgeMatch = replyText.match(/"badge"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+      if (badgeMatch) fallbackProps.badge = badgeMatch[1].replace(/\\"/g, '"');
+
+      if (Object.keys(fallbackProps).length > 0) {
+        parsedRaw = { props: fallbackProps };
+      }
+    }
+
+    // 4. Normalization into structured { summary, props, styles }
+    if (parsedRaw && typeof parsedRaw === 'object') {
+      const summary = parsedRaw.summary || parsedRaw.description || 'AI updated component properties';
+      let normalizedProps: Record<string, any> = {};
+      let normalizedStyles: Record<string, any> = {};
+
+      if (parsedRaw.props && typeof parsedRaw.props === 'object') {
+        normalizedProps = { ...parsedRaw.props };
+      }
+      if (parsedRaw.styles && typeof parsedRaw.styles === 'object') {
+        normalizedStyles = { ...parsedRaw.styles };
+      }
+
+      // Check top-level keys if props is empty or missing
+      for (const [k, v] of Object.entries(parsedRaw)) {
+        if (['summary', 'description', 'props', 'styles', 'changes', 'target'].includes(k)) continue;
+        if (STYLE_KEYS.has(k)) {
+          normalizedStyles[k] = v;
+        } else {
+          normalizedProps[k] = v;
+        }
+      }
+
+      if (Object.keys(normalizedProps).length > 0 || Object.keys(normalizedStyles).length > 0) {
+        parsedChanges = {
+          summary,
+          props: Object.keys(normalizedProps).length > 0 ? normalizedProps : undefined,
+          styles: Object.keys(normalizedStyles).length > 0 ? normalizedStyles : undefined
+        };
       }
     }
 
