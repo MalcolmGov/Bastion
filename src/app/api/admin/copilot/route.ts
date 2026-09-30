@@ -150,7 +150,9 @@ export async function POST(req: NextRequest) {
 
       if (targetLanguage === 'es') {
         // Spanish translation (Salares Norte / Cerro Corona)
-        if (/creating enduring value beyond mining/i.test(cleanText)) {
+        if (/creating enduring value beyond mining/i.test(cleanText) && /disciplined capital allocation/i.test(cleanText)) {
+          translated = 'Creando valor duradero más allá de la minería con Asignación disciplinada de capital.';
+        } else if (/creating enduring value beyond mining/i.test(cleanText)) {
           translated = 'Creando valor duradero más allá de la minería.';
         } else if (/disciplined capital allocation/i.test(cleanText)) {
           translated = 'Asignación disciplinada de capital e impulso operacional sostenido.';
@@ -164,7 +166,9 @@ export async function POST(req: NextRequest) {
         }
       } else if (targetLanguage === 'fr') {
         // French translation (Tarkwa & Damang)
-        if (/creating enduring value beyond mining/i.test(cleanText)) {
+        if (/creating enduring value beyond mining/i.test(cleanText) && /disciplined capital allocation/i.test(cleanText)) {
+          translated = 'Créer une valeur durable au-delà de l’exploitation minière avec une allocation disciplinée du capital.';
+        } else if (/creating enduring value beyond mining/i.test(cleanText)) {
           translated = 'Créer une valeur durable au-delà de l’exploitation minière.';
         } else if (/disciplined capital allocation/i.test(cleanText)) {
           translated = 'Allocation disciplinée du capital et dynamique opérationnelle soutenue.';
