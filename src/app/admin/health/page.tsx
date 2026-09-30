@@ -61,14 +61,19 @@ export default function AdminHealthPage() {
     loadHealth();
   }, []);
 
-  const handleRunScan = async (simulate = false) => {
+  const handleRunScan = async (simulate = false, repoName = 'MoveDigital') => {
     setScanning(true);
     setSreMessage(null);
     try {
       const res = await fetch('/api/admin/sre/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ simulate })
+        body: JSON.stringify({
+          simulate,
+          repoOwner: 'MalcolmGov',
+          repoName,
+          targetRoute: repoName === 'MoveDigital' ? 'https://www.movedigital.africa/' : '/sustainability'
+        })
       });
       const json = await res.json();
       if (res.ok) {
@@ -89,15 +94,21 @@ export default function AdminHealthPage() {
       const res = await fetch('/api/admin/sre/diagnose-and-fix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ incidentId: incident.id })
+        body: JSON.stringify({
+          incidentId: incident.id,
+          repoOwner: incident.repo_owner || 'MalcolmGov',
+          repoName: incident.repo_name || 'MoveDigital'
+        })
       });
       const json = await res.json();
       if (res.ok) {
-        setSreMessage(`AI fix generated! GitHub PR #${json.prNumber || 'open'} staged for Human-in-the-Loop review.`);
+        setSreMessage(`AI fix generated! GitHub PR #${json.prNumber || 'open'} staged on ${json.repoOwner}/${json.repoName} for Human-in-the-Loop review.`);
         await loadHealth();
         // Automatically open review modal for the incident
         setSelectedIncidentForReview({
           ...incident,
+          repo_owner: json.repoOwner,
+          repo_name: json.repoName,
           ai_diagnosis: json.diagnosis,
           ai_proposed_patch: json.patch,
           pr_number: json.prNumber,
@@ -323,12 +334,12 @@ export default function AdminHealthPage() {
             </button>
 
             <button
-              onClick={() => handleRunScan(true)}
+              onClick={() => handleRunScan(true, 'MoveDigital')}
               disabled={scanning}
               className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition disabled:opacity-50"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Simulate Anomaly &amp; Auto-Heal</span>
+              <span>Simulate MoveDigital Anomaly &amp; Auto-Heal</span>
             </button>
           </div>
         </div>
@@ -357,6 +368,8 @@ export default function AdminHealthPage() {
               const hasPatch = !!inc.ai_proposed_patch;
               const hasPR = !!inc.pr_number;
               const isDiagnosing = diagnosingId === inc.id;
+              const repoOwner = inc.repo_owner || 'MalcolmGov';
+              const repoName = inc.repo_name || 'MoveDigital';
 
               return (
                 <div
@@ -393,6 +406,11 @@ export default function AdminHealthPage() {
                         {inc.status}
                       </span>
 
+                      {/* Target Repository Badge */}
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700">
+                        {repoOwner}/{repoName}
+                      </span>
+
                       {/* SRE Risk Level Pill */}
                       {inc.risk_level && (
                         <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -403,13 +421,13 @@ export default function AdminHealthPage() {
                       {/* GitHub PR Pill if created */}
                       {hasPR && (
                         <a
-                          href={inc.pr_url}
+                          href={inc.pr_url || `https://github.com/${repoOwner}/${repoName}/pull/${inc.pr_number}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:underline"
                         >
                           <GitPullRequest className="w-3 h-3 text-indigo-500" />
-                          <span>PR #{inc.pr_number} on GitHub</span>
+                          <span>PR #{inc.pr_number} on {repoName}</span>
                           <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
                         </a>
                       )}

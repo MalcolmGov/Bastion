@@ -135,7 +135,9 @@ CREATE TABLE IF NOT EXISTS incidents (
   approval_status TEXT DEFAULT 'pending_review',
   approved_by TEXT,
   deploy_status TEXT DEFAULT 'idle',
-  verification_status TEXT DEFAULT 'unverified'
+  verification_status TEXT DEFAULT 'unverified',
+  repo_owner TEXT DEFAULT 'MalcolmGov',
+  repo_name TEXT DEFAULT 'MoveDigital'
 );
 
 CREATE TABLE IF NOT EXISTS ai_knowledge_items (

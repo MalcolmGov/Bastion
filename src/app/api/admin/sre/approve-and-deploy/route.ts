@@ -31,14 +31,17 @@ export async function POST(req: NextRequest) {
 
     const incident: any = result.rows[0];
 
+    const repoOwner = incident.repo_owner || 'MalcolmGov';
+    const repoName = incident.repo_name || 'MoveDigital';
+
     // 1. Merge the GitHub PR if one was opened
     let mergeResult: any = { merged: false };
     if (incident.pr_number) {
       mergeResult = await mergeFixPR({
-        owner: 'MalcolmGov',
-        repo: 'Goldfields',
+        owner: repoOwner,
+        repo: repoName,
         prNumber: incident.pr_number,
-        commitMessage: `Approved & merged by ${user.name || user.email} via Bastion SRE HITL Console.`
+        commitMessage: `Approved & merged by ${user.name || user.email} via Bastion SRE HITL Console into ${repoOwner}/${repoName}.`
       });
     }
 

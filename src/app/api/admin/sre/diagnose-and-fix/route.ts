@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
 
     const incident: any = result.rows[0];
 
+    const repoOwner = body.repoOwner || incident.repo_owner || 'MalcolmGov';
+    const repoName = body.repoName || incident.repo_name ||
+      (incident.affected_routes?.includes('movedigital') || incident.title.toLowerCase().includes('move') || incident.title.toLowerCase().includes('tailings') ? 'MoveDigital' : 'Goldfields');
+
     // 1. Run AI Diagnosis & Patch Generation
     const diagnosisResult = await diagnoseAndGeneratePatch({
       incidentId: incident.id,
@@ -37,15 +41,17 @@ export async function POST(req: NextRequest) {
       severity: incident.severity,
       affectedRoutes: incident.affected_routes,
       errorDetails: incident.error_details,
-      customPrompt
+      customPrompt,
+      repoOwner,
+      repoName
     });
 
     const patch = diagnosisResult.patch;
 
     // 2. Open GitHub PR via GitHub API
     const prResult = await openFixPR({
-      owner: 'MalcolmGov',
-      repo: 'Goldfields',
+      owner: repoOwner,
+      repo: repoName,
       baseBranch: 'main',
       fileChanges: {
         [patch.filePath]: patch.fullNewContent
@@ -64,13 +70,15 @@ export async function POST(req: NextRequest) {
     timeline.push({
       time: new Date().toISOString(),
       action: prResult.success
-        ? `AI SRE generated patch and opened GitHub PR #${prNumber} on branch ${prBranch}`
-        : `AI SRE generated patch (PR creation warning: ${prResult.error})`,
+        ? `AI SRE generated patch and opened GitHub PR #${prNumber} on ${repoOwner}/${repoName} (branch: ${prBranch})`
+        : `AI SRE generated patch for ${repoOwner}/${repoName} (PR creation warning: ${prResult.error})`,
       by: user.email
     });
 
     await db.execute({
       sql: `UPDATE incidents SET
+        repo_owner = ?,
+        repo_name = ?,
         ai_diagnosis = ?,
         ai_proposed_patch = ?,
         risk_level = ?,
@@ -83,6 +91,8 @@ export async function POST(req: NextRequest) {
         timeline_json = ?
       WHERE id = ?`,
       args: [
+        repoOwner,
+        repoName,
         diagnosisResult.diagnosis,
         JSON.stringify(patch),
         patch.riskLevel,
@@ -98,6 +108,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       incidentId,
+      repoOwner,
+      repoName,
       diagnosis: diagnosisResult.diagnosis,
       patch,
       prResult,

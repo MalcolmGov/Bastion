@@ -10,7 +10,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { simulate = false, targetRoute = '/sustainability' } = body;
+    const {
+      simulate = false,
+      targetRoute = 'https://www.movedigital.africa/',
+      repoOwner = 'MalcolmGov',
+      repoName = 'MoveDigital'
+    } = body;
 
     const db = getDb();
     const scannedEndpoints = [
@@ -25,13 +30,17 @@ export async function POST(req: NextRequest) {
     // 1. If simulation is requested, create a live verifiable incident
     if (simulate) {
       const incidentId = `inc_${Date.now().toString().slice(-6)}`;
-      const title = `Tailings Management GISTM Portal Broken Disclosure Link`;
+      const title = repoName === 'MoveDigital'
+        ? 'Move Digital Route Fallback & SRE Telemetry Resilience Gap'
+        : 'Tailings Management GISTM Portal Broken Disclosure Link';
       const severity = 'medium';
       const affectedRoutes = targetRoute;
       const errorDetails = JSON.stringify({
         endpoint: targetRoute,
         httpStatus: 404,
-        error: 'Target URL returned HTTP 404 Not Found on tailings-disclosure.php',
+        error: repoName === 'MoveDigital'
+          ? 'Edge routing probe flagged missing client route telemetry handler on movedigital.africa'
+          : 'Target URL returned HTTP 404 Not Found on tailings-disclosure.php',
         timestamp: new Date().toISOString(),
         prober: 'Bastion Synthetic Prober (Edge Node CPT1)'
       });
@@ -40,17 +49,20 @@ export async function POST(req: NextRequest) {
         sql: `INSERT INTO incidents (
           id, title, severity, status, affected_routes, owner_id,
           timeline_json, created_at, error_details, risk_level,
-          pr_status, approval_status, deploy_status, verification_status
-        ) VALUES (?, ?, ?, 'open', ?, ?, ?, ?, ?, 'low', 'none', 'pending_review', 'idle', 'unverified')`,
+          pr_status, approval_status, deploy_status, verification_status,
+          repo_owner, repo_name
+        ) VALUES (?, ?, ?, 'open', ?, ?, ?, ?, ?, 'low', 'none', 'pending_review', 'idle', 'unverified', ?, ?)`,
         args: [
           incidentId,
           title,
           severity,
           affectedRoutes,
           user.id,
-          JSON.stringify([{ time: new Date().toISOString(), action: 'Synthetic Prober flagged broken route URL' }]),
+          JSON.stringify([{ time: new Date().toISOString(), action: `Synthetic Prober flagged anomaly on ${repoOwner}/${repoName}` }]),
           new Date().toISOString(),
-          errorDetails
+          errorDetails,
+          repoOwner,
+          repoName
         ]
       });
 
@@ -59,6 +71,8 @@ export async function POST(req: NextRequest) {
         title,
         severity,
         affectedRoutes,
+        repoOwner,
+        repoName,
         isSimulated: true
       });
     }

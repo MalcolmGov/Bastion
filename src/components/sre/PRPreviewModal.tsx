@@ -178,9 +178,14 @@ export const PRPreviewModal: React.FC<PRPreviewModalProps> = ({
               <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 block mb-1">
                 Target Repository &amp; Branch
               </span>
-              <div className="flex items-center space-x-1.5 font-mono text-slate-800 dark:text-slate-200">
-                <GitBranch className="w-3.5 h-3.5 text-indigo-500" />
-                <span className="truncate">{incident.pr_branch || 'sre/pending-branch'}</span>
+              <div className="text-slate-800 dark:text-slate-200 font-mono space-y-0.5">
+                <div className="font-semibold text-indigo-600 dark:text-indigo-400 flex items-center space-x-1">
+                  <span>{incident.repo_owner || 'MalcolmGov'}/{incident.repo_name || 'MoveDigital'}</span>
+                </div>
+                <div className="flex items-center space-x-1.5 text-[11px] text-slate-500">
+                  <GitBranch className="w-3 h-3 text-slate-400" />
+                  <span className="truncate">{incident.pr_branch || 'sre/pending-branch'}</span>
+                </div>
               </div>
             </div>
 
@@ -195,7 +200,7 @@ export const PRPreviewModal: React.FC<PRPreviewModalProps> = ({
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-1 font-semibold text-sky-600 dark:text-sky-400 hover:underline"
                 >
-                  <span>PR #{incident.pr_number} on GitHub</span>
+                  <span>PR #{incident.pr_number} on {incident.repo_name || 'MoveDigital'}</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               ) : (
