@@ -72,8 +72,23 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        display: ["var(--font-manrope)", "system-ui", "sans-serif"],
+        sans: [
+          "var(--font-plus-jakarta)",
+          "'Plus Jakarta Sans'",
+          "var(--font-inter)",
+          "'Inter'",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "sans-serif"
+        ],
+        display: [
+          "var(--font-plus-jakarta)",
+          "'Plus Jakarta Sans'",
+          "var(--font-manrope)",
+          "'Manrope'",
+          "sans-serif"
+        ],
       },
       boxShadow: {
         subtle: "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)",
