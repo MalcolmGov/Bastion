@@ -74,6 +74,24 @@ export default function MoveStudioOverviewPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [quickBrandUrl, setQuickBrandUrl] = useState('');
+  const [timeGreeting, setTimeGreeting] = useState('Good afternoon');
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setTimeGreeting('Good morning');
+    else if (hour < 18) setTimeGreeting('Good afternoon');
+    else setTimeGreeting('Good evening');
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -139,96 +157,214 @@ export default function MoveStudioOverviewPage() {
     { label: 'Signed Webhooks', query: 'Webhooks' }
   ];
 
+  const displayName = (user?.name && !user.name.toLowerCase().includes('admin') && !user.name.toLowerCase().includes('corporate'))
+    ? user.name.split(' ')[0]
+    : 'Malcolm';
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
       {/* Signature Hero Card with Embedded Search & Voice Composer */}
       {dashboardPrefs.sections.heroComposer && (
-        <section className="rounded-2xl p-5 sm:p-7 shadow-xs relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80">
+        <section className="rounded-3xl p-6 sm:p-8 lg:p-9 shadow-xl relative overflow-hidden backdrop-blur-2xl bg-white/95 dark:bg-[#0B101B]/95 border border-slate-200/80 dark:border-slate-800/80 transition-all duration-300">
+          {/* Animated Aurora Glow Orbs */}
           <div 
-            className="absolute top-0 left-0 right-0 h-1"
+            className="absolute -top-28 -right-28 w-96 h-96 rounded-full blur-3xl pointer-events-none animate-pulse-slow"
+            style={{
+              background: `radial-gradient(circle, ${primaryCol}30 0%, #4F46E520 50%, transparent 70%)`
+            }}
+          />
+          <div 
+            className="absolute -bottom-28 -left-28 w-96 h-96 rounded-full blur-3xl pointer-events-none animate-pulse-slow-reverse"
+            style={{
+              background: `radial-gradient(circle, ${dashboardPrefs.accentColor}25 0%, #06B6D415 50%, transparent 70%)`
+            }}
+          />
+
+          {/* Animated Shimmer Top Border */}
+          <div 
+            className="absolute top-0 left-0 right-0 h-[2px] opacity-80"
             style={{
               background: `linear-gradient(90deg, ${primaryCol} 0%, ${dashboardPrefs.accentColor} 50%, #4F46E5 100%)`
             }}
           />
+          <div className="absolute top-0 left-0 right-0 h-[2px] overflow-hidden pointer-events-none">
+            <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/80 to-transparent animate-shimmer-sweep" />
+          </div>
 
-          <div className="relative z-10 max-w-3xl space-y-4">
-            <div className="space-y-1">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                Good afternoon, Malcolm. Let&apos;s govern high-impact corporate web properties.
-              </h1>
-              <p className="text-sm sm:text-base leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
-                Autonomous edge invalidation, website vitals, and multi-tenant performance across all corporate client environments.
-              </p>
-            </div>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Left 8 Cols: Executive Welcome & Command Search */}
+            <div className="lg:col-span-8 space-y-4">
+              {/* Executive Eyebrow Badge */}
+              <div className="inline-flex items-center gap-2.5 px-3 py-1 rounded-full bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs backdrop-blur-md">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <span className="text-[11px] font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300">
+                  Bastion Executive Network
+                </span>
+                <span className="text-slate-300 dark:text-slate-600">•</span>
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  12 Enterprise Tenants Live on Edge
+                </span>
+              </div>
 
-            {/* Search Composer Box */}
-            <div className="relative pt-0.5">
-              <form onSubmit={(e) => { e.preventDefault(); }}>
-                <div className="flex flex-col sm:flex-row items-center gap-2 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 focus-within:bg-white dark:focus-within:bg-slate-900 transition-all duration-200 shadow-2xs">
-                  <div className="flex items-center gap-2.5 px-3 flex-1 w-full relative">
-                    <Search className="w-4.5 h-4.5 shrink-0" style={{ color: primaryCol }} />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search title, client, or collection across Bastion CMS…"
-                      className="w-full py-2 pr-8 bg-transparent text-sm sm:text-base focus:outline-none font-semibold text-slate-900 dark:text-white placeholder:text-slate-400"
-                    />
-                    {searchQuery && (
+              {/* Polished Executive Headline & Subtitle */}
+              <div className="space-y-1.5">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.15]">
+                  {timeGreeting}, {displayName}.
+                </h1>
+                <p className="text-sm sm:text-base leading-relaxed text-slate-600 dark:text-slate-300 font-medium max-w-2xl">
+                  Your central command center for multi-tenant publishing, regulatory compliance, and real-time edge delivery across all corporate properties.
+                </p>
+              </div>
+
+              {/* Elevated Command Search Box */}
+              <div className="relative pt-1">
+                <form onSubmit={(e) => { e.preventDefault(); }}>
+                  <div className="flex flex-col sm:flex-row items-center gap-2 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/90 dark:bg-slate-800/80 focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:ring-2 focus-within:ring-indigo-500/30 transition-all duration-200 shadow-sm">
+                    <div className="flex items-center gap-3 px-3.5 flex-1 w-full relative">
+                      <Search className="w-5 h-5 shrink-0" style={{ color: primaryCol }} />
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search clients, SENS releases, pages, or components…"
+                        className="w-full py-2.5 pr-8 bg-transparent text-sm sm:text-base focus:outline-none font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:font-normal"
+                      />
+                      {searchQuery ? (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md select-none pointer-events-none shadow-2xs">
+                          ⌘K
+                        </kbd>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end px-0.5">
+                      {/* Integrated Voice Button with Animated Equalizer Soundwaves */}
                       <button
                         type="button"
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+                        onClick={toggleListeningState}
+                        style={isListening ? { backgroundColor: primaryCol, borderColor: primaryCol } : undefined}
+                        className={`h-10 px-3.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all shrink-0 cursor-pointer shadow-xs ${
+                          isListening
+                            ? 'text-white shadow-lg'
+                            : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                        }`}
                       >
-                        <X className="w-4 h-4" />
+                        {isListening ? (
+                          <div className="flex items-center gap-1 h-4 px-0.5">
+                            <span className="w-1 bg-white rounded-full animate-soundwave-1" />
+                            <span className="w-1 bg-white rounded-full animate-soundwave-2" />
+                            <span className="w-1 bg-white rounded-full animate-soundwave-3" />
+                            <span className="w-1 bg-white rounded-full animate-soundwave-4" />
+                          </div>
+                        ) : (
+                          <Mic className="w-3.5 h-3.5" style={{ color: primaryCol }} />
+                        )}
+                        <span>{isListening ? 'Listening…' : 'Voice'}</span>
                       </button>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end px-0.5">
-                    {/* Integrated Microphone */}
-                    <button
-                      type="button"
-                      onClick={toggleListeningState}
-                      style={isListening ? { backgroundColor: primaryCol, borderColor: primaryCol } : undefined}
-                      className={`h-9 px-3 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
-                        isListening
-                          ? 'text-white animate-pulse'
-                          : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold'
-                      }`}
-                    >
-                      <Mic className="w-3.5 h-3.5" style={{ color: isListening ? '#FFFFFF' : primaryCol }} />
-                      <span>{isListening ? 'Listening…' : 'Voice'}</span>
-                    </button>
-
-                    {/* Primary Search CTA */}
-                    <button
-                      type="submit"
-                      style={{ backgroundColor: primaryCol }}
-                      className="h-9 px-5 rounded-lg text-white text-xs sm:text-sm font-black flex items-center gap-1.5 transition-all active:scale-[0.98] shrink-0 hover:opacity-90 cursor-pointer shadow-md"
-                    >
-                      <span>Search CMS</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-white" />
-                    </button>
+                      {/* Primary Search CTA */}
+                      <button
+                        type="submit"
+                        style={{ backgroundColor: primaryCol }}
+                        className="h-10 px-5 rounded-xl text-white text-xs sm:text-sm font-bold flex items-center gap-2 transition-all active:scale-[0.98] shrink-0 hover:opacity-90 cursor-pointer shadow-md"
+                      >
+                        <span>Search CMS</span>
+                        <ArrowRight className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </form>
+                </form>
+              </div>
+
+              {/* Suggestion Chips */}
+              <div className="flex items-center gap-2 pt-0.5 flex-wrap text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-semibold text-slate-400 dark:text-slate-500">Quick Access:</span>
+                {suggestionChips.map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSearchQuery(chip.query)}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100/80 dark:bg-slate-800/60 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 border border-slate-200/60 dark:border-slate-700/50 font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>{chip.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Understated Suggestion Chips */}
-            <div className="flex items-center gap-2 pt-0.5 flex-wrap text-xs text-slate-500">
-              <span className="font-semibold text-slate-400">Popular:</span>
-              {suggestionChips.map((chip, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setSearchQuery(chip.query)}
-                  style={{ color: primaryCol }}
-                  className="font-semibold hover:underline transition-colors cursor-pointer"
-                >
-                  {chip.label}{idx < suggestionChips.length - 1 ? ' •' : ''}
-                </button>
-              ))}
+            {/* Right 4 Cols: Live Edge Telemetry Command Hub */}
+            <div className="lg:col-span-4 flex flex-col gap-3">
+              {/* Telemetry Card 1: Edge CDN Vitals */}
+              <div className="p-4 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-xs backdrop-blur-md relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <Zap className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                    <span>Global Edge CDN</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    99.99% Uptime
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+                    &lt; 140ms
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Worldwide Invalidation
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                  <div className="bg-gradient-to-r from-emerald-500 to-sky-500 h-full rounded-full w-[94%]" />
+                </div>
+              </div>
+
+              {/* Telemetry Card 2: Regulatory SENS & Compliance Engine */}
+              <div className="p-4 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-xs backdrop-blur-md relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Regulatory SENS Guard</span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    JSE Compliant
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+                    Synchronized
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Automated Ingestion
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full w-[100%]" />
+                </div>
+              </div>
+
+              {/* Quick Jump Action Button */}
+              <button
+                type="button"
+                onClick={() => router.push('/admin/editor')}
+                className="w-full py-2.5 px-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-between transition-all group cursor-pointer shadow-xs hover:shadow-md"
+              >
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-3.5 h-3.5" style={{ color: primaryCol }} />
+                  <span>Launch Visual Page Editor</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              </button>
             </div>
           </div>
         </section>
