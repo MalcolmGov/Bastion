@@ -37,7 +37,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   CalendarCheck,
-  ShieldAlert
+  ShieldAlert,
+  Key
 } from 'lucide-react';
 
 export function AdminSidebar() {
@@ -338,6 +339,7 @@ export function AdminSidebar() {
                 )}
                 <div className="space-y-1">
                   {renderItem('/admin/editor', 'Visual Page Editor', Edit3, pathname.startsWith('/admin/editor'), 'Studio', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
+                  {renderItem('/admin/api-keys', 'AI API Keys', Key, pathname.startsWith('/admin/api-keys'), 'AI', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                   {renderItem('/admin/media', 'Media Library', FolderOpen, pathname.startsWith('/admin/media'))}
                 </div>
               </div>
@@ -421,6 +423,7 @@ export function AdminSidebar() {
                 <div className="space-y-1">
                   {renderItem('/admin/incidents', 'Incidents & SRE Audit', ShieldAlert, pathname.startsWith('/admin/incidents'), 'SRE', 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200')}
                   {renderItem('/admin/health', 'Website Health', Activity, pathname.startsWith('/admin/health'), '100%', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
+                  {renderItem('/admin/api-keys', 'AI API Keys', Key, pathname.startsWith('/admin/api-keys'), 'NEW', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                   {renderItem('/admin/analytics', 'Analytics', BarChart3, pathname.startsWith('/admin/analytics'))}
                   {renderItem('/admin/sandbox', 'API Sandbox', Terminal, pathname.startsWith('/admin/sandbox'), 'Live', 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200')}
                   {renderItem('/api/mcp', 'MCP Server Hub', Bot, false, 'MCP', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200', true)}
