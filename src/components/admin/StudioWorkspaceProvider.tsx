@@ -91,6 +91,12 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('move_studio_portal_mode') as 'client' | 'agency' | null;
+      if (savedMode === 'agency' || savedMode === 'client') {
+        setPortalViewModeState(savedMode);
+      }
+    }
     fetchClients();
   }, []);
 

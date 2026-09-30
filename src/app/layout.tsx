@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Plus_Jakarta_Sans, Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { AppShell } from '@/components/layout/AppShell';
 import { DraftPreviewBanner } from '@/components/brand/DraftPreviewBanner';
@@ -16,6 +16,13 @@ const inter = Inter({
   display: 'swap',
   variable: '--font-inter',
   weight: ['300', '400', '500', '600', '700', '800'],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-mono',
+  weight: ['400', '500', '600', '700'],
 });
 
 export const viewport: Viewport = {
@@ -98,7 +105,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`scroll-smooth ${plusJakartaSans.variable} ${inter.variable}`}>
+    <html lang="en" className={`scroll-smooth ${plusJakartaSans.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <link rel="icon" type="image/svg+xml" href="/icon.svg" />
         <link rel="alternate icon" type="image/png" href="/icon.png" />
@@ -107,7 +114,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>

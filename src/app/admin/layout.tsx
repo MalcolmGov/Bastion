@@ -192,7 +192,7 @@ export default function AdminRootLayout({
       <AdminAuthProvider>
         <StudioWorkspaceProvider>
           <DashboardCustomizerProvider>
-            <div className="min-h-screen bg-[#FAFAFE] dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex font-sans antialiased transition-colors duration-150">
+            <div className="min-h-screen bg-[#FAFAFE] dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex font-sans antialiased tracking-[-0.011em] transition-colors duration-150">
               {/* Left Sticky Sidebar */}
               <AdminSidebar />
 

@@ -73,10 +73,10 @@ export default {
       },
       fontFamily: {
         sans: [
-          "var(--font-plus-jakarta)",
-          "'Plus Jakarta Sans'",
           "var(--font-inter)",
           "'Inter'",
+          "var(--font-plus-jakarta)",
+          "'Plus Jakarta Sans'",
           "system-ui",
           "-apple-system",
           "BlinkMacSystemFont",
@@ -85,9 +85,19 @@ export default {
         display: [
           "var(--font-plus-jakarta)",
           "'Plus Jakarta Sans'",
-          "var(--font-manrope)",
-          "'Manrope'",
+          "var(--font-inter)",
+          "'Inter'",
           "sans-serif"
+        ],
+        mono: [
+          "var(--font-mono)",
+          "'JetBrains Mono'",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "monospace"
         ],
       },
       boxShadow: {

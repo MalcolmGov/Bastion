@@ -175,7 +175,7 @@ export function ClientCmsHome({
               <Compass className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl font-black text-slate-900 dark:text-white">10 Mines</div>
+              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">10 Mines</div>
               <div className="text-xs text-slate-500 font-semibold">{isGoldFields ? 'Mining Operations' : 'Active Locations'}</div>
             </div>
           </div>
@@ -194,7 +194,7 @@ export function ClientCmsHome({
               <Newspaper className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl font-black text-slate-900 dark:text-white">Wed 14:00</div>
+              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">Wed 14:00</div>
               <div className="text-xs text-slate-500 font-semibold">Upcoming SENS Release</div>
             </div>
           </div>
@@ -213,7 +213,7 @@ export function ClientCmsHome({
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl font-black text-slate-900 dark:text-white">11 Reports</div>
+              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">11 Reports</div>
               <div className="text-xs text-slate-500 font-semibold">Annual &amp; Financial Packs</div>
             </div>
           </div>
@@ -232,7 +232,7 @@ export function ClientCmsHome({
               <Send className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl font-black text-slate-900 dark:text-white">{pendingApprovalsCount} Drafts</div>
+              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">{pendingApprovalsCount} Drafts</div>
               <div className="text-xs text-slate-500 font-semibold">Awaiting Executive Sign-Off</div>
             </div>
           </div>

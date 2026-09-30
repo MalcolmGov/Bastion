@@ -482,7 +482,7 @@ export function AdminHeader() {
                   style={{
                     background: `linear-gradient(135deg, ${primaryColor}40, #1E293B)`
                   }}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-700/80 flex items-center justify-center text-xs font-black text-white shadow-xs group-hover:scale-105 transition-transform"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-700/80 flex items-center justify-center text-xs font-bold font-sans text-white shadow-xs group-hover:scale-105 transition-transform"
                 >
                   <span>{userInitials}</span>
                 </div>

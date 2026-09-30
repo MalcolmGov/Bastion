@@ -133,7 +133,7 @@ export function ExecutiveAnalyticsDashboard({
               Edge CDN &bull; 11 Client Domains
             </span>
           </div>
-          <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
             Bastion Executive Telemetry &amp; Fleet Intelligence
           </h2>
         </div>
@@ -227,20 +227,20 @@ export function ExecutiveAnalyticsDashboard({
                     <Activity className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
                       <span>Website Vitals &amp; Edge Latency</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         100% Passed
                       </span>
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                       Autonomous edge caching across all client corporate domains
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-2xl font-black text-blue-600 dark:text-sky-400 tabular-nums">
+                  <div className="text-2xl font-bold tracking-tight text-blue-600 dark:text-sky-400 tabular-nums">
                     42ms
                   </div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -342,13 +342,13 @@ export function ExecutiveAnalyticsDashboard({
                     <Layers className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
                       <span>Multi-Tenant Client Fleet</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                         {totalFleetSites} Live Sites
                       </span>
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                       Corporate client portfolio &amp; multi-tenant web property distribution
                     </p>
                   </div>
@@ -404,7 +404,7 @@ export function ExecutiveAnalyticsDashboard({
 
                   {/* Centered KPI inside Donut */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{totalFleetSites}</span>
+                    <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums font-display">{totalFleetSites}</span>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sites</span>
                   </div>
                 </div>
@@ -419,9 +419,9 @@ export function ExecutiveAnalyticsDashboard({
                           {clientItem.name}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0 tabular-nums">
-                        <span className="font-bold text-slate-900 dark:text-white">{clientItem.value}</span>
-                        <span className="text-[11px] text-slate-400">({clientItem.percentage}%)</span>
+                      <div className="flex items-center gap-1.5 shrink-0 font-sans tabular-nums">
+                        <span className="font-bold text-slate-900 dark:text-white font-sans">{clientItem.value}</span>
+                        <span className="text-[11px] text-slate-400 font-medium font-sans">({clientItem.percentage}%)</span>
                       </div>
                     </div>
                   ))}
@@ -458,20 +458,20 @@ export function ExecutiveAnalyticsDashboard({
                     <TrendingUp className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
                       <span>Corporate Traffic &amp; Inquiries</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         +24.1% WoW
                       </span>
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                       Aggregated investor visits &amp; SENS announcement reads
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+                  <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums font-display">
                     48.2k
                   </div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -538,20 +538,20 @@ export function ExecutiveAnalyticsDashboard({
                     <Radio className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
                       <span>Edge Invalidation &amp; Monitoring</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         &lt;500ms Edge Invalidation
                       </span>
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
                       Instant cache purging across CDN nodes upon CMS sign-off
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums font-display">
                     312ms
                   </div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">

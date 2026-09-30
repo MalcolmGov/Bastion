@@ -247,10 +247,10 @@ export default function MoveStudioOverviewPage() {
 
               {/* Polished Executive Headline & Subtitle */}
               <div className="space-y-1.5">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.15]">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-[-0.035em] text-slate-900 dark:text-white leading-[1.12]">
                   {timeGreeting}, {displayName}.
                 </h1>
-                <p className="text-sm sm:text-base leading-relaxed text-slate-600 dark:text-slate-300 font-medium max-w-2xl">
+                <p className="text-sm sm:text-base leading-relaxed text-slate-500 dark:text-slate-400 font-normal max-w-2xl tracking-[-0.01em]">
                   Your central command center for multi-tenant publishing, regulatory compliance, and real-time edge delivery across all corporate properties.
                 </p>
               </div>
@@ -353,7 +353,7 @@ export default function MoveStudioOverviewPage() {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+                  <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
                     &lt; 140ms
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -377,7 +377,7 @@ export default function MoveStudioOverviewPage() {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+                  <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                     Synchronized
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -393,7 +393,7 @@ export default function MoveStudioOverviewPage() {
               <button
                 type="button"
                 onClick={() => router.push('/admin/editor')}
-                className="w-full py-2.5 px-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center justify-between transition-all group cursor-pointer shadow-xs hover:shadow-md"
+                className="w-full py-2.5 px-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center justify-between transition-all group cursor-pointer shadow-xs hover:shadow-md"
               >
                 <div className="flex items-center gap-2">
                   <Edit3 className="w-3.5 h-3.5" style={{ color: primaryCol }} />
