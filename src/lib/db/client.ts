@@ -209,10 +209,10 @@ async function seedEssentialUsers(db: Client): Promise<void> {
   const now = new Date().toISOString();
   const defaultUsers = [
     {
-      id: 'usr_admin',
-      name: 'Corporate Platform Admin',
-      email: 'admin@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
+      id: 'usr_malcolm_movedigital',
+      name: 'Malcolm Govender (Platform Admin)',
+      email: 'malcolm@movedigital.africa',
+      password_hash: hashPassword('Bastion2026!'),
       role: 'platform_admin',
       region_scope: 'All',
       created_at: now
