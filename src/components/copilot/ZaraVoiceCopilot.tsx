@@ -74,6 +74,9 @@ export function ZaraVoiceCopilot() {
   const baselineEnergyRef = useRef<number>(0.02);
   const sustainedVadCountRef = useRef<number>(0);
 
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [voiceProvider, setVoiceProvider] = useState<'elevenlabs' | 'browser'>('elevenlabs');
+
   // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -93,6 +96,11 @@ export function ZaraVoiceCopilot() {
     console.log(`🛑 [BARGE-IN] Interrupting Zara speech: ${reason}`);
     speechIdRef.current++;
     speechQueueRef.current = [];
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.src = '';
+      currentAudioRef.current = null;
+    }
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
@@ -188,18 +196,71 @@ export function ZaraVoiceCopilot() {
     setAudioLevel(0);
   }, []);
 
-  const speakSentence = useCallback((sentence: string, currentSpeechId: number): Promise<void> => {
+  const speakSentence = useCallback(async (sentence: string, currentSpeechId: number): Promise<void> => {
+    if (currentSpeechId !== speechIdRef.current) return;
+
+    // ── 1. High-Fidelity ElevenLabs Neural Speech Pipeline ───────────
+    try {
+      const resp = await fetch('/api/admin/voice-copilot/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: sentence,
+          model_id: 'eleven_turbo_v2_5'
+        })
+      });
+
+      if (currentSpeechId !== speechIdRef.current) return;
+
+      const contentType = resp.headers.get('content-type') || '';
+      if (resp.ok && contentType.includes('audio')) {
+        setVoiceProvider('elevenlabs');
+        const blob = await resp.blob();
+        if (currentSpeechId !== speechIdRef.current) return;
+
+        return new Promise<void>((resolve) => {
+          const audioUrl = URL.createObjectURL(blob);
+          const audio = new Audio(audioUrl);
+          currentAudioRef.current = audio;
+
+          audio.onplay = () => {
+            if (currentSpeechId === speechIdRef.current) {
+              setIsSpeaking(true);
+              setVoiceStatus('speaking');
+            }
+          };
+
+          audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            if (currentAudioRef.current === audio) currentAudioRef.current = null;
+            resolve();
+          };
+
+          audio.onerror = () => {
+            URL.revokeObjectURL(audioUrl);
+            if (currentAudioRef.current === audio) currentAudioRef.current = null;
+            resolve();
+          };
+
+          audio.play().catch(() => resolve());
+        });
+      }
+    } catch (err) {
+      console.warn('[Voice Copilot] ElevenLabs audio streaming error, falling back:', err);
+    }
+
+    // ── 2. Resilient Browser Speech Fallback (Female Natural Voice) ───
     return new Promise((resolve) => {
       if (typeof window === 'undefined' || !window.speechSynthesis || currentSpeechId !== speechIdRef.current) {
         return resolve();
       }
 
+      setVoiceProvider('browser');
       window.speechSynthesis.cancel();
       const utt = new SpeechSynthesisUtterance(sentence);
       utt.rate = 1.05;
       utt.pitch = 1.02;
 
-      // Select natural female English voice if available
       const voices = window.speechSynthesis.getVoices();
       const match = voices.find(v =>
         v.lang.startsWith('en') &&
@@ -214,20 +275,15 @@ export function ZaraVoiceCopilot() {
         }
       };
 
-      utt.onend = () => {
-        resolve();
-      };
-
-      utt.onerror = () => {
-        resolve();
-      };
+      utt.onend = () => resolve();
+      utt.onerror = () => resolve();
 
       window.speechSynthesis.speak(utt);
     });
   }, []);
 
   const playSpeechQueue = useCallback(async (text: string) => {
-    if (!text || typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (!text || typeof window === 'undefined') return;
 
     // Record words into echo guard buffer
     const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
@@ -530,7 +586,10 @@ export function ZaraVoiceCopilot() {
               <div>
                 <div className="text-sm font-bold text-white flex items-center gap-2">
                   <span>Zara Voice Copilot</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-purple-400" /> ElevenLabs HD
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     750ms VAD
                   </span>
                 </div>
@@ -548,13 +607,13 @@ export function ZaraVoiceCopilot() {
                   />
                   <span className="capitalize">
                     {voiceStatus === 'speaking'
-                      ? 'Speaking… (Barge-in active)'
+                      ? (voiceProvider === 'elevenlabs' ? 'Zara Speaking (ElevenLabs HD) · Duplex Active' : 'Zara Speaking… (Duplex Active)')
                       : voiceStatus === 'listening'
                       ? 'Listening with Echo Guard…'
                       : voiceStatus === 'processing'
                       ? 'Executing Platform Action…'
                       : isVoiceActive
-                      ? 'Voice Engine Ready'
+                      ? 'ElevenLabs Neural Engine Ready'
                       : 'Voice Muted'}
                   </span>
                 </div>
