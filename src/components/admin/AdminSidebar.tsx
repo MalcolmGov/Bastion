@@ -23,16 +23,13 @@ import {
   FileSpreadsheet,
   Newspaper,
   Leaf,
-  ChevronDown,
   ExternalLink,
-  PlusCircle,
   Building,
   Check,
   CreditCard,
   Terminal,
   UserPlus,
   Bot,
-  ArrowRight,
   ArrowRightLeft,
   Globe2,
   SlidersHorizontal,
@@ -50,11 +47,9 @@ export function AdminSidebar() {
     clients,
     activeClient,
     activeSite,
-    setActiveClientId,
     portalViewMode,
     setPortalViewMode
   } = useStudioWorkspace();
-  const [clientMenuOpen, setClientMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Initialize and persist collapsed state
@@ -294,135 +289,6 @@ export function AdminSidebar() {
           )}
         </div>
 
-        {/* Client & Website Context Switcher */}
-        {isCollapsed ? (
-          <div className="p-2.5 border-b border-slate-200/80 dark:border-slate-800/80 flex justify-center relative">
-            <button
-              type="button"
-              onClick={() => setClientMenuOpen(!clientMenuOpen)}
-              title={`Client Workspace: ${activeClient?.name || 'Bastion'}`}
-              style={{
-                backgroundColor: `${primaryColor}15`,
-                color: primaryColor,
-                borderColor: `${primaryColor}30`
-              }}
-              className="w-9 h-9 rounded-xl border flex items-center justify-center font-bold text-xs shrink-0 hover:scale-105 transition cursor-pointer"
-            >
-              {activeClient?.name ? activeClient.name.substring(0, 1).toUpperCase() : 'B'}
-            </button>
-
-            {clientMenuOpen && (
-              <div className="fixed left-18 top-16 w-60 bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 p-2 space-y-1">
-                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Switch Corporate Client
-                </div>
-                {clients.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveClientId(c.id);
-                      setClientMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs font-medium transition cursor-pointer ${
-                      c.id === activeClient?.id
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-300'
-                    }`}
-                  >
-                    <div className="truncate">
-                      <div className="font-semibold truncate">{c.name}</div>
-                      <div className="text-[10px] text-slate-400">{c.websites?.length || 1} website(s)</div>
-                    </div>
-                    {c.id === activeClient?.id && (
-                      <Check className="w-3.5 h-3.5 shrink-0" style={{ color: primaryColor }} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="p-3 border-b border-slate-200/80 dark:border-slate-800/80 relative">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1 px-1 flex items-center justify-between">
-              <span>Active Client Workspace</span>
-              <span className="text-[10px] font-semibold font-mono" style={{ color: primaryColor }}>
-                {clients.length} Sites
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setClientMenuOpen(!clientMenuOpen)}
-              className="w-full flex items-center justify-between p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/70 dark:bg-slate-900/70 text-left transition cursor-pointer"
-            >
-              <div className="flex items-center space-x-2.5 truncate">
-                <div 
-                  style={{
-                    backgroundColor: `${primaryColor}15`,
-                    color: primaryColor,
-                    borderColor: `${primaryColor}30`
-                  }}
-                  className="w-6 h-6 rounded-lg border flex items-center justify-center font-bold text-[10px] shrink-0"
-                >
-                  {activeClient?.name ? activeClient.name.substring(0, 1) : 'G'}
-                </div>
-                <div className="truncate">
-                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                    {activeClient?.name || 'Gold Fields Limited'}
-                  </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                    {activeSite?.name || 'Flagship Portal'}
-                  </div>
-                </div>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
-            </button>
-
-            {/* Client Selection Popover */}
-            {clientMenuOpen && (
-              <div className="absolute left-3 right-3 top-full mt-1 bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-1.5 space-y-1 max-h-64 overflow-y-auto">
-                <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Switch Corporate Client
-                </div>
-                {clients.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveClientId(c.id);
-                      setClientMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs font-medium transition cursor-pointer ${
-                      c.id === activeClient?.id
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-300'
-                    }`}
-                  >
-                    <div className="truncate">
-                      <div className="font-semibold truncate">{c.name}</div>
-                      <div className="text-[10px] text-slate-400">{c.websites?.length || 1} website(s)</div>
-                    </div>
-                    {c.id === activeClient?.id && (
-                      <Check className="w-3.5 h-3.5 shrink-0" style={{ color: primaryColor }} />
-                    )}
-                  </button>
-                ))}
-                <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
-                  <Link
-                    href="/admin/create"
-                    onClick={() => setClientMenuOpen(false)}
-                    style={{ color: primaryColor }}
-                    className="w-full flex items-center space-x-1.5 p-1.5 rounded-lg text-xs font-semibold hover:opacity-80 transition cursor-pointer"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>New Client Website</span>
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Primary Navigation Sections */}
         <div className={`flex-1 ${isCollapsed ? 'p-2 space-y-3' : 'p-3 space-y-4'} overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800`}>
           {isClientPortal ? (
@@ -562,59 +428,6 @@ export function AdminSidebar() {
             </>
           )}
         </div>
-
-        {/* AI Agent Status Module */}
-        {isCollapsed ? (
-          <div className="p-2 border-t border-slate-200/80 dark:border-slate-800/80 flex justify-center">
-            <Link
-              href="/admin/tasks"
-              title="Bastion AI Agent: Active (2/5 Pipeline)"
-              className="w-10 h-10 rounded-xl flex items-center justify-center relative bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-sky-500 transition group"
-            >
-              <Bot className="w-4 h-4 text-sky-400 group-hover:scale-110 transition-transform" />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#0A0D14] animate-pulse" />
-            </Link>
-          </div>
-        ) : (
-          <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80 shrink-0">
-            <div 
-              style={{ borderColor: `${primaryColor}30` }}
-              className="p-3 rounded-xl space-y-2 border shadow-xs bg-slate-50 dark:bg-slate-900"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div 
-                    style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center font-bold"
-                  >
-                    <Bot className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-white">AI Publishing Agent</span>
-                </div>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/40">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Active &bull; 2/5</span>
-                </span>
-              </div>
-
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                Signed webhooks &bull; Edge cache purge &bull; SENS guardrails
-              </p>
-
-              <Link
-                href="/admin/tasks"
-                style={{
-                  background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-                  boxShadow: `0 4px 12px ${primaryColor}30`
-                }}
-                className="w-full flex items-center justify-between py-1.5 px-2.5 rounded-lg text-xs font-bold text-white hover:opacity-95 shadow-xs transition cursor-pointer"
-              >
-                <span>Manage Pipeline</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-        )}
 
         {/* View Switcher Footer */}
         {isCollapsed ? (

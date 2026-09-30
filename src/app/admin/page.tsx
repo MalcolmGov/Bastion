@@ -14,7 +14,6 @@ import {
   Layers,
   Edit3,
   Send,
-  Building,
   ExternalLink,
   ShieldCheck,
   RefreshCw,
@@ -40,7 +39,6 @@ import {
   Calendar,
   Lock,
   X,
-  SlidersHorizontal,
   Clock,
   TrendingUp,
   BarChart3
@@ -67,7 +65,6 @@ export default function MoveStudioOverviewPage() {
 
   const {
     preferences: dashboardPrefs,
-    openCustomizer,
     primaryColor: primaryCol,
     accentColor
   } = useDashboardCustomizer();
@@ -144,79 +141,7 @@ export default function MoveStudioOverviewPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
-      {/* 1. Top Intelligence Strip & Customizer Trigger */}
-      <div 
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:px-4 sm:py-2.5 rounded-2xl border shadow-xs transition-all duration-300"
-        style={{
-          background: `linear-gradient(135deg, ${primaryCol}0f 0%, #FFFFFF 50%, ${dashboardPrefs.accentColor}14 100%)`,
-          borderColor: `${primaryCol}40`,
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl shadow-xs border border-slate-200/80 dark:border-slate-800">
-            <BastionLogo size="sm" showCmsBadge={false} className="text-slate-900 dark:text-white" />
-          </div>
-          <div className="hidden sm:block h-6 w-px bg-slate-300 dark:bg-slate-700" />
-          <div className="flex flex-col">
-            <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white tracking-tight">
-              Bastion Platform Intelligence
-            </span>
-            <span className="text-[11px] font-bold" style={{ color: primaryCol }}>
-              Corporate Website Management Platform &bull; Autonomous Edge Invalidation &lt;500ms
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-start">
-          {/* User Customize Dashboard Button */}
-          <button
-            type="button"
-            onClick={openCustomizer}
-            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-            title="Customize dashboard cards, KPIs, colors and layout"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" style={{ color: primaryCol }} />
-            <span>Customize</span>
-          </button>
-
-          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
-            <button
-              type="button"
-              onClick={() => setPortalViewMode('agency')}
-              style={portalViewMode === 'agency' ? {
-                background: `linear-gradient(135deg, ${primaryCol}, ${accentColor})`,
-                color: '#FFFFFF'
-              } : undefined}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                portalViewMode === 'agency'
-                  ? 'shadow-xs'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Agency</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setPortalViewMode('client')}
-              style={portalViewMode === 'client' ? {
-                background: `linear-gradient(135deg, ${primaryCol}, ${accentColor})`,
-                color: '#FFFFFF'
-              } : undefined}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                portalViewMode === 'client'
-                  ? 'shadow-xs'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Building className="w-3.5 h-3.5" />
-              <span>Client Portal</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Signature Hero Card with Embedded Search & Voice Composer */}
+      {/* Signature Hero Card with Embedded Search & Voice Composer */}
       {dashboardPrefs.sections.heroComposer && (
         <section className="rounded-2xl p-5 sm:p-7 shadow-xs relative overflow-hidden backdrop-blur-xl bg-white/95 dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80">
           <div 
