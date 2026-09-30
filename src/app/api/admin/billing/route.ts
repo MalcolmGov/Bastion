@@ -42,12 +42,25 @@ export async function GET(req: NextRequest) {
       bankName: row.bank_name ? String(row.bank_name) : undefined,
       accountNo: row.account_no ? String(row.account_no) : undefined,
       branchCode: row.branch_code ? String(row.branch_code) : undefined,
+      swiftCode: row.swift_code ? String(row.swift_code) : undefined,
       paymentRef: row.payment_ref ? String(row.payment_ref) : undefined,
       companyName: row.company_name ? String(row.company_name) : undefined,
       companyAddress: row.company_address ? String(row.company_address) : undefined,
       companyEmail: row.company_email ? String(row.company_email) : undefined,
       companyPhone: row.company_phone ? String(row.company_phone) : undefined,
       companyVat: row.company_vat ? String(row.company_vat) : undefined,
+      companyRegNo: row.company_reg_no ? String(row.company_reg_no) : undefined,
+      clientAddress: row.client_address ? String(row.client_address) : undefined,
+      clientEmail: row.client_email ? String(row.client_email) : undefined,
+      clientPhone: row.client_phone ? String(row.client_phone) : undefined,
+      clientVat: row.client_vat ? String(row.client_vat) : undefined,
+      clientContactPerson: row.client_contact_person ? String(row.client_contact_person) : undefined,
+      paymentTerms: row.payment_terms ? String(row.payment_terms) : undefined,
+      sentAt: row.sent_at ? String(row.sent_at) : undefined,
+      lastRemindedAt: row.last_reminded_at ? String(row.last_reminded_at) : undefined,
+      remindersCount: Number(row.reminders_count || 0),
+      paidAt: row.paid_at ? String(row.paid_at) : undefined,
+      amountPaid: row.amount_paid != null ? Number(row.amount_paid) : undefined,
       acceptanceToken: row.acceptance_token ? String(row.acceptance_token) : undefined,
       signatureData: row.signature_data ? String(row.signature_data) : undefined,
       signerName: row.signer_name ? String(row.signer_name) : undefined,
@@ -76,18 +89,20 @@ export async function POST(req: NextRequest) {
     const id = body.id || `doc_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
     const type = body.type || 'quote';
     const status = body.status || 'draft';
-    const token = body.acceptanceToken || (type === 'quote' ? `token_${crypto.randomBytes(16).toString('hex')}` : null);
+    const token = body.acceptanceToken || `token_${crypto.randomBytes(16).toString('hex')}`;
 
     const docNumber = body.docNumber || `${type === 'quote' ? 'QUO' : 'INV'}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     await db.execute({
       sql: `INSERT OR REPLACE INTO billing_docs (
         id, client_id, site_id, type, status, doc_number, issue_date, due_date, currency,
-        items_json, notes, bank_name, account_no, branch_code, payment_ref,
-        company_name, company_address, company_email, company_phone, company_vat,
+        items_json, notes, bank_name, account_no, branch_code, swift_code, payment_ref,
+        company_name, company_address, company_email, company_phone, company_vat, company_reg_no,
+        client_address, client_email, client_phone, client_vat, client_contact_person, payment_terms,
+        sent_at, last_reminded_at, reminders_count, paid_at, amount_paid,
         acceptance_token, signature_data, signer_name, signer_role, accepted_at, declined_at, decline_reason,
         converted_from_quote_id, converted_to_invoice_id, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         id,
         body.clientId || 'client_swifter',
@@ -99,16 +114,29 @@ export async function POST(req: NextRequest) {
         body.dueDate || new Date(Date.now() + 30 * 864e5).toISOString().split('T')[0],
         body.currency || 'R',
         JSON.stringify(body.items || []),
-        body.notes || 'Payment due within 30 days of invoice date.\nThank you for choosing Move Studio.',
+        body.notes || 'Payment due within 30 days of invoice date.\nThank you for choosing Bastion Group.',
         body.bankName || 'First National Bank (FNB)',
         body.accountNo || '62849102941',
         body.branchCode || '250655',
+        body.swiftCode || 'FIRNZAJJ',
         body.paymentRef || docNumber,
-        body.companyName || 'Move Studio Agency',
+        body.companyName || 'Bastion Group (Pty) Ltd',
         body.companyAddress || '100 Sandton Drive, Sandton, Johannesburg, 2196',
-        body.companyEmail || 'billing@movestudio.agency',
+        body.companyEmail || 'billing@bastiongroup.co.za',
         body.companyPhone || '+27 11 883 4000',
         body.companyVat || '4820194821',
+        body.companyRegNo || '2024/091823/07',
+        body.clientAddress || null,
+        body.clientEmail || null,
+        body.clientPhone || null,
+        body.clientVat || null,
+        body.clientContactPerson || null,
+        body.paymentTerms || 'Net 30 Days',
+        status === 'sent' ? now : (body.sentAt || null),
+        body.lastRemindedAt || null,
+        body.remindersCount || 0,
+        status === 'paid' ? now : (body.paidAt || null),
+        body.amountPaid || null,
         token,
         body.signatureData || null,
         body.signerName || null,
@@ -165,19 +193,21 @@ export async function PATCH(req: NextRequest) {
       if (quoteRes.rows.length === 0) {
         return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
       }
-      const q = quoteRes.rows[0];
+      const q: any = quoteRes.rows[0];
 
-      // 2. Create invoice
+      // 2. Create invoice with fresh token
       const invoiceId = `doc_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
       const invNumber = `INV-${String(q.doc_number).replace('QUO-', '')}`;
+      const token = `token_${crypto.randomBytes(16).toString('hex')}`;
 
       await db.execute({
         sql: `INSERT INTO billing_docs (
           id, client_id, site_id, type, status, doc_number, issue_date, due_date, currency,
-          items_json, notes, bank_name, account_no, branch_code, payment_ref,
-          company_name, company_address, company_email, company_phone, company_vat,
-          converted_from_quote_id, created_at, updated_at
-        ) VALUES (?, ?, ?, 'invoice', 'sent', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          items_json, notes, bank_name, account_no, branch_code, swift_code, payment_ref,
+          company_name, company_address, company_email, company_phone, company_vat, company_reg_no,
+          client_address, client_email, client_phone, client_vat, client_contact_person, payment_terms,
+          acceptance_token, converted_from_quote_id, created_at, updated_at
+        ) VALUES (?, ?, ?, 'invoice', 'sent', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           invoiceId,
           q.client_id,
@@ -191,12 +221,21 @@ export async function PATCH(req: NextRequest) {
           q.bank_name,
           q.account_no,
           q.branch_code,
+          q.swift_code || 'FIRNZAJJ',
           invNumber,
           q.company_name,
           q.company_address,
           q.company_email,
           q.company_phone,
           q.company_vat,
+          q.company_reg_no,
+          q.client_address,
+          q.client_email,
+          q.client_phone,
+          q.client_vat,
+          q.client_contact_person,
+          q.payment_terms || 'Net 14 Days',
+          token,
           docId,
           now,
           now,
@@ -209,16 +248,92 @@ export async function PATCH(req: NextRequest) {
         args: [invoiceId, now, docId],
       });
 
-      return NextResponse.json({ success: true, invoiceId, docNumber: invNumber });
+      return NextResponse.json({ success: true, invoiceId, docNumber: invNumber, token });
+    }
+
+    if (action === 'send') {
+      await db.execute({
+        sql: `UPDATE billing_docs SET status = 'sent', sent_at = ?, updated_at = ? WHERE id = ?`,
+        args: [now, now, docId],
+      });
+      return NextResponse.json({ success: true, sentAt: now });
+    }
+
+    if (action === 'send_reminder') {
+      await db.execute({
+        sql: `UPDATE billing_docs SET reminders_count = COALESCE(reminders_count, 0) + 1, last_reminded_at = ?, updated_at = ? WHERE id = ?`,
+        args: [now, now, docId],
+      });
+      return NextResponse.json({ success: true, lastRemindedAt: now });
     }
 
     if (action === 'update_status') {
       const { status } = body;
+      const isPaid = status === 'paid';
       await db.execute({
-        sql: `UPDATE billing_docs SET status = ?, updated_at = ? WHERE id = ?`,
-        args: [status, now, docId],
+        sql: `UPDATE billing_docs SET status = ?, paid_at = ?, updated_at = ? WHERE id = ?`,
+        args: [status, isPaid ? now : null, now, docId],
       });
       return NextResponse.json({ success: true });
+    }
+
+    if (action === 'duplicate') {
+      const docRes = await db.execute({
+        sql: `SELECT * FROM billing_docs WHERE id = ? LIMIT 1`,
+        args: [docId],
+      });
+      if (docRes.rows.length === 0) {
+        return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+      }
+      const orig: any = docRes.rows[0];
+      const newId = `doc_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const prefix = orig.type === 'quote' ? 'QUO' : 'INV';
+      const newDocNumber = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newToken = `token_${crypto.randomBytes(16).toString('hex')}`;
+
+      await db.execute({
+        sql: `INSERT INTO billing_docs (
+          id, client_id, site_id, type, status, doc_number, issue_date, due_date, currency,
+          items_json, notes, bank_name, account_no, branch_code, swift_code, payment_ref,
+          company_name, company_address, company_email, company_phone, company_vat, company_reg_no,
+          client_address, client_email, client_phone, client_vat, client_contact_person, payment_terms,
+          acceptance_token, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          newId,
+          orig.client_id,
+          orig.site_id,
+          orig.type,
+          newDocNumber,
+          now.split('T')[0],
+          new Date(Date.now() + 30 * 864e5).toISOString().split('T')[0],
+          orig.currency,
+          orig.items_json,
+          orig.notes,
+          orig.bank_name,
+          orig.account_no,
+          orig.branch_code,
+          orig.swift_code,
+          newDocNumber,
+          orig.company_name,
+          orig.company_address,
+          orig.company_email,
+          orig.company_phone,
+          orig.company_vat,
+          orig.company_reg_no,
+          orig.client_address,
+          orig.client_email,
+          orig.client_phone,
+          orig.client_vat,
+          orig.client_contact_person,
+          orig.payment_terms,
+          newToken,
+          now,
+          now,
+        ],
+      });
+
+      return NextResponse.json({ success: true, newId, docNumber: newDocNumber });
     }
 
     if (action === 'delete') {

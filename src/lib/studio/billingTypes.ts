@@ -32,6 +32,7 @@ export interface BillingDoc {
   bankName?: string;
   accountNo?: string;
   branchCode?: string;
+  swiftCode?: string;
   paymentRef?: string;
 
   // Company / Agency Profile
@@ -40,6 +41,22 @@ export interface BillingDoc {
   companyEmail?: string;
   companyPhone?: string;
   companyVat?: string;
+  companyRegNo?: string;
+
+  // Client Details
+  clientAddress?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientVat?: string;
+  clientContactPerson?: string;
+  paymentTerms?: string;
+
+  // Lifecycle & Reminders
+  sentAt?: string;
+  lastRemindedAt?: string;
+  remindersCount?: number;
+  paidAt?: string;
+  amountPaid?: number;
 
   // Digital E-Signature & Acceptance Workflow
   acceptanceToken?: string;
@@ -89,54 +106,62 @@ export function fmtMoney(amount: number, currency = 'R'): string {
 
 export const STATUS_CONFIG: Record<
   DocStatus,
-  { label: string; bg: string; text: string; border: string }
+  { label: string; bg: string; text: string; border: string; dot: string }
 > = {
   draft: {
     label: 'Draft',
-    bg: 'bg-slate-800/80',
-    text: 'text-slate-300',
-    border: 'border-slate-700',
+    bg: 'bg-slate-100 dark:bg-slate-800/80',
+    text: 'text-slate-700 dark:text-slate-300',
+    border: 'border-slate-300 dark:border-slate-700',
+    dot: 'bg-slate-400',
   },
   sent: {
     label: 'Sent to Client',
-    bg: 'bg-sky-950/80',
-    text: 'text-sky-400',
-    border: 'border-sky-500/40',
+    bg: 'bg-sky-50 dark:bg-sky-950/70',
+    text: 'text-sky-700 dark:text-sky-300',
+    border: 'border-sky-200 dark:border-sky-500/40',
+    dot: 'bg-sky-500',
   },
   accepted: {
     label: 'Approved & Signed',
-    bg: 'bg-emerald-950/80',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/40',
+    bg: 'bg-emerald-50 dark:bg-emerald-950/70',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    border: 'border-emerald-200 dark:border-emerald-500/40',
+    dot: 'bg-emerald-500',
   },
   paid: {
     label: 'Settled & Paid',
-    bg: 'bg-emerald-950/80',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/40',
+    bg: 'bg-emerald-50 dark:bg-emerald-950/70',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    border: 'border-emerald-200 dark:border-emerald-500/40',
+    dot: 'bg-emerald-500',
   },
   declined: {
     label: 'Declined',
-    bg: 'bg-rose-950/80',
-    text: 'text-rose-400',
-    border: 'border-rose-500/40',
+    bg: 'bg-rose-50 dark:bg-rose-950/70',
+    text: 'text-rose-700 dark:text-rose-300',
+    border: 'border-rose-200 dark:border-rose-500/40',
+    dot: 'bg-rose-500',
   },
   overdue: {
     label: 'Overdue',
-    bg: 'bg-rose-950/80',
-    text: 'text-rose-400',
-    border: 'border-rose-500/40',
+    bg: 'bg-rose-50 dark:bg-rose-950/70',
+    text: 'text-rose-700 dark:text-rose-300',
+    border: 'border-rose-200 dark:border-rose-500/40',
+    dot: 'bg-rose-500 animate-pulse',
   },
   expired: {
     label: 'Expired',
-    bg: 'bg-amber-950/80',
-    text: 'text-amber-400',
-    border: 'border-amber-500/40',
+    bg: 'bg-amber-50 dark:bg-amber-950/70',
+    text: 'text-amber-700 dark:text-amber-300',
+    border: 'border-amber-200 dark:border-amber-500/40',
+    dot: 'bg-amber-500',
   },
   cancelled: {
     label: 'Cancelled',
-    bg: 'bg-slate-900',
-    text: 'text-slate-500',
-    border: 'border-slate-800',
+    bg: 'bg-slate-100 dark:bg-slate-900',
+    text: 'text-slate-500 dark:text-slate-400',
+    border: 'border-slate-200 dark:border-slate-800',
+    dot: 'bg-slate-400',
   },
 };

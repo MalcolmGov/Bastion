@@ -20,11 +20,11 @@ export async function GET(
     });
 
     if (res.rows.length === 0) {
-      return NextResponse.json({ error: 'Quotation agreement not found or expired.' }, { status: 404 });
+      return NextResponse.json({ error: 'Invoice not found or link expired.' }, { status: 404 });
     }
 
     const row: any = res.rows[0];
-    const quote: BillingDoc = {
+    const invoice: BillingDoc = {
       id: String(row.id),
       clientId: String(row.client_id),
       siteId: row.site_id ? String(row.site_id) : undefined,
@@ -39,6 +39,7 @@ export async function GET(
       bankName: row.bank_name ? String(row.bank_name) : undefined,
       accountNo: row.account_no ? String(row.account_no) : undefined,
       branchCode: row.branch_code ? String(row.branch_code) : undefined,
+      swiftCode: row.swift_code ? String(row.swift_code) : undefined,
       paymentRef: row.payment_ref ? String(row.payment_ref) : undefined,
       companyName: row.company_name ? String(row.company_name) : undefined,
       companyAddress: row.company_address ? String(row.company_address) : undefined,
@@ -46,7 +47,6 @@ export async function GET(
       companyPhone: row.company_phone ? String(row.company_phone) : undefined,
       companyVat: row.company_vat ? String(row.company_vat) : undefined,
       companyRegNo: row.company_reg_no ? String(row.company_reg_no) : undefined,
-      swiftCode: row.swift_code ? String(row.swift_code) : undefined,
       clientAddress: row.client_address ? String(row.client_address) : undefined,
       clientEmail: row.client_email ? String(row.client_email) : undefined,
       clientPhone: row.client_phone ? String(row.client_phone) : undefined,
@@ -76,7 +76,7 @@ export async function GET(
       : null;
 
     return NextResponse.json({
-      quote,
+      invoice,
       client: {
         name: row.client_name || 'Client',
         logoUrl: row.client_logo,
@@ -96,37 +96,32 @@ export async function POST(
   try {
     const { token } = await params;
     const body = await req.json();
-    const { action = 'accept', signatureData, signerName, signerRole, declineReason } = body;
+    const { action = 'accept', signatureData, signerName, signerRole } = body;
     const db = getDb();
     const now = new Date().toISOString();
 
     const check = await db.execute({
-      sql: `SELECT id, status FROM billing_docs WHERE acceptance_token = ? LIMIT 1`,
+      sql: `SELECT id, status, type FROM billing_docs WHERE acceptance_token = ? LIMIT 1`,
       args: [token],
     });
 
     if (check.rows.length === 0) {
-      return NextResponse.json({ error: 'Quotation agreement not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Invoice not found.' }, { status: 404 });
     }
 
     const docId = String(check.rows[0].id);
 
-    if (action === 'accept') {
-      if (!signatureData) {
-        return NextResponse.json({ error: 'Digital signature is required to approve this agreement.' }, { status: 400 });
-      }
-
+    if (action === 'accept' || action === 'acknowledge') {
       await db.execute({
         sql: `UPDATE billing_docs
-              SET status = 'accepted',
-                  signature_data = ?,
+              SET signature_data = ?,
                   signer_name = ?,
                   signer_role = ?,
                   accepted_at = ?,
                   updated_at = ?
               WHERE id = ?`,
         args: [
-          signatureData,
+          signatureData || null,
           signerName || 'Authorized Signatory',
           signerRole || 'Client Representative',
           now,
@@ -141,9 +136,9 @@ export async function POST(
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           `audit_${Date.now()}`,
-          'usr_client_sign',
+          'usr_client_invoice_ack',
           signerName || 'Client Signatory',
-          'quote_digital_signature_accepted',
+          'invoice_acknowledged_digitally',
           'billing_docs',
           docId,
           'success',
@@ -151,21 +146,7 @@ export async function POST(
         ],
       });
 
-      return NextResponse.json({ success: true, acceptedAt: now, message: 'Agreement signed and approved successfully.' });
-    }
-
-    if (action === 'decline') {
-      await db.execute({
-        sql: `UPDATE billing_docs
-              SET status = 'declined',
-                  declined_at = ?,
-                  decline_reason = ?,
-                  updated_at = ?
-              WHERE id = ?`,
-        args: [now, declineReason || 'Declined by client', now, docId],
-      });
-
-      return NextResponse.json({ success: true, declinedAt: now });
+      return NextResponse.json({ success: true, acceptedAt: now, message: 'Invoice acknowledged successfully.' });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
