@@ -517,6 +517,9 @@ function VisualWebsiteEditorContent() {
       } else if (newProps?.services) {
         const servicesSec = sections.find(s => s.componentId === 'services_grid');
         if (servicesSec) targetId = servicesSec.id;
+      } else if (newProps?.title || newProps?.badge || newProps?.stats || newProps?.titleColor || newStyles?.headingColor || newStyles?.textColor) {
+        const heroSec = sections.find(s => s.componentId === 'hero');
+        if (heroSec) targetId = heroSec.id;
       }
     }
 
@@ -2500,6 +2503,8 @@ function VisualWebsiteEditorContent() {
             <div className={inspectorTab === 'ai' ? 'block animate-in fade-in duration-150' : 'hidden'}>
               <MultiModelAiCodingChat
                 section={selectedSection}
+                allSections={sections}
+                onSelectSection={(secId) => setSelectedSectionId(secId)}
                 onApplyField={handlePropChange}
                 onApplyMultipleProps={handleMultiplePropsChange}
                 onApplyDarkThemeToAllSections={handleApplyDarkThemeToAllSections}

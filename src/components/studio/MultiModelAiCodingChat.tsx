@@ -31,6 +31,8 @@ import { repairAndExtractChanges, ParsedAiChanges } from '@/lib/studio/aiJsonRep
 
 export interface MultiModelAiCodingChatProps {
   section: SectionInstance | null | undefined;
+  allSections?: SectionInstance[];
+  onSelectSection?: (sectionId: string) => void;
   onApplyField: (field: string, newValue: any) => void;
   onApplyMultipleProps?: (newProps: Record<string, any>, newStyles?: Record<string, any>, explicitTargetId?: string) => void;
   onApplyDarkThemeToAllSections?: () => void;
@@ -41,6 +43,52 @@ export interface MultiModelAiCodingChatProps {
     totalSections?: number;
   };
   brandKit?: any;
+}
+
+export function resolveTargetSection(
+  promptText: string,
+  currentSection: SectionInstance | null | undefined,
+  allSections?: SectionInstance[],
+  manualTargetId: string = 'auto'
+): SectionInstance | null | undefined {
+  if (manualTargetId && manualTargetId !== 'auto' && manualTargetId !== 'page') {
+    const found = allSections?.find(s => s.id === manualTargetId);
+    if (found) return found;
+  }
+
+  const p = promptText.toLowerCase();
+  if (allSections && allSections.length > 0) {
+    if (/\bhero\b/i.test(p)) {
+      const hero = allSections.find(s => s.componentId === 'hero');
+      if (hero) return hero;
+    }
+    if (/\b(header|nav|navbar|menu)\b/i.test(p)) {
+      const header = allSections.find(s => s.componentId === 'header');
+      if (header) return header;
+    }
+    if (/\b(service|services|grid|features)\b/i.test(p)) {
+      const sGrid = allSections.find(s => s.componentId === 'services_grid');
+      if (sGrid) return sGrid;
+    }
+    if (/\b(footer|copyright)\b/i.test(p)) {
+      const footer = allSections.find(s => s.componentId === 'footer');
+      if (footer) return footer;
+    }
+    if (/\b(cta|call to action)\b/i.test(p)) {
+      const cta = allSections.find(s => s.componentId === 'cta');
+      if (cta) return cta;
+    }
+    if (/\b(stats|metric|metrics|counter)\b/i.test(p)) {
+      const stats = allSections.find(s => s.componentId === 'stats_band' || s.componentId === 'hero');
+      if (stats) return stats;
+    }
+    if (/\b(testimonial|testimonials|reviews)\b/i.test(p)) {
+      const test = allSections.find(s => s.componentId === 'testimonials');
+      if (test) return test;
+    }
+  }
+
+  return currentSection || allSections?.[0] || null;
 }
 
 interface ChatMessage {
@@ -225,6 +273,7 @@ const MODEL_OPTIONS = [
 ];
 
 const QUICK_PROMPTS = [
+  { label: '🔷 Electric Blue Hero', prompt: 'Update the hero text, title, and typography to electric sky blue (#38BDF8) with luminous accent styling.' },
   { label: '🌓 Dark Mode', prompt: 'Convert this block to an ultra-modern dark theme with translucent glass background (rgba(5, 8, 15, 0.85)), high-contrast crisp text (#F8FAFC), subtle white borders, and luminous accent lines.' },
   { label: '✨ Polish Copy', prompt: 'Polish the headline, subtitle, and body copy to make it punchy, executive, and investor-ready.' },
   { label: '💎 Glassmorphism & Depth', prompt: 'Upgrade the section styles with a modern dark glassmorphic gradient, sleek border contrast, and luxury gold/sky accent.' },
@@ -235,6 +284,8 @@ const QUICK_PROMPTS = [
 
 export function MultiModelAiCodingChat({
   section,
+  allSections = [],
+  onSelectSection,
   onApplyField,
   onApplyMultipleProps,
   onApplyDarkThemeToAllSections,
@@ -243,6 +294,7 @@ export function MultiModelAiCodingChat({
   brandKit
 }: MultiModelAiCodingChatProps) {
   const [selectedModelId, setSelectedModelId] = useState<string>('claude-opus-5-5');
+  const [targetMode, setTargetMode] = useState<string>('auto');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputPrompt, setInputPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -383,6 +435,12 @@ export function MultiModelAiCodingChat({
         content: m.content
       }));
 
+      // Resolve Target Section based on prompt and mode
+      const resolvedSection = resolveTargetSection(text, section, allSections, targetMode);
+      if (onSelectSection && resolvedSection?.id && resolvedSection.id !== section?.id) {
+        onSelectSection(resolvedSection.id);
+      }
+
       const res = await fetch('/api/admin/editor/ai-polish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -390,7 +448,16 @@ export function MultiModelAiCodingChat({
           provider: selectedModel.provider,
           modelId: selectedModel.id,
           prompt: text,
-          section: section || null,
+          section: resolvedSection || null,
+          allSections: allSections?.map(s => ({
+            id: s.id,
+            componentId: s.componentId,
+            variant: s.variant,
+            title: s.props?.title,
+            props: s.props,
+            styles: s.styles
+          })) || [],
+          targetSectionId: resolvedSection?.id,
           pageContext: pageContext || { pageSlug: 'home', siteName: 'Gold Fields' },
           brandKit: brandKit || null,
           userApiKey: activeUserKey || undefined,
@@ -419,26 +486,36 @@ export function MultiModelAiCodingChat({
       let wasAutoApplied = false;
       let snapshot: any = null;
 
-      if (parsedChanges && (parsedChanges.props || parsedChanges.styles) && section) {
+      const actualTarget = (parsedChanges?.targetSectionId && allSections?.find(s => s.id === parsedChanges.targetSectionId)) || resolvedSection || section;
+      const targetId = actualTarget?.id;
+
+      if (parsedChanges && (parsedChanges.props || parsedChanges.styles) && targetId) {
         snapshot = {
-          sectionId: section.id,
-          props: JSON.parse(JSON.stringify(section.props || {})),
-          styles: JSON.parse(JSON.stringify(section.styles || {}))
+          sectionId: targetId,
+          props: JSON.parse(JSON.stringify(actualTarget?.props || {})),
+          styles: JSON.parse(JSON.stringify(actualTarget?.styles || {}))
         };
 
         if (autoApply) {
           if (onApplyMultipleProps) {
-            onApplyMultipleProps(parsedChanges.props || {}, parsedChanges.styles || {}, section.id);
+            onApplyMultipleProps(parsedChanges.props || {}, parsedChanges.styles || {}, targetId);
           } else if (parsedChanges.props) {
             Object.entries(parsedChanges.props).forEach(([field, val]) => {
               onApplyField(field, val);
             });
           }
+          if (onSelectSection && targetId) {
+            onSelectSection(targetId);
+          }
           wasAutoApplied = true;
-          setAppliedNotice(`✓ Auto-applied updates to ${section?.props?.title || section?.componentId.toUpperCase()}!`);
+          setAppliedNotice(`✓ Auto-applied updates to ${actualTarget?.props?.title || actualTarget?.componentId.toUpperCase()}!`);
           setTimeout(() => setAppliedNotice(null), 4000);
         }
       }
+
+      const targetTitle = actualTarget?.props?.title
+        ? `${actualTarget.componentId.toUpperCase()}: ${actualTarget.props.title.substring(0, 16)}...`
+        : (actualTarget?.componentId ? actualTarget.componentId.toUpperCase() : 'CANVAS');
 
       const assistantMsg: ChatMessage = {
         id: `assist_${Date.now()}`,
@@ -447,8 +524,8 @@ export function MultiModelAiCodingChat({
         modelId: selectedModel.name,
         provider: selectedModel.badge,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        targetSectionTitle: section?.props?.title || section?.componentId,
-        targetSectionId: section?.id,
+        targetSectionTitle: targetTitle,
+        targetSectionId: targetId,
         parsedChanges: parsedChanges || undefined,
         previousSnapshot: snapshot,
         applied: wasAutoApplied
@@ -467,11 +544,12 @@ export function MultiModelAiCodingChat({
     if (!parsedChanges) return;
 
     const targetSectionId = msg?.targetSectionId || section?.id;
+    const targetSec = (targetSectionId && allSections?.find(s => s.id === targetSectionId)) || section;
 
     const snapshot = {
       sectionId: targetSectionId || section?.id || '',
-      props: JSON.parse(JSON.stringify(section?.id === targetSectionId ? (section?.props || {}) : {})),
-      styles: JSON.parse(JSON.stringify(section?.id === targetSectionId ? (section?.styles || {}) : {}))
+      props: JSON.parse(JSON.stringify(targetSec?.props || {})),
+      styles: JSON.parse(JSON.stringify(targetSec?.styles || {}))
     };
 
     if (onApplyMultipleProps) {
@@ -482,7 +560,11 @@ export function MultiModelAiCodingChat({
       });
     }
 
-    setAppliedNotice(`✓ Successfully applied updates to ${msg?.targetSectionTitle || section?.componentId.toUpperCase()}!`);
+    if (onSelectSection && targetSectionId) {
+      onSelectSection(targetSectionId);
+    }
+
+    setAppliedNotice(`✓ Successfully applied updates to ${msg?.targetSectionTitle || 'Canvas'}!`);
     setTimeout(() => setAppliedNotice(null), 4000);
 
     setMessages(prev =>
@@ -920,6 +1002,34 @@ export function MultiModelAiCodingChat({
 
       {/* Input Action Bar */}
       <div className="p-3 bg-[#111726] border-t border-[#232F42] rounded-b-xl shrink-0 space-y-2">
+        {/* Target Scope Pill */}
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center space-x-1.5">
+            <span className="text-[10px] font-semibold text-slate-400 flex items-center space-x-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+              <span>Target:</span>
+            </span>
+            <select
+              value={targetMode}
+              onChange={(e) => setTargetMode(e.target.value)}
+              className="bg-[#0A0D14] text-slate-300 text-[10px] font-medium px-2 py-0.5 rounded-md border border-[#232F42] outline-none hover:border-sky-500/50 cursor-pointer"
+            >
+              <option value="auto">⚡ Auto-Detect (from prompt or active block)</option>
+              {allSections?.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.props?.title ? `${s.componentId.toUpperCase()}: ${s.props.title.substring(0, 20)}...` : s.componentId.toUpperCase()}
+                </option>
+              ))}
+              <option value="page">🌐 Entire Page / Global Canvas</option>
+            </select>
+          </div>
+          {section && targetMode === 'auto' && (
+            <span className="text-[10px] text-slate-500 font-mono">
+              Active: {section.componentId.toUpperCase()}
+            </span>
+          )}
+        </div>
+
         <div className="flex items-center space-x-1.5">
           <textarea
             value={inputPrompt}

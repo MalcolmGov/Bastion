@@ -5,6 +5,8 @@ interface PolishRequestBody {
   modelId: string;
   prompt: string;
   section?: any;
+  allSections?: any[];
+  targetSectionId?: string;
   pageContext?: {
     pageSlug: string;
     siteName?: string;
@@ -18,9 +20,6 @@ interface PolishRequestBody {
 // Maps futuristic or custom model IDs to valid upstream provider model endpoints
 function mapModelId(provider: string, modelId: string): string {
   if (provider === 'anthropic') {
-    if (modelId === 'claude-opus-5-5' || modelId === 'claude-fable-5-1' || modelId === 'claude-sonnet-5-5') {
-      return 'claude-3-7-sonnet-20250219';
-    }
     return modelId || 'claude-3-7-sonnet-20250219';
   }
   if (provider === 'openai') {
@@ -38,6 +37,7 @@ import { repairAndExtractChanges } from '@/lib/studio/aiJsonRepair';
 function synthesizeDesignChanges({
   prompt,
   section,
+  allSections,
   provider,
   modelId,
   startTime,
@@ -45,56 +45,108 @@ function synthesizeDesignChanges({
 }: {
   prompt: string;
   section?: any;
+  allSections?: any[];
   provider: string;
   modelId: string;
   startTime: number;
   note?: string;
 }) {
-  const isDarkModeReq = /dark|black|glass|theme|night|glow/i.test(prompt);
-  const isCopyReq = /copy|polish|headline|title|rewrite|text|authoritative/i.test(prompt);
-  const isMobileReq = /mobile|responsive|padding|spacing|tablet/i.test(prompt);
-  const isPayguardReq = /payguard/i.test(prompt);
+  const p = prompt.toLowerCase();
 
-  let summary = 'Refined component design, copy hierarchy, and modern aesthetic';
+  // 1. Resolve Target Component & Section from prompt + context
+  let compId: string = section?.componentId;
+  let targetSection = section;
+
+  if (/\bhero\b/i.test(p)) {
+    compId = 'hero';
+    if (allSections) targetSection = allSections.find(s => s.componentId === 'hero') || targetSection;
+  } else if (/\b(header|nav|navbar|menu)\b/i.test(p)) {
+    compId = 'header';
+    if (allSections) targetSection = allSections.find(s => s.componentId === 'header') || targetSection;
+  } else if (/\b(service|services|grid|features)\b/i.test(p)) {
+    compId = 'services_grid';
+    if (allSections) targetSection = allSections.find(s => s.componentId === 'services_grid') || targetSection;
+  } else if (/\b(footer|copyright)\b/i.test(p)) {
+    compId = 'footer';
+    if (allSections) targetSection = allSections.find(s => s.componentId === 'footer') || targetSection;
+  } else if (/\b(cta|call to action)\b/i.test(p)) {
+    compId = 'cta';
+    if (allSections) targetSection = allSections.find(s => s.componentId === 'cta') || targetSection;
+  }
+
+  if (!compId) compId = targetSection?.componentId || 'hero';
+
   const propsUpdates: Record<string, any> = {};
   const stylesUpdates: Record<string, any> = {};
 
-  if (isDarkModeReq) {
-    summary = 'Crafted ultra-modern Dark Mode glassmorphic theme with high-contrast typography';
-    stylesUpdates.theme = 'dark';
-    stylesUpdates.backgroundType = 'solid';
-    stylesUpdates.backgroundColor = 'rgba(5, 8, 15, 0.85)';
-    stylesUpdates.textColor = '#F8FAFC';
-    stylesUpdates.headingColor = '#FFFFFF';
-    stylesUpdates.borderColor = 'rgba(255, 255, 255, 0.08)';
-    stylesUpdates.backdropBlur = '16px';
-    stylesUpdates.backdropSaturate = '180%';
-    stylesUpdates.bottomAccentLine = 'linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.5) 50%, transparent 100%)';
-    stylesUpdates.brandTextColor = '#F8FAFC';
+  // 2. Color Detection from natural language
+  const hasBlue = /\b(blue|cyan|azure|sky|navy|sapphire|indigo)\b/i.test(p);
+  const hasGold = /\b(gold|amber|yellow|bronze)\b/i.test(p);
+  const hasGreen = /\b(green|emerald|mint|teal)\b/i.test(p);
+  const hasPurple = /\b(purple|violet|magenta)\b/i.test(p);
+  const hasRed = /\b(red|crimson|rose)\b/i.test(p);
+  const hasWhite = /\b(white|light)\b/i.test(p);
+  const hasDark = /\b(dark|black|obsidian|night|glass)\b/i.test(p);
+
+  let chosenColorHex: string | null = null;
+  let chosenAccentHex: string | null = null;
+  let colorName = '';
+
+  if (hasBlue) {
+    chosenColorHex = '#38BDF8'; // Electric Sky Blue
+    chosenAccentHex = '#0284C7';
+    colorName = 'Electric Sky Blue';
+  } else if (hasGold) {
+    chosenColorHex = '#F59E0B'; // Amber Gold
+    chosenAccentHex = '#D4AF37';
+    colorName = 'Royal Gold';
+  } else if (hasGreen) {
+    chosenColorHex = '#34D399'; // Emerald
+    chosenAccentHex = '#10B981';
+    colorName = 'Emerald';
+  } else if (hasPurple) {
+    chosenColorHex = '#C084FC';
+    chosenAccentHex = '#8B5CF6';
+    colorName = 'Violet Aura';
+  } else if (hasRed) {
+    chosenColorHex = '#F87171';
+    chosenAccentHex = '#E11D48';
+    colorName = 'Crimson';
+  } else if (hasWhite) {
+    chosenColorHex = '#FFFFFF';
+    chosenAccentHex = '#F8FAFC';
+    colorName = 'Pure White';
   }
 
-  const compId = section?.componentId || (isPayguardReq ? 'header' : 'hero');
+  const isDarkModeReq = hasDark || /theme|night|glow/i.test(p);
+  const isCopyReq = /copy|polish|headline|title|rewrite|authoritative|executive/i.test(p);
+  const isMobileReq = /mobile|responsive|padding|spacing|tablet/i.test(p);
+  const isPayguardReq = /payguard/i.test(p);
 
-  if (compId === 'header') {
-    if (isPayguardReq) {
-      propsUpdates.brandName = 'Payguard';
-      propsUpdates.logoDarkUrl = 'https://payguard.africa/payguard-logo-light.png';
-      propsUpdates.ctaText = 'Request a Demo';
-      propsUpdates.ctaHref = '/contact';
-    } else {
-      propsUpdates.brandName = section?.props?.brandName || 'Apex Advisory';
-      propsUpdates.ctaText = 'Initiate Advisory';
-      propsUpdates.ctaHref = '/contact';
+  let summary = `Refined ${compId.toUpperCase()} styling and typography`;
+
+  if (compId === 'hero') {
+    if (chosenColorHex) {
+      stylesUpdates.headingColor = chosenColorHex;
+      stylesUpdates.textColor = hasBlue ? '#93C5FD' : '#CBD5E1';
+      stylesUpdates.accentColor = chosenAccentHex || chosenColorHex;
+      propsUpdates.titleColor = chosenColorHex;
+      propsUpdates.textColor = stylesUpdates.textColor;
+      summary = `Updated Hero component typography and accents to ${colorName} (${chosenColorHex})`;
     }
-  } else if (compId === 'hero') {
+
     if (isDarkModeReq) {
-      stylesUpdates.backgroundColor = '#070B12';
       stylesUpdates.theme = 'dark';
-      stylesUpdates.textColor = '#F8FAFC';
-      stylesUpdates.headingColor = '#FFFFFF';
+      stylesUpdates.backgroundColor = '#070B12';
       stylesUpdates.borderColor = 'rgba(255, 255, 255, 0.1)';
+      if (!chosenColorHex) {
+        stylesUpdates.headingColor = '#FFFFFF';
+        stylesUpdates.textColor = '#CBD5E1';
+      }
+      summary = `Crafted executive dark mode theme for Hero with high-contrast typography`;
     }
-    if (isCopyReq || isDarkModeReq || isPayguardReq) {
+
+    if (isCopyReq || isPayguardReq) {
       propsUpdates.badge = isPayguardReq
         ? 'ENTERPRISE PAYMENT ORCHESTRATION • 2026'
         : 'FLAGSHIP INSTITUTIONAL ADVISORY • 2026';
@@ -104,33 +156,44 @@ function synthesizeDesignChanges({
       propsUpdates.subtitle = isPayguardReq
         ? 'Consolidate cards, instant EFT, mobile money, and cross-border treasury across Africa with zero settlement friction.'
         : 'Advising Fortune 500 boards and premier alternative asset managers across cross-border M&A, structured credit, and recapitalizations.';
-      propsUpdates.primaryCta = {
-        label: isPayguardReq ? 'Explore Payguard Platform' : 'Access Private Advisory',
-        href: '/contact'
-      };
-      propsUpdates.secondaryCta = {
-        label: 'View Technical Architecture',
-        href: '/docs'
-      };
+    }
+  } else if (compId === 'header') {
+    if (chosenColorHex) {
+      stylesUpdates.brandTextColor = chosenColorHex;
+      stylesUpdates.accentColor = chosenAccentHex || chosenColorHex;
+      summary = `Updated Header branding and link accents to ${colorName}`;
+    }
+    if (isDarkModeReq) {
+      stylesUpdates.theme = 'dark';
+      stylesUpdates.backgroundColor = 'rgba(5, 8, 15, 0.9)';
+      stylesUpdates.textColor = '#F8FAFC';
+      stylesUpdates.borderColor = 'rgba(255, 255, 255, 0.08)';
+    }
+    if (isPayguardReq) {
+      propsUpdates.brandName = 'Payguard';
+      propsUpdates.logoDarkUrl = 'https://payguard.africa/payguard-logo-light.png';
+      propsUpdates.ctaText = 'Request a Demo';
+      propsUpdates.ctaHref = '/contact';
     }
   } else if (compId === 'services_grid') {
+    if (chosenColorHex) {
+      stylesUpdates.headingColor = chosenColorHex;
+      stylesUpdates.accentColor = chosenAccentHex || chosenColorHex;
+      summary = `Updated Services Grid headlines and card accents to ${colorName}`;
+    }
     if (isDarkModeReq) {
       stylesUpdates.theme = 'dark';
       stylesUpdates.backgroundColor = '#090D16';
       stylesUpdates.textColor = '#F8FAFC';
     }
-    if (isCopyReq || isPayguardReq) {
-      propsUpdates.title = isPayguardReq ? 'Enterprise Payment Rails' : 'Core Advisory Capabilities';
-    }
   } else {
+    if (chosenColorHex) {
+      stylesUpdates.headingColor = chosenColorHex;
+      stylesUpdates.accentColor = chosenAccentHex || chosenColorHex;
+    }
     if (isDarkModeReq) {
       stylesUpdates.theme = 'dark';
-      stylesUpdates.backgroundColor = '#070B12';
       stylesUpdates.textColor = '#F8FAFC';
-    }
-    if (isCopyReq) {
-      propsUpdates.badge = 'EXECUTIVE CAPABILITIES';
-      propsUpdates.title = 'Institutional Strategic Execution';
     }
   }
 
@@ -140,10 +203,17 @@ function synthesizeDesignChanges({
 
   const footNote = note || `*(Synthesized via built-in Design Technologist engine. Add your ${provider.toUpperCase()} API key in the Keys tab to enable live frontier model calls).*`;
 
-  const replyText = `I have refined the ${section ? section.componentId.toUpperCase() : 'selected'} component with an executive, modern aesthetic tailored to your instruction.\n\n\`\`\`json\n{\n  "summary": "${summary}",\n  "props": ${JSON.stringify(propsUpdates, null, 2)},\n  "styles": ${JSON.stringify(stylesUpdates, null, 2)}\n}\n\`\`\`\n\n${footNote}`;
+  const targetName = compId === 'hero' ? 'Hero Section' : compId === 'header' ? 'Header Navbar' : compId === 'services_grid' ? 'Services Grid' : compId.toUpperCase();
+  const replyText = `I have refined the **${targetName}** tailored to your instruction:\n\n` +
+    `• **Summary**: ${summary}\n` +
+    (stylesUpdates.headingColor ? `• **Heading Color**: \`${stylesUpdates.headingColor}\`\n` : '') +
+    (stylesUpdates.textColor ? `• **Body Text Color**: \`${stylesUpdates.textColor}\`\n` : '') +
+    (stylesUpdates.accentColor ? `• **Accent Color**: \`${stylesUpdates.accentColor}\`\n` : '') +
+    `\n\`\`\`json\n{\n  "summary": "${summary}",\n  "targetSectionId": "${targetSection?.id || ''}",\n  "props": ${JSON.stringify(propsUpdates, null, 2)},\n  "styles": ${JSON.stringify(stylesUpdates, null, 2)}\n}\n\`\`\`\n\n${footNote}`;
 
   const parsedChanges = {
     summary,
+    targetSectionId: targetSection?.id,
     props: Object.keys(propsUpdates).length > 0 ? propsUpdates : undefined,
     styles: Object.keys(stylesUpdates).length > 0 ? stylesUpdates : undefined
   };
@@ -168,6 +238,8 @@ export async function POST(req: NextRequest) {
       modelId,
       prompt,
       section,
+      allSections = [],
+      targetSectionId,
       pageContext,
       brandKit,
       userApiKey,
@@ -176,6 +248,32 @@ export async function POST(req: NextRequest) {
 
     if (!prompt?.trim()) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+    }
+
+    // Resolve Target Section from prompt + allSections
+    const pLower = prompt.toLowerCase();
+    let targetSection = section;
+
+    if (targetSectionId && allSections.length > 0) {
+      const found = allSections.find(s => s.id === targetSectionId);
+      if (found) targetSection = found;
+    } else if (allSections.length > 0) {
+      if (/\bhero\b/i.test(pLower)) {
+        const hero = allSections.find(s => s.componentId === 'hero');
+        if (hero) targetSection = hero;
+      } else if (/\b(header|nav|navbar|menu)\b/i.test(pLower)) {
+        const header = allSections.find(s => s.componentId === 'header');
+        if (header) targetSection = header;
+      } else if (/\b(service|services|grid|features)\b/i.test(pLower)) {
+        const sGrid = allSections.find(s => s.componentId === 'services_grid');
+        if (sGrid) targetSection = sGrid;
+      } else if (/\b(footer|copyright)\b/i.test(pLower)) {
+        const footer = allSections.find(s => s.componentId === 'footer');
+        if (footer) targetSection = footer;
+      } else if (/\b(cta|call to action)\b/i.test(pLower)) {
+        const cta = allSections.find(s => s.componentId === 'cta');
+        if (cta) targetSection = cta;
+      }
     }
 
     // Determine API Key: User-provided key takes precedence, otherwise fallback to server env
@@ -191,55 +289,56 @@ export async function POST(req: NextRequest) {
     if (!apiKey) {
       return synthesizeDesignChanges({
         prompt,
-        section,
+        section: targetSection,
+        allSections,
         provider,
         modelId,
         startTime
       });
     }
 
-    // Construct System Prompt
+    // Construct System Prompt with full canvas awareness
     const systemPrompt = `You are a Principal AI Design Technologist and Staff Frontend Engineer for the Bastion Enterprise Web Platform.
 Your goal is to assist Malcolm Govender in building, polishing, and perfecting executive web pages (e.g. Gold Fields, Payguard, MoveDigital, Apex Advisory).
 
 CURRENT CONTEXT:
 - Page: ${pageContext?.pageSlug || 'home'}
 - Client: ${pageContext?.siteName || 'Bastion'}
-- Selected Block: ${section ? `${section.componentId} (${section.variant || 'default'})` : 'None / Page-level'}
-${section ? `- Current Block Props: ${JSON.stringify(section.props || {}, null, 2)}` : ''}
-${section?.styles ? `- Current Block Styles: ${JSON.stringify(section.styles || {}, null, 2)}` : ''}
+- Target Section: ${targetSection ? `${targetSection.componentId} (id: "${targetSection.id}")` : 'Page-level / All sections'}
+${allSections?.length ? `- Available Canvas Sections: ${allSections.map((s: any) => `${s.componentId} [id: ${s.id}]`).join(', ')}` : ''}
+${targetSection ? `- Target Section Props: ${JSON.stringify(targetSection.props || {}, null, 2)}` : ''}
+${targetSection?.styles ? `- Target Section Styles: ${JSON.stringify(targetSection.styles || {}, null, 2)}` : ''}
 ${brandKit ? `- Brand Colors: ${JSON.stringify(brandKit.colors || {})}` : ''}
 
 INSTRUCTIONS:
 1. Always start your response with a 1-2 sentence executive explanation of your design, architectural, and styling choices.
-2. When proposing copy, layout, dark mode, or styling updates, ALWAYS include a structured JSON block enclosed in \`\`\`json ... \`\`\` at the end of your response.
-3. The JSON structure:
+2. If the user asks to update a specific section (e.g. Hero, Header, Services), focus your changes on that section.
+3. When proposing copy, layout, dark mode, or styling updates, ALWAYS include a structured JSON block enclosed in \`\`\`json ... \`\`\` at the end of your response.
+4. The JSON structure:
 \`\`\`json
 {
   "summary": "1-line description of applied changes",
+  "targetSectionId": "${targetSection?.id || ''}",
   "props": {
-    // Component specific properties (e.g. brandName, logoDarkUrl, links, ctaText, ctaHref, title, subtitle, badge)
+    // Component specific properties (e.g. title, subtitle, badge, brandName, ctaText, ctaHref, titleColor, textColor)
   },
   "styles": {
     // Component visual styling tokens:
+    // headingColor: '#38BDF8' | '#FFFFFF',
+    // textColor: '#93C5FD' | '#CBD5E1',
+    // accentColor: '#0284C7',
     // theme: 'dark' | 'light',
-    // backgroundType: 'solid' | 'gradient' | 'default',
-    // backgroundColor: 'rgba(5, 8, 15, 0.85)' | '#0A0D14' | '#09090B',
-    // textColor: '#F8FAFC' | '#CBD5E1',
-    // headingColor: '#FFFFFF',
-    // accentColor: '#38BDF8',
-    // borderColor: 'rgba(255, 255, 255, 0.08)',
-    // backdropBlur: '16px',
-    // paddingY: 'py-24'
+    // backgroundColor: '#070B12' | 'rgba(5, 8, 15, 0.85)',
+    // borderColor: 'rgba(255, 255, 255, 0.08)'
   }
 }
 \`\`\`
-4. Keep the JSON concise, compact, and fully closed. Never leave unclosed brackets or strings.`;
+5. Keep the JSON concise, compact, and fully closed. Never leave unclosed brackets or strings.`;
 
     // Construct the user message with context
     const currentMessage = `User Request: "${prompt}"
 
-${section ? `Target Block [${section.componentId}]: Please polish, style, and refine this component based on my instruction.` : 'Please provide recommendations for the page layout, theme, and design.'}`;
+Target Block [${targetSection?.componentId || 'page'}]: Please polish, style, and refine this component based on my instruction.`;
 
     let replyText = '';
 
@@ -252,18 +351,70 @@ ${section ? `Target Block [${section.componentId}]: Please polish, style, and re
         { role: 'user', content: currentMessage }
       ];
 
-      const primaryModel = mapModelId('anthropic', modelId);
-      // Fallback model list if the requested frontier model is not enabled on this API key tier
-      const fallbackModels = [
-        primaryModel,
-        'claude-3-5-sonnet-20241022',
-        'claude-3-5-haiku-20241022'
-      ].filter((m, i, arr) => arr.indexOf(m) === i);
+      // Query available models from Anthropic API for this key
+      let availableModelIds: string[] = [];
+      let is401Unauthorized = false;
+      let authErrorMessage = '';
 
+      try {
+        const modelsRes = await fetch('https://api.anthropic.com/v1/models', {
+          method: 'GET',
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+          }
+        });
+        if (modelsRes.ok) {
+          const modelsData = await modelsRes.json();
+          if (Array.isArray(modelsData?.data)) {
+            availableModelIds = modelsData.data.map((m: any) => m.id);
+            console.log('Anthropic available models on account:', availableModelIds);
+          }
+        } else {
+          const errData = await modelsRes.json().catch(() => ({}));
+          if (modelsRes.status === 401) {
+            is401Unauthorized = true;
+            authErrorMessage = errData.error?.message || 'Invalid x-api-key';
+          }
+        }
+      } catch (checkErr) {
+        console.warn('Anthropic models check failed:', checkErr);
+      }
+
+      if (is401Unauthorized) {
+        return synthesizeDesignChanges({
+          prompt,
+          section: targetSection,
+          allSections,
+          provider,
+          modelId,
+          startTime,
+          note: `*(Anthropic returned 401 Unauthorized: "${authErrorMessage}". Please check your key in the API Keys tab).*`
+        });
+      }
+
+      // Candidate model list:
+      const candidateModels: string[] = [];
+      if (availableModelIds.length > 0) {
+        if (availableModelIds.includes(modelId)) candidateModels.push(modelId);
+        candidateModels.push(...availableModelIds);
+      }
+
+      candidateModels.push(
+        modelId,
+        'claude-3-7-sonnet-20250219',
+        'claude-3-5-sonnet-20241022',
+        'claude-3-5-haiku-20241022',
+        'claude-3-haiku-20240307',
+        'claude-3-opus-20240229',
+        'claude-3-sonnet-20240229'
+      );
+
+      const uniqueModels = candidateModels.filter((m, i, arr) => m && arr.indexOf(m) === i);
       let lastError: Error | null = null;
       let succeeded = false;
 
-      for (const mId of fallbackModels) {
+      for (const mId of uniqueModels) {
         try {
           const reqBody: any = {
             model: mId,
@@ -285,7 +436,7 @@ ${section ? `Target Block [${section.componentId}]: Please polish, style, and re
           const data = await res.json();
           if (!res.ok) {
             const errMsg = data.error?.message || `Anthropic API error: ${res.statusText}`;
-            console.warn(`Anthropic model ${mId} failed: ${errMsg}, trying next tier fallback...`);
+            console.warn(`Anthropic model ${mId} failed: ${errMsg}, trying next candidate...`);
             lastError = new Error(errMsg);
             continue;
           }
@@ -297,20 +448,19 @@ ${section ? `Target Block [${section.componentId}]: Please polish, style, and re
           succeeded = true;
           break;
         } catch (callErr: any) {
-          console.warn(`Anthropic request network error on model ${mId}:`, callErr);
           lastError = callErr;
         }
       }
 
       if (!succeeded) {
-        console.warn('Anthropic models failed. Falling back gracefully to built-in Design Technologist engine.');
         return synthesizeDesignChanges({
           prompt,
-          section,
+          section: targetSection,
+          allSections,
           provider,
           modelId,
           startTime,
-          note: `*(Synthesized via built-in Design Technologist engine: Upstream Anthropic returned "${lastError?.message || 'model unavailable'}". Check your Anthropic plan tier or keys).*`
+          note: `*(Synthesized via built-in Design Technologist engine: Upstream Anthropic returned "${lastError?.message || 'model unavailable'}").*`
         });
       }
     }
@@ -373,7 +523,8 @@ ${section ? `Target Block [${section.componentId}]: Please polish, style, and re
       if (!succeeded) {
         return synthesizeDesignChanges({
           prompt,
-          section,
+          section: targetSection,
+          allSections,
           provider,
           modelId,
           startTime,
@@ -424,7 +575,8 @@ ${section ? `Target Block [${section.componentId}]: Please polish, style, and re
       } catch (geminiErr: any) {
         return synthesizeDesignChanges({
           prompt,
-          section,
+          section: targetSection,
+          allSections,
           provider,
           modelId,
           startTime,
@@ -466,7 +618,8 @@ ${section ? `Target Block [${section.componentId}]: Please polish, style, and re
       } catch (deepseekErr: any) {
         return synthesizeDesignChanges({
           prompt,
-          section,
+          section: targetSection,
+          allSections,
           provider,
           modelId,
           startTime,
@@ -516,7 +669,8 @@ ${section ? `Target Block [${section.componentId}]: Please polish, style, and re
       } catch (qwenErr: any) {
         return synthesizeDesignChanges({
           prompt,
-          section,
+          section: targetSection,
+          allSections,
           provider,
           modelId,
           startTime,

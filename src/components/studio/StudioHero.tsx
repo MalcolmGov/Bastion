@@ -40,6 +40,11 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
   const effectiveBg = styles?.backgroundColor || (isDarkMode ? '#070B12' : undefined);
   const effectiveTextColor = styles?.textColor || (isDarkMode ? '#F8FAFC' : undefined);
 
+  // Compute resolved text & accent colors (checks both styles and props for maximum flexibility)
+  const heroHeadingColor = styles?.headingColor || (props as any)?.titleColor || (props as any)?.headingColor || (isDarkMode ? '#FFFFFF' : undefined);
+  const heroTextColor = styles?.textColor || (props as any)?.subtitleColor || (props as any)?.textColor || (isDarkMode ? '#CBD5E1' : undefined);
+  const heroAccentColor = styles?.accentColor || (props as any)?.accentColor;
+
   // Custom inline styles resolution
   const heroStyle: React.CSSProperties = {
     ...(effectiveBg ? { backgroundColor: effectiveBg } : {}),
@@ -60,7 +65,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
         <StudioBackgroundFx
           pattern={styles?.backgroundPattern}
           opacity={styles?.patternOpacity}
-          accentColor={styles?.accentColor}
+          accentColor={heroAccentColor}
         />
         {/* Ambient atmospheric backdrop */}
         {!hasCustomBg && (
@@ -76,7 +81,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
         <div className="relative z-20 max-w-4xl mx-auto text-center space-y-8">
           {props.badge && (
             <div
-              style={styles?.accentColor ? { borderColor: styles.accentColor, color: styles.accentColor } : undefined}
+              style={heroAccentColor ? { borderColor: heroAccentColor, color: heroAccentColor } : undefined}
               className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-black/40 border border-white/20 text-xs font-medium tracking-wide uppercase backdrop-blur-xs"
             >
               <span>{props.badge}</span>
@@ -84,15 +89,15 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
           )}
 
           <h1
-            style={styles?.headingColor ? { color: styles.headingColor } : undefined}
-            className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.12] tracking-normal text-white"
+            style={heroHeadingColor ? { color: heroHeadingColor } : undefined}
+            className={`font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.12] tracking-normal ${heroHeadingColor ? '' : 'text-white'}`}
           >
             {props.title}
           </h1>
 
           {props.subtitle && (
             <p
-              style={styles?.textColor ? { color: styles.textColor } : undefined}
+              style={heroTextColor ? { color: heroTextColor } : undefined}
               className="text-base sm:text-lg md:text-xl text-zinc-300 max-w-2xl mx-auto font-light leading-relaxed"
             >
               {props.subtitle}
@@ -104,9 +109,9 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
               <a
                 href={props.primaryCta.href || '#'}
                 onClick={isEditor ? (e) => e.preventDefault() : undefined}
-                style={styles?.accentColor ? { backgroundColor: styles.accentColor, borderColor: styles.accentColor, color: '#FFFFFF' } : undefined}
+                style={heroAccentColor ? { backgroundColor: heroAccentColor, borderColor: heroAccentColor, color: '#FFFFFF' } : undefined}
                 className={`inline-flex items-center space-x-2 px-7 py-3.5 rounded-md font-medium transition shadow-lg text-sm ${
-                  styles?.accentColor ? '' : 'bg-gradient-to-r from-amber-600 to-amber-700 text-white hover:from-amber-500 hover:to-amber-600'
+                  heroAccentColor ? '' : 'bg-gradient-to-r from-amber-600 to-amber-700 text-white hover:from-amber-500 hover:to-amber-600'
                 }`}
               >
                 <span>{props.primaryCta.label}</span>
@@ -137,27 +142,27 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
         <StudioBackgroundFx
           pattern={styles?.backgroundPattern}
           opacity={styles?.patternOpacity}
-          accentColor={styles?.accentColor}
+          accentColor={heroAccentColor}
         />
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
           <div className="lg:col-span-7 space-y-6">
             {props.badge && (
               <div
-                style={styles?.accentColor ? { borderColor: styles.accentColor, color: styles.accentColor } : undefined}
+                style={heroAccentColor ? { borderColor: heroAccentColor, color: heroAccentColor } : undefined}
                 className="inline-block px-3 py-1 bg-white/40 border border-current text-xs font-semibold tracking-wider uppercase"
               >
                 {props.badge}
               </div>
             )}
             <h1
-              style={styles?.headingColor ? { color: styles.headingColor } : undefined}
+              style={heroHeadingColor ? { color: heroHeadingColor } : undefined}
               className="font-serif text-4xl sm:text-5xl md:text-6xl font-normal leading-[1.14] tracking-tight"
             >
               {props.title}
             </h1>
             {props.subtitle && (
               <p
-                style={styles?.textColor ? { color: styles.textColor } : undefined}
+                style={heroTextColor ? { color: heroTextColor } : undefined}
                 className="text-lg font-sans leading-relaxed max-w-xl opacity-85"
               >
                 {props.subtitle}
@@ -168,9 +173,9 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
                 <a
                   href={props.primaryCta.href || '#'}
                   onClick={isEditor ? (e) => e.preventDefault() : undefined}
-                  style={styles?.accentColor ? { backgroundColor: styles.accentColor, color: '#FFFFFF' } : undefined}
+                  style={heroAccentColor ? { backgroundColor: heroAccentColor, color: '#FFFFFF' } : undefined}
                   className={`px-7 py-3.5 font-medium transition text-sm shadow-sm inline-flex items-center space-x-2 ${
-                    styles?.accentColor ? 'hover:brightness-110' : 'bg-[#082B49] text-white hover:bg-[#003068]'
+                    heroAccentColor ? 'hover:brightness-110' : 'bg-[#082B49] text-white hover:bg-[#003068]'
                   }`}
                 >
                   <span>{props.primaryCta.label}</span>
@@ -215,13 +220,13 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
       <StudioBackgroundFx
         pattern={styles?.backgroundPattern}
         opacity={styles?.patternOpacity}
-        accentColor={styles?.accentColor}
+        accentColor={heroAccentColor}
       />
       <div className="max-w-7xl mx-auto space-y-12 relative z-10">
         <div className="max-w-4xl space-y-6">
           {props.badge && (
             <div
-              style={styles?.accentColor ? { borderColor: styles.accentColor, color: styles.accentColor } : undefined}
+              style={heroAccentColor ? { borderColor: heroAccentColor, color: heroAccentColor } : undefined}
               className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full ${
                 isDarkMode ? 'bg-white/10 border border-white/20 text-slate-200' : 'bg-white/70 border border-current text-xs'
               } text-xs font-semibold tracking-wide`}
@@ -232,7 +237,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
           )}
 
           <h1
-            style={styles?.headingColor ? { color: styles.headingColor } : (isDarkMode ? { color: '#FFFFFF' } : undefined)}
+            style={heroHeadingColor ? { color: heroHeadingColor } : undefined}
             className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.12]"
           >
             {props.title}
@@ -240,7 +245,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
 
           {props.subtitle && (
             <p
-              style={styles?.textColor ? { color: styles.textColor } : (isDarkMode ? { color: '#CBD5E1' } : undefined)}
+              style={heroTextColor ? { color: heroTextColor } : undefined}
               className="text-lg md:text-xl font-normal leading-relaxed max-w-3xl opacity-85"
             >
               {props.subtitle}
@@ -252,9 +257,9 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
               <a
                 href={props.primaryCta.href || '#'}
                 onClick={isEditor ? (e) => e.preventDefault() : undefined}
-                style={styles?.accentColor ? { backgroundColor: styles.accentColor, color: '#FFFFFF' } : undefined}
+                style={heroAccentColor ? { backgroundColor: heroAccentColor, color: '#FFFFFF' } : undefined}
                 className={`px-6 py-3 rounded-lg font-semibold transition text-sm shadow-sm inline-flex items-center space-x-2 ${
-                  styles?.accentColor ? 'hover:brightness-110 text-white' : 'bg-slate-900 text-white hover:bg-slate-800'
+                  heroAccentColor ? 'hover:brightness-110 text-white' : 'bg-slate-900 text-white hover:bg-slate-800'
                 }`}
               >
                 <span>{props.primaryCta.label}</span>
@@ -290,9 +295,9 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
                 } p-5 rounded-xl shadow-xs`}
               >
                 <div
-                  style={styles?.headingColor ? { color: styles.headingColor } : undefined}
+                  style={heroHeadingColor ? { color: heroHeadingColor } : undefined}
                   className={`text-2xl sm:text-3xl font-bold tracking-tight font-mono ${
-                    isDarkMode ? 'text-white' : 'text-slate-900'
+                    heroHeadingColor ? '' : (isDarkMode ? 'text-white' : 'text-slate-900')
                   }`}
                 >
                   {st.value}
