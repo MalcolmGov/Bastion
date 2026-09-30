@@ -35,7 +35,14 @@ import {
   Sun,
   Star,
   Waves,
-  Ban
+  Ban,
+  Sidebar,
+  PanelLeftClose,
+  PanelRightClose,
+  Maximize2,
+  Minimize2,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
@@ -174,6 +181,26 @@ function VisualWebsiteEditorContent() {
   // Dynamic Zones Builder Left Panel Mode: 'dynamic_zones' | 'outline'
   const [leftPanelMode, setLeftPanelMode] = useState<'dynamic_zones' | 'outline'>('dynamic_zones');
   const [isContentAgentModalOpen, setIsContentAgentModalOpen] = useState(false);
+
+  // Collapsible panels & Zen focus mode
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [isZenMode, setIsZenMode] = useState(false);
+
+  const toggleZenMode = () => {
+    if (isZenMode) {
+      setIsZenMode(false);
+      setIsLeftPanelOpen(true);
+      setIsRightPanelOpen(true);
+    } else {
+      setIsZenMode(true);
+      setIsLeftPanelOpen(false);
+      setIsRightPanelOpen(false);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('set-admin-sidebar-collapsed', { detail: { collapsed: true } }));
+      }
+    }
+  };
 
   // Gradient Custom Builder State
   const [customGradDir, setCustomGradDir] = useState('135deg');
@@ -489,19 +516,33 @@ function VisualWebsiteEditorContent() {
   return (
     <div className="h-[calc(100vh-100px)] flex flex-col bg-slate-100 dark:bg-[#070B12] -m-6 lg:-m-8 select-none">
       {/* Top Editor Toolbar */}
-      <div className="h-14 bg-white dark:bg-[#0A0D14] border-b border-slate-200 dark:border-[#1E293B] px-6 flex items-center justify-between z-30 shrink-0">
-        <div className="flex items-center space-x-3 text-xs">
-          <div className="flex items-center space-x-2">
-            <span className="font-bold text-slate-900 dark:text-white tracking-wide">{siteData?.name || 'Bastion Editor'}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-blue-50 dark:bg-sky-950 text-bastion-blue dark:text-sky-400 border border-blue-200 dark:border-sky-800">
+      <div className="h-14 bg-white dark:bg-[#0A0D14] border-b border-slate-200 dark:border-[#1E293B] px-4 lg:px-6 flex items-center justify-between z-30 shrink-0 gap-3">
+        <div className="flex items-center space-x-2.5 text-xs min-w-0">
+          {/* Main Bastion Sidebar Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
+              }
+            }}
+            title="Toggle Bastion Navigation Sidebar (⌘B)"
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0 cursor-pointer"
+          >
+            <Sidebar className="w-4 h-4" />
+          </button>
+
+          <div className="flex items-center space-x-2 truncate">
+            <span className="font-bold text-slate-900 dark:text-white tracking-wide truncate">{siteData?.name || 'Bastion Editor'}</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-blue-50 dark:bg-sky-950 text-bastion-blue dark:text-sky-400 border border-blue-200 dark:border-sky-800 shrink-0">
               {collection.toUpperCase()}
             </span>
           </div>
 
-          <span className="text-slate-300 dark:text-slate-600">|</span>
+          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
 
           {/* Page Selector Pill */}
-          <div className="flex space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-lg border border-slate-200 dark:border-[#232F42]">
+          <div className="hidden md:flex space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-lg border border-slate-200 dark:border-[#232F42] shrink-0">
             {['home', 'about', 'services', 'contact'].map((p) => (
               <button
                 key={p}
@@ -519,38 +560,80 @@ function VisualWebsiteEditorContent() {
           </div>
         </div>
 
-        {/* Viewport Width Controls */}
-        <div className="flex items-center space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-xl border border-slate-200 dark:border-[#232F42]">
-          <button
-            type="button"
-            onClick={() => setViewport('desktop')}
-            title="Desktop Viewport (1440px)"
-            className={`p-1.5 rounded-lg transition ${
-              viewport === 'desktop' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Monitor className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewport('tablet')}
-            title="Tablet Viewport (768px)"
-            className={`p-1.5 rounded-lg transition ${
-              viewport === 'tablet' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Tablet className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewport('mobile')}
-            title="Mobile Viewport (375px)"
-            className={`p-1.5 rounded-lg transition ${
-              viewport === 'mobile' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Smartphone className="w-4 h-4" />
-          </button>
+        {/* Center: Viewport & Panel Controls */}
+        <div className="flex items-center space-x-2">
+          {/* Viewport Width Controls */}
+          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-xl border border-slate-200 dark:border-[#232F42]">
+            <button
+              type="button"
+              onClick={() => setViewport('desktop')}
+              title="Desktop Viewport (1440px)"
+              className={`p-1.5 rounded-lg transition ${
+                viewport === 'desktop' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Monitor className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewport('tablet')}
+              title="Tablet Viewport (768px)"
+              className={`p-1.5 rounded-lg transition ${
+                viewport === 'tablet' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Tablet className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewport('mobile')}
+              title="Mobile Viewport (375px)"
+              className={`p-1.5 rounded-lg transition ${
+                viewport === 'mobile' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Smartphone className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Panel Visibility & Focus Controls */}
+          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-xl border border-slate-200 dark:border-[#232F42]">
+            <button
+              type="button"
+              onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
+              title={isLeftPanelOpen ? 'Collapse Dynamic Zones Panel' : 'Expand Dynamic Zones Panel'}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
+                isLeftPanelOpen ? 'bg-sky-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">Blocks</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleZenMode}
+              title={isZenMode ? 'Exit Zen Focus Mode' : 'Zen Focus Mode (Hide Panels)'}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
+                isZenMode ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">{isZenMode ? 'Exit Zen' : 'Zen'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+              title={isRightPanelOpen ? 'Collapse Inspector Panel' : 'Expand Inspector Panel'}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
+                isRightPanelOpen ? 'bg-sky-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">Inspector</span>
+            </button>
+          </div>
         </div>
 
         {/* Undo/Redo & Save Actions */}
@@ -606,11 +689,13 @@ function VisualWebsiteEditorContent() {
       </div>
 
       {/* 3-Panel Main Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* LEFT PANEL: Dynamic Zones Manager / Outline Tree (320px) */}
-        <div className="w-80 bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-[#1E293B] flex flex-col justify-between shrink-0">
+        <div className={`${
+          isLeftPanelOpen ? 'w-80' : 'w-0 border-r-0'
+        } transition-all duration-300 ease-in-out bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-[#1E293B] flex flex-col justify-between shrink-0 overflow-hidden`}>
           {/* View Mode Switcher Header */}
-          <div className="p-2.5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0E1522] flex items-center justify-between text-xs">
+          <div className="p-2.5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0E1522] flex items-center justify-between text-xs w-80">
             <div className="flex items-center space-x-1 bg-[#141C2A] p-0.5 rounded-lg border border-[#232F42]">
               <button
                 type="button"
@@ -638,26 +723,40 @@ function VisualWebsiteEditorContent() {
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsContentAgentModalOpen(true)}
-              title="Open Bastion AI Content Agent"
-              className="px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition text-[10px] font-bold flex items-center space-x-1"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>AI Agent</span>
-            </button>
+            <div className="flex items-center space-x-1">
+              <button
+                type="button"
+                onClick={() => setIsContentAgentModalOpen(true)}
+                title="Open Bastion AI Content Agent"
+                className="px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition text-[10px] font-bold flex items-center space-x-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>AI Agent</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsLeftPanelOpen(false)}
+                title="Collapse panel"
+                className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* DYNAMIC ZONES VIEW */}
           {leftPanelMode === 'dynamic_zones' ? (
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden w-80">
               <DynamicZonesBuilder
                 sections={sections}
                 selectedSectionId={selectedSectionId}
-                onSelectSection={setSelectedSectionId}
+                onSelectSection={(id) => {
+                  setSelectedSectionId(id);
+                  if (!isRightPanelOpen) setIsRightPanelOpen(true);
+                }}
                 onUpdateSections={updateSections}
                 onOpenLibrary={() => setIsLibraryOpen(true)}
+                onCollapsePanel={() => setIsLeftPanelOpen(false)}
                 onOpenContentAgent={(secId) => {
                   setSelectedSectionId(secId);
                   setIsContentAgentModalOpen(true);
@@ -666,7 +765,7 @@ function VisualWebsiteEditorContent() {
             </div>
           ) : (
             /* COMPACT TREE OUTLINE VIEW */
-            <div className="flex-1 flex flex-col justify-between overflow-hidden">
+            <div className="flex-1 flex flex-col justify-between overflow-hidden w-80">
               <div className="p-3 border-b border-slate-200 dark:border-[#1E293B] flex items-center justify-between text-xs">
                 <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-[10px]">
                   Page Structure ({sections.length})
@@ -688,7 +787,10 @@ function VisualWebsiteEditorContent() {
                   return (
                     <div
                       key={sec.id}
-                      onClick={() => setSelectedSectionId(sec.id)}
+                      onClick={() => {
+                        setSelectedSectionId(sec.id);
+                        if (!isRightPanelOpen) setIsRightPanelOpen(true);
+                      }}
                       className={`p-2.5 rounded-xl border text-xs cursor-pointer transition flex items-center justify-between group ${
                         isSelected
                           ? 'bg-sky-950/70 border-sky-500 text-white ring-1 ring-sky-500'
@@ -751,7 +853,33 @@ function VisualWebsiteEditorContent() {
         </div>
 
         {/* CENTER CANVAS: Responsive Live Website Preview */}
-        <div className="flex-1 bg-[#05070B] overflow-y-auto p-6 flex justify-center items-start">
+        <div className="flex-1 bg-[#05070B] overflow-y-auto p-6 flex justify-center items-start relative min-w-0">
+          {/* Floating trigger to re-open left blocks panel */}
+          {!isLeftPanelOpen && (
+            <button
+              type="button"
+              onClick={() => setIsLeftPanelOpen(true)}
+              className="absolute left-4 top-4 z-20 px-3 py-1.5 rounded-xl bg-[#0A0D14]/90 border border-slate-800 text-slate-300 hover:text-white shadow-xl backdrop-blur-md text-xs font-semibold flex items-center space-x-2 transition hover:scale-105 cursor-pointer"
+              title="Open Dynamic Zones Panel"
+            >
+              <Layers className="w-3.5 h-3.5 text-sky-400" />
+              <span>Blocks ({sections.length})</span>
+            </button>
+          )}
+
+          {/* Floating trigger to re-open right inspector */}
+          {!isRightPanelOpen && selectedSection && (
+            <button
+              type="button"
+              onClick={() => setIsRightPanelOpen(true)}
+              className="absolute right-4 top-4 z-20 px-3 py-1.5 rounded-xl bg-[#0A0D14]/90 border border-slate-800 text-slate-300 hover:text-white shadow-xl backdrop-blur-md text-xs font-semibold flex items-center space-x-2 transition hover:scale-105 cursor-pointer"
+              title="Open Inspector Panel"
+            >
+              <Sliders className="w-3.5 h-3.5 text-sky-400" />
+              <span>Inspector</span>
+            </button>
+          )}
+
           <div
             className={`transition-all duration-300 shadow-2xl bg-white text-slate-900 overflow-hidden rounded-xl border border-slate-700/60 ${
               viewport === 'desktop'
@@ -768,32 +896,47 @@ function VisualWebsiteEditorContent() {
                 collection={collection}
                 isEditor={true}
                 isSelected={sec.id === selectedSectionId}
-                onSelectSection={(id) => setSelectedSectionId(id)}
+                onSelectSection={(id) => {
+                  setSelectedSectionId(id);
+                  if (!isRightPanelOpen) setIsRightPanelOpen(true);
+                }}
               />
             ))}
           </div>
         </div>
 
         {/* RIGHT PANEL: Selected Section Inspector & Design Studio (w-96, 384px) */}
-        <div className="w-96 bg-[#0A0D14] border-l border-[#1E293B] flex flex-col justify-between shrink-0 overflow-y-auto">
+        <div className={`${
+          isRightPanelOpen ? 'w-96' : 'w-0 border-l-0'
+        } transition-all duration-300 ease-in-out bg-[#0A0D14] border-l border-[#1E293B] flex flex-col justify-between shrink-0 overflow-y-auto overflow-x-hidden`}>
           {selectedSection ? (
-            <div className="p-4 space-y-5">
+            <div className="p-4 space-y-5 w-96">
               {/* Header */}
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1.5 text-xs text-sky-400 font-bold uppercase tracking-wider">
-                    <Sliders className="w-3.5 h-3.5" />
-                    <span>Block: {selectedSection.componentId.replace('_', ' ')}</span>
+                  <div className="flex items-center space-x-1.5 text-xs text-sky-400 font-bold uppercase tracking-wider truncate">
+                    <Sliders className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Block: {selectedSection.componentId.replace('_', ' ')}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleResetSectionStyles}
-                    title="Reset styling to blueprint defaults"
-                    className="px-2 py-0.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition text-[10px] flex items-center space-x-1"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Reset</span>
-                  </button>
+                  <div className="flex items-center space-x-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleResetSectionStyles}
+                      title="Reset styling to blueprint defaults"
+                      className="px-2 py-0.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition text-[10px] flex items-center space-x-1"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsRightPanelOpen(false)}
+                      title="Collapse Inspector"
+                      className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-[11px] text-slate-400 mt-0.5">
                   Customize content copy, layout variants, colors, and gradients.
