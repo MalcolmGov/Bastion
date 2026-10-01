@@ -96,7 +96,9 @@ export function middleware(req: NextRequest) {
     !pathname.startsWith('/sites') &&
     !pathname.startsWith('/quote') &&
     !pathname.startsWith('/invoice') &&
-    !pathname.startsWith('/status')
+    !pathname.startsWith('/status') &&
+    pathname !== '/robots.txt' &&
+    pathname !== '/sitemap.xml'
   ) {
     const rewriteUrl = req.nextUrl.clone();
     if (pathname === '/') {
