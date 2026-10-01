@@ -54,15 +54,15 @@ export function chooseBrandColors(found: string[]): Pick<ResultsBrand, 'colors' 
   }
   const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([hex]) => hex);
   const colorful = ranked.filter((hex) => saturation(hex) > 0.08 && luminance(hex) > 0.02 && luminance(hex) < 0.85);
-  const dark = ranked.filter((hex) => luminance(hex) < 0.2);
+  const neutralDark = ranked.filter((hex) => luminance(hex) < 0.28 && saturation(hex) < 0.35);
   const light = ranked.filter((hex) => luminance(hex) > 0.92 && hex !== '#ffffff');
-  const primary = dark[0] || colorful[0] || '#0d1c30';
+  const primary = neutralDark[0] || '#1c1c1c';
   const accent = colorful.find((hex) => hex !== primary) || '#c8a064';
   return {
     colors: ranked.slice(0, 6),
     primary,
     accent,
-    ink: dark[0] || '#142033',
+    ink: neutralDark[0] || '#1c1c1c',
     paper: light[0] || '#f4f1ea',
   };
 }
@@ -78,21 +78,45 @@ function absoluteUrl(value: string | undefined, base: string): string | null {
   }
 }
 
-function readFont(css: string): { headingFont: string; bodyFont: string } {
-  const families = [...css.matchAll(/font-family\s*:\s*([^;}{]+)/gi)]
-    .map((match) => match[1].split(',')[0].replace(/['"]/g, '').trim())
-    .filter((name) => name && !/inherit|initial|unset|system-ui|var\(|!important/i.test(name));
-  const headingFont = families[0] || 'inherit';
-  const bodyFont = families[1] || families[0] || 'inherit';
+function cleanFontName(value: string): string {
+  return value.replace(/['"]/g, '').replace(/\s*!important\s*/i, '').trim();
+}
+
+function googleFamilies(value: string): string[] {
+  const names: string[] = [];
+  const decoded = decodeURIComponent(value);
+  for (const match of decoded.matchAll(/family=([^:&]+)/gi)) {
+    const name = match[1].replace(/\+/g, ' ').trim();
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+function readFont(css: string, extras: string[] = []): { headingFont: string; bodyFont: string } {
+  const ignore = /inherit|initial|unset|system-ui|fontawesome|font-awesome|var\(/i;
+  const generic = /^(serif|sans-serif|monospace|cursive|fantasy)$/i;
+  const keep = (name: string) => Boolean(name) && !ignore.test(name) && !generic.test(name);
+  const familiesOf = (value: string | undefined): string[] => (
+    [...new Set((value || '').split(',').map(cleanFontName).filter(keep))].slice(0, 3)
+  );
+  const bodyRule = css.match(/(?:html\s*,\s*)?body[^{]*\{[^}]*font-family\s*:\s*([^;}{]+)/i);
+  const headingRule = css.match(/h1[^{]*\{[^}]*font-family\s*:\s*([^;}{]+)/i);
+  const scanned = [...css.matchAll(/font-family\s*:\s*([^;}{]+)/gi)].flatMap((match) => familiesOf(match[1]));
+  const bodyFamilies = familiesOf(bodyRule?.[1]);
+  const headingFamilies = familiesOf(headingRule?.[1]);
+  const bodyFont = (bodyFamilies.length ? bodyFamilies : [...new Set([...extras, ...scanned])].slice(0, 3)).join(', ') || 'inherit';
+  const headingFont = (headingFamilies.length ? headingFamilies : bodyFamilies).join(', ') || bodyFont;
   return { headingFont, bodyFont };
 }
 
-export function parseBrandHtml(html: string, pageUrl: string): ResultsBrand {
+export function parseBrandHtml(html: string, pageUrl: string, stylesheet = ''): ResultsBrand {
   const $ = cheerio.load(html);
+  const titleParts = $('title').first().text().split(/[|\-–—]/).map((part) => part.trim()).filter(Boolean);
   const siteName =
     $('meta[property="og:site_name"]').attr('content')?.trim()
     || $('meta[name="application-name"]').attr('content')?.trim()
-    || $('title').first().text().split(/[|\-–—]/)[0].trim()
+    || titleParts.find((part) => !/^home$/i.test(part))
+    || titleParts[0]
     || 'Client';
 
   const logoCandidates = [
@@ -109,9 +133,10 @@ export function parseBrandHtml(html: string, pageUrl: string): ResultsBrand {
     $('meta[name="theme-color"]').attr('content') || '',
     $('meta[name="msapplication-TileColor"]').attr('content') || '',
   ].join(' ');
-  const found = `${theme}\n${styleText}\n${inline}`.match(HEX) || [];
+  const found = `${theme}\n${styleText}\n${inline}\n${stylesheet}`.match(HEX) || [];
   const colors = chooseBrandColors(found);
-  const fonts = readFont(`${styleText}\n${$('link[href*="fonts.googleapis.com"]').attr('href') || ''}`);
+  const googleLinks = $('link[href*="fonts.googleapis.com"]').toArray().map((node) => $(node).attr('href') || '');
+  const fonts = readFont(`${stylesheet}\n${styleText}`, googleLinks.flatMap(googleFamilies));
 
   return {
     sourceUrl: pageUrl,
@@ -239,9 +264,41 @@ async function embedSvgLogo(logoUrl: string): Promise<string | null> {
   }
 }
 
+async function readLinkedCss(html: string, pageUrl: string): Promise<string> {
+  const $ = cheerio.load(html);
+  let host = '';
+  try {
+    host = new URL(pageUrl).host;
+  } catch {
+    return '';
+  }
+  const hrefs = $('link[rel="stylesheet"]').toArray()
+    .map((node) => absoluteUrl($(node).attr('href'), pageUrl))
+    .filter((url): url is string => Boolean(url))
+    .filter((url) => {
+      try {
+        return new URL(url).host === host && !/font-awesome/i.test(url);
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 2);
+  const sheets: string[] = [];
+  for (const href of hrefs) {
+    try {
+      const file = await readWithCurl(href);
+      if (/font-family|@font-face|fonts\.googleapis/i.test(file.html)) sheets.push(file.html.slice(0, 200_000));
+    } catch {
+      continue;
+    }
+  }
+  return sheets.join('\n');
+}
+
 export async function extractResultsBrand(rawUrl: string): Promise<ResultsBrand> {
   const { finalUrl, html } = await readPublicHtml(rawUrl);
-  const brand = parseBrandHtml(html, finalUrl);
+  const stylesheet = await readLinkedCss(html, finalUrl);
+  const brand = parseBrandHtml(html, finalUrl, stylesheet);
   if (brand.logoUrl && /\.svg($|\?)/i.test(brand.logoUrl)) {
     brand.logoUrl = await embedSvgLogo(brand.logoUrl);
   }

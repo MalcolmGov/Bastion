@@ -126,6 +126,17 @@ async function main() {
     assert.ok(merafe.narrative.some((paragraph) => /ferrochrome sales/i.test(paragraph)), 'commentary was not read in column order');
     assert.ok(merafe.narrative.length >= 2 && merafe.narrative.length <= 12, `narrative length ${merafe.narrative.length}`);
     assert.ok(merafe.narrative.every((paragraph) => paragraph.split(/\s+/).length >= 12), merafe.narrative.join('\n---\n'));
+    const publication = merafe.publication || [];
+    const positionTable = publication.find((block) => block.table?.rows.some((row) => row.label === 'Property, plant and equipment'));
+    const equipmentRow = positionTable?.table?.rows.find((row) => row.label === 'Property, plant and equipment');
+    assert.deepEqual(equipmentRow?.cells, [null, '1 147 920', '1 124 913']);
+    assert.deepEqual(positionTable?.table?.current, [false, true, false]);
+    assert.ok(publication.some((block) => /ferrochrome sales volumes to 124kt/.test(block.text || '')));
+    assert.ok(publication.some((block) => block.kind === 'heading' && /Basis of preparation/.test(block.text || '')));
+    assert.ok(publication.some((block) => /gross final cash dividend of 8 cents/.test(block.text || '')));
+    const cashTable = publication.find((block) => block.table?.rows.some((row) => /Cash generated from operations/.test(row.label)));
+    const generatedRow = cashTable?.table?.rows.find((row) => /Cash generated from operations/.test(row.label));
+    assert.deepEqual(generatedRow?.cells.filter((cell) => cell && !/^\d{1,2}$/.test(cell)), ['679 466', '2 034 712']);
     console.log('merafe conversion ok', {
       statements: merafe.statements.map((statement) => statement.title),
       warnings: merafe.warnings.length,
