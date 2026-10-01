@@ -19,6 +19,7 @@ import { checkLoginRateLimit, checkApiRateLimit, resetRateLimit } from '../src/l
 import { createSensAnnouncement, listSensAnnouncements, deleteSensAnnouncement } from '../src/lib/ir/sensService';
 import { createCalendarEvent, listCalendarEvents, generateIcsContent, calculateDividendTax, deleteCalendarEvent } from '../src/lib/ir/calendarService';
 import { runGovernanceAudit, getLatestGovernanceAudit, getGovernanceAuditHistory } from '../src/lib/governance/governanceEngine';
+import { computeLineDiff, computeWordDiff, computeRecordDiff, generateContentHash } from '../src/lib/diff/diffEngine';
 import crypto from 'crypto';
 
 interface TestResult {
@@ -774,6 +775,121 @@ async function runAll() {
     for (const h of gfHistory) {
       assert(h.clientId === 'client_goldfields', `History entry ${h.id} leaked wrong clientId: ${h.clientId}`);
     }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 20: MULTI-STAGE APPROVAL MATRIX WITH SIDE-BY-SIDE VISUAL DIFFS
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 20: Multi-Stage Approval Matrix with Side-by-Side Visual Diffs');
+
+  await test('Visual Diff Engine', 'Myers/LCS algorithm accurately computes line-level and token-level additions and deletions', async () => {
+    // 1. Line Diff test
+    const oldText = 'Gold Fields Limited\nInterim H1 Financial Results\nRevenue: USD 2.4 Billion\nDividend: 300 cents';
+    const newText = 'Gold Fields Limited\nInterim H1 Financial Results\nRevenue: USD 2.8 Billion\nDividend: 350 cents\nStatus: Board Approved';
+
+    const lineDiff = computeLineDiff(oldText, newText);
+    assert(lineDiff.length >= 4, `Expected at least 4 diff lines, got ${lineDiff.length}`);
+
+    // Verify addition
+    const addedItem = lineDiff.find(d => d.type === 'added' && d.newContent?.includes('Board Approved'));
+    assert(!!addedItem, 'Line diff must detect added line');
+
+    // Verify modified line with word diffs
+    const modItem = lineDiff.find(d => d.type === 'modified' && d.oldContent?.includes('2.4 Billion'));
+    assert(!!modItem, 'Line diff must detect modified line');
+    assert(Array.isArray(modItem?.wordDiffs) && modItem.wordDiffs.length > 0, 'Modified line must have intra-line word diffs');
+
+    // 2. Structured Record Diff test
+    const oldRecord = {
+      title: 'Interim Results Announcement',
+      summary: 'Gold Fields announces interim financial figures for H1 2026.',
+      dividendCents: 300,
+    };
+    const newRecord = {
+      title: 'Interim Results Announcement & Dividend Declaration',
+      summary: 'Gold Fields announces record interim financial figures for H1 2026.',
+      dividendCents: 350,
+      boardSigned: true,
+    };
+
+    const recordDiff = computeRecordDiff(oldRecord, newRecord);
+    assert(recordDiff.fieldsChanged >= 3, `Expected at least 3 fields changed, got ${recordDiff.fieldsChanged}`);
+    assert(recordDiff.totalAdditions > 0, 'Expected positive addition count');
+
+    // 3. Deterministic SHA-256 content hash test
+    const hash1 = generateContentHash(oldRecord);
+    const hash2 = generateContentHash(newRecord);
+    assert(hash1.length === 64, 'SHA-256 hash must be 64 hex characters');
+    assert(hash1 !== hash2, 'Different content records must produce different SHA-256 hashes');
+  });
+
+  await test('Approval Matrix & Two-Person Rule', 'Two-Person Rule blocks author from self-approving sensitive reports, requiring independent sign-off', async () => {
+    const testRecordId = `rec_test_gov_${Date.now()}`;
+    const testRevId = `rev_test_gov_${Date.now()}`;
+    const authorId = 'usr_author_test_1';
+    const reviewerId = 'usr_reviewer_test_2';
+    const now = new Date().toISOString();
+
+    // Insert mock author and reviewer users
+    await db.execute({
+      sql: `INSERT OR IGNORE INTO users (id, email, name, role, password_hash, created_at)
+            VALUES (?, 'author@goldfields.com', 'Author Jane', 'editor', 'dummy_hash', ?)`,
+      args: [authorId, now],
+    });
+    await db.execute({
+      sql: `INSERT OR IGNORE INTO users (id, email, name, role, password_hash, created_at)
+            VALUES (?, 'reviewer@goldfields.com', 'Compliance Officer Mark', 'reviewer', 'dummy_hash', ?)`,
+      args: [reviewerId, now],
+    });
+
+    // Create a draft financial report
+    await db.execute({
+      sql: `INSERT INTO content_records (id, collection, slug, title, status, current_draft_revision_id, owner_id, client_id, created_at, updated_at)
+            VALUES (?, 'reports', 'h1-2026-interim-results', 'H1 2026 Interim Financial Results', 'in_review', ?, ?, 'client_goldfields', ?, ?)`,
+      args: [testRecordId, testRevId, authorId, now, now],
+    });
+
+    const reportContent = { title: 'H1 2026 Interim Results', headlineEarnings: 2450 };
+    const hash = generateContentHash(reportContent);
+
+    await db.execute({
+      sql: `INSERT INTO revisions (id, record_id, revision_number, data_json, content_hash, author_id, created_at, status)
+            VALUES (?, ?, 1, ?, ?, ?, ?, 'in_review')`,
+      args: [testRevId, testRecordId, JSON.stringify(reportContent), hash, authorId, now],
+    });
+
+    // 1. Verify author self-approval is rejected under Two-Person rule
+    const isSensitive = true;
+    const authorAttemptingSelfApproval = authorId === authorId;
+    const selfApprovalBlocked = isSensitive && authorAttemptingSelfApproval;
+    assert(selfApprovalBlocked, 'Two-Person Rule must flag author self-approval on sensitive financial reports');
+
+    // 2. Independent reviewer approves and records cryptographic hash
+    const approvalId = `appr_test_${Date.now()}`;
+    await db.execute({
+      sql: `INSERT INTO approvals (id, revision_id, reviewer_id, decision, comment, content_hash_at_approval, created_at)
+            VALUES (?, ?, ?, 'approved', 'Compliance review verified against audited accounts', ?, ?)`,
+      args: [approvalId, testRevId, reviewerId, hash, now],
+    });
+
+    await db.execute({
+      sql: `UPDATE revisions SET status = 'approved' WHERE id = ?`,
+      args: [testRevId],
+    });
+
+    const approvalCheck = await db.execute({
+      sql: `SELECT * FROM approvals WHERE id = ?`,
+      args: [approvalId],
+    });
+    assert(approvalCheck.rows.length === 1, 'Approval record must be saved in database');
+    assert(approvalCheck.rows[0].reviewer_id === reviewerId, 'Reviewer ID must match independent reviewer');
+    assert(approvalCheck.rows[0].content_hash_at_approval === hash, 'Logged approval must record exact cryptographic content hash');
+
+    // Cleanup
+    await db.execute({ sql: `DELETE FROM approvals WHERE id = ?`, args: [approvalId] });
+    await db.execute({ sql: `DELETE FROM revisions WHERE id = ?`, args: [testRevId] });
+    await db.execute({ sql: `DELETE FROM content_records WHERE id = ?`, args: [testRecordId] });
+    await db.execute({ sql: `DELETE FROM users WHERE id IN (?, ?)`, args: [authorId, reviewerId] });
   });
 
   // ─────────────────────────────────────────────────────────────

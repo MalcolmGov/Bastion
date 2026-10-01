@@ -26,7 +26,7 @@ export async function GET() {
 
     const pendingItems = await db.execute({
       sql: `
-      SELECT r.id, r.collection, r.slug, r.title, r.status, r.updated_at, u.name as owner_name
+      SELECT r.id, r.collection, r.slug, r.title, r.status, r.updated_at, u.name as owner_name, r.client_id
       FROM content_records r
       LEFT JOIN users u ON r.owner_id = u.id
       WHERE r.status IN ('in_review', 'approved', 'draft') ${scoped ? 'AND r.client_id = ?' : ''}

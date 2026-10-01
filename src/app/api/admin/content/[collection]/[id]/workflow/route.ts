@@ -84,6 +84,7 @@ export async function POST(
         break;
       }
 
+      case 'compliance_signoff':
       case 'approve': {
         if (!hasPermission(user.role, 'content:approve')) {
           return NextResponse.json({ error: 'Forbidden: Insufficient permissions to approve' }, { status: 403 });
