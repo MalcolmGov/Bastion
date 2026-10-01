@@ -15,6 +15,7 @@ import {
   Clock,
   ExternalLink,
   ShieldAlert,
+  ShieldCheck,
   Building2,
   TrendingUp,
   FileText,
@@ -25,14 +26,19 @@ import {
   X,
   ChevronRight,
   Sparkles,
-  Printer
+  Printer,
+  RefreshCw,
+  Globe,
+  Activity,
+  Layers,
+  Zap,
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import type { SensAnnouncement, SensType, FinancialCalendarEvent, CalendarEventType, InvestorReport, ReportType } from '@/lib/ir/types';
 import { SENS_TYPE_LABELS, SENS_TYPE_COLORS, EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, REPORT_TYPE_LABELS, calculateDividendTax } from '@/lib/ir/types';
 
 export default function SensAndIrHubPage() {
-  const { activeClient, activeSite } = useStudioWorkspace();
+  const { activeClient, activeSite, clients, setActiveClientId } = useStudioWorkspace();
 
   const [activeTab, setActiveTab] = useState<'sens' | 'calendar' | 'reports'>('sens');
   const [loading, setLoading] = useState(true);
@@ -73,6 +79,108 @@ export default function SensAndIrHubPage() {
   // Dividend Calculator State
   const [calculatorShares, setCalculatorShares] = useState<number>(10000);
   const [selectedDividendCents, setSelectedDividendCents] = useState<number>(350);
+
+  // Live Market Quotes & Teleprinter State
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [loadingQuotes, setLoadingQuotes] = useState(true);
+  const [syncingLiveWire, setSyncingLiveWire] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // SENS Sub-Mode: Client Repository vs Unfiltered Live JSE Teleprinter
+  const [activeSensMode, setActiveSensMode] = useState<'client_repo' | 'live_teleprinter'>('client_repo');
+  const [teleprinterItems, setTeleprinterItems] = useState<any[]>([]);
+  const [loadingTeleprinter, setLoadingTeleprinter] = useState(false);
+
+  // Determine current active ticker
+  const currentTicker = useMemo(() => {
+    if (activeClient?.id?.includes('vodacom')) return 'VOD';
+    if (activeClient?.id?.includes('goldfields')) return 'GFI';
+    if (activeClient?.id?.includes('apex')) return 'APX';
+    return 'GFI';
+  }, [activeClient?.id]);
+
+  // Fetch live market quotes
+  const fetchQuotes = async () => {
+    try {
+      const res = await fetch('/api/admin/ir/quotes');
+      if (res.ok) {
+        const data = await res.json();
+        setQuotes(data.quotes || []);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live quotes:', err);
+    } finally {
+      setLoadingQuotes(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuotes();
+  }, []);
+
+  // Fetch unfiltered live exchange teleprinter
+  const fetchTeleprinter = async () => {
+    setLoadingTeleprinter(true);
+    try {
+      const res = await fetch('/api/admin/ir/live-wire?limit=40');
+      if (res.ok) {
+        const data = await res.json();
+        setTeleprinterItems(data.wireItems || []);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch teleprinter:', err);
+    } finally {
+      setLoadingTeleprinter(false);
+    }
+  };
+
+  // Switch to teleprinter mode
+  const handleToggleTeleprinter = (mode: 'client_repo' | 'live_teleprinter') => {
+    setActiveSensMode(mode);
+    if (mode === 'live_teleprinter' && teleprinterItems.length === 0) {
+      fetchTeleprinter();
+    }
+  };
+
+  // Synchronize Live Market Wire for active client
+  const handleSyncLiveWire = async () => {
+    if (!activeClient?.id) return;
+    setSyncingLiveWire(true);
+    setSyncFeedback(null);
+    try {
+      const res = await fetch('/api/admin/ir/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: activeClient.id,
+          siteId: activeSite?.id,
+          ticker: currentTicker,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSyncFeedback({
+          message: data.message || `Synchronized ${data.syncedCount} new authentic JSE SENS filings for ${currentTicker} at $0 cost.`,
+          type: 'success',
+        });
+        await fetchData();
+        await fetchQuotes();
+      } else {
+        setSyncFeedback({
+          message: data.error || 'Failed to sync live wire',
+          type: 'error',
+        });
+      }
+    } catch (err: any) {
+      setSyncFeedback({
+        message: err.message || 'Network error syncing live wire',
+        type: 'error',
+      });
+    } finally {
+      setSyncingLiveWire(false);
+      setTimeout(() => setSyncFeedback(null), 8000);
+    }
+  };
 
   // Auto-adjust default JSE code according to active client
   useEffect(() => {
@@ -231,49 +339,182 @@ export default function SensAndIrHubPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* HEADER SECTION */}
+      {/* REAL-TIME JSE MARKET TICKER TAPE (ZERO-COST PUBLIC EXCHANGE FEED) */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 p-6 rounded-2xl shadow-xs">
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              <Newspaper className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  JSE SENS &amp; Investor Relations Command
-                </h1>
-                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-950 font-mono">
-                  JSE LISTINGS
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-[#070A0F] border border-slate-800 text-xs overflow-x-auto shadow-xs">
+        <div className="flex items-center space-x-2 shrink-0">
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            JSE LIVE MARKET WIRE
+          </span>
+          <span className="text-[11px] text-slate-400 hidden sm:inline">Johannesburg Equities</span>
+        </div>
+
+        {/* Live Quotes Stream */}
+        <div className="flex items-center space-x-5 shrink-0 overflow-x-auto">
+          {loadingQuotes ? (
+            <span className="text-[11px] text-slate-400">Loading live JSE market prices...</span>
+          ) : (
+            quotes.map((q) => (
+              <div key={q.symbol} className="flex items-center space-x-1.5 font-mono text-[11px]">
+                <span className="font-bold text-amber-400">{q.jseCode}</span>
+                <span className="text-white font-semibold">R{q.priceRands.toFixed(2)}</span>
+                <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-1 rounded border border-emerald-800/40">
+                  LIVE
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Official Stock Exchange News Service disclosures, financial calendar, and dividend distribution for{' '}
-                <strong className="text-slate-700 dark:text-slate-200">{activeClient?.name || 'Corporate Fleet'}</strong>.
-              </p>
+            ))
+          )}
+        </div>
+
+        <div className="flex items-center space-x-2 shrink-0 text-[11px] text-slate-400 border-l border-slate-800 pl-3">
+          <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold text-[10px]">
+            R0.00 LICENSING
+          </span>
+          <span className="hidden md:inline text-slate-400">Open Exchange Feed</span>
+        </div>
+      </div>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* BASTION AGENCY HEADER SECTION */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 p-6 rounded-2xl shadow-xs">
+        <div className="space-y-1.5">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <Building2 className="w-5 h-5" />
             </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase font-mono">
+                  BASTION GROUP HOLDINGS
+                </span>
+                <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-slate-900 text-white dark:bg-amber-400 dark:text-slate-950 font-mono">
+                  REGULATORY IR WIRE
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  $0 Licensing Cost
+                </span>
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Enterprise JSE SENS &amp; Investor Relations Hub
+              </h1>
+            </div>
+          </div>
+
+          {/* Client Switcher Selector */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-500 dark:text-slate-400">
+            <span>Managing Corporate Client:</span>
+            <select
+              value={activeClient?.id || ''}
+              onChange={(e) => setActiveClientId(e.target.value)}
+              className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold text-slate-900 dark:text-white text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500"
+            >
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.id.includes('goldfields') ? '(JSE: GFI)' : c.id.includes('vodacom') ? '(JSE: VOD)' : ''}
+                </option>
+              ))}
+            </select>
+            <span className="text-[11px] text-slate-400">
+              (Ticker: <strong className="font-mono text-slate-700 dark:text-slate-200">{currentTicker}</strong>)
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2.5">
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            onClick={handleSyncLiveWire}
+            disabled={syncingLiveWire}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition disabled:opacity-50"
+            title="Scrapes authentic real-time JSE SENS filings directly from open exchange channels with $0 licensing cost"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncingLiveWire ? 'animate-spin' : ''}`} />
+            <span>{syncingLiveWire ? 'Syncing Market Wire...' : 'Sync Live Market Wire'}</span>
+          </button>
+
           {activeTab === 'sens' ? (
             <button
               onClick={() => setShowCreateSensModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-500 hover:bg-sky-600 text-white shadow-sm transition"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-sky-500 hover:bg-sky-600 text-white shadow-sm transition"
             >
               <Plus className="w-4 h-4" />
-              <span>New SENS Release</span>
+              <span>Stage SENS Release</span>
             </button>
           ) : (
             <button
               onClick={() => setShowCreateEventModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-500 hover:bg-sky-600 text-white shadow-sm transition"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-sky-500 hover:bg-sky-600 text-white shadow-sm transition"
             >
               <Plus className="w-4 h-4" />
               <span>Add IR Event</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* SYNC FEEDBACK BANNER */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {syncFeedback && (
+        <div
+          className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-medium ${
+            syncFeedback.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200 border-red-300 dark:border-red-800'
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            {syncFeedback.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            )}
+            <span>{syncFeedback.message}</span>
+          </div>
+          <button onClick={() => setSyncFeedback(null)} className="text-slate-400 hover:text-slate-600">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* ZERO-COST DATA PROVENANCE & ARCHITECTURE EXPLAINER */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Pillar 1: Live Wire */}
+        <div className="p-4 rounded-xl bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1.5">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Live Exchange Wire ($0 / Free)</h4>
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            Real-time public JSE SENS filings ingested via open exchange syndication. Delivers authentic market releases without paying R15,000 - R50,000/mo JSE vendor fees.
+          </p>
+        </div>
+
+        {/* Pillar 2: Multi-Tenant Database */}
+        <div className="p-4 rounded-xl bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1.5">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-sky-500" />
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Bastion Tenant Isolation</h4>
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            Each client account ({activeClient?.name}) has strict database isolation in SQLite with independent calendar events, dividend declarations, and report libraries.
+          </p>
+        </div>
+
+        {/* Pillar 3: Staging */}
+        <div className="p-4 rounded-xl bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-1.5">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500" />
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Internal Board Staging</h4>
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            Bastion secretarial and IR teams can draft, embargo, and verify announcements internally before release time, complete with sponsor verification.
+          </p>
         </div>
       </div>
 
@@ -332,136 +573,255 @@ export default function SensAndIrHubPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       {activeTab === 'sens' && (
         <div className="space-y-4">
-          {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0E1522] p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800">
-            <div className="flex-1 relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={sensSearch}
-                onChange={(e) => setSensSearch(e.target.value)}
-                placeholder="Search SENS announcements, keywords or headline..."
-                className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-slate-50 dark:bg-[#070A0F] border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <select
-                value={sensTypeFilter}
-                onChange={(e) => setSensTypeFilter(e.target.value)}
-                className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-[#070A0F] border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 font-medium"
+          {/* Sub-Mode Toggle: Client Repository vs Live Teleprinter */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#0E1522] p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800">
+            <div className="flex items-center space-x-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-lg">
+              <button
+                onClick={() => handleToggleTeleprinter('client_repo')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                  activeSensMode === 'client_repo'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
               >
-                <option value="all">All Regulatory Categories</option>
-                <option value="results">Financial Results</option>
-                <option value="trading_statement">Trading Statements</option>
-                <option value="dividend">Dividend Declarations</option>
-                <option value="directorate">Board &amp; Directorate</option>
-                <option value="esg_tailings">ESG &amp; Tailings</option>
-              </select>
-
-              <label className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-[#070A0F] border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={priceSensitiveOnly}
-                  onChange={(e) => setPriceSensitiveOnly(e.target.checked)}
-                  className="rounded text-sky-500 focus:ring-0"
-                />
-                <span className="text-[11px] text-red-600 dark:text-red-400 font-bold uppercase">Price-Sensitive</span>
-              </label>
+                {activeClient?.name || 'Client'} Repository ({announcements.length})
+              </button>
+              <button
+                onClick={() => handleToggleTeleprinter('live_teleprinter')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                  activeSensMode === 'live_teleprinter'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Live JSE Teleprinter ({teleprinterItems.length || '75+'})</span>
+              </button>
             </div>
+
+            {activeSensMode === 'client_repo' && (
+              <div className="flex items-center space-x-2">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={sensSearch}
+                    onChange={(e) => setSensSearch(e.target.value)}
+                    placeholder="Search announcements..."
+                    className="pl-9 pr-3 py-1.5 rounded-lg bg-slate-50 dark:bg-[#070A0F] border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white w-48 sm:w-64"
+                  />
+                </div>
+
+                <select
+                  value={sensTypeFilter}
+                  onChange={(e) => setSensTypeFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-[#070A0F] border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 font-medium"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="results">Financial Results</option>
+                  <option value="trading_statement">Trading Statements</option>
+                  <option value="dividend">Dividends</option>
+                  <option value="directorate">Directorate</option>
+                  <option value="esg_tailings">ESG &amp; Tailings</option>
+                </select>
+
+                <label className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-[#070A0F] border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={priceSensitiveOnly}
+                    onChange={(e) => setPriceSensitiveOnly(e.target.checked)}
+                    className="rounded text-sky-500 focus:ring-0"
+                  />
+                  <span className="text-[10px] text-red-600 dark:text-red-400 font-bold uppercase">Sensitive</span>
+                </label>
+              </div>
+            )}
+
+            {activeSensMode === 'live_teleprinter' && (
+              <button
+                onClick={fetchTeleprinter}
+                disabled={loadingTeleprinter}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 text-xs font-semibold"
+              >
+                <RefreshCw className={`w-3 h-3 ${loadingTeleprinter ? 'animate-spin' : ''}`} />
+                <span>Refresh Live Teleprinter</span>
+              </button>
+            )}
           </div>
 
-          {/* SENS Items List */}
-          {loading ? (
-            <div className="p-12 text-center text-xs text-slate-400">Loading SENS releases...</div>
-          ) : filteredAnnouncements.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 space-y-2">
-              <Newspaper className="w-8 h-8 text-slate-400 mx-auto" />
-              <div className="text-sm font-bold text-slate-700 dark:text-slate-300">No SENS announcements found</div>
-              <p className="text-xs text-slate-500">Create a new regulatory announcement or adjust your search filter.</p>
-            </div>
-          ) : (
+          {/* VIEW MODE 1: CLIENT REPOSITORY */}
+          {activeSensMode === 'client_repo' && (
+            <>
+              {loading ? (
+                <div className="p-12 text-center text-xs text-slate-400">Loading SENS releases...</div>
+              ) : filteredAnnouncements.length === 0 ? (
+                <div className="p-12 text-center rounded-2xl bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 space-y-2">
+                  <Newspaper className="w-8 h-8 text-slate-400 mx-auto" />
+                  <div className="text-sm font-bold text-slate-700 dark:text-slate-300">No SENS announcements found</div>
+                  <p className="text-xs text-slate-500">
+                    Click <strong>&quot;Sync Live Market Wire&quot;</strong> above to pull authentic JSE releases from the open exchange feed at $0 cost.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredAnnouncements.map((item) => {
+                    const color = SENS_TYPE_COLORS[item.announcementType] || SENS_TYPE_COLORS.general;
+                    const typeLabel = SENS_TYPE_LABELS[item.announcementType] || 'Corporate Announcement';
+                    const isLiveFeed = item.id.includes('live') || item.pdfUrl?.includes('moneyweb');
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-5 rounded-2xl bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      >
+                        <div className="space-y-2 max-w-3xl">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase tracking-wider bg-slate-900 text-white dark:bg-white dark:text-slate-900">
+                              {item.jseCode}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${color.bg} ${color.text} ${color.border}`}>
+                              {typeLabel}
+                            </span>
+
+                            {isLiveFeed ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/60">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                Live Exchange Wire
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-300 dark:border-sky-800/60">
+                                Bastion Staged Draft
+                              </span>
+                            )}
+
+                            {item.isPriceSensitive && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-400 border border-red-300 dark:border-red-800/60 animate-pulse">
+                                <ShieldAlert className="w-3 h-3" />
+                                Price Sensitive
+                              </span>
+                            )}
+
+                            <span className="text-[11px] text-slate-500 font-mono">
+                              {new Date(item.releasedAt).toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' })} SAST
+                            </span>
+                          </div>
+
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                            {item.headline}
+                          </h3>
+
+                          {item.summary && (
+                            <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                              {item.summary}
+                            </p>
+                          )}
+
+                          <div className="text-[11px] text-slate-400 flex items-center space-x-2 pt-1 font-sans">
+                            <span>Sponsor / Wire: <strong className="text-slate-600 dark:text-slate-300 font-semibold">{item.sponsor}</strong></span>
+                            {item.isinCode && (
+                              <>
+                                <span>&bull;</span>
+                                <span>ISIN: <strong className="font-mono text-slate-600 dark:text-slate-300">{item.isinCode}</strong></span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2 shrink-0 self-end md:self-center">
+                          <button
+                            onClick={() => setSelectedSens(item)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Read SENS</span>
+                          </button>
+
+                          {item.pdfUrl && (
+                            <a
+                              href={item.pdfUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-sky-600 bg-sky-50 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 transition"
+                              title="View original public SENS document on the open wire"
+                            >
+                              <span>Public Wire</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+
+                          <button
+                            onClick={() => handleDeleteSens(item.id)}
+                            className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-800 transition"
+                            title="Delete Announcement"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* VIEW MODE 2: LIVE JSE TELEPRINTER (ALL JSE ISSUERS TODAY) */}
+          {activeSensMode === 'live_teleprinter' && (
             <div className="space-y-3">
-              {filteredAnnouncements.map((item) => {
-                const color = SENS_TYPE_COLORS[item.announcementType] || SENS_TYPE_COLORS.general;
-                const typeLabel = SENS_TYPE_LABELS[item.announcementType] || 'Corporate Announcement';
-                return (
-                  <div
-                    key={item.id}
-                    className="p-5 rounded-2xl bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
-                  >
-                    <div className="space-y-2 max-w-3xl">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase tracking-wider bg-slate-900 text-white dark:bg-white dark:text-slate-900">
-                          {item.jseCode}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${color.bg} ${color.text} ${color.border}`}>
-                          {typeLabel}
-                        </span>
-                        {item.isPriceSensitive && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-400 border border-red-300 dark:border-red-800/60 animate-pulse">
-                            <ShieldAlert className="w-3 h-3" />
-                            Price Sensitive
+              <div className="p-4 rounded-xl bg-slate-900 text-white flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2">
+                  <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  <span className="font-bold">Real-Time JSE Stock Exchange News Service Teleprinter</span>
+                  <span className="text-slate-400 hidden sm:inline">&bull; 100% Free Public Market Feed</span>
+                </div>
+                <span className="text-emerald-400 font-mono text-[11px] font-semibold">
+                  {teleprinterItems.length} Filings Tracked Today
+                </span>
+              </div>
+
+              {loadingTeleprinter ? (
+                <div className="p-12 text-center text-xs text-slate-400">Loading live JSE teleprinter stream...</div>
+              ) : teleprinterItems.length === 0 ? (
+                <div className="p-12 text-center rounded-2xl bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800">
+                  <p className="text-xs text-slate-500">Click &quot;Refresh Live Teleprinter&quot; to fetch the latest filings.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {teleprinterItems.map((tp) => (
+                    <div
+                      key={tp.id}
+                      className="p-4 rounded-xl bg-white dark:bg-[#0E1522] border border-slate-200/90 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-slate-900 text-white dark:bg-white dark:text-slate-900">
+                            JSE: {tp.ticker}
                           </span>
-                        )}
-                        <span className="text-[11px] text-slate-500 font-mono">
-                          {new Date(item.releasedAt).toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' })} SAST
-                        </span>
-                      </div>
-
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
-                        {item.headline}
-                      </h3>
-
-                      {item.summary && (
-                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
-                          {item.summary}
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            {tp.company}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            {new Date(tp.releasedAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })} SAST
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                          {tp.headline}
                         </p>
-                      )}
-
-                      <div className="text-[11px] text-slate-400 flex items-center space-x-2 pt-1 font-sans">
-                        <span>JSE Sponsor: <strong className="text-slate-600 dark:text-slate-300 font-semibold">{item.sponsor}</strong></span>
-                        {item.isinCode && (
-                          <>
-                            <span>&bull;</span>
-                            <span>ISIN: <strong className="font-mono text-slate-600 dark:text-slate-300">{item.isinCode}</strong></span>
-                          </>
-                        )}
                       </div>
-                    </div>
 
-                    <div className="flex items-center space-x-2 shrink-0 self-end md:self-center">
-                      <button
-                        onClick={() => setSelectedSens(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                      <a
+                        href={tp.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition shrink-0 self-start sm:self-center"
                       >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Read Official SENS</span>
-                      </button>
-
-                      {item.pdfUrl && (
-                        <a
-                          href={item.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-slate-800 transition"
-                          title="Download Official PDF"
-                        >
-                          <Download className="w-4 h-4" />
-                        </a>
-                      )}
-
-                      <button
-                        onClick={() => handleDeleteSens(item.id)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-800 transition"
-                        title="Delete Announcement"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <span>Open Filing</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
                     </div>
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -681,8 +1041,14 @@ export default function SensAndIrHubPage() {
       {/* SENS OFFICIAL READER MODAL (JSE EXCHANGE FORMAT) */}
       {/* ───────────────────────────────────────────────────────────── */}
       {selectedSens && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl bg-white dark:bg-[#0B1019] text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] flex flex-col">
+        <div 
+          onClick={() => setSelectedSens(null)}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-3xl bg-white dark:bg-[#0B1019] text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] flex flex-col cursor-default"
+          >
             {/* Modal Actions */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center space-x-2">
@@ -703,6 +1069,7 @@ export default function SensAndIrHubPage() {
                 </button>
                 <button
                   onClick={() => setSelectedSens(null)}
+                  aria-label="Close reader"
                   className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
                 >
                   <X className="w-5 h-5" />
