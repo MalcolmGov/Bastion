@@ -275,7 +275,7 @@ export default function ResultsStudioPage() {
                   {busy === 'published' ? 'Publishing…' : 'Publish HTML'}
                 </button>
                 {current.status === 'published' && (
-                  <Link href={`/results/${current.slug}`} target="_blank" className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700">
+                  <Link href={`/results/${current.slug}/document`} target="_blank" className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700">
                     Open live page
                   </Link>
                 )}

@@ -629,7 +629,7 @@ async function runAll() {
     const blocked = checkLoginRateLimit(testIp);
     assert(blocked.allowed === false, '11th attempt must be rejected');
     assert(blocked.remaining === 0, 'Remaining count must be 0 when blocked');
-    assert(blocked.retryAfter > 0 && blocked.retryAfter <= 60, `Retry-After must be positive seconds, got ${blocked.retryAfter}`);
+    assert(typeof blocked.retryAfter === 'number' && blocked.retryAfter > 0 && blocked.retryAfter <= 60, `Retry-After must be positive seconds, got ${blocked.retryAfter}`);
 
     resetRateLimit(`login:${testIp}`);
     const unblocked = checkLoginRateLimit(testIp);
