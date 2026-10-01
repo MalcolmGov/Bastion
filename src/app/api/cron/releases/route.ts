@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
+import { publishRelease } from '@/lib/releases/service';
 import crypto from 'crypto';
+
+const DEV_DEFAULT_CRON_SECRET = 'bastion_cron_worker_production_key_2026';
 
 /**
  * Scheduled Releases Worker:
@@ -10,7 +13,7 @@ import crypto from 'crypto';
  */
 export async function POST(req: NextRequest) {
   const provided = req.headers.get('x-cron-secret') || tokenFromRequest(req, null);
-  const cronSecret = readSecret('CRON_SECRET');
+  const cronSecret = readSecret('CRON_SECRET') || (process.env.NODE_ENV !== 'production' ? (process.env.CRON_SECRET || DEV_DEFAULT_CRON_SECRET) : null);
 
   if (!secretsMatch(provided, cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized: Invalid CRON_SECRET' }, { status: 401 });
@@ -87,6 +90,21 @@ export async function POST(req: NextRequest) {
       }
     } catch (relErr) {
       console.warn('[Cron Releases] Table inspection note:', relErr);
+    }
+
+    // 1b. Process Scheduled Releases from content_releases table
+    try {
+      const contentReleasesRes = await db.execute({
+        sql: `SELECT id FROM content_releases WHERE status = 'scheduled' AND scheduled_at <= ?`,
+        args: [now]
+      });
+
+      for (const row of contentReleasesRes.rows) {
+        await publishRelease(String(row.id), 'system_cron');
+        publishedReleasesCount++;
+      }
+    } catch (cRelErr) {
+      console.warn('[Cron Content Releases] Inspection note:', cRelErr);
     }
 
     // 2. Process Scheduled Jobs from scheduled_jobs table

@@ -57,6 +57,15 @@ function resolveClientDomain(hostname: string): CustomDomainResolution | null {
   return null;
 }
 
+function applySecurityHeaders(res: NextResponse): NextResponse {
+  res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  res.headers.set('X-Content-Type-Options', 'nosniff');
+  res.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  return res;
+}
+
 export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
   const hasSession = !!req.cookies.get(SESSION_COOKIE)?.value;
@@ -69,14 +78,14 @@ export function middleware(req: NextRequest) {
     if (isPublicAdminApi(pathname)) {
       const res = NextResponse.next();
       res.headers.set('X-Robots-Tag', 'noindex, nofollow');
-      return res;
+      return applySecurityHeaders(res);
     }
     if (!hasSession) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return applySecurityHeaders(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
     }
     const res = NextResponse.next();
     res.headers.set('X-Robots-Tag', 'noindex, nofollow');
-    return res;
+    return applySecurityHeaders(res);
   }
 
   // 2. Admin UI Protection
@@ -85,7 +94,7 @@ export function middleware(req: NextRequest) {
       const url = req.nextUrl.clone();
       url.pathname = '/admin/login';
       url.searchParams.set('next', pathname);
-      return NextResponse.redirect(url);
+      return applySecurityHeaders(NextResponse.redirect(url));
     }
   }
 
@@ -123,7 +132,7 @@ export function middleware(req: NextRequest) {
         'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
       );
     }
-    return res;
+    return applySecurityHeaders(res);
   }
 
   // 4. Platform SEO & Robots Isolation
@@ -141,7 +150,7 @@ export function middleware(req: NextRequest) {
     res.headers.set('X-Robots-Tag', 'noindex, nofollow');
   }
 
-  return res;
+  return applySecurityHeaders(res);
 }
 
 export const config = {
