@@ -301,6 +301,56 @@ export const migrations: Migration[] = [
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_content_releases_client ON content_releases(client_id)`);
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_content_releases_status ON content_releases(status)`);
     }
+  },
+  {
+    version: 8,
+    name: '008_sre_and_probes',
+    up: async (db: Client) => {
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS incidents (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          severity TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'open',
+          affected_routes TEXT,
+          owner_id TEXT REFERENCES users(id),
+          timeline_json TEXT,
+          created_at TEXT NOT NULL,
+          resolved_at TEXT,
+          error_details TEXT,
+          ai_diagnosis TEXT,
+          ai_proposed_patch TEXT,
+          risk_level TEXT DEFAULT 'low',
+          pr_number INTEGER,
+          pr_url TEXT,
+          pr_branch TEXT,
+          pr_status TEXT DEFAULT 'none',
+          approval_status TEXT DEFAULT 'pending_review',
+          approved_by TEXT,
+          deploy_status TEXT DEFAULT 'idle',
+          verification_status TEXT DEFAULT 'unverified',
+          repo_owner TEXT DEFAULT 'MalcolmGov',
+          repo_name TEXT DEFAULT 'MoveDigital'
+        );
+      `);
+
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS sla_probes (
+          id TEXT PRIMARY KEY,
+          site_id TEXT NOT NULL,
+          url TEXT NOT NULL,
+          status TEXT NOT NULL,
+          http_code INTEGER,
+          latency_ms INTEGER,
+          ssl_status TEXT,
+          ssl_days_remaining INTEGER,
+          region TEXT,
+          probed_at TEXT NOT NULL
+        );
+      `);
+
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_sla_probes_site ON sla_probes (site_id, probed_at DESC);`);
+    }
   }
 ];
 
