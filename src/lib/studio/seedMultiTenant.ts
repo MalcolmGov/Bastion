@@ -1019,5 +1019,291 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
     });
   }
 
+  // 12. Seed JSE SENS Announcements & Financial Calendar Events
+  try {
+    const gfSensCount = await db.execute(`SELECT COUNT(*) as c FROM sens_announcements WHERE client_id = 'client_goldfields'`);
+    if (Number(gfSensCount.rows[0].c) === 0) {
+      await db.execute({
+        sql: `
+          INSERT INTO sens_announcements (
+            id, client_id, site_id, headline, announcement_type, jse_code, isin_code,
+            released_at, body_html, summary, pdf_url, is_price_sensitive, status,
+            sponsor, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [
+          'sens_gf_01',
+          'client_goldfields',
+          'site_goldfields_flagship',
+          'Reviewed Interim Financial Results for the Six Months Ended 30 June 2026 and Declaration of Interim Cash Dividend',
+          'results',
+          'JSE: GFI',
+          'ZAE000018123',
+          '2026-08-14T07:05:00Z',
+          '<p>Gold Fields Limited (&quot;Gold Fields&quot; or &quot;the Company&quot; or &quot;the Group&quot;) is pleased to report its reviewed financial and operating results for the six months ended 30 June 2026.</p><p><strong>SALIENT FEATURES:</strong></p><ul><li>Attributable gold equivalent production increased by 4% to 1,120,000 ounces.</li><li>All-in sustaining costs (AISC) reduced to US$1,180 per ounce.</li><li>Adjusted free cash flow generated of US$462 million.</li><li>Interim cash dividend declared of 350 SA cents per ordinary share.</li></ul><p>Shareholders are advised that the interim financial statements have been reviewed by the independent auditors, PricewaterhouseCoopers Inc.</p>',
+          'Attributable gold production up 4% to 1.12Moz with AISC at US$1,180/oz. Interim dividend declared of 350 SA cents per share.',
+          'https://goldfields-bay.vercel.app/reports',
+          1,
+          'published',
+          'J.P. Morgan Equities South Africa (Pty) Ltd',
+          now,
+          now
+        ]
+      });
+
+      await db.execute({
+        sql: `
+          INSERT INTO sens_announcements (
+            id, client_id, site_id, headline, announcement_type, jse_code, isin_code,
+            released_at, body_html, summary, pdf_url, is_price_sensitive, status,
+            sponsor, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [
+          'sens_gf_02',
+          'client_goldfields',
+          'site_goldfields_flagship',
+          'Declaration of Interim Cash Dividend of 350 SA Cents per Ordinary Share (Gross)',
+          'dividend',
+          'JSE: GFI',
+          'ZAE000018123',
+          '2026-08-14T07:10:00Z',
+          '<p>Notice is hereby given that the Board of Directors has declared a gross interim cash dividend of 350 South African cents per ordinary share for the six months ended 30 June 2026.</p><p><strong>DIVIDEND TAX (DWT):</strong> In accordance with paragraph 11.17 of the JSE Listings Requirements, the dividend has been declared from income reserves. The dividend withholding tax rate is 20%, resulting in a net cash dividend of 280 South African cents per ordinary share for shareholders liable to pay DWT.</p>',
+          'Gross interim cash dividend of 350 SA cents per share declared; net 280 SA cents per share after 20% DWT.',
+          'https://goldfields-bay.vercel.app/reports',
+          1,
+          'published',
+          'J.P. Morgan Equities South Africa (Pty) Ltd',
+          now,
+          now
+        ]
+      });
+
+      await db.execute({
+        sql: `
+          INSERT INTO sens_announcements (
+            id, client_id, site_id, headline, announcement_type, jse_code, isin_code,
+            released_at, body_html, summary, pdf_url, is_price_sensitive, status,
+            sponsor, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [
+          'sens_gf_03',
+          'client_goldfields',
+          'site_goldfields_flagship',
+          'Commissioning and Full Grid Interconnection of South Deep 50MW Solar Microgrid',
+          'esg_tailings',
+          'JSE: GFI',
+          'ZAE000018123',
+          '2026-09-02T08:00:00Z',
+          '<p>Gold Fields is pleased to announce the successful commissioning and full commercial grid interconnection of its 50MW solar photovoltaic (PV) plant at the South Deep mine in Gauteng, South Africa.</p><p>The plant supplies up to 24% of South Deep’s daily electricity requirements, reducing carbon emissions by approximately 110,000 tonnes per annum.</p>',
+          'South Deep 50MW solar array fully commissioned, supplying up to 24% of electricity consumption and displacing 110kt CO2/yr.',
+          'https://goldfields-bay.vercel.app/sustainability',
+          0,
+          'published',
+          'J.P. Morgan Equities South Africa (Pty) Ltd',
+          now,
+          now
+        ]
+      });
+    }
+
+    // Seed Vodacom SENS
+    const vodSensCount = await db.execute(`SELECT COUNT(*) as c FROM sens_announcements WHERE client_id = 'client_vodacom_group'`);
+    if (Number(vodSensCount.rows[0].c) === 0) {
+      await db.execute({
+        sql: `
+          INSERT INTO sens_announcements (
+            id, client_id, site_id, headline, announcement_type, jse_code, isin_code,
+            released_at, body_html, summary, pdf_url, is_price_sensitive, status,
+            sponsor, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [
+          'sens_vod_01',
+          'client_vodacom_group',
+          'site_vodacom_group',
+          'Trading Statement for the Six Months Ended 30 September 2026',
+          'trading_statement',
+          'JSE: VOD',
+          'ZAE000132577',
+          '2026-09-24T08:30:00Z',
+          '<p>Vodacom Group Limited (&quot;Vodacom&quot;) informs shareholders that headline earnings per share (&quot;HEPS&quot;) for the six months ended 30 September 2026 is expected to increase between 12.0% and 16.5% compared to the prior comparative period.</p><p>The increase was driven by robust service revenue growth across Egypt and South Africa, alongside accelerated M-Pesa fintech transaction volumes.</p>',
+          'Headline earnings per share expected to increase between 12.0% and 16.5% for H1 2026.',
+          null,
+          1,
+          'published',
+          'Nedbank Corporate and Investment Banking',
+          now,
+          now
+        ]
+      });
+    }
+
+    // Seed Financial Calendar Events
+    const calCount = await db.execute(`SELECT COUNT(*) as c FROM financial_calendar_events WHERE client_id = 'client_goldfields'`);
+    if (Number(calCount.rows[0].c) === 0) {
+      await db.execute({
+        sql: `
+          INSERT INTO financial_calendar_events (
+            id, client_id, site_id, title, event_type, event_date, time_sast,
+            location, webcast_url, description, dividend_rate_cents, dividend_currency,
+            dwt_applicable, is_completed, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+        `,
+        args: [
+          'ev_gf_01',
+          'client_goldfields',
+          'site_goldfields_flagship',
+          'H1 2026 Financial Results Webcast & Global Investor Conference',
+          'results_announcement',
+          '2026-10-15',
+          '10:00 SAST',
+          'Johannesburg Stock Exchange (JSE) & Virtual Audio Webcast',
+          'https://goldfields-bay.vercel.app/investors',
+          'Executive presentation of interim financial results and operating metrics by CEO and CFO.',
+          350.0,
+          'ZAR',
+          1,
+          now,
+          now
+        ]
+      });
+
+      await db.execute({
+        sql: `
+          INSERT INTO financial_calendar_events (
+            id, client_id, site_id, title, event_type, event_date, time_sast,
+            location, webcast_url, description, dividend_rate_cents, dividend_currency,
+            dwt_applicable, is_completed, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+        `,
+        args: [
+          'ev_gf_02',
+          'client_goldfields',
+          'site_goldfields_flagship',
+          'Ordinary Cash Dividend: Last Day to Trade Cum Dividend',
+          'dividend_dates',
+          '2026-10-20',
+          '17:00 SAST',
+          'JSE Market Close',
+          null,
+          'Last day to trade ordinary shares cum dividend on the Johannesburg Stock Exchange.',
+          350.0,
+          'ZAR',
+          1,
+          now,
+          now
+        ]
+      });
+
+      await db.execute({
+        sql: `
+          INSERT INTO financial_calendar_events (
+            id, client_id, site_id, title, event_type, event_date, time_sast,
+            location, webcast_url, description, dividend_rate_cents, dividend_currency,
+            dwt_applicable, is_completed, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+        `,
+        args: [
+          'ev_gf_03',
+          'client_goldfields',
+          'site_goldfields_flagship',
+          'Ordinary Cash Dividend Payment Date to Electronic Bank Accounts',
+          'dividend_dates',
+          '2026-10-26',
+          '09:00 SAST',
+          'Electronic Bank Remittance via Strate',
+          null,
+          'Payment of 350 SA cents per share (gross) / 280 SA cents per share (net) to registered shareholders.',
+          350.0,
+          'ZAR',
+          1,
+          now,
+          now
+        ]
+      });
+
+      await db.execute({
+        sql: `
+          INSERT INTO financial_calendar_events (
+            id, client_id, site_id, title, event_type, event_date, time_sast,
+            location, webcast_url, description, dividend_rate_cents, dividend_currency,
+            dwt_applicable, is_completed, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+        `,
+        args: [
+          'ev_gf_04',
+          'client_goldfields',
+          'site_goldfields_flagship',
+          '2027 Annual General Meeting (AGM) of Shareholders',
+          'agm',
+          '2027-05-19',
+          '11:00 SAST',
+          '150 Helen Road, Sandton & Electronic Hybrid Portal',
+          'https://goldfields-bay.vercel.app/investors',
+          'Annual General Meeting of shareholders to vote on ordinary and special corporate resolutions.',
+          null,
+          'ZAR',
+          0,
+          now,
+          now
+        ]
+      });
+    }
+
+    // Seed Investor Reports
+    const repCount = await db.execute(`SELECT COUNT(*) as c FROM investor_reports WHERE client_id = 'client_goldfields'`);
+    if (Number(repCount.rows[0].c) === 0) {
+      await db.execute({
+        sql: `
+          INSERT INTO investor_reports (
+            id, client_id, site_id, title, fiscal_year, period, report_type,
+            pdf_url, filesize_bytes, download_count, published_at, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 142, ?, ?, ?)
+        `,
+        args: [
+          'rep_gf_01',
+          'client_goldfields',
+          'site_goldfields_flagship',
+          'Gold Fields 2025 Integrated Annual Report (Building Tomorrow)',
+          2025,
+          'FY',
+          'integrated_annual_report',
+          'https://goldfields-bay.vercel.app/reports',
+          14 * 1024 * 1024,
+          now,
+          now,
+          now
+        ]
+      });
+
+      await db.execute({
+        sql: `
+          INSERT INTO investor_reports (
+            id, client_id, site_id, title, fiscal_year, period, report_type,
+            pdf_url, filesize_bytes, download_count, published_at, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 89, ?, ?, ?)
+        `,
+        args: [
+          'rep_gf_02',
+          'client_goldfields',
+          'site_goldfields_flagship',
+          'Mineral Resources and Mineral Reserves Supplement 2025',
+          2025,
+          'FY',
+          'mineral_resources',
+          'https://goldfields-bay.vercel.app/reports',
+          8 * 1024 * 1024,
+          now,
+          now,
+          now
+        ]
+      });
+    }
+  } catch (sensSeedErr) {
+    console.warn('[Seed SENS & IR] Note on table seeding:', sensSeedErr);
+  }
+
   console.log('✓ Move Studio multi-tenant seed complete (4 clients, 4 websites, commercial pipeline & proposal PRO-2026-BASTION).');
 }

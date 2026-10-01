@@ -392,6 +392,78 @@ export const migrations: Migration[] = [
       `);
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_page_versions_site_page ON page_versions(site_id, page_slug, version DESC);`);
     }
+  },
+  {
+    version: 10,
+    name: '010_sens_and_financial_calendar',
+    up: async (db: Client) => {
+      // 1. SENS Announcements Table
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS sens_announcements (
+          id TEXT PRIMARY KEY,
+          client_id TEXT NOT NULL REFERENCES clients(id),
+          site_id TEXT NOT NULL,
+          headline TEXT NOT NULL,
+          announcement_type TEXT NOT NULL DEFAULT 'general',
+          jse_code TEXT NOT NULL DEFAULT 'JSE: GFI',
+          isin_code TEXT,
+          released_at TEXT NOT NULL,
+          body_html TEXT NOT NULL,
+          summary TEXT,
+          pdf_url TEXT,
+          is_price_sensitive INTEGER NOT NULL DEFAULT 1,
+          status TEXT NOT NULL DEFAULT 'published',
+          sponsor TEXT DEFAULT 'J.P. Morgan Equities South Africa (Pty) Ltd',
+          embargo_until TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_sens_client_released ON sens_announcements(client_id, released_at DESC);`);
+
+      // 2. Financial Calendar Events Table
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS financial_calendar_events (
+          id TEXT PRIMARY KEY,
+          client_id TEXT NOT NULL REFERENCES clients(id),
+          site_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          event_type TEXT NOT NULL DEFAULT 'results_announcement',
+          event_date TEXT NOT NULL,
+          time_sast TEXT NOT NULL DEFAULT '10:00 SAST',
+          location TEXT,
+          webcast_url TEXT,
+          description TEXT,
+          dividend_rate_cents REAL,
+          dividend_currency TEXT DEFAULT 'ZAR',
+          dwt_applicable INTEGER DEFAULT 1,
+          is_completed INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_fin_cal_client_date ON financial_calendar_events(client_id, event_date ASC);`);
+
+      // 3. Investor Reports & Publications Table
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS investor_reports (
+          id TEXT PRIMARY KEY,
+          client_id TEXT NOT NULL REFERENCES clients(id),
+          site_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          fiscal_year INTEGER NOT NULL,
+          period TEXT NOT NULL DEFAULT 'FY',
+          report_type TEXT NOT NULL DEFAULT 'integrated_annual_report',
+          pdf_url TEXT NOT NULL,
+          filesize_bytes INTEGER DEFAULT 0,
+          download_count INTEGER DEFAULT 0,
+          published_at TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_inv_reports_client_year ON investor_reports(client_id, fiscal_year DESC);`);
+    }
   }
 ];
 

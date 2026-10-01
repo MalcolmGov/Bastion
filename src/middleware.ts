@@ -8,6 +8,7 @@ function isPublicAdminApi(pathname: string): boolean {
   if (pathname === '/api/admin/auth/login') return true;
   if (pathname === '/api/admin/auth/accept-invite') return true;
   if (pathname === '/api/admin/sre/quick-approve') return true;
+  if (pathname.startsWith('/api/admin/ir/calendar/') && pathname.endsWith('/ics')) return true;
   return false;
 }
 

@@ -342,11 +342,14 @@ export function AdminSidebar() {
                     <>
                       {renderItem('/admin/operations', 'Mining Operations', Compass, pathname.startsWith('/admin/operations'), '10', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                       {renderItem('/admin/reports', 'Financial Results', FileSpreadsheet, pathname.startsWith('/admin/reports'), '11', 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200')}
-                      {renderItem('/admin/news', 'SENS Releases', Newspaper, pathname.startsWith('/admin/news'), 'SENS', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
+                      {renderItem('/admin/sens', 'JSE SENS & IR Hub', Newspaper, pathname.startsWith('/admin/sens'), 'JSE', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                       {renderItem('/admin/sustainability', '2030 ESG Targets', Leaf, pathname.startsWith('/admin/sustainability'), 'ESG', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
                     </>
                   ) : (
-                    renderItem('/admin/news', 'News & Articles', Newspaper, pathname.startsWith('/admin/news'))
+                    <>
+                      {renderItem('/admin/sens', 'JSE SENS & IR Hub', Newspaper, pathname.startsWith('/admin/sens'), 'JSE', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
+                      {renderItem('/admin/news', 'News & Articles', Newspaper, pathname.startsWith('/admin/news'))}
+                    </>
                   )}
                 </div>
               </div>
@@ -402,6 +405,7 @@ export function AdminSidebar() {
                   {renderItem('/admin/clients', 'Clients & Websites', Users, pathname.startsWith('/admin/clients'), String(clients.length))}
                   {renderItem('/admin/onboard', 'Onboard Client', UserPlus, pathname.startsWith('/admin/onboard'), 'Wizard', 'bg-blue-100 dark:bg-sky-950 text-bastion-blue dark:text-sky-300 border border-blue-200 dark:border-sky-800')}
                   {renderItem('/admin/billing', 'Commercial & Billing', CreditCard, pathname.startsWith('/admin/billing'))}
+                  {renderItem('/admin/sens', 'JSE SENS & IR Command', Newspaper, pathname.startsWith('/admin/sens'), 'JSE', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                 </div>
               </div>
 
