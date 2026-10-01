@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
+import { sanitizePublicationHtml } from '@/lib/results/codeAssistant';
 import { getResultsDocument, saveResultsDocument } from '@/lib/results/store';
 import type { ResultsDocument } from '@/lib/results/types';
 
@@ -44,6 +45,9 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     return NextResponse.json({ error: 'A results document is required.' }, { status: 400 });
   }
   const status = body.status === 'published' ? 'published' : 'draft';
+  if (typeof body.document.presentationHtml === 'string') {
+    body.document.presentationHtml = sanitizePublicationHtml(body.document.presentationHtml);
+  }
   const saved = await saveResultsDocument({
     id,
     document: body.document,

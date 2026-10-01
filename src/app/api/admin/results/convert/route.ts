@@ -1,31 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
+import { readStoredBrand } from '@/lib/results/brand';
 import { convertMerafeExample, convertPdfBytes, convertSampleBooklet } from '@/lib/results/convert';
+import { renderResultsHtml } from '@/lib/results/renderHtml';
 import { saveResultsDocument } from '@/lib/results/store';
 
 export const runtime = 'nodejs';
+
+function clientForUser(user: { client_id: string | null }, requested: string | null, agency: boolean): string | null {
+  return agency ? requested : user.client_id;
+}
 
 export async function POST(req: NextRequest) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const user = gate.user;
+  const agency = isAgencyUser(user);
 
   try {
     const contentType = req.headers.get('content-type') || '';
     let document;
     let clientId: string | null = null;
+    let brandInput: unknown = null;
 
     if (contentType.includes('application/json')) {
       const body = await req.json();
-      clientId = isAgencyUser(user) ? (body.clientId || null) : user.client_id;
+      clientId = clientForUser(user, body.clientId || null, agency);
+      brandInput = body.brand;
       if (body.example === 'merafe') document = await convertMerafeExample();
       else if (body.sample) document = await convertSampleBooklet();
       else return NextResponse.json({ error: 'Upload a PDF or choose an example booklet.' }, { status: 400 });
     } else {
       const form = await req.formData();
       const file = form.get('file');
-      clientId = isAgencyUser(user) ? (String(form.get('clientId') || '') || null) : user.client_id;
+      clientId = clientForUser(user, String(form.get('clientId') || '') || null, agency);
+      const brandField = form.get('brand');
+      if (typeof brandField === 'string' && brandField) {
+        brandInput = parseBrandField(brandField);
+      }
       if (!(file instanceof File)) {
         return NextResponse.json({ error: 'Choose a PDF results booklet.' }, { status: 400 });
       }
@@ -40,6 +53,9 @@ export async function POST(req: NextRequest) {
       document = await convertPdfBytes(bytes, name);
     }
 
+    document.brand = readStoredBrand(brandInput);
+    document.presentationHtml = renderResultsHtml(document);
+
     const saved = await saveResultsDocument({
       clientId,
       document,
@@ -50,5 +66,13 @@ export async function POST(req: NextRequest) {
     const message = error instanceof Error ? error.message : 'Conversion failed';
     console.error('Results conversion error:', error);
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+function parseBrandField(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
   }
 }

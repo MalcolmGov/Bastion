@@ -30,6 +30,19 @@ export interface ResultsHighlight {
   comparison: string;
 }
 
+export interface ResultsBrand {
+  sourceUrl: string;
+  siteName: string;
+  logoUrl: string | null;
+  colors: string[];
+  primary: string;
+  accent: string;
+  ink: string;
+  paper: string;
+  headingFont: string;
+  bodyFont: string;
+}
+
 export interface ResultsDocument {
   issuer: string;
   title: string;
@@ -42,6 +55,8 @@ export interface ResultsDocument {
   warnings: string[];
   sourceFilename: string;
   pageCount: number;
+  brand?: ResultsBrand | null;
+  presentationHtml?: string | null;
 }
 
 export interface StoredResultsDocument {
