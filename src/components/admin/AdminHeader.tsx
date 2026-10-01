@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAdminAuth } from './AdminAuthProvider';
+import { isAgencyUser } from '@/lib/auth/roles';
 import { useStudioWorkspace } from './StudioWorkspaceProvider';
 import { useTheme } from './ThemeProvider';
 import {
@@ -44,6 +45,7 @@ export function AdminHeader() {
     setPortalViewMode
   } = useStudioWorkspace();
 
+  const agency = isAgencyUser(user);
   const [sastTime, setSastTime] = useState<string>('');
   const [siteSwitcherOpen, setSiteSwitcherOpen] = useState(false);
   const [perspectiveDropdownOpen, setPerspectiveDropdownOpen] = useState(false);
@@ -159,7 +161,7 @@ export function AdminHeader() {
           <span className="hidden sm:inline-block h-5 w-px bg-slate-800/80 select-none" />
 
           {/* Workspace Perspective Switcher (Agency Studio vs Client CMS) */}
-          <div ref={perspectiveDropdownRef} className="relative">
+          {agency && <div ref={perspectiveDropdownRef} className="relative">
             <button
               type="button"
               onClick={() => setPerspectiveDropdownOpen(!perspectiveDropdownOpen)}
@@ -257,7 +259,7 @@ export function AdminHeader() {
                 </button>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Connected Client Website Selector */}
           <div ref={siteDropdownRef} className="relative hidden md:block">

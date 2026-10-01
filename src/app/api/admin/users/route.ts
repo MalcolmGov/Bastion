@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import { getCurrentUser, hashPassword } from '@/lib/auth/auth';
+import { hashPassword } from '@/lib/auth/auth';
+import { requireAgencyUser, requireUser } from '@/lib/auth/guard';
+import { isAgencyUser } from '@/lib/auth/roles';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
+    const user = gate.user;
 
     const db = getDb();
-    const result = await db.execute(`
-      SELECT id, name, email, role, region_scope, created_at, last_login 
-      FROM users 
-      ORDER BY created_at DESC
-    `);
+    const result = isAgencyUser(user)
+      ? await db.execute(`
+          SELECT id, name, email, role, region_scope, client_id, created_at, last_login
+          FROM users
+          ORDER BY created_at DESC
+        `)
+      : await db.execute({
+          sql: `
+            SELECT id, name, email, role, region_scope, client_id, created_at, last_login
+            FROM users
+            WHERE client_id = ?
+            ORDER BY created_at DESC
+          `,
+          args: [user.client_id]
+        });
 
     return NextResponse.json({ users: result.rows });
   } catch (err: any) {
@@ -25,10 +36,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
+    const currentUser = gate.user;
 
     const body = await req.json();
     const {
@@ -37,6 +47,7 @@ export async function POST(req: NextRequest) {
       role = 'content_editor',
       clientName = 'Bastion Group',
       clientScope = 'All',
+      clientId = null,
       initialPassword
     } = body;
 
@@ -44,8 +55,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name and email are required.' }, { status: 400 });
     }
 
-    const sanitizedClient = (clientName || 'Bastion').replace(/[^a-zA-Z0-9]/g, '') || 'Bastion';
-    const computedPassword = initialPassword || `${sanitizedClient}2026!`;
+    if (!initialPassword || String(initialPassword).length < 12) {
+      return NextResponse.json({ error: 'A temporary password of at least 12 characters is required.' }, { status: 400 });
+    }
+
+    if (role === 'platform_admin' && clientId) {
+      return NextResponse.json({ error: 'Platform admins are agency accounts and cannot be bound to one client.' }, { status: 400 });
+    }
+
+    if (role !== 'platform_admin' && !clientId) {
+      return NextResponse.json({ error: 'Client users must be assigned to a client workspace.' }, { status: 400 });
+    }
+
+    const computedPassword = String(initialPassword);
 
     const db = getDb();
 
@@ -62,14 +84,13 @@ export async function POST(req: NextRequest) {
     if (existing.rows.length > 0) {
       // Update existing user role and scope
       await db.execute({
-        sql: `UPDATE users SET name = ?, role = ?, region_scope = ? WHERE email = ?`,
-        args: [name, role, clientScope, email]
+        sql: `UPDATE users SET name = ?, role = ?, region_scope = ?, client_id = ? WHERE email = ?`,
+        args: [name, role, clientScope, role === 'platform_admin' ? null : clientId, email]
       });
     } else {
-      // Insert new user
       await db.execute({
-        sql: `INSERT INTO users (id, name, email, password_hash, role, region_scope, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [userId, name, email, passHash, role, clientScope, now]
+        sql: `INSERT INTO users (id, name, email, password_hash, role, region_scope, client_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [userId, name, email, passHash, role, clientScope, role === 'platform_admin' ? null : clientId, now]
       });
     }
 

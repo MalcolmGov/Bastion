@@ -2,11 +2,7 @@ import { createClient } from '@libsql/client';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-
-function hashPassword(password: string): string {
-  const salt = process.env.AUTH_SALT || 'goldfields_studio_salt_2026';
-  return crypto.createHash('sha256').update(password + salt).digest('hex');
-}
+import { hashPassword } from '../src/lib/auth/password';
 
 function hashContent(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -30,62 +26,64 @@ async function main() {
 
   const now = new Date().toISOString();
 
-  // 2. Seed Users
-  const users = [
-    {
-      id: 'usr_admin',
-      name: 'Corporate Platform Admin',
-      email: 'admin@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
-      role: 'platform_admin',
-      region_scope: 'All',
-      created_at: now
-    },
-    {
-      id: 'usr_editor',
-      name: 'Elena Rostova (Lead Editor)',
-      email: 'editor@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
-      role: 'content_editor',
-      region_scope: 'All',
-      created_at: now
-    },
-    {
-      id: 'usr_reviewer',
-      name: 'Marcus Vance (Compliance Reviewer)',
-      email: 'reviewer@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
-      role: 'reviewer',
-      region_scope: 'All',
-      created_at: now
-    },
-    {
-      id: 'usr_publisher',
-      name: 'Sipho Dlamini (Head of Communications)',
-      email: 'publisher@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
-      role: 'publisher',
-      region_scope: 'All',
-      created_at: now
-    },
-    {
-      id: 'usr_analyst',
-      name: 'Thabo Mokoena (IR Analyst)',
-      email: 'analyst@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
-      role: 'analyst',
-      region_scope: 'All',
-      created_at: now
-    }
-  ];
+  // 2. Seed Users only when an operator supplies a password. Never write a shared demo password.
+  const demoPassword = process.env.SEED_DEMO_PASSWORD?.trim() || '';
+  if (demoPassword.length < 12) {
+    console.log('Skipping user seed. Set SEED_DEMO_PASSWORD (12+ characters) to create demo accounts.');
+  } else {
+    const passwordHash = hashPassword(demoPassword);
+    const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim() || 'admin@bastion.local';
+    const users = [
+      {
+        id: 'usr_admin',
+        name: 'Bastion Platform Admin',
+        email: adminEmail,
+        password_hash: passwordHash,
+        role: 'platform_admin',
+        region_scope: 'All',
+        client_id: null as string | null,
+        created_at: now
+      },
+      {
+        id: 'usr_editor',
+        name: 'Client Lead Editor',
+        email: 'editor@client.local',
+        password_hash: passwordHash,
+        role: 'content_editor',
+        region_scope: 'client_goldfields',
+        client_id: 'client_goldfields',
+        created_at: now
+      },
+      {
+        id: 'usr_reviewer',
+        name: 'Client Reviewer',
+        email: 'reviewer@client.local',
+        password_hash: passwordHash,
+        role: 'reviewer',
+        region_scope: 'client_goldfields',
+        client_id: 'client_goldfields',
+        created_at: now
+      },
+      {
+        id: 'usr_publisher',
+        name: 'Client Publisher',
+        email: 'publisher@client.local',
+        password_hash: passwordHash,
+        role: 'publisher',
+        region_scope: 'client_goldfields',
+        client_id: 'client_goldfields',
+        created_at: now
+      }
+    ];
 
-  for (const u of users) {
-    await db.execute({
-      sql: `INSERT OR REPLACE INTO users (id, name, email, password_hash, role, region_scope, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [u.id, u.name, u.email, u.password_hash, u.role, u.region_scope, u.created_at]
-    });
+    for (const u of users) {
+      await db.execute({
+        sql: `INSERT OR REPLACE INTO users (id, name, email, password_hash, role, region_scope, client_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [u.id, u.name, u.email, u.password_hash, u.role, u.region_scope, u.client_id, now]
+      });
+    }
+    console.log(`✓ Seeded ${users.length} users. Admin email: ${adminEmail}`);
   }
-  console.log(`✓ Seeded ${users.length} enterprise users.`);
 
   // 3. Helper to insert content record & published revision
   async function insertRecord(collection: string, id: string, slug: string, title: string, data: any) {

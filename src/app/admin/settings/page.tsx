@@ -31,7 +31,7 @@ export default function WorkspaceSettingsAndExportPage() {
 
   // Headless Integration State
   const [loadingHeadless, setLoadingHeadless] = useState(true);
-  const [apiKey, setApiKey] = useState('sec_goldfields_bastion_2026_live');
+  const [apiKey, setApiKey] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('https://goldfields.com/api/webhooks/cms-update');
   const [webhookSecret, setWebhookSecret] = useState('whsec_bastion_goldfields_2026');
   const [previewUrlPattern, setPreviewUrlPattern] = useState('https://preview.goldfields.com/{slug}?preview=true');
@@ -62,7 +62,7 @@ export default function WorkspaceSettingsAndExportPage() {
         if (res.ok) {
           const data = await res.json();
           if (data.headless) {
-            setApiKey(data.headless.apiKey || 'sec_goldfields_bastion_2026_live');
+            setApiKey(data.headless.apiKey || '');
             setWebhookUrl(data.headless.webhookUrl || 'https://goldfields.com/api/webhooks/cms-update');
             setWebhookSecret(data.headless.webhookSecret || 'whsec_bastion_goldfields_2026');
             setPreviewUrlPattern(data.headless.previewUrlPattern || 'https://preview.goldfields.com/{slug}?preview=true');

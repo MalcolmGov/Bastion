@@ -4,8 +4,9 @@
  */
 
 import crypto from 'crypto';
+import { readSecret } from '@/lib/auth/apiToken';
 
-const SECRET_KEY = process.env.SRE_APPROVAL_SECRET || 'bastion_sre_quick_approval_secret_2026';
+const SECRET_KEY = readSecret('SRE_APPROVAL_SECRET');
 const PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3010';
 
 export interface QuickApproveTokenPayload {
@@ -21,10 +22,14 @@ export interface QuickApproveTokenPayload {
  * allowing 1-click approval directly from WhatsApp / mobile email.
  */
 export function generateQuickApproveToken(payload: Omit<QuickApproveTokenPayload, 'expiresAt'>, validHours = 24): string {
+  if (!SECRET_KEY) {
+    throw new Error('SRE_APPROVAL_SECRET is not configured.');
+  }
+  const secret: string = SECRET_KEY;
   const expiresAt = Date.now() + validHours * 3600 * 1000;
   const fullPayload: QuickApproveTokenPayload = { ...payload, expiresAt };
   const encodedData = Buffer.from(JSON.stringify(fullPayload)).toString('base64url');
-  const signature = crypto.createHmac('sha256', SECRET_KEY).update(encodedData).digest('hex');
+  const signature = crypto.createHmac('sha256', secret).update(encodedData).digest('hex');
   return `${encodedData}.${signature}`;
 }
 
@@ -33,11 +38,15 @@ export function generateQuickApproveToken(payload: Omit<QuickApproveTokenPayload
  */
 export function verifyQuickApproveToken(token: string): QuickApproveTokenPayload | null {
   try {
+    if (!SECRET_KEY) return null;
+    const secret: string = SECRET_KEY;
     const [encodedData, signature] = token.split('.');
     if (!encodedData || !signature) return null;
 
-    const expectedSig = crypto.createHmac('sha256', SECRET_KEY).update(encodedData).digest('hex');
-    if (signature !== expectedSig) {
+    const expectedSig = crypto.createHmac('sha256', secret).update(encodedData).digest('hex');
+    const sigBuf = Buffer.from(signature);
+    const expectedBuf = Buffer.from(expectedSig);
+    if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
       console.warn('[Bastion SRE Auth] Invalid HMAC signature on approval token');
       return null;
     }

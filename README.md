@@ -82,6 +82,9 @@ npm install
 npm run dev
 # -> Opens http://localhost:3000
 
+# Optional: create demo studio logins (password is never stored in source)
+# SEED_DEMO_USERS=true SEED_DEMO_PASSWORD='choose-a-long-password' npm run seed
+
 # Build production bundle
 npm run build
 

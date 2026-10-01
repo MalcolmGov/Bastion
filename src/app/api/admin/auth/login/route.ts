@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import { createSession, hashPassword, StudioUser } from '@/lib/auth/auth';
+import { createSession, hashPassword, isLegacyPasswordHash, verifyPassword, StudioUser } from '@/lib/auth/auth';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
@@ -14,10 +14,9 @@ export async function POST(req: NextRequest) {
 
     const db = getDb();
     const cleanEmail = String(email).trim().toLowerCase();
-    const pwdHash = hashPassword(password);
 
     const userRes = await db.execute({
-      sql: `SELECT id, name, email, password_hash, role, region_scope, created_at, last_login FROM users WHERE LOWER(email) = ? LIMIT 1`,
+      sql: `SELECT id, name, email, password_hash, role, region_scope, client_id, created_at, last_login FROM users WHERE LOWER(email) = ? LIMIT 1`,
       args: [cleanEmail]
     });
 
@@ -25,7 +24,8 @@ export async function POST(req: NextRequest) {
     const userAgent = req.headers.get('user-agent') || 'Unknown';
     const now = new Date().toISOString();
 
-    if (userRes.rows.length === 0 || userRes.rows[0].password_hash !== pwdHash) {
+    const storedHash = userRes.rows.length > 0 ? String(userRes.rows[0].password_hash || '') : '';
+    if (userRes.rows.length === 0 || !verifyPassword(password, storedHash)) {
       // Audit log failed attempt
       await db.execute({
         sql: `INSERT INTO audit_log (id, actor_id, actor_name, action, collection, record_id, result, details_json, correlation_id, ip_address, created_at)
@@ -49,12 +49,20 @@ export async function POST(req: NextRequest) {
     }
 
     const row = userRes.rows[0];
+    if (isLegacyPasswordHash(storedHash)) {
+      await db.execute({
+        sql: `UPDATE users SET password_hash = ? WHERE id = ?`,
+        args: [hashPassword(password), String(row.id)]
+      });
+    }
+
     const user: StudioUser = {
       id: String(row.id),
       name: String(row.name),
       email: String(row.email),
       role: String(row.role) as any,
       region_scope: String(row.region_scope || 'All'),
+      client_id: row.client_id ? String(row.client_id) : null,
       created_at: String(row.created_at),
       last_login: now
     };

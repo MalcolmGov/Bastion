@@ -3,15 +3,11 @@ import type { Client, InStatement } from '@libsql/client';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { hashPassword } from '@/lib/auth/password';
 
 let rawClient: Client | null = null;
 let wrappedClient: Client | null = null;
 let initPromise: Promise<void> | null = null;
-
-function hashPassword(password: string): string {
-  const salt = process.env.AUTH_SALT || 'goldfields_studio_salt_2026';
-  return crypto.createHash('sha256').update(password + salt).digest('hex');
-}
 
 function getRawClient(): Client {
   if (!rawClient) {
@@ -72,6 +68,7 @@ export async function ensureDbReady(): Promise<Client> {
         // Run Phase 2 migrations (Content Releases, Media Folders, Translations)
         const { runPhase2Migrations } = await import('@/lib/db/phase2Migrations');
         await runPhase2Migrations(raw);
+        await ensureTenantColumns(raw);
       } catch (err) {
         console.error('[DB] Error inspecting database tables:', err);
         try {
@@ -81,6 +78,7 @@ export async function ensureDbReady(): Promise<Client> {
           await runMoveStudioMigrations(raw);
           const { runPhase2Migrations } = await import('@/lib/db/phase2Migrations');
           await runPhase2Migrations(raw);
+          await ensureTenantColumns(raw);
         } catch (innerErr) {
           console.error('[DB] Schema init fallback error:', innerErr);
         }
@@ -111,6 +109,7 @@ async function runInitSchema(db: Client): Promise<void> {
         password_hash TEXT NOT NULL,
         role TEXT NOT NULL,
         region_scope TEXT DEFAULT 'All',
+        client_id TEXT,
         created_at TEXT NOT NULL,
         last_login TEXT
       );
@@ -205,62 +204,91 @@ async function runInitSchema(db: Client): Promise<void> {
   }
 }
 
+async function ensureTenantColumns(db: Client): Promise<void> {
+  try {
+    const userCols = await db.execute('PRAGMA table_info(users)');
+    const userNames = userCols.rows.map((r) => String(r.name));
+    if (userNames.length > 0 && !userNames.includes('client_id')) {
+      await db.execute('ALTER TABLE users ADD COLUMN client_id TEXT');
+    }
+    if (userNames.length > 0) {
+      await db.execute(
+        `UPDATE users SET client_id = 'client_goldfields' WHERE role != 'platform_admin' AND (client_id IS NULL OR client_id = '')`
+      );
+    }
+    await db.execute(
+      `UPDATE content_records SET client_id = 'client_goldfields' WHERE client_id IS NULL OR client_id = ''`
+    );
+    await db.execute(
+      `UPDATE media_assets SET client_id = 'client_goldfields' WHERE client_id IS NULL OR client_id = ''`
+    );
+  } catch (err) {
+    console.warn('[DB] Tenant user column migration warning:', err);
+  }
+
+  try {
+    const approvalCols = await db.execute('PRAGMA table_info(approvals)');
+    const approvalNames = approvalCols.rows.map((r) => String(r.name));
+    if (approvalNames.length > 0 && !approvalNames.includes('content_hash_at_approval')) {
+      await db.execute('ALTER TABLE approvals ADD COLUMN content_hash_at_approval TEXT');
+    }
+  } catch (err) {
+    console.warn('[DB] Approval hash column migration warning:', err);
+  }
+}
+
 async function seedEssentialUsers(db: Client): Promise<void> {
+  if (process.env.SEED_DEMO_USERS !== 'true') return;
+
+  const password = process.env.SEED_DEMO_PASSWORD?.trim() || '';
+  if (password.length < 12) {
+    console.warn('[DB] SEED_DEMO_USERS is set but SEED_DEMO_PASSWORD must be at least 12 characters. Skipping demo user seed.');
+    return;
+  }
+
   const now = new Date().toISOString();
+  const passwordHash = hashPassword(password);
   const defaultUsers = [
     {
-      id: 'usr_malcolm_movedigital',
-      name: 'Malcolm Govender (Platform Admin)',
-      email: 'malcolm@movedigital.africa',
-      password_hash: hashPassword('Bastion2026!'),
+      id: 'usr_platform_admin',
+      name: 'Bastion Platform Admin',
+      email: process.env.SEED_ADMIN_EMAIL?.trim() || 'admin@bastion.local',
       role: 'platform_admin',
       region_scope: 'All',
-      created_at: now
+      client_id: null as string | null,
     },
     {
       id: 'usr_editor',
-      name: 'Elena Rostova (Lead Editor)',
-      email: 'editor@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
+      name: 'Client Lead Editor',
+      email: 'editor@client.local',
       role: 'content_editor',
-      region_scope: 'All',
-      created_at: now
+      region_scope: 'client_goldfields',
+      client_id: 'client_goldfields',
     },
     {
       id: 'usr_reviewer',
-      name: 'Marcus Vance (Compliance Reviewer)',
-      email: 'reviewer@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
+      name: 'Client Reviewer',
+      email: 'reviewer@client.local',
       role: 'reviewer',
-      region_scope: 'All',
-      created_at: now
+      region_scope: 'client_goldfields',
+      client_id: 'client_goldfields',
     },
     {
       id: 'usr_publisher',
-      name: 'Sipho Dlamini (Head of Communications)',
-      email: 'publisher@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
+      name: 'Client Publisher',
+      email: 'publisher@client.local',
       role: 'publisher',
-      region_scope: 'All',
-      created_at: now
+      region_scope: 'client_goldfields',
+      client_id: 'client_goldfields',
     },
-    {
-      id: 'usr_analyst',
-      name: 'Thabo Mokoena (IR Analyst)',
-      email: 'analyst@goldfields.com',
-      password_hash: hashPassword('GoldFields2026!'),
-      role: 'analyst',
-      region_scope: 'All',
-      created_at: now
-    }
   ];
 
   for (const u of defaultUsers) {
     try {
       await db.execute({
-        sql: `INSERT OR IGNORE INTO users (id, name, email, password_hash, role, region_scope, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [u.id, u.name, u.email, u.password_hash, u.role, u.region_scope, u.created_at]
+        sql: `INSERT OR IGNORE INTO users (id, name, email, password_hash, role, region_scope, client_id, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [u.id, u.name, u.email, passwordHash, u.role, u.region_scope, u.client_id, now]
       });
     } catch (err) {
       console.error('[DB] Failed to insert user:', u.email, err);

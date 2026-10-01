@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
+import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
 
 export async function GET(
   req: NextRequest,
@@ -9,24 +10,21 @@ export async function GET(
     const { collection, slug } = await context.params;
     const { searchParams } = new URL(req.url);
 
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : searchParams.get('apiKey');
-    const validToken = process.env.API_SECRET_TOKEN || 'sec_goldfields_bastion_2026_live';
-    const isPreview = searchParams.get('preview') === 'true';
-
-    if (token && token !== validToken && !token.startsWith('prev_')) {
+    const token = tokenFromRequest(req.headers.get('authorization'), searchParams.get('apiKey'));
+    if (!secretsMatch(token, readSecret('API_SECRET_TOKEN'))) {
       return NextResponse.json(
         { error: 'Unauthorized: Invalid Bearer token' },
         { status: 401 }
       );
     }
+    const isPreview = searchParams.get('preview') === 'true';
 
     const siteId = searchParams.get('siteId') || 'site_goldfields_flagship';
     const db = getDb();
 
     if (collection === 'pages') {
       const pageRes = await db.execute({
-        sql: `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = ? LIMIT 1`,
+        sql: `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = ? ${isPreview ? '' : "AND status = 'published'"} LIMIT 1`,
         args: [siteId, slug],
       });
 

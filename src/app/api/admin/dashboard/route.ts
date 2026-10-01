@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser } from '@/lib/auth/auth';
+import { isAgencyUser } from '@/lib/auth/roles';
 
 export async function GET() {
   try {
@@ -10,49 +11,55 @@ export async function GET() {
     }
 
     const db = getDb();
+    const scoped = !isAgencyUser(user);
+    const clientId = user.client_id || '';
 
-    // 1. Content record status counts
-    const statusCounts = await db.execute(`
-      SELECT status, COUNT(*) as count 
-      FROM content_records 
-      GROUP BY status
-    `);
+    const statusCounts = await db.execute({
+      sql: `SELECT status, COUNT(*) as count FROM content_records ${scoped ? 'WHERE client_id = ?' : ''} GROUP BY status`,
+      args: scoped ? [clientId] : []
+    });
 
-    // 2. Collection breakdown
-    const collectionCounts = await db.execute(`
-      SELECT collection, COUNT(*) as count 
-      FROM content_records 
-      GROUP BY collection
-    `);
+    const collectionCounts = await db.execute({
+      sql: `SELECT collection, COUNT(*) as count FROM content_records ${scoped ? 'WHERE client_id = ?' : ''} GROUP BY collection`,
+      args: scoped ? [clientId] : []
+    });
 
-    // 3. Pending approvals / review items
-    const pendingItems = await db.execute(`
+    const pendingItems = await db.execute({
+      sql: `
       SELECT r.id, r.collection, r.slug, r.title, r.status, r.updated_at, u.name as owner_name
       FROM content_records r
       LEFT JOIN users u ON r.owner_id = u.id
-      WHERE r.status IN ('in_review', 'approved', 'draft')
+      WHERE r.status IN ('in_review', 'approved', 'draft') ${scoped ? 'AND r.client_id = ?' : ''}
       ORDER BY r.updated_at DESC
       LIMIT 10
-    `);
+    `,
+      args: scoped ? [clientId] : []
+    });
 
-    // 4. Recent audit activity
-    const auditLogs = await db.execute(`
+    const auditLogs = await db.execute({
+      sql: `
       SELECT id, actor_name, action, collection, record_id, result, created_at
       FROM audit_log
+      ${scoped ? 'WHERE client_id = ?' : ''}
       ORDER BY created_at DESC
       LIMIT 8
-    `);
+    `,
+      args: scoped ? [clientId] : []
+    });
 
-    // 5. Active Incidents
-    const incidents = await db.execute(`
+    const incidents = scoped
+      ? { rows: [] as any[] }
+      : await db.execute(`
       SELECT id, title, severity, status, affected_routes, created_at
       FROM incidents
       WHERE status != 'resolved'
       ORDER BY created_at DESC
     `);
 
-    // 6. Media asset count
-    const mediaCountRes = await db.execute(`SELECT COUNT(*) as count FROM media_assets`);
+    const mediaCountRes = await db.execute({
+      sql: `SELECT COUNT(*) as count FROM media_assets ${scoped ? 'WHERE client_id = ?' : ''}`,
+      args: scoped ? [clientId] : []
+    });
     const mediaCount = mediaCountRes.rows[0]?.count || 0;
 
     return NextResponse.json({

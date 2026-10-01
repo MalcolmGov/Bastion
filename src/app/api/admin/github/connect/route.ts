@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/auth';
+import { requireAgencyUser } from '@/lib/auth/guard';
 import {
   getGitHubOAuthUrl,
   fetchGitHubUser,
@@ -10,6 +11,8 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const origin = req.nextUrl.origin;
     const url = await getGitHubOAuthUrl(origin);
     const cliToken = getLocalGitHubCliToken();
@@ -28,6 +31,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const user = await getCurrentUser();
     const body = await req.json();
 

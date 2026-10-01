@@ -702,7 +702,7 @@ export default function AdminPageBuilder() {
           {/* Shareable Secret Preview Link */}
           <button
             onClick={() => {
-              const url = `${window.location.origin}/api/preview?secret=gf_preview_secret_token_2026&collection=pages&slug=${pageSlug}`;
+              const url = `${window.location.origin}/api/preview?collection=pages&slug=${pageSlug}`;
               navigator.clipboard.writeText(url);
               setNotification({ type: 'success', msg: 'Secret Executive Preview link copied to clipboard!' });
               setTimeout(() => setNotification(null), 3500);

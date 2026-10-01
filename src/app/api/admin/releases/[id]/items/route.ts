@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addItemToRelease, removeItemFromRelease } from '@/lib/releases/service';
+import { assertReleaseAccess, requireUser } from '@/lib/auth/guard';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
     const { id } = await params;
+    const access = await assertReleaseAccess(gate.user, id);
+    if (!access.ok) return access.response;
     const body = await request.json();
 
     if (!body.itemType || !body.itemId || !body.title) {
@@ -33,7 +38,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
     const { id } = await params;
+    const access = await assertReleaseAccess(gate.user, id);
+    if (!access.ok) return access.response;
     const { searchParams } = new URL(request.url);
     const itemId = searchParams.get('itemId');
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
+import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
 
 export async function GET(
   req: NextRequest,
@@ -9,21 +10,14 @@ export async function GET(
     const { collection } = await context.params;
     const { searchParams } = new URL(req.url);
 
-    // 1. API Token Authentication Check
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : searchParams.get('apiKey');
-
-    // Expected token from environment or site settings
-    const validToken = process.env.API_SECRET_TOKEN || 'sec_goldfields_bastion_2026_live';
-    const isPreview = searchParams.get('preview') === 'true';
-
-    // Allow Bearer token authentication or preview token
-    if (token && token !== validToken && !token.startsWith('prev_')) {
+    const token = tokenFromRequest(req.headers.get('authorization'), searchParams.get('apiKey'));
+    if (!secretsMatch(token, readSecret('API_SECRET_TOKEN'))) {
       return NextResponse.json(
         { error: 'Unauthorized: Invalid Bearer token for Headless Content API' },
         { status: 401 }
       );
     }
+    const isPreview = searchParams.get('preview') === 'true';
 
     const siteId = searchParams.get('siteId') || 'site_goldfields_flagship';
     const slug = searchParams.get('slug');

@@ -256,7 +256,7 @@ export function RecordEditor({ collection, id, collectionTitle }: RecordEditorPr
 
           <button
             onClick={() => {
-              const url = `${window.location.origin}/api/preview?secret=gf_preview_secret_token_2026&collection=${collection}&slug=${slug}`;
+              const url = `${window.location.origin}/api/preview?collection=${collection}&slug=${slug}`;
               navigator.clipboard.writeText(url);
               setNotification({ type: 'success', msg: 'Secret Executive Preview link copied to clipboard!' });
               setTimeout(() => setNotification(null), 3500);

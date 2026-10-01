@@ -54,8 +54,15 @@ export default function AdminUsersPage() {
     }
   }, [activeClient?.name]);
 
-  const sanitizedClient = inviteClientName.replace(/[^a-zA-Z0-9]/g, '') || 'Bastion';
-  const dynamicTempPassword = `${sanitizedClient}2026!`;
+  const [dynamicTempPassword, setDynamicTempPassword] = useState('');
+
+  useEffect(() => {
+    if (!showInviteModal) return;
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    setDynamicTempPassword(Array.from(bytes, (b) => alphabet[b % alphabet.length]).join(''));
+  }, [showInviteModal]);
 
   // Email Preview Modal State
   const [previewEmailHtml, setPreviewEmailHtml] = useState<string | null>(null);
@@ -97,6 +104,7 @@ export default function AdminUsersPage() {
           role: inviteRole,
           clientName: inviteClientName,
           clientScope: inviteClientName,
+          clientId: inviteRole === 'platform_admin' ? null : activeClient?.id,
           initialPassword: dynamicTempPassword
         })
       });

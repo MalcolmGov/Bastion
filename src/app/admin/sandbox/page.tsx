@@ -273,7 +273,7 @@ export default function BastionDeveloperSandboxPage() {
   // REST State
   const [selectedEndpoint, setSelectedEndpoint] = useState<EndpointOption>(ENDPOINTS[0]);
   const [includeAuth, setIncludeAuth] = useState(true);
-  const [apiKey, setApiKey] = useState('sec_goldfields_bastion_2026_live');
+  const [apiKey, setApiKey] = useState('');
   const [enablePreview, setEnablePreview] = useState(false);
   const [customParams, setCustomParams] = useState('');
 

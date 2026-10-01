@@ -1,6 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAdminAuth } from './AdminAuthProvider';
+import { isAgencyUser } from '@/lib/auth/roles';
 
 export interface WorkspaceSite {
   id: string;
@@ -48,6 +50,8 @@ const StudioWorkspaceContext = createContext<StudioWorkspaceContextType>({
 });
 
 export function StudioWorkspaceProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAdminAuth();
+  const agency = isAgencyUser(user);
   const [clients, setClients] = useState<WorkspaceClient[]>([]);
   const [activeClientId, setActiveClientIdState] = useState<string>('client_goldfields');
   const [activeSiteId, setActiveSiteIdState] = useState<string>('site_goldfields_flagship');
@@ -64,12 +68,6 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
         // Restore saved client from localStorage if available
         const savedClientId = typeof window !== 'undefined' ? localStorage.getItem('move_studio_active_client') : null;
         const savedSiteId = typeof window !== 'undefined' ? localStorage.getItem('move_studio_active_site') : null;
-        const savedMode = typeof window !== 'undefined' ? localStorage.getItem('move_studio_portal_mode') as 'client' | 'agency' : null;
-
-        if (savedMode) {
-          setPortalViewModeState(savedMode);
-        }
-
         if (savedClientId && data.clients.some((c: any) => c.id === savedClientId)) {
           setActiveClientIdState(savedClientId);
           if (savedSiteId) setActiveSiteIdState(savedSiteId);
@@ -100,6 +98,12 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     fetchClients();
   }, []);
 
+  useEffect(() => {
+    if (user && !agency) {
+      setPortalViewModeState('client');
+    }
+  }, [user, agency]);
+
   const setActiveClientId = (id: string) => {
     setActiveClientIdState(id);
     if (typeof window !== 'undefined') {
@@ -119,6 +123,7 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   };
 
   const setPortalViewMode = (mode: 'client' | 'agency') => {
+    if (!agency && mode === 'agency') return;
     setPortalViewModeState(mode);
     if (typeof window !== 'undefined') {
       localStorage.setItem('move_studio_portal_mode', mode);

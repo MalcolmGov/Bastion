@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLocaleMeta } from '@/lib/i18n/locales';
+import { requireUser } from '@/lib/auth/guard';
 
 // Deterministic high-quality corporate glossary translations for mining and enterprise terminology
 const CORPORATE_TERMINOLOGY_PRESETS: Record<string, Record<string, string>> = {
@@ -43,6 +44,8 @@ const CORPORATE_TERMINOLOGY_PRESETS: Record<string, Record<string, string>> = {
 
 export async function POST(request: NextRequest) {
   try {
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
     const body = await request.json();
     const targetLocale = (body.targetLocale || 'es').toLowerCase();
     const sourceLocale = (body.sourceLocale || 'en').toLowerCase();

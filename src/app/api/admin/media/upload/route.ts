@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser } from '@/lib/auth/auth';
+import { isAgencyUser } from '@/lib/auth/roles';
 import { put } from '@vercel/blob';
 import fs from 'fs';
 import path from 'path';
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
         fs.mkdirSync(assetsDir, { recursive: true });
       }
 
-      const filePath = path.join(assetsDir, cleanFilename);
+      const filePath = path.join(assetsDir, path.basename(cleanFilename));
       fs.writeFileSync(filePath, buffer);
       fileUrl = `/assets/${cleanFilename}`;
     }
@@ -53,9 +54,13 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString();
     const altText = customAlt || `Gold Fields corporate asset: ${cleanFilename}`;
 
+    const requestedClient = formData.get('clientId');
+    const clientId = isAgencyUser(user)
+      ? (typeof requestedClient === 'string' && requestedClient ? requestedClient : 'client_goldfields')
+      : user.client_id;
     await db.execute({
-      sql: `INSERT INTO media_assets (id, filename, url, mime_type, size_bytes, alt_text, caption, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO media_assets (id, filename, url, mime_type, size_bytes, alt_text, caption, client_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         assetId,
         cleanFilename,
@@ -63,7 +68,8 @@ export async function POST(req: NextRequest) {
         mimeType,
         sizeBytes,
         altText,
-        'Uploaded via Gold Fields Studio',
+        'Uploaded via Bastion Studio',
+        clientId,
         now
       ]
     });

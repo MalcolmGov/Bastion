@@ -32,6 +32,7 @@ function mapModelId(provider: string, modelId: string): string {
 }
 
 import { repairAndExtractChanges } from '@/lib/studio/aiJsonRepair';
+import { requireUser } from '@/lib/auth/guard';
 
 // Intelligent Built-in Design Technologist Synthesis (ensures zero blocking errors and seamless polish diffs)
 function synthesizeDesignChanges({
@@ -230,6 +231,8 @@ function synthesizeDesignChanges({
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requireUser();
+  if (!gate.ok) return gate.response;
   const startTime = Date.now();
   try {
     const body: PolishRequestBody = await req.json();

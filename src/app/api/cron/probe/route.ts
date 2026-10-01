@@ -1,11 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { runProberCycle } from '@/lib/sre/prober-daemon';
+import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
 
 /**
  * Background / Cron Route:
- * Can be called periodically by Vercel Cron, Hetzner systemd timer, or internal worker.
+ * Requires CRON_SECRET via Authorization: Bearer or x-cron-secret.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const provided = req.headers.get('x-cron-secret') || tokenFromRequest(req.headers.get('authorization'), null);
+  if (!secretsMatch(provided, readSecret('CRON_SECRET'))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const result = await runProberCycle();
     return NextResponse.json({
@@ -19,6 +24,6 @@ export async function GET() {
   }
 }
 
-export async function POST() {
-  return GET();
+export async function POST(req: NextRequest) {
+  return GET(req);
 }

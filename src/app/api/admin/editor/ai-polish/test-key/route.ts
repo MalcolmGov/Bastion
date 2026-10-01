@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/guard';
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
     const { provider, apiKey } = await req.json();
 
     if (!apiKey || typeof apiKey !== 'string' || !apiKey.trim()) {

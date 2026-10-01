@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { StudioUser, UserRole } from '@/lib/auth/auth';
+import { isAgencyOnlyPath, isAgencyUser } from '@/lib/auth/roles';
 
 interface AuthContextType {
   user: StudioUser | null;
@@ -51,6 +52,13 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
     checkAuth();
   }, [pathname, router]);
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+    if (!isAgencyUser(user) && isAgencyOnlyPath(pathname)) {
+      router.replace('/admin');
+    }
+  }, [isLoading, user, pathname, router]);
 
   const logout = async () => {
     try {

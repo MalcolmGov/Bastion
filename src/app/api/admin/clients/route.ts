@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { WebsiteAssembler } from '@/lib/studio/assembler';
+import { requireAgencyUser, requireUser } from '@/lib/auth/guard';
+import { isAgencyUser } from '@/lib/auth/roles';
 
 export async function GET() {
   try {
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
     const db = getDb();
     const clientsRes = await db.execute(`SELECT * FROM clients ORDER BY created_at ASC`);
     const websitesRes = await db.execute(`SELECT * FROM websites ORDER BY created_at ASC`);
@@ -20,7 +24,7 @@ export async function GET() {
       settings: typeof w.settings_json === 'string' ? JSON.parse(w.settings_json) : (w.settings_json || {})
     }));
 
-    const clients = clientsRes.rows.map(c => ({
+    let clients = clientsRes.rows.map(c => ({
       id: String(c.id),
       name: String(c.name),
       slug: String(c.slug),
@@ -29,7 +33,12 @@ export async function GET() {
       websites: websites.filter(w => w.clientId === String(c.id))
     }));
 
-    return NextResponse.json({ clients, websites });
+    if (!isAgencyUser(gate.user)) {
+      clients = clients.filter(c => c.id === gate.user.client_id);
+    }
+
+    const visibleWebsites = websites.filter(w => clients.some(c => c.id === w.clientId));
+    return NextResponse.json({ clients, websites: visibleWebsites });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -37,6 +46,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const body = await req.json();
     const {
       name,
