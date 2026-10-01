@@ -32,7 +32,7 @@ function mapModelId(provider: string, modelId: string): string {
 }
 
 import { repairAndExtractChanges } from '@/lib/studio/aiJsonRepair';
-import { requireUser } from '@/lib/auth/guard';
+import { assertSiteAccess, requirePermission, requireUser } from '@/lib/auth/guard';
 
 // Intelligent Built-in Design Technologist Synthesis (ensures zero blocking errors and seamless polish diffs)
 function synthesizeDesignChanges({
@@ -233,9 +233,20 @@ function synthesizeDesignChanges({
 export async function POST(req: NextRequest) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
+
+  const permGate = await requirePermission('content:edit');
+  if (!permGate.ok) {
+    return NextResponse.json({ error: 'Forbidden: content:edit permission required for AI Polish.' }, { status: 403 });
+  }
+
   const startTime = Date.now();
   try {
     const body: PolishRequestBody = await req.json();
+    const siteId = (body.pageContext as any)?.siteId || (body as any)?.siteId;
+    if (siteId) {
+      const siteGate = await assertSiteAccess(gate.user, siteId);
+      if (!siteGate.ok) return siteGate.response;
+    }
     const {
       provider,
       modelId,

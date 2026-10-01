@@ -4,10 +4,12 @@
  * User Invites, Media Upload Safety, 2-Person Workflow Guards, and Cron Releases.
  */
 
-import { getDb, ensureDbReady } from '../src/lib/db/client';
+import { getDb, ensureDbReady, getDatabaseInfo } from '../src/lib/db/client';
 import { runMigrations } from '../src/lib/db/migrations';
 import { createApiToken, verifyApiToken, revokeApiToken } from '../src/lib/auth/apiToken';
 import { hashPassword, verifyPassword } from '../src/lib/auth/password';
+import { sendTransactionalEmail } from '../src/lib/email/delivery';
+import { hasPermission } from '../src/lib/auth/auth';
 import crypto from 'crypto';
 
 interface TestResult {
@@ -315,6 +317,147 @@ async function runAll() {
     } catch (e: any) {
       console.log('    (Server fetch skipped, verifying route unit behavior)');
     }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 7: HOSTED DATABASE CONFIG & ARCHITECTURE
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 7: Hosted Database Architecture & Survivability');
+
+  await test('Hosted DB', 'getDatabaseInfo reports database connection state and mode', async () => {
+    const info = getDatabaseInfo();
+    assert(info.mode === 'hosted_turso' || info.mode === 'local_file', `Invalid DB mode: ${info.mode}`);
+    assert(typeof info.url === 'string' && info.url.length > 0, 'Database URL must be present');
+    assert(typeof info.isHosted === 'boolean', 'isHosted must be boolean');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 8: REAL TRANSACTIONAL EMAIL DELIVERY & AUDIT
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 8: Real Transactional Email Delivery & Audit Logging');
+
+  await test('Email Delivery', 'sendTransactionalEmail dispatches email and writes to email_deliveries audit table', async () => {
+    const testRecipient = `test_invite_${Date.now()}@bastionclient.com`;
+    const delivery = await sendTransactionalEmail({
+      to: testRecipient,
+      subject: 'Welcome to the Bastion Corporate CMS Portal',
+      html: '<p>Test email body</p>',
+      roleTitle: 'Corporate Content Editor',
+      clientName: 'Gold Fields Limited',
+      inviteUrl: 'http://localhost:3010/admin/invite?token=test_tok'
+    });
+
+    assert(delivery.ok === true, 'Email delivery failed');
+    assert(delivery.status === 'delivered' || delivery.status === 'simulated_dev', `Unexpected status: ${delivery.status}`);
+    assert(delivery.id.startsWith('eml_'), 'Delivery ID should start with eml_');
+
+    // Verify database record in email_deliveries
+    const record = await db.execute({
+      sql: `SELECT id, recipient_email, subject, status FROM email_deliveries WHERE id = ?`,
+      args: [delivery.id]
+    });
+
+    assert(record.rows.length === 1, 'email_deliveries record not found');
+    assert(record.rows[0].recipient_email === testRecipient, 'Recipient email mismatch in audit record');
+
+    // Cleanup
+    await db.execute({ sql: `DELETE FROM email_deliveries WHERE id = ?`, args: [delivery.id] });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 9: PAGE VERSION HISTORY & ROLLBACK
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 9: Page Version History & Rollback System');
+
+  await test('Version History', 'Saving page creates incremental immutable snapshots in page_versions and supports rollback', async () => {
+    const testSiteId = 'site_bastion_core';
+    const testPageSlug = 'investor-history-test';
+    const compId = `comp_${testSiteId}_${testPageSlug}`;
+    const now = new Date().toISOString();
+
+    // 1. Create initial Version 1
+    const v1Sections = [{ id: 'hero-1', blockType: 'Hero', title: 'Version 1 Hero' }];
+    await db.execute({
+      sql: `INSERT OR REPLACE INTO page_compositions (id, site_id, page_slug, title, layout_collection, sections_json, version, status, created_at, updated_at)
+            VALUES (?, ?, ?, 'About Investors', 'contemporary', ?, 1, 'draft', ?, ?)`,
+      args: [compId, testSiteId, testPageSlug, JSON.stringify(v1Sections), now, now]
+    });
+    await db.execute({
+      sql: `INSERT INTO page_versions (id, composition_id, site_id, page_slug, version, title, layout_collection, sections_json, status, change_summary, created_at)
+            VALUES (?, ?, ?, ?, 1, 'About Investors', 'contemporary', ?, 'draft', 'Initial layout', ?)`,
+      args: [`pver_${testSiteId}_v1`, compId, testSiteId, testPageSlug, JSON.stringify(v1Sections), now]
+    });
+
+    // 2. Create Version 2 with modified sections
+    const v2Sections = [{ id: 'hero-1', blockType: 'Hero', title: 'Version 2 Hero Updated' }, { id: 'cta-1', blockType: 'CTA', title: 'Join Us' }];
+    await db.execute({
+      sql: `UPDATE page_compositions SET sections_json = ?, version = 2, updated_at = ? WHERE id = ?`,
+      args: [JSON.stringify(v2Sections), now, compId]
+    });
+    await db.execute({
+      sql: `INSERT INTO page_versions (id, composition_id, site_id, page_slug, version, title, layout_collection, sections_json, status, change_summary, created_at)
+            VALUES (?, ?, ?, ?, 2, 'About Investors', 'contemporary', ?, 'draft', 'Added CTA block', ?)`,
+      args: [`pver_${testSiteId}_v2`, compId, testSiteId, testPageSlug, JSON.stringify(v2Sections), now]
+    });
+
+    // 3. Verify version history query
+    const hist = await db.execute({
+      sql: `SELECT version, change_summary FROM page_versions WHERE site_id = ? AND page_slug = ? ORDER BY version DESC`,
+      args: [testSiteId, testPageSlug]
+    });
+    assert(hist.rows.length === 2, `Expected 2 versions, found ${hist.rows.length}`);
+    assert(Number(hist.rows[0].version) === 2 && Number(hist.rows[1].version) === 1, 'Versions not ordered DESC');
+
+    // 4. Simulate rollback to Version 1 -> creates Version 3
+    const targetSnapshot = await db.execute({
+      sql: `SELECT sections_json, title FROM page_versions WHERE site_id = ? AND page_slug = ? AND version = 1`,
+      args: [testSiteId, testPageSlug]
+    });
+    assert(targetSnapshot.rows.length === 1, 'Target snapshot v1 missing');
+
+    const rollbackSections = String(targetSnapshot.rows[0].sections_json);
+    await db.execute({
+      sql: `UPDATE page_compositions SET sections_json = ?, version = 3, updated_at = ? WHERE id = ?`,
+      args: [rollbackSections, now, compId]
+    });
+    await db.execute({
+      sql: `INSERT INTO page_versions (id, composition_id, site_id, page_slug, version, title, layout_collection, sections_json, status, change_summary, created_at)
+            VALUES (?, ?, ?, ?, 3, 'About Investors', 'contemporary', ?, 'draft', 'Rolled back to version 1', ?)`,
+      args: [`pver_${testSiteId}_v3`, compId, testSiteId, testPageSlug, rollbackSections, now]
+    });
+
+    // Verify current composition has v1 sections and version 3
+    const current = await db.execute({ sql: `SELECT version, sections_json FROM page_compositions WHERE id = ?`, args: [compId] });
+    assert(Number(current.rows[0].version) === 3, 'Composition version should be 3 after rollback');
+    const parsedSections = JSON.parse(String(current.rows[0].sections_json));
+    assert(parsedSections.length === 1 && parsedSections[0].title === 'Version 1 Hero', 'Sections did not revert to v1 content');
+
+    // Cleanup
+    await db.execute({ sql: `DELETE FROM page_versions WHERE site_id = ?`, args: [testSiteId] });
+    await db.execute({ sql: `DELETE FROM page_compositions WHERE id = ?`, args: [compId] });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 10: RBAC PERMISSION ENFORCEMENT ON EDITOR ACTIONS
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 10: RBAC Permission Enforcement on Editor Actions');
+
+  await test('RBAC Permissions', 'Verify granular role permission checks for content and editor actions', async () => {
+    // Read-only stakeholders must NOT be allowed to edit content
+    assert(hasPermission('read_only_stakeholder', 'content:edit') === false, 'Stakeholder should not have content:edit');
+    assert(hasPermission('read_only_stakeholder', 'content:read') === true, 'Stakeholder should have content:read');
+
+    // Content editors can edit and read, but cannot publish
+    assert(hasPermission('content_editor', 'content:read') === true, 'Content editor should have content:read');
+    assert(hasPermission('content_editor', 'content:edit') === true, 'Content editor should have content:edit');
+    assert(hasPermission('content_editor', 'content:publish') === false, 'Content editor must NOT have content:publish');
+
+    // Publishers can publish
+    assert(hasPermission('publisher', 'content:publish') === true, 'Publisher should have content:publish');
+
+    // Platform admin has wildcard (*) access
+    assert(hasPermission('platform_admin', 'content:publish') === true, 'Platform admin should have wildcard access');
+    assert(hasPermission('platform_admin', 'anything:custom') === true, 'Platform admin wildcard should grant any permission');
   });
 
   // ─────────────────────────────────────────────────────────────

@@ -9,32 +9,39 @@ let rawClient: Client | null = null;
 let wrappedClient: Client | null = null;
 let initPromise: Promise<void> | null = null;
 
+export interface DatabaseInfo {
+  mode: 'hosted_turso' | 'local_file';
+  url: string;
+  isHosted: boolean;
+  hasAuthToken: boolean;
+}
+
+export function getDatabaseInfo(): DatabaseInfo {
+  const remoteUrl = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
+  const isHosted = !!remoteUrl && (remoteUrl.startsWith('libsql://') || remoteUrl.startsWith('https://'));
+  const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN;
+  return {
+    mode: isHosted ? 'hosted_turso' : 'local_file',
+    url: isHosted ? remoteUrl.replace(/:\/\/[^:]+:[^@]+@/, '://***:***@') : 'file:studio.db',
+    isHosted,
+    hasAuthToken: !!authToken
+  };
+}
+
 function getRawClient(): Client {
   if (!rawClient) {
     const isVercel = !!process.env.VERCEL;
+    const isProd = process.env.NODE_ENV === 'production';
     let url = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
 
     if (!url) {
-      if (isVercel) {
-        const tmpDbPath = '/tmp/studio.db';
-        const bundled = path.join(process.cwd(), 'studio.db');
-
-        // Copy bundled DB if /tmp/studio.db doesn't exist or is empty
-        try {
-          if (!fs.existsSync(tmpDbPath) || fs.statSync(tmpDbPath).size === 0) {
-            if (fs.existsSync(bundled) && fs.statSync(bundled).size > 0) {
-              fs.copyFileSync(bundled, tmpDbPath);
-              console.log('[DB] Successfully copied bundled studio.db to /tmp/studio.db');
-            }
-          }
-        } catch (e) {
-          console.warn('[DB] Could not copy studio.db to /tmp, will initialize from schema:', e);
-        }
-
-        url = `file:${tmpDbPath}`;
-      } else {
-        url = `file:${path.join(process.cwd(), 'studio.db')}`;
+      if (isProd || isVercel) {
+        console.warn(
+          '[DB ARCHITECTURE WARNING] Running in production/serverless without TURSO_DATABASE_URL. ' +
+          'Configure TURSO_DATABASE_URL and TURSO_AUTH_TOKEN to persist database records across deploys.'
+        );
       }
+      url = `file:${path.join(process.cwd(), 'studio.db')}`;
     }
 
     const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN;

@@ -351,6 +351,47 @@ export const migrations: Migration[] = [
 
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_sla_probes_site ON sla_probes (site_id, probed_at DESC);`);
     }
+  },
+  {
+    version: 9,
+    name: '009_email_deliveries_and_page_versions',
+    up: async (db: Client) => {
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS email_deliveries (
+          id TEXT PRIMARY KEY,
+          recipient_email TEXT NOT NULL,
+          subject TEXT NOT NULL,
+          role_title TEXT,
+          client_name TEXT,
+          provider TEXT NOT NULL DEFAULT 'resend',
+          status TEXT NOT NULL DEFAULT 'delivered',
+          provider_message_id TEXT,
+          error_message TEXT,
+          created_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_email_deliveries_recipient ON email_deliveries(recipient_email);`);
+
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS page_versions (
+          id TEXT PRIMARY KEY,
+          composition_id TEXT NOT NULL,
+          site_id TEXT NOT NULL,
+          page_slug TEXT NOT NULL,
+          version INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          layout_collection TEXT DEFAULT 'contemporary',
+          sections_json TEXT NOT NULL,
+          meta_json TEXT,
+          status TEXT NOT NULL DEFAULT 'draft',
+          created_by TEXT,
+          created_by_name TEXT,
+          change_summary TEXT,
+          created_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_page_versions_site_page ON page_versions(site_id, page_slug, version DESC);`);
+    }
   }
 ];
 

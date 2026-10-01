@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import { assertSiteAccess, requireUser } from '@/lib/auth/guard';
+import { assertSiteAccess, requirePermission, requireUser } from '@/lib/auth/guard';
 
 export async function GET(req: NextRequest) {
   try {
     const gate = await requireUser();
     if (!gate.ok) return gate.response;
+
+    const permGate = await requirePermission('content:read');
+    if (!permGate.ok) return permGate.response;
+
     const { searchParams } = new URL(req.url);
     const siteId = searchParams.get('siteId') || 'site_apex_strategy';
     const siteGate = await assertSiteAccess(gate.user, siteId);
@@ -77,34 +81,78 @@ export async function POST(req: NextRequest) {
   try {
     const gate = await requireUser();
     if (!gate.ok) return gate.response;
+
     const body = await req.json();
-    const { siteId, pageSlug = 'home', sections, title, status = 'draft' } = body;
+    const { siteId, pageSlug = 'home', sections, title, layoutCollection = 'contemporary', meta, status = 'draft', changeSummary } = body;
     if (!siteId) {
       return NextResponse.json({ error: 'siteId is required' }, { status: 400 });
     }
+
     const siteGate = await assertSiteAccess(gate.user, siteId);
     if (!siteGate.ok) return siteGate.response;
-    if (status === 'published' && gate.user.role !== 'platform_admin' && gate.user.role !== 'publisher') {
-      return NextResponse.json({ error: 'Forbidden: only a publisher can publish a page.' }, { status: 403 });
+
+    if (status === 'published') {
+      const pubGate = await requirePermission('content:publish');
+      if (!pubGate.ok) {
+        return NextResponse.json({ error: 'Forbidden: only a publisher can publish a page composition.' }, { status: 403 });
+      }
+    } else {
+      const editGate = await requirePermission('content:edit');
+      if (!editGate.ok) {
+        return NextResponse.json({ error: 'Forbidden: content:edit permission required.' }, { status: 403 });
+      }
     }
+
     const db = getDb();
     const now = new Date().toISOString();
 
-    const compId = `comp_${siteId}_${pageSlug}_v1`;
+    // Query existing composition and calculate next version number
+    const existingRes = await db.execute({
+      sql: `SELECT id, version FROM page_compositions WHERE site_id = ? AND page_slug = ? LIMIT 1`,
+      args: [siteId, pageSlug]
+    });
+
+    const currentVersion = existingRes.rows.length > 0 ? Number(existingRes.rows[0].version || 1) : 0;
+    const newVersion = currentVersion + 1;
+    const compId = existingRes.rows.length > 0 ? String(existingRes.rows[0].id) : `comp_${siteId}_${pageSlug}`;
 
     await db.execute({
-      sql: `INSERT OR REPLACE INTO page_compositions (id, site_id, page_slug, title, layout_collection, sections_json, version, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT OR REPLACE INTO page_compositions (id, site_id, page_slug, title, layout_collection, sections_json, meta_json, version, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         compId,
         siteId,
         pageSlug,
         title || 'Page',
-        'contemporary',
-        JSON.stringify(sections),
-        1,
+        layoutCollection,
+        JSON.stringify(sections || []),
+        meta ? JSON.stringify(meta) : null,
+        newVersion,
         status,
         now,
+        now
+      ]
+    });
+
+    // Record immutable historical version snapshot
+    const versionId = `pver_${siteId}_${pageSlug}_v${newVersion}`;
+    await db.execute({
+      sql: `INSERT INTO page_versions (id, composition_id, site_id, page_slug, version, title, layout_collection, sections_json, meta_json, status, created_by, created_by_name, change_summary, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        versionId,
+        compId,
+        siteId,
+        pageSlug,
+        newVersion,
+        title || 'Page',
+        layoutCollection,
+        JSON.stringify(sections || []),
+        meta ? JSON.stringify(meta) : null,
+        status,
+        gate.user.id,
+        gate.user.name,
+        changeSummary || (status === 'published' ? `Published version ${newVersion}` : `Draft snapshot v${newVersion}`),
         now
       ]
     });
@@ -142,7 +190,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, compositionId: compId, savedAt: now });
+    return NextResponse.json({
+      success: true,
+      compositionId: compId,
+      version: newVersion,
+      savedAt: now
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import { generateToken, hashPassword } from '@/lib/auth/auth';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
+import { sendTransactionalEmail } from '@/lib/email/delivery';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
@@ -96,15 +97,24 @@ export async function POST(req: NextRequest) {
       inviterName: `${currentUser.name} (${isAgencyUser(currentUser) ? 'Bastion Agency' : clientName})`
     });
 
+    const delivery = await sendTransactionalEmail({
+      to: cleanEmail,
+      subject: `Welcome to the ${clientName} Corporate CMS Portal`,
+      html: emailHtml,
+      roleTitle: roleTitles[role] || 'Corporate Workspace Member',
+      clientName,
+      inviteUrl
+    });
+
     return NextResponse.json({
       success: true,
-      message: `Invitation generated successfully for ${cleanEmail}`,
+      message: `Invitation ${delivery.status === 'delivered' ? 'dispatched via email' : 'generated'} successfully for ${cleanEmail}`,
       userId,
       email: cleanEmail,
       inviteUrl,
       inviteToken,
       expiresAt,
-      emailHtml
+      delivery
     });
   } catch (err: any) {
     console.error('Invite error:', err);
