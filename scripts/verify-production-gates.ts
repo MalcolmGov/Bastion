@@ -18,6 +18,7 @@ import { createDatabaseBackup, runRestoreDrill } from './backup-restore-drill';
 import { checkLoginRateLimit, checkApiRateLimit, resetRateLimit } from '../src/lib/security/rateLimiter';
 import { createSensAnnouncement, listSensAnnouncements, deleteSensAnnouncement } from '../src/lib/ir/sensService';
 import { createCalendarEvent, listCalendarEvents, generateIcsContent, calculateDividendTax, deleteCalendarEvent } from '../src/lib/ir/calendarService';
+import { runGovernanceAudit, getLatestGovernanceAudit, getGovernanceAuditHistory } from '../src/lib/governance/governanceEngine';
 import crypto from 'crypto';
 
 interface TestResult {
@@ -720,6 +721,59 @@ async function runAll() {
 
     // Cleanup
     await deleteCalendarEvent(event.id, 'client_goldfields');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 19: KING IV & POPIA AUTOMATED GOVERNANCE SCORECARD
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 19: King IV & POPIA Automated Governance Scorecard');
+
+  await test('Governance Scorecard', 'Automated statutory audit executes 16 compliance rules and computes weighted category scores', async () => {
+    // 1. Run audit for Gold Fields
+    const audit = await runGovernanceAudit('client_goldfields');
+
+    assert(audit.id.startsWith('gov_audit_'), 'Audit ID must start with gov_audit_');
+    assert(audit.totalChecks === 16, `Expected 16 statutory checks, got ${audit.totalChecks}`);
+    assert(audit.overallScore >= 0 && audit.overallScore <= 100, `Overall score must be 0-100, got ${audit.overallScore}`);
+    assert(audit.popiaScore >= 0 && audit.popiaScore <= 100, `POPIA score must be 0-100, got ${audit.popiaScore}`);
+    assert(audit.paiaScore >= 0 && audit.paiaScore <= 100, `PAIA score must be 0-100, got ${audit.paiaScore}`);
+    assert(audit.kingIvScore >= 0 && audit.kingIvScore <= 100, `King IV score must be 0-100, got ${audit.kingIvScore}`);
+    assert(audit.securityScore >= 0 && audit.securityScore <= 100, `Security score must be 0-100, got ${audit.securityScore}`);
+    assert(Array.isArray(audit.checks) && audit.checks.length === 16, 'Audit checks array must contain 16 items');
+
+    // Verify statutory categories
+    const checks = audit.checks || [];
+    const popiaChecks = checks.filter(c => c.category === 'popia');
+    const paiaChecks = checks.filter(c => c.category === 'paia');
+    const kingIvChecks = checks.filter(c => c.category === 'king_iv');
+    const secChecks = checks.filter(c => c.category === 'security');
+
+    assert(popiaChecks.length === 4, `Expected 4 POPIA checks, got ${popiaChecks.length}`);
+    assert(paiaChecks.length === 2, `Expected 2 PAIA checks, got ${paiaChecks.length}`);
+    assert(kingIvChecks.length === 6, `Expected 6 King IV checks, got ${kingIvChecks.length}`);
+    assert(secChecks.length === 4, `Expected 4 Security checks, got ${secChecks.length}`);
+
+    // Verify database storage
+    const latest = await getLatestGovernanceAudit('client_goldfields');
+    assert(!!latest, 'Latest governance audit must be retrievable from database');
+    assert(latest!.id === audit.id, 'Retrieved audit ID must match executed audit ID');
+  });
+
+  await test('Governance Scorecard', 'Multi-tenant isolation ensures Client A audit records never leak into Client B portfolio', async () => {
+    // Run audit for Vodacom
+    const vodacomAudit = await runGovernanceAudit('client_vodacom_group');
+    assert(vodacomAudit.clientId === 'client_vodacom_group', 'Vodacom audit must be scoped to client_vodacom_group');
+
+    // Retrieve Gold Fields latest
+    const gfLatest = await getLatestGovernanceAudit('client_goldfields');
+    assert(gfLatest?.clientId === 'client_goldfields', 'Gold Fields query must only return Gold Fields client audits');
+    assert(gfLatest?.id !== vodacomAudit.id, 'Client A audit must never overwrite or collide with Client B audit');
+
+    // Verify audit history scoping
+    const gfHistory = await getGovernanceAuditHistory('client_goldfields', 5);
+    for (const h of gfHistory) {
+      assert(h.clientId === 'client_goldfields', `History entry ${h.id} leaked wrong clientId: ${h.clientId}`);
+    }
   });
 
   // ─────────────────────────────────────────────────────────────

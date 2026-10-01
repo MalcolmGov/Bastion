@@ -464,6 +464,54 @@ export const migrations: Migration[] = [
       `);
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_inv_reports_client_year ON investor_reports(client_id, fiscal_year DESC);`);
     }
+  },
+  {
+    version: 11,
+    name: '011_governance_and_compliance_scorecard',
+    up: async (db: Client) => {
+      // 1. Governance Audits Table
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS governance_audits (
+          id TEXT PRIMARY KEY,
+          client_id TEXT NOT NULL REFERENCES clients(id),
+          site_id TEXT NOT NULL,
+          overall_score INTEGER NOT NULL,
+          popia_score INTEGER NOT NULL,
+          paia_score INTEGER NOT NULL,
+          king_iv_score INTEGER NOT NULL,
+          security_score INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'compliant',
+          total_checks INTEGER NOT NULL DEFAULT 0,
+          passed_checks INTEGER NOT NULL DEFAULT 0,
+          warning_checks INTEGER NOT NULL DEFAULT 0,
+          failed_checks INTEGER NOT NULL DEFAULT 0,
+          scanned_by TEXT DEFAULT 'Bastion Statutory Compliance Engine',
+          created_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_gov_audits_client ON governance_audits(client_id, created_at DESC);`);
+
+      // 2. Governance Check Results Table
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS governance_check_results (
+          id TEXT PRIMARY KEY,
+          audit_id TEXT NOT NULL REFERENCES governance_audits(id) ON DELETE CASCADE,
+          client_id TEXT NOT NULL REFERENCES clients(id),
+          rule_id TEXT NOT NULL,
+          category TEXT NOT NULL,
+          title TEXT NOT NULL,
+          statutory_ref TEXT NOT NULL,
+          status TEXT NOT NULL,
+          severity TEXT NOT NULL,
+          score_weight INTEGER NOT NULL DEFAULT 10,
+          evidence_text TEXT,
+          remediation_advice TEXT,
+          created_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_gov_results_audit ON governance_check_results(audit_id, category);`);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_gov_results_client ON governance_check_results(client_id);`);
+    }
   }
 ];
 

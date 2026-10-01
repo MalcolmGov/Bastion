@@ -40,6 +40,7 @@ import {
   PanelLeftOpen,
   CalendarCheck,
   ShieldAlert,
+  ShieldCheck,
   Key
 } from 'lucide-react';
 
@@ -385,6 +386,7 @@ export function AdminSidebar() {
                 )}
                 <div className="space-y-1">
                   {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'), 'Drops', 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800')}
+                  {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'), 'King IV', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
                   {renderItem('/admin/tasks', 'Approvals & Sign-Off', Send, pathname.startsWith('/admin/tasks'), 'Queue', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                   {renderItem('/admin/users', 'Authorized Editors', Users, pathname.startsWith('/admin/users'))}
                 </div>
@@ -442,6 +444,7 @@ export function AdminSidebar() {
                 )}
                 <div className="space-y-1">
                   {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'), 'Drops', 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800')}
+                  {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'), 'King IV', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
                   {renderItem('/admin/tasks', 'Reviews & Publishing', Send, pathname.startsWith('/admin/tasks'), '2', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                   {renderItem('/admin/users', 'Team & Access Control', UserPlus, pathname.startsWith('/admin/users'))}
                 </div>
