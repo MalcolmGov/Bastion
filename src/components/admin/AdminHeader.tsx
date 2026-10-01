@@ -23,7 +23,8 @@ import {
   ArrowRight,
   LogOut,
   User,
-  ShieldCheck
+  ShieldCheck,
+  Eye
 } from 'lucide-react';
 
 import { useDashboardCustomizer } from './DashboardCustomizerProvider';
@@ -258,6 +259,29 @@ export function AdminHeader() {
               </div>
             )}
           </div>
+
+          {/* Quick Toggle: Client Experience Sandbox */}
+          {!isClientPortal ? (
+            <button
+              type="button"
+              onClick={() => setPortalViewMode('client')}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition shadow-2xs cursor-pointer group"
+              title="Experience the zero-code CMS interface seen by corporate clients"
+            >
+              <Eye className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+              <span>Client Sandbox</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPortalViewMode('agency')}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 transition shadow-2xs cursor-pointer group"
+              title="Return to Bastion Agency Studio Operations"
+            >
+              <Sliders className="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span>Agency Studio</span>
+            </button>
+          )}
 
           {/* Connected Client Website Selector */}
           <div ref={siteDropdownRef} className="relative hidden md:block">

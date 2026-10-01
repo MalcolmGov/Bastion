@@ -68,10 +68,11 @@ export function CommercialDocumentTemplate({
   const isPaid = doc.status === 'paid';
   const isAccepted = doc.status === 'accepted';
 
+  const isProposal = doc.docNumber?.startsWith('PRO-');
   const docTitle = isInvoice
     ? 'TAX INVOICE'
     : isQuote
-    ? 'COMMERCIAL QUOTATION'
+    ? (isProposal ? 'ENTERPRISE PROPOSAL & QUOTATION' : 'COMMERCIAL QUOTATION')
     : doc.type === 'receipt'
     ? 'PAYMENT RECEIPT'
     : 'COMMERCIAL DOCUMENT';

@@ -453,6 +453,7 @@ export function AdminSidebar() {
             <button
               type="button"
               onClick={() => setPortalViewMode(portalViewMode === 'client' ? 'agency' : 'client')}
+              title={portalViewMode === 'client' ? 'Switch to Bastion Agency Studio' : 'Launch Client Experience Sandbox'}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold transition cursor-pointer ${
                 portalViewMode === 'client'
                   ? 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 border-amber-300 dark:border-amber-800/50 text-amber-900 dark:text-amber-300'
@@ -465,7 +466,7 @@ export function AdminSidebar() {
                   className={`w-2 h-2 rounded-full ${portalViewMode === 'client' ? 'animate-pulse' : ''}`} 
                 />
                 <span className="truncate">
-                  {portalViewMode === 'client' ? 'Switch to Agency View' : 'Switch to Client View'}
+                  {portalViewMode === 'client' ? 'Exit to Agency Studio' : 'Client Experience Sandbox'}
                 </span>
               </span>
               <ArrowRightLeft className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />

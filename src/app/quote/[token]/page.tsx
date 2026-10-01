@@ -279,7 +279,7 @@ export default function QuoteSignPortal({ params }: ClientPortalProps) {
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
             <div>
               <div className="text-xs font-mono font-bold text-sky-400 uppercase tracking-widest mb-1.5">
-                Official Proposal & Agreement
+                {quote.docNumber?.startsWith('PRO-') ? 'Enterprise Acquisition Proposal' : 'Official Quotation & Agreement'}
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 {quote.docNumber}
@@ -301,15 +301,30 @@ export default function QuoteSignPortal({ params }: ClientPortalProps) {
               <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
                 Prepared Specifically For
               </div>
-              <div className="text-sm font-bold text-white">{client?.name || 'Valued Client'}</div>
-              {client?.contact?.name && (
-                <div className="text-xs text-slate-300 mt-0.5">{client.contact.name}</div>
+              <div className="text-sm font-bold text-white">
+                {quote.clientLegalName || client?.name || 'Valued Client'}
+              </div>
+              {quote.clientRegNo && (
+                <div className="text-[10px] text-slate-400 font-mono">Reg: {quote.clientRegNo}</div>
               )}
-              {client?.contact?.email && (
-                <div className="text-[11px] text-slate-400 mt-0.5">{client.contact.email}</div>
+              {quote.clientVat && (
+                <div className="text-[10px] text-slate-400 font-mono">VAT: {quote.clientVat}</div>
+              )}
+              {(quote.clientContactPerson || client?.contact?.name) && (
+                <div className="text-xs text-slate-300 mt-0.5">
+                  Attn: {quote.clientContactPerson || client?.contact?.name}
+                </div>
+              )}
+              {(quote.clientEmail || client?.contact?.email) && (
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  {quote.clientEmail || client?.contact?.email}
+                </div>
+              )}
+              {quote.poNumber && (
+                <div className="text-[10px] font-mono text-emerald-400 mt-1 font-semibold">PO Ref: {quote.poNumber}</div>
               )}
               {client?.siteName && (
-                <div className="text-[10px] font-mono text-sky-400 mt-1">Project: {client.siteName}</div>
+                <div className="text-[10px] font-mono text-sky-400 mt-0.5">Project: {client.siteName}</div>
               )}
             </div>
           </div>

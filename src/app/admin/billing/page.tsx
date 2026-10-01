@@ -639,8 +639,13 @@ export default function AdminBillingPage() {
 
                       {/* Client */}
                       <td className="py-3.5 px-4">
-                        <div className="font-semibold text-slate-900 dark:text-slate-100">
-                          {clientObj?.name || doc.companyName || 'Corporate Client'}
+                        <div className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
+                          <span>{doc.clientLegalName || clientObj?.name || doc.companyName || 'Corporate Client'}</span>
+                          {doc.docNumber?.startsWith('PRO-') && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                              Enterprise Proposal
+                            </span>
+                          )}
                         </div>
                         <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
                           <span>{doc.items.length} line items</span>

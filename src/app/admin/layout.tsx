@@ -7,6 +7,7 @@ import { AdminAuthProvider } from '@/components/admin/AdminAuthProvider';
 import { StudioWorkspaceProvider } from '@/components/admin/StudioWorkspaceProvider';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminHeader } from '@/components/admin/AdminHeader';
+import { ClientSandboxBanner } from '@/components/admin/ClientSandboxBanner';
 import { DashboardCustomizerProvider } from '@/components/admin/DashboardCustomizerProvider';
 import { ZaraVoiceCopilot } from '@/components/copilot/ZaraVoiceCopilot';
 
@@ -48,6 +49,7 @@ export default function AdminRootLayout({
               {/* Main Content Area */}
               <div className="flex-1 flex flex-col min-w-0">
                 <AdminHeader />
+                <ClientSandboxBanner />
                 <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
                   {children}
                 </main>

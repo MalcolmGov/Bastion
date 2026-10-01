@@ -690,5 +690,279 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
     ]
   });
 
-  console.log('✓ Move Studio multi-tenant seed complete (3 clients, 3 blueprints, 3 design collections).');
+  // --- CLIENT BASTION: Bastion Group Holdings (Platform Acquirer & Holding Enterprise) ---
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      'client_bastion',
+      'Bastion Group Holdings',
+      'bastion-group',
+      'agency_holding',
+      '/assets/bastion-logo.svg',
+      JSON.stringify({ name: 'Jacques Marais', email: 'executive@bastiongroup.co.za', phone: '+27 11 883 4000' }),
+      JSON.stringify({
+        legalEntityName: 'Bastion Group Holdings (Pty) Ltd',
+        registrationNumber: '2024/091823/07',
+        vatNumber: '4820194821',
+        billingAddress: '100 Sandton Drive, Sandton, Johannesburg, 2196, South Africa',
+        billingContactName: 'Jacques Marais',
+        billingEmail: 'finance@bastiongroup.co.za',
+        billingPhone: '+27 11 883 4000',
+        currency: 'R',
+        paymentTerms: '50% on signature, 25% staging, 25% signoff',
+        poNumberRequired: true
+      }),
+      now,
+      now
+    ]
+  });
+
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO websites (id, client_id, name, slug, blueprint_id, design_collection_id, status, primary_domain, settings_json, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      'site_bastion_core',
+      'client_bastion',
+      'Bastion Group Corporate Hub',
+      'bastion-holding',
+      'corporate',
+      'contemporary',
+      'published',
+      'bastiongroup.co.za',
+      JSON.stringify({
+        enabledModules: { publicAssistant: true },
+        navigation: { mainNav: [{ label: 'Overview', href: '/' }] }
+      }),
+      now,
+      now
+    ]
+  });
+
+  // --- SEED COMMERCIAL PIPELINE: BASTION ACQUISITION PROPOSAL & ENTERPRISE INVOICES ---
+  const bastionProposalItems = [
+    {
+      id: 'item_pro_1',
+      description: 'Move Studio Enterprise Multi-Tenant Core Platform License & Proprietary IP Transfer',
+      qty: 1,
+      unitPrice: 285000,
+      taxRate: 15
+    },
+    {
+      id: 'item_pro_2',
+      description: 'Client Rapid Onboarding Engine & 5-Step Corporate Provisioning Wizard',
+      qty: 1,
+      unitPrice: 85000,
+      taxRate: 15
+    },
+    {
+      id: 'item_pro_3',
+      description: 'Real-Time Visual Canvas & No-Code Client CMS Portal Experience',
+      qty: 1,
+      unitPrice: 110000,
+      taxRate: 15
+    },
+    {
+      id: 'item_pro_4',
+      description: 'Enterprise Commercial Quoting, Invoicing & SARS-Compliant Billing Engine',
+      qty: 1,
+      unitPrice: 65000,
+      taxRate: 15
+    },
+    {
+      id: 'item_pro_5',
+      description: 'Pre-Engineered Turnkey Flagship Corporate Sites (Gold Fields, Vodacom, Solaris, Apex)',
+      qty: 1,
+      unitPrice: 180000,
+      taxRate: 15
+    },
+    {
+      id: 'item_pro_6',
+      description: 'Tier-1 High Availability SRE Architecture & Annual SLA Support Retainer (Year 1)',
+      qty: 1,
+      unitPrice: 95000,
+      taxRate: 15
+    }
+  ];
+
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO billing_docs (
+      id, client_id, site_id, type, status, doc_number, issue_date, due_date, currency,
+      items_json, notes, bank_name, account_no, branch_code, swift_code, payment_ref,
+      company_name, company_address, company_email, company_phone, company_vat, company_reg_no,
+      client_legal_name, client_reg_no, client_address, client_email, client_phone, client_vat, client_contact_person, payment_terms, po_number,
+      sent_at, reminders_count, acceptance_token, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      'doc_pro_2026_bastion',
+      'client_bastion',
+      'site_bastion_core',
+      'quote',
+      'sent',
+      'PRO-2026-BASTION',
+      '2026-06-01',
+      '2026-11-30',
+      'R',
+      JSON.stringify(bastionProposalItems),
+      'Commercial Acquisition Proposal & Implementation Terms:\n\n1. SCOPE & IP TRANSFER: Move Digital Studio delivers complete source code, deployment pipelines, design system tokens, and multi-tenant database architectures for Move Studio to Bastion Group Holdings (Pty) Ltd under perpetual, unrestricted enterprise ownership.\n2. MULTI-TENANT CAPACITY: Architecture pre-configured for unlimited enterprise client tenants, including turnkey instances for Gold Fields Limited, Vodacom Group, Solaris Clean Energy, and Apex Advisory Partners.\n3. SARS COMPLIANCE & LEGAL GOVERNANCE: Integrated corporate tax invoice generation, CIPC registration records, and cryptographic digital signature audit logging.\n4. ACCEPTANCE & MOBILIZATION: Immediate staging provisioning within 48 hours of digital signature.',
+      'First National Bank (FNB)',
+      '62849102941',
+      '250655',
+      'FIRNZAJJ',
+      'PRO-2026-BASTION',
+      'Move Digital Studio (Pty) Ltd',
+      'Sandton City Atrium, 5th Floor, Sandton, Johannesburg, 2196',
+      'enterprise@movedigital.co.za',
+      '+27 11 784 9000',
+      '4920281948',
+      '2021/489210/07',
+      'Bastion Group Holdings (Pty) Ltd',
+      '2024/091823/07',
+      '100 Sandton Drive, Sandton, Johannesburg, 2196, South Africa',
+      'executive@bastiongroup.co.za',
+      '+27 11 883 4000',
+      '4820194821',
+      'Jacques Marais — Managing Director',
+      '50% mobilization deposit upon digital acceptance, 25% upon multi-client staging delivery, 25% upon final signoff & production IP handover.',
+      'PO-BASTION-2026-001',
+      '2026-06-01T09:00:00Z',
+      1,
+      'tok_bastion_platform_proposal_2026',
+      now,
+      now
+    ]
+  });
+
+  const gfInvoiceItems = [
+    {
+      id: 'item_gf_1',
+      description: 'Enterprise Corporate Flagship CMS Retainer & SENS Feeds (Q3 2026)',
+      qty: 3,
+      unitPrice: 35000,
+      taxRate: 15
+    },
+    {
+      id: 'item_gf_2',
+      description: 'GISTM Tailings Compliance Interactive Geospatial Mapping Module',
+      qty: 1,
+      unitPrice: 40000,
+      taxRate: 15
+    }
+  ];
+
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO billing_docs (
+      id, client_id, site_id, type, status, doc_number, issue_date, due_date, currency,
+      items_json, notes, bank_name, account_no, branch_code, swift_code, payment_ref,
+      company_name, company_address, company_email, company_phone, company_vat, company_reg_no,
+      client_legal_name, client_reg_no, client_address, client_email, client_phone, client_vat, client_contact_person, payment_terms, po_number,
+      sent_at, paid_at, amount_paid, acceptance_token, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      'doc_inv_2026_gf01',
+      'client_goldfields',
+      'site_goldfields_flagship',
+      'invoice',
+      'paid',
+      'INV-2026-GF01',
+      '2026-09-01',
+      '2026-09-30',
+      'R',
+      JSON.stringify(gfInvoiceItems),
+      'Tax Invoice for Q3 Enterprise CMS Hosting, High-Availability SRE SLA, and SENS Financial Integration.',
+      'First National Bank (FNB)',
+      '62849102941',
+      '250655',
+      'FIRNZAJJ',
+      'INV-2026-GF01',
+      'Bastion Group (Pty) Ltd',
+      '100 Sandton Drive, Sandton, Johannesburg, 2196',
+      'billing@bastiongroup.co.za',
+      '+27 11 883 4000',
+      '4820194821',
+      '2024/091823/07',
+      'Gold Fields Limited',
+      '1968/004880/06',
+      '150 Helen Road, Sandown, Sandton, Johannesburg, 2196, South Africa',
+      'accounts.payable@goldfields.com',
+      '+27 11 562 9700',
+      '4690104820',
+      'Sipho Dlamini — Head of Communications',
+      'Net 30 Days. EFT to Bastion Group Operations account.',
+      'PO-GF-2026-8812',
+      '2026-09-01T10:00:00Z',
+      '2026-09-24T14:32:00Z',
+      166750,
+      'tok_gf_tax_invoice_2026_q3',
+      now,
+      now
+    ]
+  });
+
+  const vodProposalItems = [
+    {
+      id: 'item_vod_1',
+      description: 'Pan-African Corporate Portal Multi-Region Cloud Architecture',
+      qty: 1,
+      unitPrice: 180000,
+      taxRate: 15
+    },
+    {
+      id: 'item_vod_2',
+      description: 'Enterprise Telecom Regulatory Disclosures & Investor Relations Hub',
+      qty: 1,
+      unitPrice: 100000,
+      taxRate: 15
+    }
+  ];
+
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO billing_docs (
+      id, client_id, site_id, type, status, doc_number, issue_date, due_date, currency,
+      items_json, notes, bank_name, account_no, branch_code, swift_code, payment_ref,
+      company_name, company_address, company_email, company_phone, company_vat, company_reg_no,
+      client_legal_name, client_reg_no, client_address, client_email, client_phone, client_vat, client_contact_person, payment_terms, po_number,
+      sent_at, reminders_count, acceptance_token, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      'doc_quo_2026_vod01',
+      'client_vodacom_group',
+      'site_vodacom_group',
+      'quote',
+      'sent',
+      'QUO-2026-VOD01',
+      '2026-09-15',
+      '2026-10-15',
+      'R',
+      JSON.stringify(vodProposalItems),
+      'Commercial Proposal for Pan-African Corporate DXP Rollout and Zero-Code Tenant Provisioning.',
+      'First National Bank (FNB)',
+      '62849102941',
+      '250655',
+      'FIRNZAJJ',
+      'QUO-2026-VOD01',
+      'Bastion Group (Pty) Ltd',
+      '100 Sandton Drive, Sandton, Johannesburg, 2196',
+      'billing@bastiongroup.co.za',
+      '+27 11 883 4000',
+      '4820194821',
+      '2024/091823/07',
+      'Vodacom Group Limited',
+      '1993/005461/06',
+      'Vodacom Corporate Park, 082 Vodacom Boulevard, Midrand, 1685, South Africa',
+      'procurement@vodacom.co.za',
+      '+27 11 546 1000',
+      '4160136270',
+      'Lerato Khumalo — Head of Group Digital',
+      'Net 30 Days. 50% deposit upon acceptance.',
+      'PO-VOD-2026-1092',
+      '2026-09-15T11:00:00Z',
+      0,
+      'tok_vodacom_proposal_2026',
+      now,
+      now
+    ]
+  });
+
+  console.log('✓ Move Studio multi-tenant seed complete (4 clients, 4 websites, commercial pipeline & proposal PRO-2026-BASTION).');
 }
