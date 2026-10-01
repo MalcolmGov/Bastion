@@ -339,6 +339,7 @@ export function AdminSidebar() {
                 )}
                 <div className="space-y-1">
                   {renderItem('/admin/editor', 'Visual Page Editor', Edit3, pathname.startsWith('/admin/editor'), 'Studio', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
+                  {renderItem('/admin/analytics', 'Audience & Analytics', BarChart3, pathname.startsWith('/admin/analytics'))}
                   {renderItem('/admin/api-keys', 'AI API Keys', Key, pathname.startsWith('/admin/api-keys'), 'AI', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                   {renderItem('/admin/media', 'Media Library', FolderOpen, pathname.startsWith('/admin/media'))}
                 </div>

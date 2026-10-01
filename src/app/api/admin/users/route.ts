@@ -35,14 +35,17 @@ export async function POST(req: NextRequest) {
       name,
       email,
       role = 'content_editor',
-      clientName = 'Gold Fields Limited',
+      clientName = 'Bastion Group',
       clientScope = 'All',
-      initialPassword = 'GoldFields2026!'
+      initialPassword
     } = body;
 
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required.' }, { status: 400 });
     }
+
+    const sanitizedClient = (clientName || 'Bastion').replace(/[^a-zA-Z0-9]/g, '') || 'Bastion';
+    const computedPassword = initialPassword || `${sanitizedClient}2026!`;
 
     const db = getDb();
 
@@ -54,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
     const userId = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const passHash = hashPassword(initialPassword);
+    const passHash = hashPassword(computedPassword);
 
     if (existing.rows.length > 0) {
       // Update existing user role and scope
@@ -90,7 +93,7 @@ export async function POST(req: NextRequest) {
       roleTitle: roleTitles[role] || 'Corporate Content Editor',
       clientName: clientName,
       loginUrl: loginUrl,
-      temporaryPassword: initialPassword,
+      temporaryPassword: computedPassword,
       inviterName: `${currentUser.name} (Bastion Group)`
     });
 

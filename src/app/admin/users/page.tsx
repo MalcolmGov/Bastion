@@ -34,7 +34,7 @@ interface UserRecord {
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAdminAuth();
-  const { activeClient } = useStudioWorkspace();
+  const { clients, activeClient } = useStudioWorkspace();
 
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,8 +45,17 @@ export default function AdminUsersPage() {
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('content_editor');
-  const [inviteClientName, setInviteClientName] = useState(activeClient?.name || 'Gold Fields Limited');
+  const [inviteClientName, setInviteClientName] = useState(activeClient?.name || 'Bastion Group');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (activeClient?.name) {
+      setInviteClientName(activeClient.name);
+    }
+  }, [activeClient?.name]);
+
+  const sanitizedClient = inviteClientName.replace(/[^a-zA-Z0-9]/g, '') || 'Bastion';
+  const dynamicTempPassword = `${sanitizedClient}2026!`;
 
   // Email Preview Modal State
   const [previewEmailHtml, setPreviewEmailHtml] = useState<string | null>(null);
@@ -87,7 +96,8 @@ export default function AdminUsersPage() {
           email: inviteEmail,
           role: inviteRole,
           clientName: inviteClientName,
-          clientScope: inviteClientName
+          clientScope: inviteClientName,
+          initialPassword: dynamicTempPassword
         })
       });
 
@@ -358,10 +368,12 @@ export default function AdminUsersPage() {
                     onChange={(e) => setInviteClientName(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-[#070B12] border border-[#1E293B] text-white focus:outline-hidden focus:border-amber-500 font-medium"
                   >
-                    <option value="Bastion Group">Bastion Group</option>
-                    <option value="Gold Fields Limited">Gold Fields Limited</option>
-                    <option value="Swifter">Swifter</option>
-                    <option value="Apex Advisory Partners">Apex Advisory</option>
+                    <option value="Bastion Group">Bastion Group (Platform Owner)</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -369,7 +381,7 @@ export default function AdminUsersPage() {
               <div className="p-3 rounded-xl bg-[#070B12] border border-[#1E293B] flex items-center space-x-2 text-[11px] text-slate-400">
                 <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>
-                  Initial temporary password will be set to <code className="text-amber-300 font-mono">GoldFields2026!</code> and sent in the visual welcome emailer.
+                  Initial temporary password will be set to <code className="text-amber-300 font-mono">{dynamicTempPassword}</code> and sent in the visual welcome emailer.
                 </span>
               </div>
 

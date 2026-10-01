@@ -29,11 +29,12 @@ export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
 
   const clientName = rawClient;
   const recipientEmail = rawEmail;
+  const sanitizedClient = clientName.replace(/[^a-zA-Z0-9]/g, '') || 'Bastion';
   const {
     recipientName = 'Malcolm Govender',
     roleTitle = 'Platform Administrator',
     loginUrl: rawLoginUrl = 'http://localhost:3010/admin/login',
-    temporaryPassword = 'GoldFields2026!',
+    temporaryPassword = options.temporaryPassword || `${sanitizedClient}2026!`,
     inviterName = 'Bastion Group Platform Operations'
   } = options;
 

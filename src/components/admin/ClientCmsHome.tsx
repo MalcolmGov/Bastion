@@ -45,6 +45,40 @@ export function ClientCmsHome({
   const isGoldFields = client?.id === 'client_goldfields';
   const siteUrl = isGoldFields ? '/' : site ? `/sites/${site.slug}` : '/';
 
+  const isSolaris = Boolean(client?.id?.includes('solaris') || client?.industry?.includes('energy'));
+  const isVodacom = Boolean(client?.id?.includes('voda') || client?.industry?.includes('telecom'));
+  const isFinance = Boolean(client?.id?.includes('apex') || client?.id?.includes('meridian') || client?.id?.includes('valence') || client?.industry?.includes('finance'));
+
+  const kpi1 = isGoldFields
+    ? { value: '10 Mines', label: 'Mining Operations' }
+    : isSolaris
+    ? { value: '8 Solar Arrays', label: 'Active Facilities' }
+    : isVodacom
+    ? { value: '64M Subs', label: 'Network Operations' }
+    : isFinance
+    ? { value: 'R4.2B AUM', label: 'Managed Mandates' }
+    : { value: '12 Pages', label: 'Active Sections' };
+
+  const kpi2 = isGoldFields
+    ? { value: 'Wed 14:00', label: 'Upcoming SENS Release' }
+    : isSolaris
+    ? { value: 'Active Feed', label: 'Grid Interconnection' }
+    : isVodacom
+    ? { value: 'Live 5G', label: 'Network Infrastructure' }
+    : isFinance
+    ? { value: 'Q2 Outlook', label: 'Macro Strategy Brief' }
+    : { value: 'Live Synced', label: 'Content Pipeline' };
+
+  const kpi3 = isGoldFields
+    ? { value: '11 Reports', label: 'Annual & Financial Packs' }
+    : isSolaris
+    ? { value: '6 ESG Packs', label: 'PPA & Carbon Offset Reports' }
+    : isVodacom
+    ? { value: '14 Reports', label: 'Interim Results & Factbooks' }
+    : isFinance
+    ? { value: '8 Mandates', label: 'Deal Teasers & Diligence' }
+    : { value: 'Resource Hub', label: 'Media & PDF Assets' };
+
   // Stats from dashboard or realistic fallbacks
   const pendingApprovalsCount = dashboardData?.pendingTasks?.length || 2;
   const recentRevisions = dashboardData?.recentRevisions || [];
@@ -175,8 +209,8 @@ export function ClientCmsHome({
               <Compass className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">10 Mines</div>
-              <div className="text-xs text-slate-500 font-semibold">{isGoldFields ? 'Mining Operations' : 'Active Locations'}</div>
+              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">{kpi1.value}</div>
+              <div className="text-xs text-slate-500 font-semibold">{kpi1.label}</div>
             </div>
           </div>
         )}
@@ -194,8 +228,8 @@ export function ClientCmsHome({
               <Newspaper className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">Wed 14:00</div>
-              <div className="text-xs text-slate-500 font-semibold">Upcoming SENS Release</div>
+              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">{kpi2.value}</div>
+              <div className="text-xs text-slate-500 font-semibold">{kpi2.label}</div>
             </div>
           </div>
         )}
@@ -213,8 +247,8 @@ export function ClientCmsHome({
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">11 Reports</div>
-              <div className="text-xs text-slate-500 font-semibold">Annual &amp; Financial Packs</div>
+              <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">{kpi3.value}</div>
+              <div className="text-xs text-slate-500 font-semibold">{kpi3.label}</div>
             </div>
           </div>
         )}
