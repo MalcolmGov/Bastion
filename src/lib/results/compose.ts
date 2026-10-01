@@ -1,4 +1,5 @@
-import type { PdfGlyph } from './extractPdf';
+import type { PdfGlyph, PdfShade } from './extractPdf';
+import { buildPublication } from './publication';
 import { reconstructStatements } from './reconstruct';
 import type { ResultsDocument, ResultsHighlight, ResultsStatement } from './types';
 
@@ -80,7 +81,8 @@ function fallbackHighlights(statements: ResultsStatement[]): ResultsHighlight[] 
 export function composeResultsDocument(
   glyphs: PdfGlyph[],
   pageCount: number,
-  sourceFilename: string
+  sourceFilename: string,
+  shades: PdfShade[] = [],
 ): ResultsDocument {
   const reconstructed = reconstructStatements(glyphs);
   const issuer = issuerFrom(glyphs);
@@ -102,5 +104,6 @@ export function composeResultsDocument(
     warnings,
     sourceFilename,
     pageCount,
+    publication: buildPublication(glyphs, shades),
   };
 }

@@ -43,6 +43,29 @@ export interface ResultsBrand {
   bodyFont: string;
 }
 
+export interface PublicationTable {
+  columns: string[];
+  current: boolean[];
+  rows: Array<{ kind: 'section' | 'data' | 'subtotal' | 'total'; label: string; cells: Array<string | null> }>;
+  footnotes: string[];
+}
+
+export interface PublicationMetric {
+  group: string;
+  label: string;
+  value: string;
+  comparison: string;
+}
+
+export interface PublicationBlock {
+  kind: 'heading' | 'paragraph' | 'metrics' | 'table' | 'list';
+  level?: 2 | 3;
+  text?: string;
+  items?: string[];
+  metrics?: PublicationMetric[];
+  table?: PublicationTable;
+}
+
 export interface ResultsDocument {
   issuer: string;
   title: string;
@@ -57,6 +80,7 @@ export interface ResultsDocument {
   pageCount: number;
   brand?: ResultsBrand | null;
   presentationHtml?: string | null;
+  publication?: PublicationBlock[];
 }
 
 export interface StoredResultsDocument {

@@ -1,4 +1,4 @@
-import type { ResultsDocument, ResultsRow } from './types';
+import type { PublicationBlock, PublicationTable, ResultsDocument, ResultsRow } from './types';
 
 function esc(value: string | null | undefined): string {
   return String(value || '')
@@ -38,6 +38,79 @@ function rowHtml(row: ResultsRow): string {
   }
   const cells = row.cells.map((cell) => `<td>${esc(cell || '—')}</td>`).join('');
   return `<tr class="${row.kind}"><th>${esc(row.label)}</th>${cells}</tr>`;
+}
+
+function tableHtml(table: PublicationTable): string {
+  const head = table.columns.map((label, index) => (
+    `<th class="${table.current[index] ? 'current' : ''}">${esc(label).replace(/\n/g, '<br>')}</th>`
+  )).join('');
+  const span = table.columns.length + 1;
+  const rows = table.rows.map((row) => {
+    if (row.kind === 'section') {
+      return `<tr class="section"><th colspan="${span}">${esc(row.label)}</th></tr>`;
+    }
+    const cells = row.cells.map((cell, index) => (
+      `<td class="${table.current[index] ? 'current' : ''}">${esc(cell || '')}</td>`
+    )).join('');
+    return `<tr class="${row.kind}"><th>${esc(row.label)}</th>${cells}</tr>`;
+  }).join('');
+  const notes = table.footnotes.map((note) => `<p class="footnote">${esc(note)}</p>`).join('');
+  return `<div class="table-wrap"><table><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table></div>${notes}`;
+}
+
+function publicationHtml(blocks: PublicationBlock[]): string {
+  let region = 'results-narrative';
+  const chunks: string[] = [];
+  let open = '';
+  const close = () => {
+    if (!open) return;
+    chunks.push(`</div>`);
+    open = '';
+  };
+  const ensure = (next: string) => {
+    if (open === next) return;
+    close();
+    open = next;
+    chunks.push(`<div id="${next}">`);
+  };
+  for (const block of blocks) {
+    if (block.kind === 'heading' && block.level === 2 && block.text) {
+      if (/commentary/i.test(block.text)) region = 'results-narrative';
+      else if (/statement of|cash flow|changes in equity|earnings per share/i.test(block.text)) region = 'results-statements';
+      else if (/notes to the|administration|basis of preparation/i.test(block.text)) region = 'results-notes';
+      else if (/year in review/i.test(block.text)) region = 'results-highlights';
+    }
+    ensure(region);
+    if (block.kind === 'heading') {
+      const tag = block.level === 3 ? 'h3' : 'h2';
+      chunks.push(`<${tag}>${esc(block.text)}</${tag}>`);
+    } else if (block.kind === 'paragraph') {
+      chunks.push(`<p>${esc(block.text)}</p>`);
+    } else if (block.kind === 'list') {
+      chunks.push(`<ul class="contents-list">${(block.items || []).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>`);
+    } else if (block.kind === 'metrics') {
+      const groups = new Map<string, typeof block.metrics>();
+      for (const metric of block.metrics || []) {
+        const key = metric.group || 'Results';
+        groups.set(key, [...(groups.get(key) || []), metric]);
+      }
+      const cards = [...groups.entries()].map(([group, metrics]) => `
+        <section class="metric-group">
+          <h3>${esc(group)}</h3>
+          <div class="metrics">${(metrics || []).map((metric) => `
+            <article class="metric">
+              <p>${esc(metric.label)}</p>
+              <strong>${esc(metric.value)}</strong>
+              ${metric.comparison ? `<span>${esc(metric.comparison)}</span>` : ''}
+            </article>`).join('')}</div>
+        </section>`).join('');
+      chunks.push(cards);
+    } else if (block.kind === 'table' && block.table) {
+      chunks.push(`<section class="statement">${tableHtml(block.table)}</section>`);
+    }
+  }
+  close();
+  return chunks.join('');
 }
 
 function brandName(document: ResultsDocument): string {
@@ -158,9 +231,19 @@ export function renderResultsHtml(document: ResultsDocument): string {
     th, td { padding: 11px 16px; text-align: right; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
     th:first-child, td:first-child { text-align: left; font-variant-numeric: normal; }
     thead th { background: color-mix(in srgb, var(--paper) 55%, white); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
-    tr.section td { background: color-mix(in srgb, var(--accent) 18%, white); color: var(--masthead); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; }
-    tr.total th, tr.total td { font-weight: 700; border-top: 2px solid var(--ink); }
-    #results-notes { margin-top: 36px; max-width: 76ch; }
+    th.current, td.current { background: #e6e7e8; }
+    thead th.current { background: #d9dadb; }
+    tr.section th { text-align: left; background: #f4f2ee; color: var(--masthead); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; }
+    tr.subtotal th, tr.subtotal td { font-weight: 700; border-top: 1px solid var(--ink); }
+    tr.total th, tr.total td { font-weight: 700; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
+    tr.total td.current, tr.total th.current { background: #dcdede; }
+    h3 { margin: 28px 0 8px; font-family: var(--heading-font); font-size: 20px; font-weight: 500; }
+    .footnote { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .metric-group { margin-top: 8px; }
+    .metric-group h3 { margin: 22px 0 0; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; }
+    .contents-list { margin: 8px 0 24px; padding-left: 18px; line-height: 1.7; }
+    #results-narrative p, #results-notes p, #results-statements p { max-width: 76ch; line-height: 1.65; }
+    #results-notes { margin-top: 36px; }
     #results-notes ol { padding-left: 18px; color: var(--muted); line-height: 1.6; }
     footer { border-top: 1px solid var(--line); padding: 28px 7vw 48px; color: var(--muted); font-size: 12px; letter-spacing: 0.02em; }
     @media (max-width: 900px) {
@@ -190,11 +273,12 @@ export function renderResultsHtml(document: ResultsDocument): string {
     <p class="lede">${esc(document.periodLabel)}</p>
   </header>
   <main id="results-layout">
+    ${document.publication?.length ? publicationHtml(document.publication) : `
     ${highlights ? `<section class="metrics" id="results-highlights">${highlights}</section>` : ''}
     ${contents ? `<nav id="results-contents" aria-label="Statements">${contents}</nav>` : ''}
     ${narrative ? `<section id="results-narrative"><h2>Commentary</h2>${narrative}</section>` : ''}
     <div id="results-statements">${statements}</div>
-    ${notes}
+    ${notes}`}
   </main>
   <footer id="results-footer">Prepared by Bastion from ${esc(document.sourceFilename || 'the source PDF')}.</footer>
 </body>
