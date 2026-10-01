@@ -53,30 +53,47 @@ export async function runMoveStudioMigrations(db: DbClient): Promise<void> {
     }
   }
 
-  // 3. Migrate any existing unassociated content_records to Gold Fields
-  try {
-    await db.execute(
-      `UPDATE content_records SET site_id = 'site_goldfields_flagship', client_id = 'client_goldfields' WHERE site_id IS NULL`
-    );
-    await db.execute(
-      `UPDATE media_assets SET site_id = 'site_goldfields_flagship', client_id = 'client_goldfields' WHERE site_id IS NULL`
-    );
-  } catch (err) {
-    console.warn('[MoveStudio Migration] Notice migrating legacy records:', err);
-  }
-
-  // 4. Seed Clients & Websites
+  // 3. Seed Clients & Websites
   await seedMoveStudioTenants(db);
+}
+
+async function upsertClient(db: DbClient, args: any[]): Promise<void> {
+  const [id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at] = args;
+  const existing = await db.execute({ sql: `SELECT id FROM clients WHERE id = ? LIMIT 1`, args: [id] });
+  if (existing.rows.length > 0) {
+    await db.execute({
+      sql: `UPDATE clients SET name = ?, slug = ?, industry = ?, logo_url = ?, primary_contact_json = ?, billing_details_json = ?, updated_at = ? WHERE id = ?`,
+      args: [name, slug, industry, logo_url, primary_contact_json, billing_details_json, updated_at, id]
+    });
+  } else {
+    await db.execute({
+      sql: `INSERT INTO clients (id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args
+    });
+  }
+}
+
+async function upsertWebsite(db: DbClient, args: any[]): Promise<void> {
+  const [id, client_id, name, slug, blueprint_id, design_collection_id, status, primary_domain, settings_json, created_at, updated_at] = args;
+  const existing = await db.execute({ sql: `SELECT id FROM websites WHERE id = ? LIMIT 1`, args: [id] });
+  if (existing.rows.length > 0) {
+    await db.execute({
+      sql: `UPDATE websites SET client_id = ?, name = ?, slug = ?, blueprint_id = ?, design_collection_id = ?, status = ?, primary_domain = ?, settings_json = ?, updated_at = ? WHERE id = ?`,
+      args: [client_id, name, slug, blueprint_id, design_collection_id, status, primary_domain, settings_json, updated_at, id]
+    });
+  } else {
+    await db.execute({
+      sql: `INSERT INTO websites (id, client_id, name, slug, blueprint_id, design_collection_id, status, primary_domain, settings_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args
+    });
+  }
 }
 
 export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
   const now = new Date().toISOString();
 
   // --- CLIENT 1: Gold Fields Limited (Preserved Corporate Flagship) ---
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
+  await upsertClient(db, [
       'client_goldfields',
       'Gold Fields Limited',
       'goldfields',
@@ -98,7 +115,7 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
       now,
       now
     ]
-  });
+  );
 
   const gfSettings = {
     enabledModules: {
@@ -144,51 +161,43 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
     }
   };
 
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO websites (id, client_id, name, slug, blueprint_id, design_collection_id, status, primary_domain, settings_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      'site_goldfields_flagship',
-      'client_goldfields',
-      'Gold Fields Corporate Flagship',
-      'goldfields',
-      'corporate',
-      'editorial',
-      'published',
-      'goldfields-bay.vercel.app',
-      JSON.stringify(gfSettings),
-      now,
-      now
-    ]
-  });
+  await upsertWebsite(db, [
+    'site_goldfields_flagship',
+    'client_goldfields',
+    'Gold Fields Corporate Flagship',
+    'goldfields',
+    'corporate',
+    'editorial',
+    'published',
+    'goldfields-bay.vercel.app',
+    JSON.stringify(gfSettings),
+    now,
+    now
+  ]);
 
   // --- CLIENT 2: Apex Advisory Partners (Professional Services Blueprint / Contemporary Collection) ---
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      'client_apex_advisory',
-      'Apex Advisory Partners',
-      'apex-advisory',
-      'professional_services',
-      '/assets/apex-advisory-logo.svg',
-      JSON.stringify({ name: 'Alexandra Vance', email: 'alexandra.vance@apexadvisory.com', phone: '+44 20 7946 0912' }),
-      JSON.stringify({
-        legalEntityName: 'Apex Advisory Partners (Pty) Ltd',
-        registrationNumber: '2018/341920/07',
-        vatNumber: '4720194812',
-        billingAddress: 'Katherine & West Building, 114 West Street, Sandton, 2196, South Africa',
-        billingContactName: 'Alexandra Vance',
-        billingEmail: 'invoices@apexadvisory.co.za',
-        billingPhone: '+27 11 884 2100',
-        currency: 'R',
-        paymentTerms: 'Net 14 Days',
-        poNumberRequired: false
-      }),
-      now,
-      now
-    ]
-  });
+  await upsertClient(db, [
+    'client_apex_advisory',
+    'Apex Advisory Partners',
+    'apex-advisory',
+    'professional_services',
+    '/assets/apex-advisory-logo.svg',
+    JSON.stringify({ name: 'Alexandra Vance', email: 'alexandra.vance@apexadvisory.com', phone: '+44 20 7946 0912' }),
+    JSON.stringify({
+      legalEntityName: 'Apex Advisory Partners (Pty) Ltd',
+      registrationNumber: '2018/341920/07',
+      vatNumber: '4720194812',
+      billingAddress: 'Katherine & West Building, 114 West Street, Sandton, 2196, South Africa',
+      billingContactName: 'Alexandra Vance',
+      billingEmail: 'invoices@apexadvisory.co.za',
+      billingPhone: '+27 11 884 2100',
+      currency: 'R',
+      paymentTerms: 'Net 14 Days',
+      poNumberRequired: false
+    }),
+    now,
+    now
+  ]);
 
   const apexSettings = {
     enabledModules: {
@@ -228,23 +237,19 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
     }
   };
 
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO websites (id, client_id, name, slug, blueprint_id, design_collection_id, status, primary_domain, settings_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      'site_apex_strategy',
-      'client_apex_advisory',
-      'Apex Advisory Flagship',
-      'apex-advisory',
-      'professional_services',
-      'contemporary',
-      'published',
-      'apexadvisory.com',
-      JSON.stringify(apexSettings),
-      now,
-      now
-    ]
-  });
+  await upsertWebsite(db, [
+    'site_apex_strategy',
+    'client_apex_advisory',
+    'Apex Advisory Flagship',
+    'apex-advisory',
+    'professional_services',
+    'contemporary',
+    'published',
+    'apexadvisory.com',
+    JSON.stringify(apexSettings),
+    now,
+    now
+  ]);
 
   // Apex Brand Kit
   const apexBrandKit = {
@@ -455,32 +460,28 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
   });
 
   // --- CLIENT 3: Lumina Dining & Experiences (Hospitality Blueprint / Immersive Collection) ---
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      'client_lumina',
-      'Lumina Botanical Dining',
-      'lumina',
-      'hospitality',
-      '/assets/lumina-logo.svg',
-      JSON.stringify({ name: 'Chef Sebastien Roy', email: 'reservations@luminadining.com', phone: '+27 21 488 3000' }),
-      JSON.stringify({
-        legalEntityName: 'Lumina Hospitality Group (Pty) Ltd',
-        registrationNumber: '2022/681029/07',
-        vatNumber: '4610294817',
-        billingAddress: 'Bree Street Studios, 120 Bree Street, Cape Town, 8001, South Africa',
-        billingContactName: 'Chef Sebastien Roy',
-        billingEmail: 'accounts@luminadining.com',
-        billingPhone: '+27 21 488 3000',
-        currency: 'R',
-        paymentTerms: 'Net 7 Days',
-        poNumberRequired: false
-      }),
-      now,
-      now
-    ]
-  });
+  await upsertClient(db, [
+    'client_lumina',
+    'Lumina Botanical Dining',
+    'lumina',
+    'hospitality',
+    '/assets/lumina-logo.svg',
+    JSON.stringify({ name: 'Chef Sebastien Roy', email: 'reservations@luminadining.com', phone: '+27 21 488 3000' }),
+    JSON.stringify({
+      legalEntityName: 'Lumina Hospitality Group (Pty) Ltd',
+      registrationNumber: '2022/681029/07',
+      vatNumber: '4610294817',
+      billingAddress: 'Bree Street Studios, 120 Bree Street, Cape Town, 8001, South Africa',
+      billingContactName: 'Chef Sebastien Roy',
+      billingEmail: 'accounts@luminadining.com',
+      billingPhone: '+27 21 488 3000',
+      currency: 'R',
+      paymentTerms: 'Net 7 Days',
+      poNumberRequired: false
+    }),
+    now,
+    now
+  ]);
 
   const luminaSettings = {
     enabledModules: {
@@ -517,23 +518,19 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
     }
   };
 
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO websites (id, client_id, name, slug, blueprint_id, design_collection_id, status, primary_domain, settings_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      'site_lumina_dining',
-      'client_lumina',
-      'Lumina Flagship Experience',
-      'lumina',
-      'hospitality',
-      'immersive',
-      'draft',
-      'luminadining.com',
-      JSON.stringify(luminaSettings),
-      now,
-      now
-    ]
-  });
+  await upsertWebsite(db, [
+    'site_lumina_dining',
+    'client_lumina',
+    'Lumina Flagship Experience',
+    'lumina',
+    'hospitality',
+    'immersive',
+    'draft',
+    'luminadining.com',
+    JSON.stringify(luminaSettings),
+    now,
+    now
+  ]);
 
   // Lumina Brand Kit
   const luminaBrandKit = {
@@ -691,53 +688,86 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
   });
 
   // --- CLIENT BASTION: Bastion Group Holdings (Platform Acquirer & Holding Enterprise) ---
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      'client_bastion',
-      'Bastion Group Holdings',
-      'bastion-group',
-      'agency_holding',
-      '/assets/bastion-logo.svg',
-      JSON.stringify({ name: 'Jacques Marais', email: 'executive@bastiongroup.co.za', phone: '+27 11 883 4000' }),
-      JSON.stringify({
-        legalEntityName: 'Bastion Group Holdings (Pty) Ltd',
-        registrationNumber: '2024/091823/07',
-        vatNumber: '4820194821',
-        billingAddress: '100 Sandton Drive, Sandton, Johannesburg, 2196, South Africa',
-        billingContactName: 'Jacques Marais',
-        billingEmail: 'finance@bastiongroup.co.za',
-        billingPhone: '+27 11 883 4000',
-        currency: 'R',
-        paymentTerms: '50% on signature, 25% staging, 25% signoff',
-        poNumberRequired: true
-      }),
-      now,
-      now
-    ]
-  });
+  await upsertClient(db, [
+    'client_bastion',
+    'Bastion Group Holdings',
+    'bastion-group',
+    'agency_holding',
+    '/assets/bastion-logo.svg',
+    JSON.stringify({ name: 'Jacques Marais', email: 'executive@bastiongroup.co.za', phone: '+27 11 883 4000' }),
+    JSON.stringify({
+      legalEntityName: 'Bastion Group Holdings (Pty) Ltd',
+      registrationNumber: '2024/091823/07',
+      vatNumber: '4820194821',
+      billingAddress: '100 Sandton Drive, Sandton, Johannesburg, 2196, South Africa',
+      billingContactName: 'Jacques Marais',
+      billingEmail: 'finance@bastiongroup.co.za',
+      billingPhone: '+27 11 883 4000',
+      currency: 'R',
+      paymentTerms: '50% on signature, 25% staging, 25% signoff',
+      poNumberRequired: true
+    }),
+    now,
+    now
+  ]);
 
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO websites (id, client_id, name, slug, blueprint_id, design_collection_id, status, primary_domain, settings_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      'site_bastion_core',
-      'client_bastion',
-      'Bastion Group Corporate Hub',
-      'bastion-holding',
-      'corporate',
-      'contemporary',
-      'published',
-      'bastiongroup.co.za',
-      JSON.stringify({
-        enabledModules: { publicAssistant: true },
-        navigation: { mainNav: [{ label: 'Overview', href: '/' }] }
-      }),
-      now,
-      now
-    ]
-  });
+  await upsertWebsite(db, [
+    'site_bastion_core',
+    'client_bastion',
+    'Bastion Group Corporate Hub',
+    'bastion-holding',
+    'corporate',
+    'contemporary',
+    'published',
+    'bastiongroup.co.za',
+    JSON.stringify({
+      enabledModules: { publicAssistant: true },
+      navigation: { mainNav: [{ label: 'Overview', href: '/' }] }
+    }),
+    now,
+    now
+  ]);
+
+  // --- CLIENT 5: Vodacom Group Limited (Pan-African Enterprise Telecom) ---
+  await upsertClient(db, [
+    'client_vodacom_group',
+    'Vodacom Group Limited',
+    'vodacom',
+    'telecommunications',
+    '/assets/vodacom-logo.svg',
+    JSON.stringify({ name: 'Shameel Joosub', email: 'ir@vodacom.co.za', phone: '+27 11 546 1000' }),
+    JSON.stringify({
+      legalEntityName: 'Vodacom Group Limited',
+      registrationNumber: '1993/005461/06',
+      vatNumber: '4010142998',
+      billingAddress: 'Vodacom Corporate Park, 082 Vodacom Boulevard, Midrand, 1685, South Africa',
+      billingContactName: 'Corporate Procurement Office',
+      billingEmail: 'procurement@vodacom.co.za',
+      billingPhone: '+27 11 546 1000',
+      currency: 'R',
+      paymentTerms: '30 Days from Invoice Date',
+      poNumberRequired: true
+    }),
+    now,
+    now
+  ]);
+
+  await upsertWebsite(db, [
+    'site_vodacom_group',
+    'client_vodacom_group',
+    'Vodacom Group Flagship Portal',
+    'vodacom',
+    'corporate',
+    'contemporary',
+    'published',
+    'vodacom.com',
+    JSON.stringify({
+      enabledModules: { investorDisclosures: true, publicAssistant: true },
+      navigation: { mainNav: [{ label: 'Overview', href: '/' }] }
+    }),
+    now,
+    now
+  ]);
 
   // --- SEED COMMERCIAL PIPELINE: BASTION ACQUISITION PROPOSAL & ENTERPRISE INVOICES ---
   const bastionProposalItems = [

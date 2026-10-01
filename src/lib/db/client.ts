@@ -61,6 +61,10 @@ export async function ensureDbReady(): Promise<Client> {
           await seedEssentialContent(raw);
         }
 
+        // Run ordered versioned database migrations
+        const { runMigrations } = await import('@/lib/db/migrations');
+        await runMigrations(raw);
+
         // Run Move Studio multi-tenant migrations and seeds
         const { runMoveStudioMigrations } = await import('@/lib/studio/seedMultiTenant');
         await runMoveStudioMigrations(raw);
@@ -68,17 +72,15 @@ export async function ensureDbReady(): Promise<Client> {
         // Run Phase 2 migrations (Content Releases, Media Folders, Translations)
         const { runPhase2Migrations } = await import('@/lib/db/phase2Migrations');
         await runPhase2Migrations(raw);
-        await ensureTenantColumns(raw);
       } catch (err) {
         console.error('[DB] Error inspecting database tables:', err);
         try {
-          await runInitSchema(raw);
-          await seedEssentialUsers(raw);
+          const { runMigrations } = await import('@/lib/db/migrations');
+          await runMigrations(raw);
           const { runMoveStudioMigrations } = await import('@/lib/studio/seedMultiTenant');
           await runMoveStudioMigrations(raw);
           const { runPhase2Migrations } = await import('@/lib/db/phase2Migrations');
           await runPhase2Migrations(raw);
-          await ensureTenantColumns(raw);
         } catch (innerErr) {
           console.error('[DB] Schema init fallback error:', innerErr);
         }
@@ -216,39 +218,6 @@ async function runInitSchema(db: Client): Promise<void> {
   try {
     await db.execute(`ALTER TABLE billing_docs ADD COLUMN po_number TEXT`);
   } catch (_) {}
-}
-
-async function ensureTenantColumns(db: Client): Promise<void> {
-  try {
-    const userCols = await db.execute('PRAGMA table_info(users)');
-    const userNames = userCols.rows.map((r) => String(r.name));
-    if (userNames.length > 0 && !userNames.includes('client_id')) {
-      await db.execute('ALTER TABLE users ADD COLUMN client_id TEXT');
-    }
-    if (userNames.length > 0) {
-      await db.execute(
-        `UPDATE users SET client_id = 'client_goldfields' WHERE role != 'platform_admin' AND (client_id IS NULL OR client_id = '')`
-      );
-    }
-    await db.execute(
-      `UPDATE content_records SET client_id = 'client_goldfields' WHERE client_id IS NULL OR client_id = ''`
-    );
-    await db.execute(
-      `UPDATE media_assets SET client_id = 'client_goldfields' WHERE client_id IS NULL OR client_id = ''`
-    );
-  } catch (err) {
-    console.warn('[DB] Tenant user column migration warning:', err);
-  }
-
-  try {
-    const approvalCols = await db.execute('PRAGMA table_info(approvals)');
-    const approvalNames = approvalCols.rows.map((r) => String(r.name));
-    if (approvalNames.length > 0 && !approvalNames.includes('content_hash_at_approval')) {
-      await db.execute('ALTER TABLE approvals ADD COLUMN content_hash_at_approval TEXT');
-    }
-  } catch (err) {
-    console.warn('[DB] Approval hash column migration warning:', err);
-  }
 }
 
 async function seedEssentialUsers(db: Client): Promise<void> {

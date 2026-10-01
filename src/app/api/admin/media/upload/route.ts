@@ -7,6 +7,30 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/svg+xml',
+  'application/pdf'
+]);
+
+function isUnsafeSvg(svgText: string): boolean {
+  const dangerousPatterns = [
+    /<script\b/i,
+    /onload\s*=/i,
+    /onerror\s*=/i,
+    /onclick\s*=/i,
+    /onmouseover\s*=/i,
+    /javascript:/i,
+    /xlink:href\s*=\s*['"]\s*javascript:/i,
+    /<foreignObject\b/i
+  ];
+  return dangerousPatterns.some(pattern => pattern.test(svgText));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -22,24 +46,69 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
+    // 1. File size limit
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return NextResponse.json({
+        error: `File size exceeds the 10 MB limit (${(file.size / (1024 * 1024)).toFixed(1)} MB)`
+      }, { status: 413 });
+    }
+
+    // 2. MIME type verification
+    const mimeType = (file.type || '').toLowerCase();
+    if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+      return NextResponse.json({
+        error: `Unsupported file type '${mimeType}'. Allowed formats: JPEG, PNG, WebP, SVG, PDF.`
+      }, { status: 415 });
+    }
+
+    // 3. SVG Safety Check
+    const isSvg = mimeType === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    if (isSvg) {
+      const svgText = buffer.toString('utf8');
+      if (isUnsafeSvg(svgText)) {
+        return NextResponse.json({
+          error: 'Unsafe SVG: embedded scripts or active event handlers are strictly prohibited.'
+        }, { status: 400 });
+      }
+    }
+
+    // 4. Client Isolation
+    const requestedClient = formData.get('clientId');
+    let clientId: string | null = null;
+
+    if (isAgencyUser(user)) {
+      if (typeof requestedClient === 'string' && requestedClient.trim()) {
+        clientId = requestedClient.trim();
+      } else {
+        return NextResponse.json({
+          error: 'Agency uploads must specify an explicit target clientId.'
+        }, { status: 400 });
+      }
+    } else {
+      clientId = user.client_id;
+      if (!clientId) {
+        return NextResponse.json({ error: 'User is not assigned to a client workspace.' }, { status: 403 });
+      }
+    }
+
     const cleanFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const mimeType = file.type || 'application/octet-stream';
     const sizeBytes = file.size;
     let fileUrl = '';
 
     // If Vercel Blob token is set, upload to cloud storage
     if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const blob = await put(cleanFilename, file, {
+      const blob = await put(cleanFilename, buffer, {
         access: 'public',
-        addRandomSuffix: true
+        addRandomSuffix: true,
+        contentType: mimeType
       });
       fileUrl = blob.url;
     } else {
       // Local dev fallback: write to public/assets
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
       const assetsDir = path.join(process.cwd(), 'public/assets');
-      
       if (!fs.existsSync(assetsDir)) {
         fs.mkdirSync(assetsDir, { recursive: true });
       }
@@ -52,12 +121,8 @@ export async function POST(req: NextRequest) {
     const db = getDb();
     const assetId = `asset_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
     const now = new Date().toISOString();
-    const altText = customAlt || `Gold Fields corporate asset: ${cleanFilename}`;
+    const altText = customAlt || `Corporate asset: ${cleanFilename}`;
 
-    const requestedClient = formData.get('clientId');
-    const clientId = isAgencyUser(user)
-      ? (typeof requestedClient === 'string' && requestedClient ? requestedClient : 'client_goldfields')
-      : user.client_id;
     await db.execute({
       sql: `INSERT INTO media_assets (id, filename, url, mime_type, size_bytes, alt_text, caption, client_id, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -83,7 +148,7 @@ export async function POST(req: NextRequest) {
         user.id,
         user.name,
         assetId,
-        JSON.stringify({ filename: cleanFilename, sizeBytes, url: fileUrl }),
+        JSON.stringify({ filename: cleanFilename, sizeBytes, url: fileUrl, clientId }),
         `corr_${Date.now()}`,
         req.headers.get('x-forwarded-for') || '127.0.0.1',
         now
@@ -98,11 +163,12 @@ export async function POST(req: NextRequest) {
         url: fileUrl,
         mime_type: mimeType,
         size_bytes: sizeBytes,
-        alt_text: altText
+        alt_text: altText,
+        clientId
       }
     });
   } catch (error: any) {
     console.error('Media upload error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

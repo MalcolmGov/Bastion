@@ -244,8 +244,7 @@ export async function POST(req: NextRequest) {
         id: userId,
         name: userName,
         email: userEmail,
-        role: userRole,
-        temporaryPassword: rawPassword
+        role: userRole
       };
     }
 
@@ -271,6 +270,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error('Failed to onboard client:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

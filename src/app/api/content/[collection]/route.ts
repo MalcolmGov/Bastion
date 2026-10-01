@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
+import { verifyApiToken } from '@/lib/auth/apiToken';
 
 export async function GET(
   req: NextRequest,
@@ -10,16 +10,16 @@ export async function GET(
     const { collection } = await context.params;
     const { searchParams } = new URL(req.url);
 
-    const token = tokenFromRequest(req.headers.get('authorization'), searchParams.get('apiKey'));
-    if (!secretsMatch(token, readSecret('API_SECRET_TOKEN'))) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid Bearer token for Headless Content API' },
-        { status: 401 }
-      );
+    const auth = await verifyApiToken(req, searchParams.get('apiKey'), 'content:read');
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
     const isPreview = searchParams.get('preview') === 'true';
 
-    const siteId = searchParams.get('siteId') || 'site_goldfields_flagship';
+    const effectiveClientId = auth.isAgencyAdmin
+      ? (searchParams.get('clientId') || 'client_goldfields')
+      : auth.clientId;
+    const siteId = auth.siteId || searchParams.get('siteId') || 'site_goldfields_flagship';
     const slug = searchParams.get('slug');
     const search = searchParams.get('search') || '';
     const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -29,8 +29,8 @@ export async function GET(
 
     // SPECIAL CASE: 'pages' collection maps to page_compositions
     if (collection === 'pages') {
-      let pageSql = `SELECT * FROM page_compositions WHERE site_id = ?`;
-      const pageArgs: any[] = [siteId];
+      let pageSql = `SELECT * FROM page_compositions WHERE (site_id = ? OR client_id = ?)`;
+      const pageArgs: any[] = [siteId, effectiveClientId];
 
       if (slug) {
         pageSql += ` AND page_slug = ?`;
@@ -76,9 +76,9 @@ export async function GET(
           ELSE r.current_published_revision_id = rev.id
         END
       )
-      WHERE r.collection = ?
+      WHERE r.collection = ? AND (r.client_id = ? OR (r.client_id IS NULL AND ? = 'client_goldfields'))
     `;
-    const args: any[] = [isPreview ? 'true' : 'false', collection];
+    const args: any[] = [isPreview ? 'true' : 'false', collection, effectiveClientId, effectiveClientId];
 
     if (!isPreview) {
       sql += ` AND r.status = 'published'`;
@@ -137,6 +137,6 @@ export async function GET(
     });
   } catch (err: any) {
     console.error('Headless API error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

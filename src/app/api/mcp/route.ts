@@ -5,13 +5,13 @@ import {
   handleMcpToolCall,
   handleMcpResourceRead
 } from '@/lib/mcp/server';
-import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
+import { verifyApiToken } from '@/lib/auth/apiToken';
 import { getCurrentUser } from '@/lib/auth/auth';
 import { isAgencyUser } from '@/lib/auth/roles';
 
 async function mcpAuthorized(req: NextRequest): Promise<boolean> {
-  const token = tokenFromRequest(req.headers.get('authorization'), new URL(req.url).searchParams.get('apiKey'));
-  if (secretsMatch(token, readSecret('API_SECRET_TOKEN'))) return true;
+  const auth = await verifyApiToken(req, new URL(req.url).searchParams.get('apiKey'), 'mcp:access');
+  if (auth.ok) return true;
   const user = await getCurrentUser();
   return isAgencyUser(user);
 }

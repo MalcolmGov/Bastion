@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
 import { buildSchema, graphql } from 'graphql';
 import { getDb, ensureDbReady } from '@/lib/db/client';
 import { BLUEPRINTS } from '@/lib/studio/blueprints';
+import { verifyApiToken } from '@/lib/auth/apiToken';
 
 // GraphQL Schema Definition (SDL)
 const typeDefs = `
@@ -599,18 +599,15 @@ function formatReleaseRow(db: any, row: any) {
   };
 }
 
-function checkAuthorization(req: NextRequest): boolean {
-  const token = tokenFromRequest(req.headers.get('authorization'), new URL(req.url).searchParams.get('apiKey'));
-  return secretsMatch(token, readSecret('API_SECRET_TOKEN'));
-}
-
 // POST Handler (Standard GraphQL Client Request)
 export async function POST(req: NextRequest) {
   try {
-    if (!checkAuthorization(req)) {
+    const { searchParams } = new URL(req.url);
+    const auth = await verifyApiToken(req, searchParams.get('apiKey'), 'graphql:read');
+    if (!auth.ok) {
       return NextResponse.json(
-        { errors: [{ message: 'Unauthorized: Invalid Bearer token for Bastion GraphQL API' }] },
-        { status: 401 }
+        { errors: [{ message: auth.error || 'Unauthorized' }] },
+        { status: auth.status }
       );
     }
 
@@ -637,7 +634,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error('GraphQL Execution Error:', err);
     return NextResponse.json(
-      { errors: [{ message: err.message || 'Internal GraphQL execution failure' }] },
+      { errors: [{ message: 'Internal GraphQL execution failure' }] },
       { status: 500 }
     );
   }
@@ -646,14 +643,15 @@ export async function POST(req: NextRequest) {
 // GET Handler (Introspection & URL queries)
 export async function GET(req: NextRequest) {
   try {
-    if (!checkAuthorization(req)) {
+    const { searchParams } = new URL(req.url);
+    const auth = await verifyApiToken(req, searchParams.get('apiKey'), 'graphql:read');
+    if (!auth.ok) {
       return NextResponse.json(
-        { errors: [{ message: 'Unauthorized: Invalid Bearer token for Bastion GraphQL API' }] },
-        { status: 401 }
+        { errors: [{ message: auth.error || 'Unauthorized' }] },
+        { status: auth.status }
       );
     }
 
-    const { searchParams } = new URL(req.url);
     const query = searchParams.get('query');
     const variablesRaw = searchParams.get('variables');
     let variables: any = undefined;

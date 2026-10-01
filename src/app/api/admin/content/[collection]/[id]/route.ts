@@ -104,7 +104,7 @@ export async function GET(
     });
   } catch (error: any) {
     console.error('Content Item GET error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -162,13 +162,13 @@ export async function PUT(
       args: [newRevId, id, nextRevNum, dataJson, contentHash, user.id, now]
     });
 
-    // Update content_records pointer
+    // Update content_records pointer - edit immediately resets status to draft, invalidating prior approvals
     await db.execute({
       sql: `UPDATE content_records 
             SET title = COALESCE(?, title),
                 slug = COALESCE(?, slug),
                 current_draft_revision_id = ?,
-                status = CASE WHEN status = 'published' THEN 'draft' ELSE status END,
+                status = 'draft',
                 updated_at = ?
             WHERE id = ?`,
       args: [title || null, slug || null, newRevId, now, id]
@@ -198,6 +198,6 @@ export async function PUT(
     });
   } catch (error: any) {
     console.error('Content Item PUT error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

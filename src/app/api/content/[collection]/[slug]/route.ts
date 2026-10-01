@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
+import { verifyApiToken } from '@/lib/auth/apiToken';
 
 export async function GET(
   req: NextRequest,
@@ -10,22 +10,22 @@ export async function GET(
     const { collection, slug } = await context.params;
     const { searchParams } = new URL(req.url);
 
-    const token = tokenFromRequest(req.headers.get('authorization'), searchParams.get('apiKey'));
-    if (!secretsMatch(token, readSecret('API_SECRET_TOKEN'))) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid Bearer token' },
-        { status: 401 }
-      );
+    const auth = await verifyApiToken(req, searchParams.get('apiKey'), 'content:read');
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
     const isPreview = searchParams.get('preview') === 'true';
 
-    const siteId = searchParams.get('siteId') || 'site_goldfields_flagship';
+    const effectiveClientId: string = auth.isAgencyAdmin
+      ? (searchParams.get('clientId') || 'client_goldfields')
+      : (auth.clientId || 'client_goldfields');
+    const siteId: string = auth.siteId || searchParams.get('siteId') || 'site_goldfields_flagship';
     const db = getDb();
 
     if (collection === 'pages') {
       const pageRes = await db.execute({
-        sql: `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = ? ${isPreview ? '' : "AND status = 'published'"} LIMIT 1`,
-        args: [siteId, slug],
+        sql: `SELECT * FROM page_compositions WHERE (site_id = ? OR client_id = ?) AND page_slug = ? ${isPreview ? '' : "AND status = 'published'"} LIMIT 1`,
+        args: [siteId, effectiveClientId, slug],
       });
 
       if (pageRes.rows.length === 0) {
@@ -57,13 +57,13 @@ export async function GET(
           ELSE r.current_published_revision_id = rev.id
         END
       )
-      WHERE r.collection = ? AND r.slug = ?
+      WHERE r.collection = ? AND r.slug = ? AND (r.client_id = ? OR (r.client_id IS NULL AND ? = 'client_goldfields'))
       LIMIT 1
     `;
 
     const res = await db.execute({
       sql,
-      args: [isPreview ? 'true' : 'false', collection, slug],
+      args: [isPreview ? 'true' : 'false', collection, slug, effectiveClientId, effectiveClientId],
     });
 
     if (res.rows.length === 0) {
@@ -91,6 +91,6 @@ export async function GET(
     });
   } catch (err: any) {
     console.error('Headless single item API error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

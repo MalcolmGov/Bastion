@@ -7,7 +7,7 @@ import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken'
  * Requires CRON_SECRET via Authorization: Bearer or x-cron-secret.
  */
 export async function GET(req: NextRequest) {
-  const provided = req.headers.get('x-cron-secret') || tokenFromRequest(req.headers.get('authorization'), null);
+  const provided = req.headers.get('x-cron-secret') || tokenFromRequest(req, null);
   if (!secretsMatch(provided, readSecret('CRON_SECRET'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

@@ -114,7 +114,6 @@ export async function POST(req: NextRequest) {
       roleTitle: roleTitles[role] || 'Corporate Content Editor',
       clientName: clientName,
       loginUrl: loginUrl,
-      temporaryPassword: computedPassword,
       inviterName: `${currentUser.name} (Bastion Group)`
     });
 
@@ -127,6 +126,7 @@ export async function POST(req: NextRequest) {
       emailHtml
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('Users POST error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
