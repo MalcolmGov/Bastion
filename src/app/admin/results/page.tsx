@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ResultsCodingChat } from '@/components/results/ResultsCodingChat';
+import { applyFigureEdit } from '@/lib/results/applyFigureEdit';
 import { renderResultsHtml } from '@/lib/results/renderHtml';
 import type { ResultsBrand, ResultsDocument, StoredResultsDocument } from '@/lib/results/types';
 
@@ -87,11 +88,14 @@ export default function ResultsStudioPage() {
     const document = structuredClone(current.document);
     const statement = document.statements.find((item) => item.id === statementId);
     const row = statement?.rows.find((item) => item.id === rowId);
-    if (!row) return;
+    if (!statement || !row) return;
+    const previous = row.cells[cellIndex] ?? null;
     row.cells[cellIndex] = value;
     row.confidence = row.cells.every((cell) => cell && cell.trim()) ? 1 : 0.6;
+    const placed = applyFigureEdit(document, statementId, rowId, cellIndex, previous);
     setCurrent({ ...current, document });
     setHtmlStale(true);
+    setError(placed ? null : 'That row is not in the published tables, so this figure stays in the grid.');
   }
 
   function applyHtml(nextHtml: string) {
