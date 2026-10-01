@@ -132,7 +132,7 @@ export default function MoveStudioOverviewPage() {
     if (!isListening) {
       setIsListening(true);
       setTimeout(() => {
-        setSearchQuery('Gold Fields Mining Operations');
+        setSearchQuery('Vodacom Group Corporate Website');
         setIsListening(false);
       }, 1500);
     } else {
@@ -150,11 +150,12 @@ export default function MoveStudioOverviewPage() {
   };
 
   const suggestionChips = [
+    { label: 'Vodacom Group', query: 'Vodacom' },
+    { label: 'Gold Fields', query: 'Gold Fields' },
+    { label: 'Solaris Energy', query: 'Solaris' },
+    { label: 'Apex Advisory', query: 'Apex' },
     { label: 'Brand DNA Extractor', query: 'Brand DNA' },
-    { label: 'SENS Announcements', query: 'SENS' },
-    { label: 'Bastion Group', query: 'Bastion' },
-    { label: 'Gold Fields Mining', query: 'Gold Fields' },
-    { label: 'Signed Webhooks', query: 'Webhooks' }
+    { label: 'Edge Webhooks', query: 'Webhooks' }
   ];
 
   const displayName = (user?.name && !user.name.toLowerCase().includes('admin') && !user.name.toLowerCase().includes('corporate'))
@@ -266,7 +267,7 @@ export default function MoveStudioOverviewPage() {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search clients, SENS releases, pages, or components…"
+                        placeholder="Search clients, corporate websites, releases, or pages…"
                         className="w-full py-2.5 pr-8 bg-transparent text-sm sm:text-base focus:outline-none font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:font-normal"
                       />
                       {searchQuery ? (
@@ -365,15 +366,15 @@ export default function MoveStudioOverviewPage() {
                 </div>
               </div>
 
-              {/* Telemetry Card 2: Regulatory SENS & Compliance Engine */}
+              {/* Telemetry Card 2: Fleet Security & Compliance */}
               <div className="p-4 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 shadow-xs backdrop-blur-md relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition-all">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
                     <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-                    <span>Regulatory SENS Guard</span>
+                    <span>Fleet Security &amp; Compliance</span>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                    JSE Compliant
+                    Multi-Tenant Active
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
@@ -381,7 +382,7 @@ export default function MoveStudioOverviewPage() {
                     Synchronized
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    Automated Ingestion
+                    100% Client Domain SLA
                   </span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2.5 overflow-hidden">
@@ -574,13 +575,13 @@ export default function MoveStudioOverviewPage() {
 
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
                   <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
-                    <span>Gold Fields Q3 Production Update</span>
+                    <span>Vodacom Group Interim &amp; Gold Fields Releases</span>
                     <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200">
-                      SENS
+                      SCHEDULED
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Corporate relations submitted regulatory release for scheduled publishing.
+                    Client corporate teams submitted authenticated disclosures for coordinated multi-site broadcast.
                   </p>
                 </div>
 

@@ -34,7 +34,8 @@ import {
   ChevronRight,
   BarChart3,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 
 interface ExecutiveAnalyticsDashboardProps {
@@ -54,29 +55,80 @@ const vitalsTimeline = [
   { time: '23:59', ttfb: 42, lcp: 0.71, jnb: 18, fra: 42, lhr: 46, cacheHit: 99.4 },
 ];
 
-// 2. Multi-Tenant Client Fleet Distribution (Actual Client Companies)
+// Brand styling & industry sectors for Bastion's core enterprise clients
+const clientBrandMap: Record<string, { color: string; sector: string }> = {
+  'Vodacom Group': { color: '#E60000', sector: 'Telecom & Techco' },
+  'Gold Fields Limited': { color: '#C99700', sector: 'Mining & Resources' },
+  'Solaris Clean Energy': { color: '#10B981', sector: 'Clean Energy' },
+  'Apex Advisory Partners': { color: '#2563EB', sector: 'Financial Advisory' },
+  'Valence Private Wealth': { color: '#7C3AED', sector: 'Wealth Management' },
+  'Meridian Strategic Capital': { color: '#0284C7', sector: 'Asset Management' },
+};
+
+// 2. Default Multi-Tenant Client Fleet Distribution (Bastion Flagship Accounts)
 const defaultClientCompanies = [
-  { name: 'Gold Fields Limited', value: 2, percentage: 18, color: '#C99700', client: 'Gold Fields Limited' },
-  { name: 'Bastion Group', value: 2, percentage: 18, color: '#7C3AED', client: 'Bastion Group' },
-  { name: 'Meridian Strategic Capital', value: 2, percentage: 18, color: '#2563EB', client: 'Meridian Strategic Capital' },
-  { name: 'Swifter Technologies', value: 2, percentage: 18, color: '#0284C7', client: 'Swifter Technologies' },
-  { name: 'Solaris Clean Energy', value: 1, percentage: 9, color: '#10B981', client: 'Solaris Clean Energy' },
-  { name: 'Valence Private Wealth', value: 1, percentage: 9, color: '#6366F1', client: 'Valence Private Wealth' },
-  { name: 'Apex Advisory Partners', value: 1, percentage: 10, color: '#EC4899', client: 'Apex Advisory Partners' },
+  { name: 'Vodacom Group', value: 3, percentage: 27, color: '#E60000', sector: 'Telecom & Techco' },
+  { name: 'Gold Fields Limited', value: 2, percentage: 18, color: '#C99700', sector: 'Mining & Resources' },
+  { name: 'Solaris Clean Energy', value: 2, percentage: 18, color: '#10B981', sector: 'Clean Energy' },
+  { name: 'Apex Advisory Partners', value: 2, percentage: 18, color: '#2563EB', sector: 'Financial Advisory' },
+  { name: 'Valence Private Wealth', value: 1, percentage: 9, color: '#7C3AED', sector: 'Wealth Management' },
+  { name: 'Meridian Strategic Capital', value: 1, percentage: 10, color: '#0284C7', sector: 'Asset Management' },
 ];
 
-// 3. Corporate Traffic Velocity & Investor Analytics (14-day timeline)
-const corporateTrafficData = [
-  { day: 'Sep 17', pageviews: 2850, sensViews: 410, inquiries: 8 },
-  { day: 'Sep 19', pageviews: 3120, sensViews: 520, inquiries: 11 },
-  { day: 'Sep 21', pageviews: 2980, sensViews: 380, inquiries: 7 },
-  { day: 'Sep 23', pageviews: 3840, sensViews: 690, inquiries: 14 },
-  { day: 'Sep 25', pageviews: 4210, sensViews: 840, inquiries: 18 },
-  { day: 'Sep 27', pageviews: 4560, sensViews: 920, inquiries: 21 },
-  { day: 'Sep 29', pageviews: 4890, sensViews: 1040, inquiries: 24 },
-];
+// 3. Corporate Traffic Velocity & Inquiries by Time Range
+const trafficDatasets = {
+  '24h': {
+    metric: '3.4k',
+    label: '24H Fleet Traffic',
+    data: [
+      { day: '00:00', pageviews: 240, inquiries: 28 },
+      { day: '04:00', pageviews: 180, inquiries: 16 },
+      { day: '08:00', pageviews: 520, inquiries: 54 },
+      { day: '12:00', pageviews: 790, inquiries: 88 },
+      { day: '16:00', pageviews: 860, inquiries: 92 },
+      { day: '20:00', pageviews: 510, inquiries: 42 },
+      { day: '23:59', pageviews: 300, inquiries: 20 },
+    ]
+  },
+  '7d': {
+    metric: '23.8k',
+    label: '7D Fleet Traffic',
+    data: [
+      { day: 'Mon', pageviews: 3100, inquiries: 340 },
+      { day: 'Tue', pageviews: 3450, inquiries: 380 },
+      { day: 'Wed', pageviews: 3820, inquiries: 420 },
+      { day: 'Thu', pageviews: 3950, inquiries: 440 },
+      { day: 'Fri', pageviews: 3600, inquiries: 390 },
+      { day: 'Sat', pageviews: 2800, inquiries: 260 },
+      { day: 'Sun', pageviews: 3080, inquiries: 310 },
+    ]
+  },
+  '14d': {
+    metric: '48.2k',
+    label: '14D Fleet Traffic',
+    data: [
+      { day: 'Sep 17', pageviews: 2850, inquiries: 410 },
+      { day: 'Sep 19', pageviews: 3120, inquiries: 520 },
+      { day: 'Sep 21', pageviews: 2980, inquiries: 380 },
+      { day: 'Sep 23', pageviews: 3840, inquiries: 690 },
+      { day: 'Sep 25', pageviews: 4210, inquiries: 840 },
+      { day: 'Sep 27', pageviews: 4560, inquiries: 920 },
+      { day: 'Sep 29', pageviews: 4890, inquiries: 1040 },
+    ]
+  },
+  '30d': {
+    metric: '96.5k',
+    label: '30D Fleet Traffic',
+    data: [
+      { day: 'Week 1', pageviews: 18200, inquiries: 1950 },
+      { day: 'Week 2', pageviews: 21400, inquiries: 2310 },
+      { day: 'Week 3', pageviews: 26300, inquiries: 2890 },
+      { day: 'Week 4', pageviews: 30600, inquiries: 3250 },
+    ]
+  }
+};
 
-// 4. Edge Invalidation & Cache Performance
+// 4. Edge Invalidation & Cache Performance Nodes
 const edgeNodes = [
   { city: 'Johannesburg', code: 'JNB-1', latency: '18ms', status: 'Optimal', load: '38%' },
   { city: 'Frankfurt', code: 'FRA-1', latency: '42ms', status: 'Optimal', load: '44%' },
@@ -92,6 +144,8 @@ export function ExecutiveAnalyticsDashboard({
   const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'vitals' | 'fleet' | 'traffic'>('all');
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '14d' | '30d'>('14d');
+  const [isPurging, setIsPurging] = useState(false);
+  const [purgeSuccess, setPurgeSuccess] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -99,17 +153,38 @@ export function ExecutiveAnalyticsDashboard({
 
   const fleetData = useMemo(() => {
     if (clients && clients.length > 0) {
-      const totalSites = clients.reduce((acc, c) => acc + (c.websites?.length || 1), 0);
-      const colors = ['#C99700', '#7C3AED', '#2563EB', '#0284C7', '#10B981', '#6366F1', '#EC4899', '#F59E0B'];
-      return clients.map((c, i) => {
-        const siteCount = c.websites?.length || 1;
-        return {
-          name: c.name,
-          value: siteCount,
-          percentage: Math.max(1, Math.round((siteCount / Math.max(1, totalSites)) * 100)),
-          color: colors[i % colors.length],
-        };
-      });
+      // Deduplicate clients by clean name
+      const clientMap: Record<string, { name: string; siteCount: number }> = {};
+      for (const c of clients) {
+        const key = c.name.trim();
+        const count = c.websites && c.websites.length > 0 ? c.websites.length : 1;
+        if (!clientMap[key]) {
+          clientMap[key] = { name: key, siteCount: count };
+        } else {
+          clientMap[key].siteCount += count;
+        }
+      }
+
+      const clientList = Object.values(clientMap);
+      const totalSites = clientList.reduce((acc, c) => acc + c.siteCount, 0);
+      const fallbackColors = ['#E60000', '#C99700', '#10B981', '#2563EB', '#7C3AED', '#0284C7', '#EC4899', '#F59E0B'];
+
+      return clientList
+        .sort((a, b) => b.siteCount - a.siteCount)
+        .map((c, i) => {
+          const brand = clientBrandMap[c.name] || {
+            color: fallbackColors[i % fallbackColors.length],
+            sector: 'Corporate Client'
+          };
+          const percentage = Math.max(1, Math.round((c.siteCount / Math.max(1, totalSites)) * 100));
+          return {
+            name: c.name,
+            value: c.siteCount,
+            percentage,
+            color: brand.color,
+            sector: brand.sector
+          };
+        });
     }
     return defaultClientCompanies;
   }, [clients]);
@@ -117,6 +192,18 @@ export function ExecutiveAnalyticsDashboard({
   const totalFleetSites = useMemo(() => {
     return fleetData.reduce((acc, c) => acc + c.value, 0);
   }, [fleetData]);
+
+  const activeTrafficConfig = trafficDatasets[timeRange];
+
+  const handlePurgeCache = () => {
+    setIsPurging(true);
+    setPurgeSuccess(false);
+    setTimeout(() => {
+      setIsPurging(false);
+      setPurgeSuccess(true);
+      setTimeout(() => setPurgeSuccess(false), 4000);
+    }, 900);
+  };
 
   return (
     <section className="space-y-6">
@@ -126,15 +213,15 @@ export function ExecutiveAnalyticsDashboard({
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live Telemetry Active
+              Live Fleet Telemetry Active
             </span>
             <span className="text-slate-300 dark:text-slate-700">&bull;</span>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Edge CDN &bull; 11 Client Domains
+              Edge CDN &bull; {totalFleetSites} Live Properties across {fleetData.length} Managed Clients
             </span>
           </div>
           <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
-            Bastion Executive Telemetry &amp; Fleet Intelligence
+            Bastion Operations &amp; Managed Client Fleet Intelligence
           </h2>
         </div>
 
@@ -234,7 +321,7 @@ export function ExecutiveAnalyticsDashboard({
                       </span>
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                      Autonomous edge caching across all client corporate domains
+                      Autonomous edge caching across all client corporate domains (Vodacom, Gold Fields, Solaris, Apex)
                     </p>
                   </div>
                 </div>
@@ -331,7 +418,7 @@ export function ExecutiveAnalyticsDashboard({
           <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
             <div 
               className="absolute top-0 left-0 right-0 h-1"
-              style={{ background: `linear-gradient(90deg, #C99700 0%, ${primaryColor} 100%)` }}
+              style={{ background: `linear-gradient(90deg, #E60000 0%, #C99700 50%, ${primaryColor} 100%)` }}
             />
 
             <div>
@@ -343,9 +430,9 @@ export function ExecutiveAnalyticsDashboard({
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
-                      <span>Multi-Tenant Client Fleet</span>
+                      <span>Managed Client Fleet</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                        {totalFleetSites} Live Sites
+                        {totalFleetSites} Live Properties
                       </span>
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
@@ -366,7 +453,7 @@ export function ExecutiveAnalyticsDashboard({
               {/* Donut Chart + Client Companies Legend */}
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
                 {/* Donut Visual */}
-                <div className="sm:col-span-6 h-52 flex items-center justify-center relative">
+                <div className="sm:col-span-5 h-52 flex items-center justify-center relative">
                   {isMounted ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -398,7 +485,7 @@ export function ExecutiveAnalyticsDashboard({
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-full w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/40 rounded-xl animate-pulse">
-                      <span className="text-xs text-slate-400">Loading Donut...</span>
+                      <span className="text-xs text-slate-400">Loading Fleet Chart...</span>
                     </div>
                   )}
 
@@ -410,16 +497,21 @@ export function ExecutiveAnalyticsDashboard({
                 </div>
 
                 {/* Client Companies Legend */}
-                <div className="sm:col-span-6 space-y-2">
+                <div className="sm:col-span-7 space-y-2">
                   {fleetData.map((clientItem) => (
-                    <div key={clientItem.name} className="flex items-center justify-between text-xs">
+                    <div key={clientItem.name} className="flex items-center justify-between text-xs py-0.5">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: clientItem.color }} />
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: clientItem.color }} />
+                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
                           {clientItem.name}
                         </span>
+                        {clientItem.sector && (
+                          <span className="hidden sm:inline-block text-[9px] px-1.5 py-0.2 rounded font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0">
+                            {clientItem.sector}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0 font-sans tabular-nums">
+                      <div className="flex items-center gap-1.5 shrink-0 font-sans tabular-nums pl-2">
                         <span className="font-bold text-slate-900 dark:text-white font-sans">{clientItem.value}</span>
                         <span className="text-[11px] text-slate-400 font-medium font-sans">({clientItem.percentage}%)</span>
                       </div>
@@ -433,7 +525,7 @@ export function ExecutiveAnalyticsDashboard({
             <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-medium">
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                100% Uptime Across All 11 Clients
+                100% Uptime Across All {fleetData.length} Managed Clients
               </span>
               <span className="font-bold text-slate-700 dark:text-slate-300">
                 0 Critical Incidents
@@ -465,17 +557,17 @@ export function ExecutiveAnalyticsDashboard({
                       </span>
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                      Aggregated investor visits &amp; SENS announcement reads
+                      Aggregated visitor traffic &amp; stakeholder inquiries across client web properties
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
                   <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums font-display">
-                    48.2k
+                    {activeTrafficConfig.metric}
                   </div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    14D Pageviews
+                    {activeTrafficConfig.label}
                   </div>
                 </div>
               </div>
@@ -484,7 +576,7 @@ export function ExecutiveAnalyticsDashboard({
               <div className="h-56 w-full pt-1">
                 {isMounted ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={corporateTrafficData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <BarChart data={activeTrafficConfig.data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94A3B8" opacity={0.15} />
                       <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} />
                       <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} />
@@ -497,8 +589,8 @@ export function ExecutiveAnalyticsDashboard({
                           fontSize: '12px'
                         }}
                       />
-                      <Bar dataKey="pageviews" name="Pageviews" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="sensViews" name="SENS Reads" fill="#10B981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="pageviews" name="Fleet Pageviews" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="inquiries" name="Inquiries & Downloads" fill="#10B981" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -513,7 +605,7 @@ export function ExecutiveAnalyticsDashboard({
             <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-medium">
               <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-bold">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                142 Inbound Mandates Submitted
+                142 Inbound Inquiries &amp; Mandates across Client Sites
               </span>
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                 Avg Session: 3m 42s
@@ -539,13 +631,13 @@ export function ExecutiveAnalyticsDashboard({
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
-                      <span>Edge Invalidation &amp; Monitoring</span>
+                      <span>Edge Invalidation &amp; Fleet Health</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         &lt;500ms Edge Invalidation
                       </span>
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                      Instant cache purging across CDN nodes upon CMS sign-off
+                      Instant cache purging across CDN nodes upon CMS updates across client properties
                     </p>
                   </div>
                 </div>
@@ -566,8 +658,8 @@ export function ExecutiveAnalyticsDashboard({
                   <div className="flex items-center gap-2.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">Gold Fields SENS Webhook</div>
-                      <div className="text-[10px] text-slate-500">SHA-256 HMAC Signature Verified</div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white">Multi-Tenant Client Webhook Feeds</div>
+                      <div className="text-[10px] text-slate-500">Vodacom, Gold Fields, Solaris, Apex &bull; SHA-256 HMAC Verified</div>
                     </div>
                   </div>
                   <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200">
@@ -580,7 +672,7 @@ export function ExecutiveAnalyticsDashboard({
                     <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                     <div>
                       <div className="text-xs font-bold text-slate-900 dark:text-white">Bastion Global Edge Invalidation Queue</div>
-                      <div className="text-[10px] text-slate-500">0 pending jobs &bull; 100% delivery rate</div>
+                      <div className="text-[10px] text-slate-500">0 pending jobs &bull; 100% delivery rate across 4 global PoPs</div>
                     </div>
                   </div>
                   <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200">
@@ -592,8 +684,8 @@ export function ExecutiveAnalyticsDashboard({
                   <div className="flex items-center gap-2.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
                     <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">SSL &amp; Strict Transport Security (HSTS)</div>
-                      <div className="text-[10px] text-slate-500">11 of 11 certs valid &bull; Next renewal: 74 days</div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white">Fleet SSL &amp; Strict Transport Security (HSTS)</div>
+                      <div className="text-[10px] text-slate-500">{totalFleetSites} of {totalFleetSites} client certs valid &bull; Automated Let's Encrypt rotation</div>
                     </div>
                   </div>
                   <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200">
@@ -606,15 +698,32 @@ export function ExecutiveAnalyticsDashboard({
             {/* Invalidation Trigger CTA */}
             <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-medium">
               <span className="text-slate-600 dark:text-slate-400">
-                Last broadcast: 14 mins ago
+                {purgeSuccess ? (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    All 4 Edge PoPs Purged &amp; Revalidated!
+                  </span>
+                ) : (
+                  'Last broadcast: 14 mins ago'
+                )}
               </span>
               <button
                 type="button"
-                onClick={() => alert('Edge caches across all 4 PoPs have been purged and revalidated.')}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                onClick={handlePurgeCache}
+                disabled={isPurging}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer disabled:opacity-50"
               >
-                <RefreshCw className="w-3 h-3 text-slate-500" />
-                <span>Purge Edge Cache</span>
+                {isPurging ? (
+                  <>
+                    <Loader2 className="w-3 h-3 text-slate-500 animate-spin" />
+                    <span>Purging Edge PoPs...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3 h-3 text-slate-500" />
+                    <span>Purge Edge Cache</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
