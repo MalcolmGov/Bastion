@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { createSession, hashPassword, isLegacyPasswordHash, verifyPassword, StudioUser } from '@/lib/auth/auth';
+import { checkLoginRateLimit } from '@/lib/security/rateLimiter';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1';
+    const rateLimit = checkLoginRateLimit(ip);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: `Too many login attempts from this IP address. Please wait ${rateLimit.retryAfterSec} seconds before trying again.`
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retryAfterSec),
+            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(rateLimit.resetMs)
+          }
+        }
+      );
+    }
+
     const body = await req.json();
     const { email, password } = body;
 
@@ -20,7 +40,6 @@ export async function POST(req: NextRequest) {
       args: [cleanEmail]
     });
 
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1';
     const userAgent = req.headers.get('user-agent') || 'Unknown';
     const now = new Date().toISOString();
 

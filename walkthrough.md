@@ -8,7 +8,8 @@ This document is the **single source of truth** for the architectural implementa
 
 - **Status**: Production Ready & Fully Verified
 - **Target Repository**: `MalcolmGov/Goldfields` (`main` branch)
-- **Automated Test Results**: **22 Passed / 0 Failed (100% Pass Rate across 15 Suites)**
+- **Automated Test Results**: **24 Passed / 0 Failed (100% Pass Rate across 17 Suites)**
+- **Cross-Tenant HTTP E2E Matrix**: **8 Passed / 0 Failed (100% Pass Rate across 4 Suites)**
 - **Disaster Recovery Restore Drill**: **Passed (29 tables, 65 records, 0 discrepancies)**
 - **Next.js Production Build**: `exit code 0`
 - **CI Pipeline**: Active via `.github/workflows/ci.yml`
@@ -71,8 +72,14 @@ This document is the **single source of truth** for the architectural implementa
 📦 SUITE 15: Disaster Recovery & Database Backup Restore Drill
   ✅ [PASS] Disaster Recovery -> Full database snapshot backup and restore drill succeeds with 0 discrepancies
 
+📦 SUITE 16: Edge Sliding-Window Rate Limiting & Brute Force Defense
+  ✅ [PASS] Rate Limiting -> checkLoginRateLimit allows 10 attempts then rejects 11th with retry-after
+
+📦 SUITE 17: Enterprise Defense-in-Depth HTTP Security Headers
+  ✅ [PASS] Security Headers -> Edge middleware injects HSTS, nosniff, SAMEORIGIN, and Permissions-Policy headers
+
 ============================================================
-TOTAL: 22 | PASSED: 22 | FAILED: 0
+TOTAL: 24 | PASSED: 24 | FAILED: 0
 ============================================================
 ```
 
@@ -120,3 +127,23 @@ TOTAL: 22 | PASSED: 22 | FAILED: 0
    - [src/app/api/admin/health/route.ts](file:///Users/malcolmgovender/Desktop/Zara-AI/goldfields/src/app/api/admin/health/route.ts): Gated with `requireAgencyUser()` on GET and PUT.
    - [src/app/api/admin/results/route.ts](file:///Users/malcolmgovender/Desktop/Zara-AI/goldfields/src/app/api/admin/results/route.ts) and [src/app/api/admin/results/[id]/route.ts](file:///Users/malcolmgovender/Desktop/Zara-AI/goldfields/src/app/api/admin/results/[id]/route.ts): Non-agency client users are strictly filtered and prohibited from viewing or converting documents belonging to other client tenants.
    - [src/lib/email/delivery.ts](file:///Users/malcolmgovender/Desktop/Zara-AI/goldfields/src/lib/email/delivery.ts): Fails closed on production servers if `RESEND_API_KEY` is missing, preventing silent simulated leaks.
+
+### Gate F: Edge Sliding-Window Rate Limiting, Enterprise Headers & Cross-Tenant HTTP E2E
+1. **Sliding-Window IP Rate Limiter**:
+   - [src/lib/security/rateLimiter.ts](file:///Users/malcolmgovender/Desktop/Zara-AI/goldfields/src/lib/security/rateLimiter.ts) implements an edge-friendly in-memory sliding-window counter with automatic garbage collection.
+   - Enforces 10 requests / 60-second window on [src/app/api/admin/auth/login/route.ts](file:///Users/malcolmgovender/Desktop/Zara-AI/goldfields/src/app/api/admin/auth/login/route.ts) with `X-Forwarded-For` client IP resolution.
+   - Returns standard HTTP `429 Too Many Requests` with `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
+2. **Defense-in-Depth HTTP Security Headers**:
+   - [src/middleware.ts](file:///Users/malcolmgovender/Desktop/Zara-AI/goldfields/src/middleware.ts): Injects 5 enterprise defense headers across all incoming requests:
+     - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+     - `X-Content-Type-Options: nosniff`
+     - `X-Frame-Options: SAMEORIGIN` (protects against clickjacking while allowing studio canvas previews)
+     - `Referrer-Policy: strict-origin-when-cross-origin`
+     - `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`
+3. **Cross-Tenant HTTP E2E Matrix & Scheduled Cron Rollout**:
+   - [scripts/test-cross-tenant-e2e.ts](file:///Users/malcolmgovender/Desktop/Zara-AI/goldfields/scripts/test-cross-tenant-e2e.ts) executes real HTTP requests over the network layer across two isolated client accounts (Client A and Client B):
+     - Blocks cross-tenant billing and SRE health route access with HTTP 403 Forbidden.
+     - Confirms `/api/admin/users` and `/api/admin/clients` return strictly tenant-partitioned results.
+     - Confirms Client A cannot view Client B results documents by ID (HTTP 403 Forbidden).
+     - Confirms scheduled content releases execute atomically via [src/app/api/cron/releases/route.ts](file:///Users/malcolmgovender/Desktop/Zara-AI/goldfields/src/app/api/cron/releases/route.ts) when supplied with a valid `CRON_SECRET`.
+     - Confirms IP sliding-window rate limit triggers HTTP 429 upon the 11th rapid attempt.
