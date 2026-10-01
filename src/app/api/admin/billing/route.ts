@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import crypto from 'crypto';
 import type { BillingDoc, LineItem } from '@/lib/studio/billingTypes';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function GET(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const { searchParams } = new URL(req.url);
     const clientId = searchParams.get('clientId');
     const type = searchParams.get('type');
@@ -85,6 +88,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const body = await req.json();
     const db = getDb();
     const now = new Date().toISOString();
@@ -181,6 +186,8 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const body = await req.json();
     const { action, docId } = body;
     const db = getDb();

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { JobManager } from '@/lib/studio/worker';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function GET(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get('jobId');
 
@@ -51,6 +54,8 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get('jobId');
 

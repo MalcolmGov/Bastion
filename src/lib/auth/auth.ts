@@ -2,6 +2,8 @@ import { getDb } from '@/lib/db/client';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
+export { hashPassword, verifyPassword, isLegacyPasswordHash } from '@/lib/auth/password';
+
 export type UserRole = 
   | 'platform_admin'
   | 'content_editor'
@@ -18,6 +20,7 @@ export interface StudioUser {
   email: string;
   role: UserRole;
   region_scope: string;
+  client_id: string | null;
   created_at: string;
   last_login?: string;
 }
@@ -37,12 +40,6 @@ export function hasPermission(role: UserRole, permission: string): boolean {
   const perms = ROLE_PERMISSIONS[role] || [];
   if (perms.includes('*')) return true;
   return perms.includes(permission);
-}
-
-// SHA-256 password hash with salt
-export function hashPassword(password: string): string {
-  const salt = process.env.AUTH_SALT || 'goldfields_studio_salt_2026';
-  return crypto.createHash('sha256').update(password + salt).digest('hex');
 }
 
 export function hashToken(token: string): string {
@@ -83,7 +80,7 @@ export async function getCurrentUser(): Promise<StudioUser | null> {
 
   const result = await db.execute({
     sql: `
-      SELECT u.id, u.name, u.email, u.role, u.region_scope, u.created_at, u.last_login
+      SELECT u.id, u.name, u.email, u.role, u.region_scope, u.client_id, u.created_at, u.last_login
       FROM sessions s
       JOIN users u ON s.user_id = u.id
       WHERE s.token_hash = ? AND s.expires_at > ?
@@ -103,6 +100,7 @@ export async function getCurrentUser(): Promise<StudioUser | null> {
     email: String(row.email),
     role: String(row.role) as UserRole,
     region_scope: String(row.region_scope || 'All'),
+    client_id: row.client_id ? String(row.client_id) : null,
     created_at: String(row.created_at),
     last_login: row.last_login ? String(row.last_login) : undefined
   };

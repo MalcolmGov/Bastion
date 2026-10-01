@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const body = await req.json();
     let {
-      recipientName = 'Malcolm Govender',
-      recipientEmail = 'malcolm@bastiongroup.co.za',
-      role = 'platform_admin',
+      recipientName = 'Client Editor',
+      recipientEmail = 'editor@client.local',
+      role = 'content_editor',
       clientName = 'Bastion Group',
-      initialPassword = 'GoldFields2026!'
+      initialPassword = ''
     } = body;
+    const temporaryPassword = initialPassword || 'Provided separately by your administrator';
 
     // Strict cleansing: Replace any Moove Digital references with Bastion Group
     if (clientName && clientName.toLowerCase().includes('moove')) {
@@ -38,7 +42,7 @@ export async function POST(req: NextRequest) {
       roleTitle: roleTitles[role] || 'Corporate Content Editor',
       clientName,
       loginUrl,
-      temporaryPassword: initialPassword,
+      temporaryPassword,
       inviterName: 'Bastion Group Platform Operations'
     });
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAgencyUser } from '@/lib/auth/guard';
 import {
   getSchemaSyncStatus,
   generateJsonSchema,
@@ -10,6 +11,8 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const status = getSchemaSyncStatus();
     return NextResponse.json({
       success: true,
@@ -23,6 +26,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const body = await req.json();
     const { action, commitMessage } = body;
 

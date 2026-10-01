@@ -36,7 +36,7 @@ export async function getPublishedPage(slug: string, isDraft = false): Promise<P
   try {
     const db = getDb();
     const recResult = await db.execute({
-      sql: `SELECT * FROM content_records WHERE collection = 'pages' AND slug = ? LIMIT 1`,
+      sql: `SELECT * FROM content_records WHERE collection = 'pages' AND slug = ? AND (client_id IS NULL OR client_id = 'client_goldfields') LIMIT 1`,
       args: [slug]
     });
 
@@ -84,6 +84,7 @@ export async function getPublishedCollection<T>(collection: string, isDraft = fa
                    ELSE r.current_published_revision_id END
             )
             WHERE (r.collection = ? OR (r.collection = 'sustainability_targets' AND ? = 'sustainability'))
+              AND (r.client_id IS NULL OR r.client_id = 'client_goldfields')
               AND (r.status = 'published' OR ? = 1)
             ORDER BY r.updated_at DESC`,
       args: [isDraft ? 1 : 0, collection, collection, isDraft ? 1 : 0]
@@ -120,6 +121,7 @@ export async function getPublishedRecordBySlug<T>(collection: string, slug: stri
                    ELSE r.current_published_revision_id END
             )
             WHERE (r.collection = ? OR (r.collection = 'sustainability_targets' AND ? = 'sustainability'))
+              AND (r.client_id IS NULL OR r.client_id = 'client_goldfields')
               AND (r.slug = ? OR r.id = ?)
               AND (r.status = 'published' OR ? = 1)
             LIMIT 1`,

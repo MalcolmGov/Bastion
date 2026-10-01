@@ -5,9 +5,12 @@ import { mergeFixPR, pollDeploymentStatus } from '@/lib/sre/github-pr';
 import { executeAutomatedRollback } from '@/lib/sre/rollback';
 import fs from 'fs';
 import path from 'path';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -63,9 +66,9 @@ export async function POST(req: NextRequest) {
     if (incident.ai_proposed_patch) {
       try {
         const patchData = JSON.parse(incident.ai_proposed_patch);
-        if (patchData.filePath && patchData.fullNewContent) {
-          const absPath = path.join(process.cwd(), patchData.filePath);
-          if (fs.existsSync(absPath)) {
+        if (process.env.SRE_LOCAL_PATCH === 'true' && patchData.filePath && patchData.fullNewContent) {
+          const absPath = resolveSafePatchPath(patchData.filePath);
+          if (absPath) {
             fs.writeFileSync(absPath, patchData.fullNewContent, 'utf-8');
             patchApplied = true;
           }
@@ -172,4 +175,15 @@ export async function POST(req: NextRequest) {
     console.error('[Bastion SRE Approve Error]:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+}
+
+function resolveSafePatchPath(filePath: string): string | null {
+  if (!filePath || filePath.includes('\0') || path.isAbsolute(filePath)) return null;
+  const root = path.resolve(process.cwd());
+  const abs = path.resolve(root, filePath);
+  const relative = path.relative(root, abs);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
+  if (!relative.startsWith(`src${path.sep}`) && !relative.startsWith(`public${path.sep}`)) return null;
+  if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) return null;
+  return abs;
 }

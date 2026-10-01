@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
 import { buildSchema, graphql } from 'graphql';
 import { getDb, ensureDbReady } from '@/lib/db/client';
 import { BLUEPRINTS } from '@/lib/studio/blueprints';
@@ -598,16 +599,9 @@ function formatReleaseRow(db: any, row: any) {
   };
 }
 
-// Authentication Check
 function checkAuthorization(req: NextRequest): boolean {
-  const authHeader = req.headers.get('authorization');
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : new URL(req.url).searchParams.get('apiKey');
-  const validToken = process.env.API_SECRET_TOKEN || 'sec_goldfields_bastion_2026_live';
-
-  // Allow internal sandbox and dev testing, or valid bearer token
-  if (!token) return true;
-  if (token === validToken || token.startsWith('prev_')) return true;
-  return false;
+  const token = tokenFromRequest(req.headers.get('authorization'), new URL(req.url).searchParams.get('apiKey'));
+  return secretsMatch(token, readSecret('API_SECRET_TOKEN'));
 }
 
 // POST Handler (Standard GraphQL Client Request)

@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser } from '@/lib/auth/auth';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function GET() {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

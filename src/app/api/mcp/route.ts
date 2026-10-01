@@ -5,6 +5,16 @@ import {
   handleMcpToolCall,
   handleMcpResourceRead
 } from '@/lib/mcp/server';
+import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
+import { getCurrentUser } from '@/lib/auth/auth';
+import { isAgencyUser } from '@/lib/auth/roles';
+
+async function mcpAuthorized(req: NextRequest): Promise<boolean> {
+  const token = tokenFromRequest(req.headers.get('authorization'), new URL(req.url).searchParams.get('apiKey'));
+  if (secretsMatch(token, readSecret('API_SECRET_TOKEN'))) return true;
+  const user = await getCurrentUser();
+  return isAgencyUser(user);
+}
 
 /**
  * Bastion Model Context Protocol (MCP) Server Endpoint
@@ -23,6 +33,13 @@ interface JsonRpcRequest {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!(await mcpAuthorized(req))) {
+      return NextResponse.json({
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32001, message: 'Unauthorized' }
+      }, { status: 401 });
+    }
     const body = (await req.json()) as JsonRpcRequest;
     const { id = 1, method, params = {} } = body;
 
@@ -183,6 +200,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  if (!(await mcpAuthorized(req))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const host = req.headers.get('host') || 'localhost:3010';
   const protocol = req.headers.get('x-forwarded-proto') || 'http';
   const baseUrl = `${protocol}://${host}`;

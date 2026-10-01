@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser, hasPermission } from '@/lib/auth/auth';
+import { clientOwns, tenantClause } from '@/lib/auth/guard';
+import { isAgencyUser } from '@/lib/auth/roles';
 import crypto from 'crypto';
 
 export async function GET(
@@ -28,6 +30,9 @@ export async function GET(
       WHERE r.collection = ?
     `;
     const args: any[] = [collection];
+    const scope = tenantClause(user, 'r.client_id');
+    sql += scope.sql;
+    args.push(...scope.args);
 
     if (status) {
       sql += ` AND r.status = ?`;
@@ -84,12 +89,14 @@ export async function POST(
 
     const dataJson = JSON.stringify(data || {}, null, 2);
     const contentHash = crypto.createHash('sha256').update(dataJson).digest('hex');
+    const requestedClientId = typeof body.clientId === 'string' ? body.clientId : null;
+    const clientId = isAgencyUser(user) ? (requestedClientId || 'client_goldfields') : user.client_id;
 
     // 1. Insert record in draft status
     await db.execute({
-      sql: `INSERT INTO content_records (id, collection, slug, title, status, current_published_revision_id, current_draft_revision_id, owner_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, 'draft', NULL, ?, ?, ?, ?)`,
-      args: [recordId, collection, cleanSlug, title, revId, user.id, now, now]
+      sql: `INSERT INTO content_records (id, collection, slug, title, status, current_published_revision_id, current_draft_revision_id, owner_id, client_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, 'draft', NULL, ?, ?, ?, ?, ?)`,
+      args: [recordId, collection, cleanSlug, title, revId, user.id, clientId, now, now]
     });
 
     // 2. Insert initial draft revision

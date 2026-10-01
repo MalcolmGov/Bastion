@@ -5,9 +5,12 @@ import { diagnoseAndGeneratePatch } from '@/lib/sre/engine';
 import { openFixPR } from '@/lib/sre/github-pr';
 import { validateAndSanitizePatch } from '@/lib/sre/ast-validator';
 import { dispatchWhatsAppIncidentAlert } from '@/lib/alerts/notifier';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/auth';
 import { getDb } from '@/lib/db/client';
 import { closeFixPR } from '@/lib/sre/github-pr';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

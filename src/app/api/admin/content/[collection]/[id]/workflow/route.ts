@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser, hasPermission } from '@/lib/auth/auth';
+import { clientOwns } from '@/lib/auth/guard';
 import { sendReviewNotification } from '@/lib/notifications/notifier';
 import crypto from 'crypto';
 
@@ -33,6 +34,9 @@ export async function POST(
     }
 
     const record = recordRes.rows[0];
+    if (!clientOwns(user, record.client_id ? String(record.client_id) : null)) {
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+    }
     const draftRevId = String(record.current_draft_revision_id || '');
 
     // 2. Fetch draft revision details
@@ -95,10 +99,11 @@ export async function POST(
 
         // Insert approval record
         const approvalId = `appr_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+        const contentHash = draft?.content_hash ? String(draft.content_hash) : '';
         await db.execute({
-          sql: `INSERT INTO approvals (id, revision_id, reviewer_id, decision, comment, created_at)
-                VALUES (?, ?, ?, 'approved', ?, ?)`,
-          args: [approvalId, draftRevId, user.id, comments || 'Approved for release', now]
+          sql: `INSERT INTO approvals (id, revision_id, reviewer_id, decision, comment, content_hash_at_approval, created_at)
+                VALUES (?, ?, ?, 'approved', ?, ?, ?)`,
+          args: [approvalId, draftRevId, user.id, comments || 'Approved for release', contentHash, now]
         });
 
         newStatus = 'approved';

@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
+import { assertSiteAccess, requireUser } from '@/lib/auth/guard';
 
 export async function GET(req: NextRequest) {
   try {
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
     const { searchParams } = new URL(req.url);
     const siteId = searchParams.get('siteId') || 'site_apex_strategy';
+    const siteGate = await assertSiteAccess(gate.user, siteId);
+    if (!siteGate.ok) return siteGate.response;
     const pageSlug = searchParams.get('pageSlug') || 'home';
     const db = getDb();
 
@@ -70,8 +75,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
     const body = await req.json();
     const { siteId, pageSlug = 'home', sections, title, status = 'draft' } = body;
+    if (!siteId) {
+      return NextResponse.json({ error: 'siteId is required' }, { status: 400 });
+    }
+    const siteGate = await assertSiteAccess(gate.user, siteId);
+    if (!siteGate.ok) return siteGate.response;
+    if (status === 'published' && gate.user.role !== 'platform_admin' && gate.user.role !== 'publisher') {
+      return NextResponse.json({ error: 'Forbidden: only a publisher can publish a page.' }, { status: 403 });
+    }
     const db = getDb();
     const now = new Date().toISOString();
 
@@ -100,8 +115,8 @@ export async function POST(req: NextRequest) {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         `audit_${Date.now()}`,
-        'usr_admin',
-        'Agency Administrator',
+        gate.user.id,
+        gate.user.name,
         'page_composition_save',
         'page_compositions',
         compId,

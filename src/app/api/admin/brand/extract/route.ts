@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { HeadlessBrandExtractor } from '@/lib/studio/headlessExtractor';
 import { BrandDnaExtractor } from '@/lib/studio/brandExtractor';
 import { JobManager } from '@/lib/studio/worker';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const body = await req.json();
     const { url, maxPages = 3 } = body;
 

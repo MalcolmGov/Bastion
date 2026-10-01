@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser, hasPermission } from '@/lib/auth/auth';
+import { clientOwns } from '@/lib/auth/guard';
 import crypto from 'crypto';
 
 export async function GET(
@@ -33,6 +34,9 @@ export async function GET(
     }
 
     const record = recordRes.rows[0];
+    if (!clientOwns(user, record.client_id ? String(record.client_id) : null)) {
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+    }
 
     // 2. Fetch current draft revision
     let draftData = null;
@@ -136,6 +140,9 @@ export async function PUT(
     }
 
     const existing = existingRes.rows[0];
+    if (!clientOwns(user, existing.client_id ? String(existing.client_id) : null)) {
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+    }
 
     // Determine next revision number
     const maxRevRes = await db.execute({

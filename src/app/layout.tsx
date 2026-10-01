@@ -31,8 +31,10 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3010';
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.goldfields.com'),
+  metadataBase: new URL(appUrl),
   title: {
     default: 'Gold Fields — Creating Enduring Value Beyond Mining',
     template: '%s | Gold Fields',
@@ -49,7 +51,7 @@ export const metadata: Metadata = {
     'H1 2026 Results',
     'GFI',
   ],
-  authors: [{ name: 'Gold Fields Corporate Communications' }],
+  authors: [{ name: 'Bastion Studio' }],
   robots: 'noindex, nofollow', // As specified: concept prototype default
   manifest: '/manifest.json',
   icons: {
@@ -66,7 +68,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://www.goldfields.com',
+    url: appUrl,
     siteName: 'Gold Fields',
     title: 'Gold Fields — Creating Enduring Value Beyond Mining',
     description:

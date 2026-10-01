@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import crypto from 'crypto';
 import { dispatchContentWebhook } from '@/lib/webhooks/dispatcher';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function GET(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const { searchParams } = new URL(req.url);
     const siteId = searchParams.get('siteId') || 'site_goldfields_flagship';
     const db = getDb();
@@ -22,11 +25,11 @@ export async function GET(req: NextRequest) {
     const row = siteRes.rows[0];
     const settings = typeof row.settings_json === 'string' ? JSON.parse(row.settings_json) : (row.settings_json || {});
     const headless = settings.headlessIntegration || {
-      apiKey: 'sec_goldfields_bastion_2026_live',
-      webhookUrl: 'https://goldfields.com/api/webhooks/cms-update',
-      webhookSecret: 'whsec_bastion_goldfields_2026',
-      previewUrlPattern: 'https://preview.goldfields.com/{slug}?preview=true',
-      previewSecret: 'prev_sec_goldfields_draft_2026',
+      apiKey: '',
+      webhookUrl: '',
+      webhookSecret: '',
+      previewUrlPattern: '',
+      previewSecret: '',
     };
 
     // 2. Fetch recent webhook deliveries
@@ -63,6 +66,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const body = await req.json();
     const { action = 'save', siteId = 'site_goldfields_flagship', headless } = body;
     const db = getDb();
@@ -105,11 +110,11 @@ export async function POST(req: NextRequest) {
 
     // Action B: Save Settings
     settings.headlessIntegration = {
-      apiKey: headless.apiKey || 'sec_goldfields_bastion_2026_live',
-      webhookUrl: headless.webhookUrl || '',
-      webhookSecret: headless.webhookSecret || 'whsec_bastion_goldfields_2026',
-      previewUrlPattern: headless.previewUrlPattern || '',
-      previewSecret: headless.previewSecret || 'prev_sec_goldfields_draft_2026',
+      apiKey: headless?.apiKey || '',
+      webhookUrl: headless?.webhookUrl || '',
+      webhookSecret: headless?.webhookSecret || '',
+      previewUrlPattern: headless?.previewUrlPattern || '',
+      previewSecret: headless?.previewSecret || '',
       updatedAt: now,
     };
 

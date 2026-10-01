@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAdminAuth } from './AdminAuthProvider';
+import { isAgencyUser } from '@/lib/auth/roles';
 import { useStudioWorkspace } from './StudioWorkspaceProvider';
 import { useDashboardCustomizer } from './DashboardCustomizerProvider';
 import { BastionLogo } from './BastionLogo';
@@ -110,7 +111,8 @@ export function AdminSidebar() {
     try { localStorage.setItem('bastion_sidebar_collapsed', String(next)); } catch {}
   };
 
-  const isClientPortal = portalViewMode === 'client';
+  const agency = isAgencyUser(user);
+  const isClientPortal = !agency || portalViewMode === 'client';
   const isGoldFields = activeClient?.id === 'client_goldfields';
 
   const siteUrl = isGoldFields
@@ -365,7 +367,6 @@ export function AdminSidebar() {
                 <div className="space-y-1">
                   {renderItem('/admin/editor', 'Visual Page Editor', Edit3, pathname.startsWith('/admin/editor'), 'Studio', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
                   {renderItem('/admin/analytics', 'Audience & Analytics', BarChart3, pathname.startsWith('/admin/analytics'))}
-                  {renderItem('/admin/api-keys', 'AI API Keys', Key, pathname.startsWith('/admin/api-keys'), 'AI', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
                   {renderItem('/admin/media', 'Media Library', FolderOpen, pathname.startsWith('/admin/media'))}
                 </div>
               </div>
@@ -465,8 +466,8 @@ export function AdminSidebar() {
           )}
         </div>
 
-        {/* View Switcher Footer */}
-        {isCollapsed ? (
+        {/* View Switcher Footer — agency staff only */}
+        {agency && (isCollapsed ? (
           <div className="p-2 border-t border-slate-200/80 dark:border-slate-800/80 flex justify-center">
             <button
               type="button"
@@ -501,7 +502,7 @@ export function AdminSidebar() {
               <ArrowRightLeft className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
             </button>
           </div>
-        )}
+        ))}
 
         {/* Footer Collapse Toggle Control */}
         <div className="p-2 border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-50/40 dark:bg-[#06090F]">

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAgencyUser } from '@/lib/auth/guard';
 import {
   exchangeOAuthCode,
   fetchGitHubUser,
@@ -7,8 +8,13 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
     const code = req.nextUrl.searchParams.get('code');
-    const returnTo = req.nextUrl.searchParams.get('return_to') || '/admin/create';
+    const requestedReturn = req.nextUrl.searchParams.get('return_to') || '/admin/create';
+    const returnTo = requestedReturn.startsWith('/admin') && !requestedReturn.startsWith('//')
+      ? requestedReturn
+      : '/admin/create';
     const origin = req.nextUrl.origin;
 
     if (!code) {

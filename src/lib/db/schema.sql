@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL, -- platform_admin, content_editor, reviewer, publisher, analyst, website_operator, ai_knowledge_manager, read_only_stakeholder
   region_scope TEXT DEFAULT 'All',
+  client_id TEXT,
   created_at TEXT NOT NULL,
   last_login TEXT
 );
