@@ -11,12 +11,30 @@ function isPublicAdminApi(pathname: string): boolean {
   return false;
 }
 
-/** Resolves client site slug from custom domain hostnames */
-function resolveClientSiteSlug(hostname: string): string | null {
+interface CustomDomainResolution {
+  slug: string;
+  isPublished: boolean;
+}
+
+const EXACT_DOMAIN_REGISTRY: Record<string, CustomDomainResolution> = {
+  'goldfields-bay.vercel.app': { slug: 'goldfields', isPublished: true },
+  'vodacom.com': { slug: 'vodacom', isPublished: true },
+  'apexadvisory.com': { slug: 'apex-advisory', isPublished: true },
+  'bastiongroup.co.za': { slug: 'bastion-holding', isPublished: true },
+  'luminadining.com': { slug: 'lumina', isPublished: false },
+};
+
+/** Resolves client site slug from custom domain hostnames via exact match */
+function resolveClientDomain(hostname: string): CustomDomainResolution | null {
   if (!hostname) return null;
   const clean = hostname.split(':')[0].toLowerCase();
+  const noWww = clean.replace(/^www\./, '');
 
-  // Root platform / agency control planes — do not rewrite
+  // 1. Exact registry lookup against verified primary domains
+  if (EXACT_DOMAIN_REGISTRY[clean]) return EXACT_DOMAIN_REGISTRY[clean];
+  if (EXACT_DOMAIN_REGISTRY[noWww]) return EXACT_DOMAIN_REGISTRY[noWww];
+
+  // 2. Root platform / agency control planes — do not rewrite
   if (
     clean === 'localhost' ||
     clean === '127.0.0.1' ||
@@ -28,27 +46,12 @@ function resolveClientSiteSlug(hostname: string): string | null {
     return null;
   }
 
-  // Pre-configured client domain mappings
-  if (clean === 'goldfields-bay.vercel.app' || clean.includes('goldfields')) {
-    return 'goldfields';
-  }
-  if (clean.includes('vodacom')) {
-    return 'vodacom';
-  }
-  if (clean.includes('apex')) {
-    return 'apex-advisory';
-  }
-  if (clean.includes('lumina')) {
-    return 'lumina';
-  }
-  if (clean.includes('bastiongroup.co.za')) {
-    return 'bastion-holding';
-  }
-
-  // Multi-tenant subdomain pattern: [siteSlug].domains...
+  // 3. Multi-tenant subdomain pattern: [siteSlug].domains...
   const parts = clean.split('.');
-  if (parts.length >= 3 && parts[0] !== 'www' && parts[0] !== 'admin' && parts[0] !== 'api') {
-    return parts[0];
+  if (parts.length >= 3) {
+    const candidateSlug = parts[0];
+    const registered = Object.values(EXACT_DOMAIN_REGISTRY).find(r => r.slug === candidateSlug);
+    if (registered) return registered;
   }
 
   return null;
@@ -87,10 +90,10 @@ export function middleware(req: NextRequest) {
   }
 
   // 3. Client Custom Domain Routing
-  // If the request is from a client's own domain, rewrite to their published tenant site
-  const clientSiteSlug = resolveClientSiteSlug(hostname);
+  // If the request is from a client's verified domain, rewrite to their tenant site
+  const resolvedDomain = resolveClientDomain(hostname);
   if (
-    clientSiteSlug &&
+    resolvedDomain &&
     !pathname.startsWith('/api') &&
     !pathname.startsWith('/admin') &&
     !pathname.startsWith('/sites') &&
@@ -102,16 +105,17 @@ export function middleware(req: NextRequest) {
   ) {
     const rewriteUrl = req.nextUrl.clone();
     if (pathname === '/') {
-      rewriteUrl.pathname = `/sites/${clientSiteSlug}`;
+      rewriteUrl.pathname = `/sites/${resolvedDomain.slug}`;
     } else {
-      rewriteUrl.pathname = `/sites/${clientSiteSlug}${pathname}`;
+      rewriteUrl.pathname = `/sites/${resolvedDomain.slug}${pathname}`;
     }
 
     const res = NextResponse.rewrite(rewriteUrl);
-    res.headers.set('x-tenant-site', clientSiteSlug);
+    res.headers.set('x-tenant-site', resolvedDomain.slug);
     res.headers.set('x-tenant-domain', hostname);
 
-    if (isPreview) {
+    // Only grant indexing if the website is officially published and not in preview mode
+    if (isPreview || !resolvedDomain.isPublished) {
       res.headers.set('X-Robots-Tag', 'noindex, nofollow');
     } else {
       res.headers.set(
@@ -130,16 +134,11 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/preview') ||
     pathname.startsWith('/quote') ||
     pathname.startsWith('/invoice') ||
+    pathname.startsWith('/sites/') ||
     isPreview
   ) {
+    // All platform direct visits, preview links, admin tools, and direct /sites/... visits are strictly noindex
     res.headers.set('X-Robots-Tag', 'noindex, nofollow');
-  } else if (pathname.startsWith('/sites/')) {
-    // Direct access to site compositions inherits preview/published indexing rule
-    if (isPreview) {
-      res.headers.set('X-Robots-Tag', 'noindex, nofollow');
-    } else {
-      res.headers.set('X-Robots-Tag', 'index, follow');
-    }
   }
 
   return res;

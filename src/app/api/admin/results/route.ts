@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/auth';
+import { requireUser } from '@/lib/auth/guard';
+import { isAgencyUser } from '@/lib/auth/roles';
 import { listResultsDocuments } from '@/lib/results/store';
 
 export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const documents = await listResultsDocuments();
+  const gate = await requireUser();
+  if (!gate.ok) return gate.response;
+  const user = gate.user;
+
+  const clientId = isAgencyUser(user) ? null : user.client_id;
+  const documents = await listResultsDocuments(clientId);
   return NextResponse.json({ documents });
 }

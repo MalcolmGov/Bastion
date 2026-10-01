@@ -28,6 +28,40 @@ export function getDatabaseInfo(): DatabaseInfo {
   };
 }
 
+export function validateProductionEnvironment(): { ok: boolean; issues: string[]; warnings: string[] } {
+  const issues: string[] = [];
+  const warnings: string[] = [];
+  const isProd = process.env.NODE_ENV === 'production';
+  const isVercel = !!process.env.VERCEL;
+  const dbInfo = getDatabaseInfo();
+
+  if ((isProd || isVercel) && !dbInfo.isHosted && process.env.ALLOW_LOCAL_DB !== 'true') {
+    issues.push('TURSO_DATABASE_URL is missing. Hosted database required in production/serverless.');
+  }
+
+  if (dbInfo.isHosted && !dbInfo.hasAuthToken) {
+    issues.push('TURSO_AUTH_TOKEN is missing for hosted Turso connection.');
+  }
+
+  if ((isProd || isVercel) && !process.env.RESEND_API_KEY && process.env.ALLOW_SIMULATED_EMAIL !== 'true') {
+    issues.push('RESEND_API_KEY is not configured for transactional email delivery in production.');
+  }
+
+  if (!process.env.CRON_SECRET) {
+    warnings.push('CRON_SECRET is not set; scheduled release execution is unprotected.');
+  }
+
+  if (!process.env.API_SECRET_TOKEN) {
+    warnings.push('API_SECRET_TOKEN is not set; headless and GraphQL routes lack bearer token protection.');
+  }
+
+  return {
+    ok: issues.length === 0,
+    issues,
+    warnings
+  };
+}
+
 function getRawClient(): Client {
   if (!rawClient) {
     const isVercel = !!process.env.VERCEL;
@@ -35,10 +69,11 @@ function getRawClient(): Client {
     let url = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
 
     if (!url) {
-      if (isProd || isVercel) {
-        console.warn(
-          '[DB ARCHITECTURE WARNING] Running in production/serverless without TURSO_DATABASE_URL. ' +
-          'Configure TURSO_DATABASE_URL and TURSO_AUTH_TOKEN to persist database records across deploys.'
+      if ((isProd || isVercel) && process.env.ALLOW_LOCAL_DB !== 'true') {
+        throw new Error(
+          '[FATAL DB ERROR] Production launch blocked: TURSO_DATABASE_URL is not configured. ' +
+          'Running with local SQLite in production/serverless will result in data loss on container restart. ' +
+          'Configure TURSO_DATABASE_URL and TURSO_AUTH_TOKEN, or set ALLOW_LOCAL_DB=true only for explicit local staging.'
         );
       }
       url = `file:${path.join(process.cwd(), 'studio.db')}`;

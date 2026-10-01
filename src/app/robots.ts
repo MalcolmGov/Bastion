@@ -1,19 +1,14 @@
 import type { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
+import { resolveDomain, isPlatformHost } from '@/lib/domains/registry';
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const headersList = await headers();
   const host = headersList.get('host') || '';
   const domain = host.split(':')[0].toLowerCase();
 
-  // If host is internal agency, preview, or staging, disallow crawler indexing
-  if (
-    domain.includes('admin') ||
-    domain.includes('preview') ||
-    domain.includes('staging') ||
-    domain === 'localhost' ||
-    domain === '127.0.0.1'
-  ) {
+  // If host is platform/agency, preview, or staging, completely disallow crawler indexing
+  if (isPlatformHost(domain) || domain.includes('admin') || domain.includes('staging')) {
     return {
       rules: {
         userAgent: '*',
@@ -22,7 +17,19 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     };
   }
 
-  // Public client custom domain or production site
+  // Resolve against custom domain registry
+  const resolved = await resolveDomain(domain);
+  if (!resolved.found || !resolved.isPublished) {
+    // Unverified or draft client site — do not index
+    return {
+      rules: {
+        userAgent: '*',
+        disallow: '/',
+      },
+    };
+  }
+
+  // Verified published client custom domain
   const protocol = host.includes('localhost') ? 'http' : 'https';
   return {
     rules: [

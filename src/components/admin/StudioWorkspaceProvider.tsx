@@ -101,10 +101,22 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     if (user && !agency) {
       setPortalViewModeState('client');
+      if (user.client_id) {
+        setActiveClientIdState(user.client_id);
+        const userClient = clients.find(c => c.id === user.client_id);
+        if (userClient?.websites?.[0]) {
+          setActiveSiteIdState(userClient.websites[0].id);
+        }
+      }
     }
-  }, [user, agency]);
+  }, [user, agency, clients]);
 
   const setActiveClientId = (id: string) => {
+    // If not agency, forbid switching to another client
+    if (!agency && user?.client_id && id !== user.client_id) {
+      console.warn('[StudioWorkspace] Non-agency user cannot switch client workspace.');
+      return;
+    }
     setActiveClientIdState(id);
     if (typeof window !== 'undefined') {
       localStorage.setItem('move_studio_active_client', id);

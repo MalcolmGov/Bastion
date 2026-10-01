@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/auth';
+import { requireUser } from '@/lib/auth/guard';
+import { isAgencyUser } from '@/lib/auth/roles';
 import { convertMerafeExample, convertPdfBytes, convertSampleBooklet } from '@/lib/results/convert';
 import { saveResultsDocument } from '@/lib/results/store';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const gate = await requireUser();
+  if (!gate.ok) return gate.response;
+  const user = gate.user;
 
   try {
     const contentType = req.headers.get('content-type') || '';
@@ -16,14 +18,14 @@ export async function POST(req: NextRequest) {
 
     if (contentType.includes('application/json')) {
       const body = await req.json();
-      clientId = body.clientId || null;
+      clientId = isAgencyUser(user) ? (body.clientId || null) : user.client_id;
       if (body.example === 'merafe') document = await convertMerafeExample();
       else if (body.sample) document = await convertSampleBooklet();
       else return NextResponse.json({ error: 'Upload a PDF or choose an example booklet.' }, { status: 400 });
     } else {
       const form = await req.formData();
       const file = form.get('file');
-      clientId = String(form.get('clientId') || '') || null;
+      clientId = isAgencyUser(user) ? (String(form.get('clientId') || '') || null) : user.client_id;
       if (!(file instanceof File)) {
         return NextResponse.json({ error: 'Choose a PDF results booklet.' }, { status: 400 });
       }
