@@ -3,6 +3,12 @@
 import React, { useState } from 'react';
 import { Menu, X, ChevronDown, ArrowRight } from 'lucide-react';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
+import {
+  getFontFamilyClass,
+  getContainerWidthClass,
+  getBorderRadiusClass,
+  getGlowEffectStyles
+} from '@/lib/studio/styleResolver';
 
 interface HeaderProps {
   props: {
@@ -43,12 +49,25 @@ export function StudioHeader({ props, styles, collection = 'contemporary', varia
   const effectiveTextColor = styles?.textColor || (styles as any)?.brandTextColor || (isDarkMode ? '#F8FAFC' : undefined);
   const effectiveLogo = (isDarkMode && (props as any)?.logoDarkUrl) ? (props as any).logoDarkUrl : props.logoUrl;
 
+  // Resolve visual controls tokens
+  const defaultFont = isEditorial ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = getFontFamilyClass(styles?.fontFamily, defaultFont);
+  const containerWidthClass = getContainerWidthClass(styles?.containerWidth, 'max-w-7xl');
+  const borderRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-lg');
+  const glowStyle = getGlowEffectStyles(styles?.glowEffect);
+  const frostedGlassStyle: React.CSSProperties = styles?.frostedGlass || styles?.glassBlurPx ? {
+    backdropFilter: `blur(${styles?.glassBlurPx ?? 16}px)`,
+    WebkitBackdropFilter: `blur(${styles?.glassBlurPx ?? 16}px)`,
+  } : {};
+
   const headerStyle: React.CSSProperties = {
     ...(effectiveBg ? { backgroundColor: effectiveBg } : {}),
     ...(styles?.backgroundType === 'gradient' && styles.gradient ? { background: styles.gradient } : {}),
     ...(effectiveTextColor ? { color: effectiveTextColor } : {}),
     ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
     ...((styles as any)?.backdropBlur ? { backdropFilter: `blur(${(styles as any).backdropBlur})` } : {}),
+    ...glowStyle,
+    ...frostedGlassStyle,
   };
 
   const defaultBgClass = isDarkMode
@@ -72,7 +91,7 @@ export function StudioHeader({ props, styles, collection = 'contemporary', varia
           style={{ background: (styles as any).bottomAccentLine }}
         />
       )}
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div className={`${containerWidthClass} mx-auto px-6 h-20 flex items-center justify-between ${fontFamilyClass}`}>
         {/* Brand Logo / Title */}
         <div className="flex items-center space-x-3 shrink-0">
           {effectiveLogo ? (
@@ -85,7 +104,7 @@ export function StudioHeader({ props, styles, collection = 'contemporary', varia
             <div className="flex items-center space-x-2.5">
               <div
                 style={styles?.accentColor ? { backgroundColor: styles.accentColor } : undefined}
-                className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs shadow-xs ${
+                className={`w-9 h-9 ${borderRadiusClass} flex items-center justify-center font-bold text-xs shadow-xs ${
                   styles?.accentColor ? 'text-white' : (isImmersive ? 'bg-amber-500 text-black' : isEditorial ? 'bg-[#082B49] text-white' : 'bg-slate-900 text-white')
                 }`}
               >
@@ -156,14 +175,14 @@ export function StudioHeader({ props, styles, collection = 'contemporary', varia
               href={props.ctaHref || '#'}
               onClick={isEditor ? (e) => e.preventDefault() : undefined}
               style={styles?.accentColor ? { backgroundColor: styles.accentColor, color: '#FFFFFF' } : undefined}
-              className={`px-5 py-2.5 text-xs font-semibold transition shadow-sm inline-flex items-center space-x-1.5 ${
+              className={`px-5 py-2.5 text-xs font-semibold transition shadow-sm inline-flex items-center space-x-1.5 ${borderRadiusClass} ${
                 styles?.accentColor
-                  ? 'rounded-lg hover:brightness-110'
+                  ? 'hover:brightness-110'
                   : isImmersive
-                  ? 'rounded-md bg-amber-600 text-white hover:bg-amber-500'
+                  ? 'bg-amber-600 text-white hover:bg-amber-500'
                   : isEditorial
-                  ? 'bg-[#082B49] text-white hover:bg-[#003068] rounded-none'
-                  : 'rounded-lg bg-slate-900 text-white hover:bg-slate-800'
+                  ? 'bg-[#082B49] text-white hover:bg-[#003068]'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
               }`}
             >
               <span>{props.ctaText}</span>

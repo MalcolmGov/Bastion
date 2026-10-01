@@ -48,7 +48,14 @@ import {
   Globe,
   CalendarCheck,
   Check,
-  Key
+  Key,
+  Box,
+  AlignLeft,
+  AlignCenter,
+  Square,
+  Sparkle,
+  Maximize,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
@@ -149,6 +156,63 @@ const PATTERN_OPTIONS: { id: BackgroundPatternType; label: string; desc: string;
   { id: 'mesh', label: 'Conic Mesh', desc: 'Multi-hue aura blend', icon: Palette },
   { id: 'galaxy', label: 'Galaxy Stars', desc: 'Celestial starlight nodes', icon: Star },
   { id: 'aurora', label: 'Aurora Wave', desc: 'Prismatic kinetic waves', icon: Waves },
+];
+
+const FONT_OPTIONS = [
+  { id: 'sans', label: 'Modern Sans', preview: 'Aa', desc: 'Clean Swiss Tech (Inter / Geist)', fontClass: 'font-sans' },
+  { id: 'serif', label: 'Editorial Serif', preview: 'Aa', desc: 'Luxury Institutional (Playfair / Merriweather)', fontClass: 'font-serif' },
+  { id: 'mono', label: 'Precision Mono', preview: 'Aa', desc: 'Engineering & Quant (JetBrains Mono)', fontClass: 'font-mono' },
+];
+
+const HEADING_SCALE_OPTIONS = [
+  { id: 'compact', label: 'Compact', desc: '3xl / 4xl' },
+  { id: 'normal', label: 'Balanced', desc: '4xl / 5xl' },
+  { id: 'hero', label: 'Hero', desc: '5xl / 6xl' },
+  { id: 'ultra', label: 'Ultra Display', desc: '7xl / 8xl' },
+];
+
+const LETTER_SPACING_OPTIONS = [
+  { id: 'tighter', label: '-0.05em', name: 'Tighter' },
+  { id: 'tight', label: '-0.025em', name: 'Tight' },
+  { id: 'normal', label: '0', name: 'Normal' },
+  { id: 'wide', label: '+0.025em', name: 'Wide' },
+  { id: 'expanded', label: '+0.05em', name: 'Expanded' },
+];
+
+const CONTAINER_WIDTH_OPTIONS = [
+  { id: 'compact', label: 'Compact', detail: 'max-w-4xl (896px)' },
+  { id: 'standard', label: 'Standard', detail: 'max-w-6xl (1152px)' },
+  { id: 'wide', label: 'Wide', detail: 'max-w-7xl (1280px)' },
+  { id: 'full', label: 'Full Bleed', detail: '100% Bleed' },
+];
+
+const BORDER_RADIUS_OPTIONS = [
+  { id: 'none', label: '0px', name: 'Sharp', iconClass: 'rounded-none' },
+  { id: 'sm', label: '2px', name: 'Subtle', iconClass: 'rounded-xs' },
+  { id: 'md', label: '6px', name: 'Soft', iconClass: 'rounded-md' },
+  { id: 'lg', label: '8px', name: 'Standard', iconClass: 'rounded-lg' },
+  { id: 'xl', label: '12px', name: 'Curved', iconClass: 'rounded-xl' },
+  { id: '2xl', label: '16px', name: 'Glass', iconClass: 'rounded-2xl' },
+  { id: 'full', label: '99px', name: 'Pill', iconClass: 'rounded-full' },
+];
+
+const GLOW_OPTIONS = [
+  { id: 'none', name: 'None', color: 'transparent' },
+  { id: 'blue', name: 'Cyan Bloom', color: '#38BDF8' },
+  { id: 'gold', name: 'Royal Gold', color: '#F59E0B' },
+  { id: 'emerald', name: 'Emerald', color: '#10B981' },
+  { id: 'purple', name: 'Deep Violet', color: '#A855F7' },
+  { id: 'rose', name: 'Rose Bloom', color: '#F43F5E' },
+];
+
+const PADDING_OPTIONS = [
+  { id: 'py-8', label: '32px', name: 'Minimal' },
+  { id: 'py-12', label: '48px', name: 'Compact' },
+  { id: 'py-16', label: '64px', name: 'Standard' },
+  { id: 'py-20', label: '80px', name: 'Balanced' },
+  { id: 'py-24', label: '96px', name: 'Relaxed' },
+  { id: 'py-28', label: '112px', name: 'Spacious' },
+  { id: 'py-36', label: '144px', name: 'Epic' },
 ];
 
 function VisualWebsiteEditorContent() {
@@ -1379,6 +1443,15 @@ function VisualWebsiteEditorContent() {
                   setSelectedSectionId(id);
                   setIsContentAgentModalOpen(true);
                 }}
+                onQuickStyleChange={(id, key, val) => {
+                  setSelectedSectionId(id);
+                  handleStyleChange(key, val);
+                }}
+                onOpenDesignTab={(id) => {
+                  setSelectedSectionId(id);
+                  setInspectorTab('design');
+                  if (!isRightPanelOpen) setIsRightPanelOpen(true);
+                }}
               />
             ))}
           </div>
@@ -2464,31 +2537,410 @@ function VisualWebsiteEditorContent() {
                     </div>
                   </div>
 
-                  {/* SPACING & VERTICAL PADDING */}
-                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2">
-                    <label className="block text-[11px] font-semibold uppercase text-slate-400">
-                      Block Vertical Padding
-                    </label>
-                    <div className="grid grid-cols-4 gap-1 text-[11px]">
-                      {[
-                        { label: 'Compact', val: 'py-12' },
-                        { label: 'Balanced', val: 'py-20' },
-                        { label: 'Spacious', val: 'py-28' },
-                        { label: 'Epic', val: 'py-36' }
-                      ].map((pad) => (
+                  {/* SUITE 1: INTERACTIVE BOX MODEL & LAYOUT SPACING */}
+                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Box className="w-3.5 h-3.5 text-sky-400" />
+                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                          Box Model & Layout Spacing
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                        {selectedSection.styles?.paddingY || 'py-20 md:py-28'}
+                      </span>
+                    </div>
+
+                    {/* Interactive 2D Box Model Diagram */}
+                    <div className="p-2.5 rounded-xl bg-[#0A0D14] border border-[#1E293B] text-center text-xs relative select-none">
+                      {/* Outer: Margin / Container Bounds */}
+                      <div className="border border-dashed border-sky-500/40 rounded-lg p-2.5 bg-sky-950/20 relative">
+                        <div className="flex items-center justify-between text-[9px] uppercase font-mono font-bold text-sky-400/80 mb-1.5 px-1">
+                          <span>CONTAINER: {selectedSection.styles?.containerWidth || 'wide (max-w-7xl)'}</span>
+                          <span>MARGIN: AUTO</span>
+                        </div>
+
+                        {/* Inner: Padding Top & Bottom */}
+                        <div className="border border-indigo-500/40 rounded-md p-3 bg-indigo-950/30 space-y-1.5">
+                          <div className="text-[10px] font-mono text-indigo-300 font-bold flex items-center justify-center space-x-1">
+                            <span>PADDING-Y:</span>
+                            <span className="bg-indigo-900/60 px-1.5 py-0.5 rounded border border-indigo-400/30 text-white">
+                              {selectedSection.styles?.paddingY ? selectedSection.styles.paddingY.replace('py-', '') + ' (rem unit)' : 'Default (py-20)'}
+                            </span>
+                          </div>
+
+                          {/* Center Content Block */}
+                          <div className="bg-[#141C2A] border border-slate-700/60 rounded py-2 px-3 text-[10px] font-semibold text-slate-200 flex items-center justify-between">
+                            <span className="truncate">Block: {selectedSection.componentId.replace('_', ' ')}</span>
+                            <span className="text-[9px] text-slate-400 font-mono capitalize">{selectedSection.styles?.alignment || 'left'} align</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Container Width Bounds */}
+                    <div className="space-y-1.5 pt-1">
+                      <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                        Container Max Width Constraint
+                      </label>
+                      <div className="grid grid-cols-4 gap-1 text-[10px]">
+                        {CONTAINER_WIDTH_OPTIONS.map((cw) => {
+                          const isCurrent = (!selectedSection.styles?.containerWidth && cw.id === 'wide') ||
+                            selectedSection.styles?.containerWidth === cw.id;
+                          return (
+                            <button
+                              key={cw.id}
+                              type="button"
+                              onClick={() => handleStyleChange('containerWidth', cw.id)}
+                              title={cw.detail}
+                              className={`py-1.5 rounded-lg border text-center font-medium transition ${
+                                isCurrent
+                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <div>{cw.label}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Vertical Padding Steppers */}
+                    <div className="space-y-1.5 pt-1">
+                      <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                        Block Vertical Padding
+                      </label>
+                      <div className="grid grid-cols-4 gap-1 text-[10px]">
+                        {PADDING_OPTIONS.map((pad) => {
+                          const isCurrent = (!selectedSection.styles?.paddingY && pad.id === 'py-20') ||
+                            selectedSection.styles?.paddingY === pad.id;
+                          return (
+                            <button
+                              key={pad.id}
+                              type="button"
+                              onClick={() => handleStyleChange('paddingY', pad.id)}
+                              title={`${pad.name} (${pad.label})`}
+                              className={`py-1 rounded-lg border text-center font-medium transition ${
+                                isCurrent
+                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <div className="font-mono text-[9px]">{pad.label}</div>
+                              <div className="text-[8px] opacity-75">{pad.name}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SUITE 2: TYPOGRAPHY ENGINE & PAIRINGS */}
+                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Type className="w-3.5 h-3.5 text-sky-400" />
+                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                          Typography Engine
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 capitalize">
+                        {selectedSection.styles?.fontFamily || 'Sans'}
+                      </span>
+                    </div>
+
+                    {/* Font Family Selector Cards */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                        Font Family & Pairing
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {FONT_OPTIONS.map((font) => {
+                          const isCurrent = (!selectedSection.styles?.fontFamily && font.id === 'sans') ||
+                            selectedSection.styles?.fontFamily === font.id;
+                          return (
+                            <button
+                              key={font.id}
+                              type="button"
+                              onClick={() => handleStyleChange('fontFamily', font.id)}
+                              className={`p-2 rounded-xl border text-center transition flex flex-col items-center justify-between ${
+                                isCurrent
+                                  ? 'bg-sky-950/70 border-sky-400 ring-1 ring-sky-400 text-white shadow-sm'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <span className={`text-xl font-bold mb-0.5 ${font.fontClass}`}>
+                                {font.preview}
+                              </span>
+                              <span className="text-[10px] font-semibold truncate w-full">
+                                {font.label}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Heading Scale Multiplier */}
+                    <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-xs">
+                        <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                          Heading Scale Multiplier
+                        </label>
+                        <span className="text-[10px] text-sky-400 font-mono capitalize">
+                          {selectedSection.styles?.headingScale || 'Balanced'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1 text-[10px]">
+                        {HEADING_SCALE_OPTIONS.map((hs) => {
+                          const isCurrent = (!selectedSection.styles?.headingScale && hs.id === 'normal') ||
+                            selectedSection.styles?.headingScale === hs.id;
+                          return (
+                            <button
+                              key={hs.id}
+                              type="button"
+                              onClick={() => handleStyleChange('headingScale', hs.id)}
+                              title={hs.desc}
+                              className={`py-1 rounded border text-center font-medium transition ${
+                                isCurrent
+                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <div>{hs.label}</div>
+                              <div className="text-[8px] opacity-75 font-mono">{hs.desc}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Letter Spacing / Tracking */}
+                    <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-xs">
+                        <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                          Tracking / Letter Spacing
+                        </label>
+                        <span className="text-[10px] text-sky-400 font-mono">
+                          {selectedSection.styles?.letterSpacing || 'normal (0)'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1 text-[10px]">
+                        {LETTER_SPACING_OPTIONS.map((ls) => {
+                          const isCurrent = (!selectedSection.styles?.letterSpacing && ls.id === 'normal') ||
+                            selectedSection.styles?.letterSpacing === ls.id;
+                          return (
+                            <button
+                              key={ls.id}
+                              type="button"
+                              onClick={() => handleStyleChange('letterSpacing', ls.id)}
+                              title={ls.name}
+                              className={`py-1 rounded border text-center font-medium transition ${
+                                isCurrent
+                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <div className="text-[9px] font-mono">{ls.label}</div>
+                              <div className="text-[8px] opacity-75">{ls.name}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Text Alignment */}
+                    <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                      <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                        Content & Heading Alignment
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs">
+                        {[
+                          { id: 'left', label: 'Left', icon: AlignLeft },
+                          { id: 'center', label: 'Center', icon: AlignCenter },
+                          { id: 'split', label: 'Split', icon: Square }
+                        ].map((al) => {
+                          const Icon = al.icon;
+                          const isCurrent = (!selectedSection.styles?.alignment && al.id === 'left') ||
+                            selectedSection.styles?.alignment === al.id;
+                          return (
+                            <button
+                              key={al.id}
+                              type="button"
+                              onClick={() => handleStyleChange('alignment', al.id)}
+                              className={`py-1.5 px-2 rounded-lg border flex items-center justify-center space-x-1.5 transition ${
+                                isCurrent
+                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <Icon className="w-3.5 h-3.5" />
+                              <span className="text-[11px]">{al.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SUITE 3: GEOMETRY, GLASSMORPHISM & AMBIENT GLOW */}
+                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Sparkle className="w-3.5 h-3.5 text-sky-400" />
+                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                          Geometry & Ambient Glow
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 capitalize">
+                        {selectedSection.styles?.borderRadius || 'Default'}
+                      </span>
+                    </div>
+
+                    {/* Corner Radius Controls */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                        Card & Element Corner Radius
+                      </label>
+                      <div className="grid grid-cols-7 gap-1 text-[10px]">
+                        {BORDER_RADIUS_OPTIONS.map((br) => {
+                          const isCurrent = (!selectedSection.styles?.borderRadius && br.id === 'xl') ||
+                            selectedSection.styles?.borderRadius === br.id;
+                          return (
+                            <button
+                              key={br.id}
+                              type="button"
+                              onClick={() => handleStyleChange('borderRadius', br.id)}
+                              title={`${br.name} (${br.label})`}
+                              className={`py-1.5 rounded border text-center flex flex-col items-center justify-center transition ${
+                                isCurrent
+                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <div className={`w-3.5 h-3.5 border border-current mb-0.5 ${br.iconClass}`} />
+                              <div className="text-[8px] font-mono">{br.label}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Frosted Glass Backdrop Blur */}
+                    <div className="space-y-2 pt-1 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400 text-[10px] font-semibold uppercase">Frosted Glass Blur</span>
+                        <span className="text-sky-400 font-mono text-[11px] font-semibold">
+                          {selectedSection.styles?.glassBlurPx !== undefined ? `${selectedSection.styles.glassBlurPx}px` : '16px (Default)'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1 text-[10px]">
+                        {[
+                          { label: 'Off', val: 0 },
+                          { label: 'Subtle (8px)', val: 8 },
+                          { label: 'Glass (16px)', val: 16 },
+                          { label: 'Deep (24px)', val: 24 }
+                        ].map((bl) => {
+                          const currentVal = selectedSection.styles?.glassBlurPx !== undefined ? selectedSection.styles.glassBlurPx : 16;
+                          const isCurrent = currentVal === bl.val;
+                          return (
+                            <button
+                              key={bl.label}
+                              type="button"
+                              onClick={() => {
+                                handleStyleChange('glassBlurPx', bl.val);
+                                handleStyleChange('frostedGlass', bl.val > 0);
+                              }}
+                              className={`py-1 rounded border text-center font-medium transition ${
+                                isCurrent
+                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              {bl.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Luminous Ambient Accent Glow */}
+                    <div className="space-y-2 pt-1 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400 text-[10px] font-semibold uppercase">Ambient Luminous Glow Bloom</span>
+                        <span className="text-sky-400 font-mono text-[10px] capitalize">
+                          {selectedSection.styles?.glowEffect || 'None'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {GLOW_OPTIONS.map((gl) => {
+                          const isCurrent = (!selectedSection.styles?.glowEffect && gl.id === 'none') ||
+                            selectedSection.styles?.glowEffect === gl.id;
+                          return (
+                            <button
+                              key={gl.id}
+                              type="button"
+                              onClick={() => handleStyleChange('glowEffect', gl.id)}
+                              className={`p-2 rounded-xl border text-center flex items-center space-x-2 transition ${
+                                isCurrent
+                                  ? 'bg-sky-950/70 border-sky-400 ring-1 ring-sky-400 text-white shadow-sm'
+                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              <div
+                                className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0"
+                                style={{
+                                  backgroundColor: gl.color,
+                                  boxShadow: gl.id !== 'none' ? `0 0 8px ${gl.color}` : 'none'
+                                }}
+                              />
+                              <span className="text-[10px] font-semibold truncate leading-tight">
+                                {gl.name}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Border Accents & Hairlines */}
+                    <div className="space-y-2 pt-1 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400 text-[10px] font-semibold uppercase">Border Dividers & Hairlines</span>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="color"
+                            value={selectedSection.styles?.borderColor || '#232F42'}
+                            onChange={(e) => handleStyleChange('borderColor', e.target.value)}
+                            className="w-5 h-5 rounded cursor-pointer border border-slate-600 bg-transparent"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
                         <button
-                          key={pad.val}
                           type="button"
-                          onClick={() => handleStyleChange('paddingY', pad.val)}
-                          className={`py-1.5 rounded-lg border text-center transition ${
-                            selectedSection.styles?.paddingY === pad.val
+                          onClick={() => handleStyleChange('borderTop', !selectedSection.styles?.borderTop)}
+                          className={`py-1.5 px-2 rounded-lg border text-center font-medium transition ${
+                            selectedSection.styles?.borderTop
                               ? 'bg-sky-600 border-sky-400 text-white font-bold'
                               : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
                           }`}
                         >
-                          {pad.label}
+                          Border Top
                         </button>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={() => handleStyleChange('borderBottom', !selectedSection.styles?.borderBottom)}
+                          className={`py-1.5 px-2 rounded-lg border text-center font-medium transition ${
+                            selectedSection.styles?.borderBottom
+                              ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                              : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Border Bottom
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

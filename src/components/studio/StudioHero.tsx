@@ -5,6 +5,15 @@ import Link from 'next/link';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { StudioBackgroundFx } from './StudioBackgroundFx';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
+import {
+  getFontFamilyClass,
+  getHeadingScaleClass,
+  getTrackingClass,
+  getAlignmentClasses,
+  getContainerWidthClass,
+  getBorderRadiusClass,
+  getGlowEffectStyles
+} from '@/lib/studio/styleResolver';
 
 interface HeroProps {
   props: {
@@ -45,12 +54,28 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
   const heroTextColor = styles?.textColor || (props as any)?.subtitleColor || (props as any)?.textColor || (isDarkMode ? '#CBD5E1' : undefined);
   const heroAccentColor = styles?.accentColor || (props as any)?.accentColor;
 
+  // Resolve visual controls tokens
+  const defaultFont = isEditorial || isImmersive ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = getFontFamilyClass(styles?.fontFamily, defaultFont);
+  const headingScaleClass = getHeadingScaleClass(styles?.headingScale, variant === 'immersive_full' || isImmersive ? 'text-4xl sm:text-5xl md:text-6xl lg:text-7xl' : 'text-4xl sm:text-5xl md:text-6xl');
+  const trackingClass = getTrackingClass(styles?.letterSpacing, 'tracking-tight');
+  const alignClass = getAlignmentClasses(styles?.alignment, variant === 'immersive_full' || isImmersive ? 'center' : 'left');
+  const containerWidthClass = getContainerWidthClass(styles?.containerWidth, variant === 'contemporary_bold' ? 'max-w-7xl' : variant === 'editorial_split' ? 'max-w-6xl' : 'max-w-4xl');
+  const borderRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-lg');
+  const glowStyle = getGlowEffectStyles(styles?.glowEffect);
+  const frostedGlassStyle: React.CSSProperties = styles?.frostedGlass || styles?.glassBlurPx ? {
+    backdropFilter: `blur(${styles?.glassBlurPx ?? 16}px)`,
+    WebkitBackdropFilter: `blur(${styles?.glassBlurPx ?? 16}px)`,
+  } : {};
+
   // Custom inline styles resolution
   const heroStyle: React.CSSProperties = {
     ...(effectiveBg ? { backgroundColor: effectiveBg } : {}),
     ...(styles?.backgroundType === 'gradient' && styles.gradient ? { background: styles.gradient } : {}),
     ...(effectiveTextColor ? { color: effectiveTextColor } : {}),
     ...(styles?.borderColor ? { borderColor: styles.borderColor } : (isDarkMode ? { borderColor: 'rgba(255, 255, 255, 0.08)' } : {})),
+    ...glowStyle,
+    ...frostedGlassStyle,
   };
 
   const hasCustomBg = Boolean(effectiveBg || styles?.backgroundType === 'gradient');
@@ -78,11 +103,11 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
           }}
         />
 
-        <div className="relative z-20 max-w-4xl mx-auto text-center space-y-8">
+        <div className={`relative z-20 ${containerWidthClass} mx-auto ${alignClass.text} space-y-8`}>
           {props.badge && (
             <div
               style={heroAccentColor ? { borderColor: heroAccentColor, color: heroAccentColor } : undefined}
-              className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-black/40 border border-white/20 text-xs font-medium tracking-wide uppercase backdrop-blur-xs"
+              className={`inline-flex items-center space-x-2 px-3.5 py-1.5 ${borderRadiusClass} bg-black/40 border border-white/20 text-xs font-medium tracking-wide uppercase backdrop-blur-xs`}
             >
               <span>{props.badge}</span>
             </div>
@@ -90,7 +115,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
 
           <h1
             style={heroHeadingColor ? { color: heroHeadingColor } : undefined}
-            className={`font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.12] tracking-normal ${heroHeadingColor ? '' : 'text-white'}`}
+            className={`${fontFamilyClass} ${headingScaleClass} font-normal leading-[1.12] ${trackingClass} ${heroHeadingColor ? '' : 'text-white'}`}
           >
             {props.title}
           </h1>
@@ -104,13 +129,13 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
             </p>
           )}
 
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+          <div className={`flex flex-wrap items-center ${alignClass.buttons} gap-4 pt-4`}>
             {props.primaryCta && (
               <a
                 href={props.primaryCta.href || '#'}
                 onClick={isEditor ? (e) => e.preventDefault() : undefined}
                 style={heroAccentColor ? { backgroundColor: heroAccentColor, borderColor: heroAccentColor, color: '#FFFFFF' } : undefined}
-                className={`inline-flex items-center space-x-2 px-7 py-3.5 rounded-md font-medium transition shadow-lg text-sm ${
+                className={`inline-flex items-center space-x-2 px-7 py-3.5 ${borderRadiusClass} font-medium transition shadow-lg text-sm ${
                   heroAccentColor ? '' : 'bg-gradient-to-r from-amber-600 to-amber-700 text-white hover:from-amber-500 hover:to-amber-600'
                 }`}
               >
@@ -122,7 +147,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
               <a
                 href={props.secondaryCta.href || '#'}
                 onClick={isEditor ? (e) => e.preventDefault() : undefined}
-                className="inline-flex items-center space-x-2 px-6 py-3.5 rounded-md border border-white/20 text-zinc-300 hover:text-white hover:border-white/40 transition text-sm font-medium"
+                className={`inline-flex items-center space-x-2 px-6 py-3.5 ${borderRadiusClass} border border-white/20 text-zinc-300 hover:text-white hover:border-white/40 transition text-sm font-medium`}
               >
                 <span>{props.secondaryCta.label}</span>
               </a>
@@ -144,19 +169,19 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
           opacity={styles?.patternOpacity}
           accentColor={heroAccentColor}
         />
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
+        <div className={`${containerWidthClass} mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10`}>
           <div className="lg:col-span-7 space-y-6">
             {props.badge && (
               <div
                 style={heroAccentColor ? { borderColor: heroAccentColor, color: heroAccentColor } : undefined}
-                className="inline-block px-3 py-1 bg-white/40 border border-current text-xs font-semibold tracking-wider uppercase"
+                className={`inline-block px-3 py-1 bg-white/40 border border-current text-xs font-semibold tracking-wider uppercase ${borderRadiusClass}`}
               >
                 {props.badge}
               </div>
             )}
             <h1
               style={heroHeadingColor ? { color: heroHeadingColor } : undefined}
-              className="font-serif text-4xl sm:text-5xl md:text-6xl font-normal leading-[1.14] tracking-tight"
+              className={`${fontFamilyClass} ${headingScaleClass} font-normal leading-[1.14] ${trackingClass}`}
             >
               {props.title}
             </h1>
@@ -174,7 +199,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
                   href={props.primaryCta.href || '#'}
                   onClick={isEditor ? (e) => e.preventDefault() : undefined}
                   style={heroAccentColor ? { backgroundColor: heroAccentColor, color: '#FFFFFF' } : undefined}
-                  className={`px-7 py-3.5 font-medium transition text-sm shadow-sm inline-flex items-center space-x-2 ${
+                  className={`px-7 py-3.5 font-medium transition text-sm shadow-sm inline-flex items-center space-x-2 ${borderRadiusClass} ${
                     heroAccentColor ? 'hover:brightness-110' : 'bg-[#082B49] text-white hover:bg-[#003068]'
                   }`}
                 >
@@ -186,7 +211,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
                 <a
                   href={props.secondaryCta.href || '#'}
                   onClick={isEditor ? (e) => e.preventDefault() : undefined}
-                  className="px-6 py-3.5 border border-current opacity-80 hover:opacity-100 transition text-sm font-medium"
+                  className={`px-6 py-3.5 border border-current opacity-80 hover:opacity-100 transition text-sm font-medium ${borderRadiusClass}`}
                 >
                   <span>{props.secondaryCta.label}</span>
                 </a>
@@ -195,7 +220,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
           </div>
 
           <div className="lg:col-span-5">
-            <div className="relative aspect-[4/5] bg-gray-200 overflow-hidden shadow-md rounded-lg">
+            <div className={`relative aspect-[4/5] bg-gray-200 overflow-hidden shadow-md ${borderRadiusClass}`}>
               <img
                 src={props.bgImage || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80'}
                 alt={props.title}
@@ -222,12 +247,12 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
         opacity={styles?.patternOpacity}
         accentColor={heroAccentColor}
       />
-      <div className="max-w-7xl mx-auto space-y-12 relative z-10">
-        <div className="max-w-4xl space-y-6">
+      <div className={`${containerWidthClass} mx-auto space-y-12 relative z-10`}>
+        <div className={`max-w-4xl space-y-6 ${alignClass.container}`}>
           {props.badge && (
             <div
               style={heroAccentColor ? { borderColor: heroAccentColor, color: heroAccentColor } : undefined}
-              className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full ${
+              className={`inline-flex items-center space-x-2 px-3 py-1 ${borderRadiusClass} ${
                 isDarkMode ? 'bg-white/10 border border-white/20 text-slate-200' : 'bg-white/70 border border-current text-xs'
               } text-xs font-semibold tracking-wide`}
             >
@@ -238,7 +263,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
 
           <h1
             style={heroHeadingColor ? { color: heroHeadingColor } : undefined}
-            className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.12]"
+            className={`${fontFamilyClass} ${headingScaleClass} font-bold ${trackingClass} leading-[1.12] ${alignClass.text}`}
           >
             {props.title}
           </h1>
@@ -246,19 +271,19 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
           {props.subtitle && (
             <p
               style={heroTextColor ? { color: heroTextColor } : undefined}
-              className="text-lg md:text-xl font-normal leading-relaxed max-w-3xl opacity-85"
+              className={`text-lg md:text-xl font-normal leading-relaxed max-w-3xl opacity-85 ${alignClass.text}`}
             >
               {props.subtitle}
             </p>
           )}
 
-          <div className="flex flex-wrap items-center gap-4 pt-2">
+          <div className={`flex flex-wrap items-center ${alignClass.buttons} gap-4 pt-2`}>
             {props.primaryCta && (
               <a
                 href={props.primaryCta.href || '#'}
                 onClick={isEditor ? (e) => e.preventDefault() : undefined}
                 style={heroAccentColor ? { backgroundColor: heroAccentColor, color: '#FFFFFF' } : undefined}
-                className={`px-6 py-3 rounded-lg font-semibold transition text-sm shadow-sm inline-flex items-center space-x-2 ${
+                className={`px-6 py-3 ${borderRadiusClass} font-semibold transition text-sm shadow-sm inline-flex items-center space-x-2 ${
                   heroAccentColor ? 'hover:brightness-110 text-white' : 'bg-slate-900 text-white hover:bg-slate-800'
                 }`}
               >
@@ -270,7 +295,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
               <a
                 href={props.secondaryCta.href || '#'}
                 onClick={isEditor ? (e) => e.preventDefault() : undefined}
-                className={`px-5 py-3 rounded-lg border transition text-sm font-semibold ${
+                className={`px-5 py-3 ${borderRadiusClass} border transition text-sm font-semibold ${
                   isDarkMode
                     ? 'border-white/20 text-slate-200 hover:text-white hover:border-white/40 hover:bg-white/5'
                     : 'border-current opacity-80 hover:opacity-100 hover:bg-black/5'
@@ -292,7 +317,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
                   isDarkMode
                     ? 'bg-white/[0.04] border border-white/10 backdrop-blur-md'
                     : 'bg-white/80 border border-current/10 backdrop-blur-xs'
-                } p-5 rounded-xl shadow-xs`}
+                } p-5 ${borderRadiusClass} shadow-xs`}
               >
                 <div
                   style={heroHeadingColor ? { color: heroHeadingColor } : undefined}

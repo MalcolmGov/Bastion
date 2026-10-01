@@ -193,6 +193,17 @@ export interface SectionStyles {
   backdropSaturate?: string;
   bottomAccentLine?: string;
   brandTextColor?: string;
+
+  // High-Leverage Visual Control Tokens
+  fontFamily?: 'sans' | 'serif' | 'mono';
+  headingScale?: 'compact' | 'normal' | 'hero' | 'ultra';
+  letterSpacing?: 'tighter' | 'tight' | 'normal' | 'wide' | 'expanded';
+  alignment?: 'left' | 'center' | 'split';
+  borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  containerWidth?: 'compact' | 'standard' | 'wide' | 'full';
+  glowEffect?: 'none' | 'blue' | 'gold' | 'emerald' | 'purple' | 'rose';
+  frostedGlass?: boolean;
+  glassBlurPx?: number;
 }
 
 export interface SectionInstance {

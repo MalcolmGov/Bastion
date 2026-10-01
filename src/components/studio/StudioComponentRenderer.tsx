@@ -11,9 +11,14 @@ import {
   Sliders,
   Check,
   Eye,
-  CornerDownRight
+  CornerDownRight,
+  AlignLeft,
+  AlignCenter,
+  Moon,
+  Sun,
+  Palette
 } from 'lucide-react';
-import type { SectionInstance, DesignCollectionId } from '@/lib/studio/types';
+import type { SectionInstance, DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 import { StudioHeader } from './StudioHeader';
 import { StudioHero } from './StudioHero';
 import { StudioServices } from './StudioServices';
@@ -41,6 +46,8 @@ interface RendererProps {
   onDuplicate?: (sectionId: string) => void;
   onDelete?: (sectionId: string) => void;
   onAiPolish?: (sectionId: string) => void;
+  onQuickStyleChange?: (sectionId: string, key: keyof SectionStyles, val: any) => void;
+  onOpenDesignTab?: (sectionId: string) => void;
   isSelected?: boolean;
   focusedFieldPath?: string | null;
 }
@@ -56,6 +63,8 @@ export function StudioComponentRenderer({
   onDuplicate,
   onDelete,
   onAiPolish,
+  onQuickStyleChange,
+  onOpenDesignTab,
   isSelected = false,
   focusedFieldPath
 }: RendererProps) {
@@ -178,6 +187,56 @@ export function StudioComponentRenderer({
 
             {/* Right Quick Actions Bar */}
             <div className="flex items-center space-x-1 bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-xl backdrop-blur-md text-white text-xs">
+              {/* Alignment Quick-Toggle */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextAlign = section.styles?.alignment === 'center' ? 'left' : 'center';
+                  onQuickStyleChange?.(section.id, 'alignment', nextAlign);
+                }}
+                title={`Text Alignment: ${section.styles?.alignment || 'left'} (Click to toggle)`}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-sky-400 transition cursor-pointer"
+              >
+                {section.styles?.alignment === 'center' ? (
+                  <AlignCenter className="w-3.5 h-3.5 text-sky-400" />
+                ) : (
+                  <AlignLeft className="w-3.5 h-3.5" />
+                )}
+              </button>
+
+              {/* Theme Quick-Toggle */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const isDark = section.styles?.theme === 'dark';
+                  onQuickStyleChange?.(section.id, 'theme', isDark ? 'light' : 'dark');
+                }}
+                title={`Theme: ${section.styles?.theme || 'light'} (Click to toggle)`}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-amber-400 transition cursor-pointer"
+              >
+                {section.styles?.theme === 'dark' ? (
+                  <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                ) : (
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                )}
+              </button>
+
+              {/* Design Tab Shortcut */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenDesignTab?.(section.id);
+                }}
+                title="Open Design & Spacing Inspector"
+                className="px-2 py-1 rounded-lg bg-sky-950/80 border border-sky-500/30 hover:bg-sky-900/80 text-sky-300 text-[10px] font-bold flex items-center space-x-1 transition cursor-pointer"
+              >
+                <Palette className="w-3 h-3 text-sky-400" />
+                <span className="hidden sm:inline">Design</span>
+              </button>
+
               <button
                 type="button"
                 onClick={(e) => {
@@ -197,11 +256,11 @@ export function StudioComponentRenderer({
                   e.stopPropagation();
                   onSelectField?.(section.id, 'title');
                 }}
-                title="Jump to Inspector"
+                title="Jump to Content Inspector"
                 className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold flex items-center space-x-1 transition cursor-pointer"
               >
                 <Sliders className="w-3 h-3 text-sky-400" />
-                <span className="hidden sm:inline">Inspector</span>
+                <span className="hidden sm:inline">Fields</span>
               </button>
 
               <div className="w-px h-3.5 bg-slate-700 mx-0.5" />

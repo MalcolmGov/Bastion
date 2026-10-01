@@ -4,6 +4,15 @@ import React from 'react';
 import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { StudioBackgroundFx } from './StudioBackgroundFx';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
+import {
+  getFontFamilyClass,
+  getHeadingScaleClass,
+  getTrackingClass,
+  getAlignmentClasses,
+  getContainerWidthClass,
+  getBorderRadiusClass,
+  getGlowEffectStyles
+} from '@/lib/studio/styleResolver';
 
 interface ServicesProps {
   props: {
@@ -39,11 +48,27 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
   const effectiveBg = styles?.backgroundColor || (isDarkMode ? '#090D16' : undefined);
   const effectiveTextColor = styles?.textColor || (isDarkMode ? '#F8FAFC' : undefined);
 
+  // Resolve visual controls tokens
+  const defaultFont = isEditorial || isImmersive ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = getFontFamilyClass(styles?.fontFamily, defaultFont);
+  const headingScaleClass = getHeadingScaleClass(styles?.headingScale, 'text-3xl sm:text-4xl');
+  const trackingClass = getTrackingClass(styles?.letterSpacing, 'tracking-tight');
+  const alignClass = getAlignmentClasses(styles?.alignment, 'left');
+  const containerWidthClass = getContainerWidthClass(styles?.containerWidth, 'max-w-7xl');
+  const cardBorderRadiusClass = getBorderRadiusClass(styles?.borderRadius, isEditorial ? 'rounded-none' : 'rounded-2xl');
+  const glowStyle = getGlowEffectStyles(styles?.glowEffect);
+  const frostedGlassStyle: React.CSSProperties = styles?.frostedGlass || styles?.glassBlurPx ? {
+    backdropFilter: `blur(${styles?.glassBlurPx ?? 16}px)`,
+    WebkitBackdropFilter: `blur(${styles?.glassBlurPx ?? 16}px)`,
+  } : {};
+
   const sectionStyle: React.CSSProperties = {
     ...(effectiveBg ? { backgroundColor: effectiveBg } : {}),
     ...(styles?.backgroundType === 'gradient' && styles.gradient ? { background: styles.gradient } : {}),
     ...(effectiveTextColor ? { color: effectiveTextColor } : {}),
     ...(styles?.borderColor ? { borderColor: styles.borderColor } : (isDarkMode ? { borderColor: 'rgba(255, 255, 255, 0.08)' } : {})),
+    ...glowStyle,
+    ...frostedGlassStyle,
   };
 
   const hasCustomBg = Boolean(effectiveBg || styles?.backgroundType === 'gradient');
@@ -67,8 +92,8 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
         opacity={styles?.patternOpacity}
         accentColor={styles?.accentColor}
       />
-      <div className="max-w-7xl mx-auto space-y-12 relative z-10">
-        <div className="max-w-3xl space-y-4">
+      <div className={`${containerWidthClass} mx-auto space-y-12 relative z-10`}>
+        <div className={`max-w-3xl space-y-4 ${alignClass.container}`}>
           {props.eyebrow && (
             <div
               style={styles?.accentColor ? { color: styles.accentColor } : undefined}
@@ -81,14 +106,14 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
           )}
           <h2
             style={styles?.headingColor ? { color: styles.headingColor } : undefined}
-            className={`text-3xl sm:text-4xl font-bold tracking-tight ${isEditorial || isImmersive ? 'font-serif font-normal' : 'font-sans'}`}
+            className={`${fontFamilyClass} ${headingScaleClass} font-bold ${trackingClass} ${alignClass.text}`}
           >
             {props.title}
           </h2>
           {props.description && (
             <p
               style={styles?.textColor ? { color: styles.textColor } : undefined}
-              className="text-base leading-relaxed opacity-80"
+              className={`text-base leading-relaxed opacity-80 ${alignClass.text}`}
             >
               {props.description}
             </p>
@@ -99,7 +124,7 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
           {props.services?.map((svc, idx) => (
             <div
               key={idx}
-              className={`p-7 rounded-2xl flex flex-col justify-between transition group ${
+              className={`p-7 ${cardBorderRadiusClass} flex flex-col justify-between transition group ${
                 hasCustomBg || isDarkMode
                   ? 'bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.08] text-white shadow-sm'
                   : isImmersive
@@ -124,7 +149,7 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
                 </div>
                 <h3
                   style={styles?.headingColor ? { color: styles.headingColor } : undefined}
-                  className={`text-xl font-bold ${isEditorial || isImmersive ? 'font-serif font-normal' : 'font-sans'}`}
+                  className={`text-xl font-bold ${fontFamilyClass}`}
                 >
                   {svc.title}
                 </h3>
