@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/auth';
+import { readStoredBrand } from '@/lib/results/brand';
 import { convertMerafeExample, convertPdfBytes, convertSampleBooklet } from '@/lib/results/convert';
+import { renderResultsHtml } from '@/lib/results/renderHtml';
 import { saveResultsDocument } from '@/lib/results/store';
 
 export const runtime = 'nodejs';
@@ -14,9 +16,11 @@ export async function POST(req: NextRequest) {
     let document;
     let clientId: string | null = null;
 
+    let brandInput: unknown = null;
     if (contentType.includes('application/json')) {
       const body = await req.json();
       clientId = body.clientId || null;
+      brandInput = body.brand;
       if (body.example === 'merafe') document = await convertMerafeExample();
       else if (body.sample) document = await convertSampleBooklet();
       else return NextResponse.json({ error: 'Upload a PDF or choose an example booklet.' }, { status: 400 });
@@ -24,6 +28,10 @@ export async function POST(req: NextRequest) {
       const form = await req.formData();
       const file = form.get('file');
       clientId = String(form.get('clientId') || '') || null;
+      const brandField = form.get('brand');
+      if (typeof brandField === 'string' && brandField) {
+        try { brandInput = JSON.parse(brandField); } catch { brandInput = null; }
+      }
       if (!(file instanceof File)) {
         return NextResponse.json({ error: 'Choose a PDF results booklet.' }, { status: 400 });
       }
@@ -37,6 +45,9 @@ export async function POST(req: NextRequest) {
       const bytes = new Uint8Array(await file.arrayBuffer());
       document = await convertPdfBytes(bytes, name);
     }
+
+    document.brand = readStoredBrand(brandInput);
+    document.presentationHtml = renderResultsHtml(document);
 
     const saved = await saveResultsDocument({
       clientId,
