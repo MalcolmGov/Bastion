@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db/client';
-import { getCurrentUser } from '@/lib/auth/auth';
+import { getDb, validateProductionEnvironment } from '@/lib/db/client';
+import { requireAgencyUser } from '@/lib/auth/guard';
 
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
+    const user = gate.user;
 
     const db = getDb();
     const incidents = await db.execute(`
@@ -86,10 +85,8 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requireAgencyUser();
+    if (!gate.ok) return gate.response;
 
     const body = await req.json();
     const { id, status } = body;

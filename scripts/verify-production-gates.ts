@@ -4,12 +4,17 @@
  * User Invites, Media Upload Safety, 2-Person Workflow Guards, and Cron Releases.
  */
 
-import { getDb, ensureDbReady, getDatabaseInfo } from '../src/lib/db/client';
+import { getDb, ensureDbReady, getDatabaseInfo, validateProductionEnvironment } from '../src/lib/db/client';
 import { runMigrations } from '../src/lib/db/migrations';
 import { createApiToken, verifyApiToken, revokeApiToken } from '../src/lib/auth/apiToken';
 import { hashPassword, verifyPassword } from '../src/lib/auth/password';
 import { sendTransactionalEmail } from '../src/lib/email/delivery';
 import { hasPermission } from '../src/lib/auth/auth';
+import { resolveDomain } from '../src/lib/domains/registry';
+import { encryptSecret, decryptSecret, isEncrypted } from '../src/lib/crypto/encryption';
+import { saveGitHubIntegration, getActiveGitHubIntegration } from '../src/lib/github/client';
+import { saveResultsDocument, listResultsDocuments, getResultsDocument } from '../src/lib/results/store';
+import { createDatabaseBackup, runRestoreDrill } from './backup-restore-drill';
 import crypto from 'crypto';
 
 interface TestResult {
@@ -458,6 +463,151 @@ async function runAll() {
     // Platform admin has wildcard (*) access
     assert(hasPermission('platform_admin', 'content:publish') === true, 'Platform admin should have wildcard access');
     assert(hasPermission('platform_admin', 'anything:custom') === true, 'Platform admin wildcard should grant any permission');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 11: PRODUCTION BOOT GATE & ENVIRONMENT VALIDATOR
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 11: Production Boot Gate & Environment Validator');
+
+  await test('Production Boot Gate', 'Refuse production boot without TURSO_DATABASE_URL', async () => {
+    const origNodeEnv = process.env.NODE_ENV;
+    const origTursoUrl = process.env.TURSO_DATABASE_URL;
+    const origAllowLocal = process.env.ALLOW_LOCAL_DB;
+
+    try {
+      (process.env as any).NODE_ENV = 'production';
+      delete process.env.TURSO_DATABASE_URL;
+      delete process.env.ALLOW_LOCAL_DB;
+
+      const report = validateProductionEnvironment();
+      assert(report.ok === false, 'Validator should flag unhosted db in production');
+      assert(report.issues.some(i => i.includes('TURSO_DATABASE_URL is missing')), 'Expected TURSO_DATABASE_URL error issue');
+    } finally {
+      (process.env as any).NODE_ENV = origNodeEnv;
+      if (origTursoUrl) process.env.TURSO_DATABASE_URL = origTursoUrl;
+      if (origAllowLocal) process.env.ALLOW_LOCAL_DB = origAllowLocal;
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 12: CUSTOM DOMAIN REGISTRY EXACT MATCHING & SUBSTRING REJECTION
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 12: Custom Domain Registry Exact Matching & Substring Rejection');
+
+  await test('Domain Registry', 'Resolve verified custom domains from database without substring guessing', async () => {
+    // 1. Exact match against verified live domain
+    const goldfieldsRes = await resolveDomain('goldfields-bay.vercel.app');
+    assert(goldfieldsRes.found === true, 'goldfields-bay.vercel.app should be found');
+    assert(goldfieldsRes.siteSlug === 'goldfields', 'Slug should be goldfields');
+    assert(goldfieldsRes.isPublished === true, 'goldfields should be marked published');
+
+    // 2. Exact match against draft site
+    const luminaRes = await resolveDomain('luminadining.com');
+    assert(luminaRes.found === true, 'luminadining.com should be found');
+    assert(luminaRes.siteSlug === 'lumina', 'Slug should be lumina');
+    assert(luminaRes.isPublished === false, 'Draft site lumina must NOT be marked published');
+
+    // 3. Reject phishing domain with substring 'goldfields'
+    const phishGoldfields = await resolveDomain('fake-goldfields.com');
+    assert(phishGoldfields.found === false, 'fake-goldfields.com must NOT resolve');
+
+    // 4. Reject phishing domain with substring 'vodacom'
+    const phishVodacom = await resolveDomain('phishing-vodacom.co');
+    assert(phishVodacom.found === false, 'phishing-vodacom.co must NOT resolve');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 13: SECRETS & DEVELOPER TOKEN ENCRYPTION AT REST
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 13: Secrets & Developer Token Encryption at Rest');
+
+  await test('Token Encryption', 'AES-256-GCM encrypts tokens at rest in database and decrypts transparently', async () => {
+    const rawSecret = 'ghp_liveProductionPersonalAccessToken998877';
+    const encrypted = encryptSecret(rawSecret);
+    assert(encrypted.startsWith('enc$gcm$'), 'Encrypted token should have enc$gcm$ prefix');
+    assert(encrypted !== rawSecret, 'Encrypted token must not match plaintext');
+
+    const decrypted = decryptSecret(encrypted);
+    assert(decrypted === rawSecret, 'Decrypted token must match original plaintext');
+
+    // Save developer integration and verify DB column contains ciphertext
+    const testGhUser = {
+      login: 'bastion_dev_test',
+      id: 99881,
+      avatar_url: 'https://example.com/avatar.png',
+      name: 'Bastion Dev',
+      html_url: 'https://github.com/bastion_dev_test'
+    };
+
+    await saveGitHubIntegration(testGhUser, rawSecret, 'usr_test_crypto');
+
+    // Read directly from DB to verify raw storage is encrypted
+    const rowRes = await db.execute(`SELECT access_token FROM developer_github_integrations WHERE github_login = 'bastion_dev_test'`);
+    assert(rowRes.rows.length > 0, 'GitHub integration should exist');
+    const storedToken = String(rowRes.rows[0].access_token);
+    assert(storedToken.startsWith('enc$gcm$'), 'Database column access_token must be stored as enc$gcm$ ciphertext');
+    assert(storedToken !== rawSecret, 'Plaintext token must NEVER be stored unencrypted in database');
+
+    // Read via client API and verify transparent decryption
+    const active = await getActiveGitHubIntegration();
+    assert(active.isConnected === true, 'Integration should be active');
+    assert(active.token === rawSecret, 'Client read must transparently return decrypted plaintext');
+
+    // Cleanup
+    await db.execute(`DELETE FROM developer_github_integrations WHERE github_login = 'bastion_dev_test'`);
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 14: CROSS-TENANT DATA ISOLATION & SCOPE FILTERING
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 14: Cross-Tenant Data Isolation & Scope Filtering');
+
+  await test('Cross-Tenant Isolation', 'Client A user is blocked from viewing or editing Client B documents', async () => {
+    // Create a results document for Client Goldfields
+    const docGoldfields = await saveResultsDocument({
+      clientId: 'client_goldfields',
+      status: 'published',
+      document: {
+        issuer: 'Gold Fields Limited',
+        title: 'Interim Results Announcement',
+        periodLabel: `H1 2026 Test ${Date.now()}`,
+        unit: 'USD million',
+        narrative: [],
+        highlights: [],
+        statements: [],
+        notes: [],
+        warnings: [],
+        sourceFilename: 'goldfields_h1_test.pdf',
+        pageCount: 1,
+      }
+    });
+
+    // Query documents scoped to client_vodacom_group
+    const vodacomDocs = await listResultsDocuments('client_vodacom_group');
+    const leaked = vodacomDocs.find(d => d.id === docGoldfields.id);
+    assert(!leaked, 'Client A (Gold Fields) document must NOT leak in Client B (Vodacom) results query');
+
+    // Query documents scoped to client_goldfields
+    const goldfieldsDocs = await listResultsDocuments('client_goldfields');
+    const found = goldfieldsDocs.find(d => d.id === docGoldfields.id);
+    assert(!!found, 'Client A document should be visible in Client A scoped query');
+
+    // Cleanup
+    await db.execute({ sql: `DELETE FROM results_documents WHERE id = ?`, args: [docGoldfields.id] });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 15: DISASTER RECOVERY & DATABASE BACKUP RESTORE DRILL
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 15: Disaster Recovery & Database Backup Restore Drill');
+
+  await test('Disaster Recovery', 'Full database snapshot backup and restore drill succeeds with 0 discrepancies', async () => {
+    const snapshot = await createDatabaseBackup();
+    assert(Object.keys(snapshot.tableCounts).length >= 10, 'Expected at least 10 tables in snapshot');
+    const drillResult = await runRestoreDrill(snapshot);
+    assert(drillResult.success === true, `Restore drill failed with discrepancies: ${drillResult.discrepancies.join(', ')}`);
+    assert(drillResult.discrepancies.length === 0, 'Expected zero discrepancies in restore drill');
   });
 
   // ─────────────────────────────────────────────────────────────

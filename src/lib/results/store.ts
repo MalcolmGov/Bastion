@@ -5,24 +5,28 @@ import type { ResultsDocument, StoredResultsDocument } from './types';
 
 let schemaReady: Promise<void> | null = null;
 
+export async function ensureResultsSchema(targetDb?: any): Promise<void> {
+  const db = targetDb || getDb();
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS results_documents (
+      id TEXT PRIMARY KEY,
+      client_id TEXT,
+      slug TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL,
+      source_filename TEXT,
+      document_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      published_at TEXT
+    );
+  `);
+}
+
 async function ensureSchema(): Promise<void> {
   if (!schemaReady) {
     schemaReady = (async () => {
-      const db = getDb();
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS results_documents (
-          id TEXT PRIMARY KEY,
-          client_id TEXT,
-          slug TEXT UNIQUE NOT NULL,
-          title TEXT NOT NULL,
-          status TEXT NOT NULL,
-          source_filename TEXT,
-          document_json TEXT NOT NULL,
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL,
-          published_at TEXT
-        );
-      `);
+      await ensureResultsSchema();
     })();
   }
   await schemaReady;
@@ -117,12 +121,17 @@ export async function saveResultsDocument(input: {
   return saved;
 }
 
-export async function listResultsDocuments(): Promise<StoredResultsDocument[]> {
+export async function listResultsDocuments(clientId?: string | null): Promise<StoredResultsDocument[]> {
   await ensureSchema();
   const db = getDb();
-  const result = await db.execute(
-    `SELECT * FROM results_documents ORDER BY updated_at DESC`
-  );
+  let sql = `SELECT * FROM results_documents`;
+  const args: any[] = [];
+  if (clientId) {
+    sql += ` WHERE client_id = ?`;
+    args.push(clientId);
+  }
+  sql += ` ORDER BY updated_at DESC`;
+  const result = await db.execute({ sql, args });
   return result.rows.map((row) => mapRow(row as Record<string, unknown>));
 }
 

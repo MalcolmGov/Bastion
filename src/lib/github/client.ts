@@ -6,6 +6,7 @@
 
 import { getDb } from '@/lib/db/client';
 import { execSync } from 'child_process';
+import { encryptSecret, decryptSecret } from '@/lib/crypto/encryption';
 
 export interface GitHubUser {
   login: string;
@@ -199,7 +200,7 @@ export async function getActiveGitHubIntegration(): Promise<{
         name: String(row.github_name || row.github_login),
         html_url: `https://github.com/${row.github_login}`
       },
-      token: String(row.access_token),
+      token: decryptSecret(String(row.access_token)),
       connectedAt: String(row.connected_at)
     };
   } catch (err) {
@@ -220,6 +221,7 @@ export async function saveGitHubIntegration(
   const db = getDb();
   const now = new Date().toISOString();
   const id = `gh_${user.login}_${Date.now()}`;
+  const encryptedToken = encryptSecret(token);
 
   // Upsert or replace previous connection
   await db.execute(`DELETE FROM developer_github_integrations`);
@@ -235,7 +237,7 @@ export async function saveGitHubIntegration(
       user.login,
       user.name || user.login,
       user.avatar_url,
-      token,
+      encryptedToken,
       'bearer',
       'repo,read:org,user:email',
       now,

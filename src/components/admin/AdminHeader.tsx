@@ -262,8 +262,8 @@ export function AdminHeader() {
             )}
           </div>}
 
-          {/* Quick Toggle: Client Experience Sandbox */}
-          {!isClientPortal ? (
+          {/* Quick Toggle: Client Experience Sandbox (Agency Only) */}
+          {agency && (!isClientPortal ? (
             <button
               type="button"
               onClick={() => setPortalViewMode('client')}
@@ -283,7 +283,7 @@ export function AdminHeader() {
               <Sliders className="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform" />
               <span>Agency Studio</span>
             </button>
-          )}
+          ))}
 
           {/* Connected Client Website Selector */}
           <div ref={siteDropdownRef} className="relative hidden md:block">

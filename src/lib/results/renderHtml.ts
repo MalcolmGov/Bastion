@@ -19,7 +19,7 @@ function rowHtml(row: ResultsRow, columnCount: number): string {
     return `<tr class="section"><td colspan="${columnCount + 1}">${esc(row.label)}</td></tr>`;
   }
   const cells = row.cells.map((cell) => `<td>${esc(cell || '—')}</td>`).join('');
-  return `<tr class="${row.kind}">${row.kind === 'total' ? `<th>${esc(row.label)}</th>` : `<th>${esc(row.label)}</th>`}${cells}</tr>`;
+  return `<tr class="${row.kind}"><th>${esc(row.label)}</th>${cells}</tr>`;
 }
 
 export function renderResultsHtml(document: ResultsDocument): string {

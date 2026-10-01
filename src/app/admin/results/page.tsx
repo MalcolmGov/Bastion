@@ -244,7 +244,7 @@ export default function ResultsStudioPage() {
                 disabled={busy !== null}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
-                  if (file) convert({ file });
+                  if (file) void convert({ file });
                   event.target.value = '';
                 }}
               />

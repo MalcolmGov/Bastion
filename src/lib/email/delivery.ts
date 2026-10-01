@@ -65,12 +65,19 @@ export async function sendTransactionalEmail(options: SendEmailOptions): Promise
       errorMessage = err.message || 'Network failure dispatching email';
     }
   } else {
-    // Development / Test Simulation
-    status = 'simulated_dev';
-    providerMessageId = `sim_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-    console.log(
-      `[Email Service - Simulated Dev] To: ${options.to} | Subject: "${options.subject}" | Link: ${options.inviteUrl || 'N/A'}`
-    );
+    const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+    if (isProd && process.env.ALLOW_SIMULATED_EMAIL !== 'true') {
+      status = 'failed';
+      errorMessage = 'Production email delivery blocked: RESEND_API_KEY is not configured on production server.';
+      console.error('[Email Delivery] FATAL: Production email blocked because RESEND_API_KEY is missing.');
+    } else {
+      // Development / Test Simulation
+      status = 'simulated_dev';
+      providerMessageId = `sim_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+      console.log(
+        `[Email Service - Simulated Dev] To: ${options.to} | Subject: "${options.subject}" | Link: ${options.inviteUrl || 'N/A'}`
+      );
+    }
   }
 
   // Persist delivery audit record in database

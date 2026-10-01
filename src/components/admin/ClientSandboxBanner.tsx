@@ -14,8 +14,13 @@ import {
   Check
 } from 'lucide-react';
 import { useStudioWorkspace } from './StudioWorkspaceProvider';
+import { useAdminAuth } from './AdminAuthProvider';
+import { isAgencyUser } from '@/lib/auth/roles';
 
 export function ClientSandboxBanner() {
+  const { user } = useAdminAuth();
+  const agency = isAgencyUser(user);
+
   const {
     portalViewMode,
     setPortalViewMode,
@@ -26,7 +31,8 @@ export function ClientSandboxBanner() {
     setActiveSiteId
   } = useStudioWorkspace();
 
-  if (portalViewMode !== 'client') {
+  // Strictly agency-only: provisioned client accounts must never see the sandbox banner or switch clients
+  if (!agency || portalViewMode !== 'client') {
     return null;
   }
 

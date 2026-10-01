@@ -301,7 +301,7 @@ export function ResultsCodingChat({
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(message.content);
+                    void navigator.clipboard.writeText(message.content);
                     setCopiedId(message.id);
                     setTimeout(() => setCopiedId(null), 1500);
                   }}
@@ -339,7 +339,7 @@ export function ResultsCodingChat({
         className="flex gap-2 border-t border-[#232F42] p-3"
         onSubmit={(event) => {
           event.preventDefault();
-          send();
+          void send();
         }}
       >
         <textarea
@@ -348,7 +348,7 @@ export function ResultsCodingChat({
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
               event.preventDefault();
-              send();
+              void send();
             }
           }}
           rows={2}
