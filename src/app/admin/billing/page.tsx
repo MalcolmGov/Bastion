@@ -59,11 +59,15 @@ export default function AdminBillingPage() {
   const [dueDate, setDueDate] = useState(() => new Date(Date.now() + 30 * 864e5).toISOString().split('T')[0]);
   const [currency, setCurrency] = useState('R');
   const [paymentTerms, setPaymentTerms] = useState('Net 14 Days. 50% deposit on acceptance, 50% on project delivery.');
+  const [clientLegalName, setClientLegalName] = useState('');
+  const [clientRegNo, setClientRegNo] = useState('');
   const [clientContactPerson, setClientContactPerson] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
   const [clientVat, setClientVat] = useState('');
+  const [poNumber, setPoNumber] = useState('');
+  const [isClientCompliant, setIsClientCompliant] = useState(false);
 
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { id: 'item_1', description: 'Enterprise Portal Engineering & Custom Design System', qty: 1, unitPrice: 45000, taxRate: 15 },
@@ -115,11 +119,27 @@ export default function AdminBillingPage() {
   const populateClientFields = (clientId: string) => {
     const selected = clients.find((c) => c.id === clientId) as any;
     if (selected) {
-      setClientContactPerson(selected.primaryContact?.name || selected.name || 'Commercial Client');
-      setClientEmail(selected.primaryContact?.email || 'accounts@client.com');
-      setClientPhone(selected.primaryContact?.phone || '+27 11 000 0000');
-      setClientAddress('100 Sandton Drive, Sandton, Johannesburg, 2196');
-      setClientVat('4890123456');
+      const b = selected.billingDetails || {};
+      const primaryContact = selected.primaryContact || {};
+
+      const legalName = b.legalEntityName || selected.name || 'Commercial Client';
+      const regNo = b.registrationNumber || '';
+      const vat = b.vatNumber || selected.vatNumber || '';
+      const contactPerson = b.billingContactName || primaryContact.name || selected.name || 'Accounts Payable';
+      const email = b.billingEmail || primaryContact.email || 'accounts@client.com';
+      const phone = b.billingPhone || primaryContact.phone || '+27 11 000 0000';
+      const address = b.billingAddress || primaryContact.address || selected.headquarters || 'Sandton, Johannesburg, South Africa';
+
+      setClientLegalName(legalName);
+      setClientRegNo(regNo);
+      setClientVat(vat);
+      setClientContactPerson(contactPerson);
+      setClientEmail(email);
+      setClientPhone(phone);
+      setClientAddress(address);
+      if (b.currency) setCurrency(b.currency);
+      if (b.paymentTerms) setPaymentTerms(b.paymentTerms);
+      setIsClientCompliant(!!(b.registrationNumber || b.vatNumber));
     }
   };
 
@@ -196,6 +216,9 @@ export default function AdminBillingPage() {
         companyPhone: '+27 11 883 4000',
         companyVat: '4820194821',
         companyRegNo: '2024/091823/07',
+        clientLegalName,
+        clientRegNo,
+        poNumber,
         clientContactPerson,
         clientEmail,
         clientPhone,
@@ -893,38 +916,122 @@ export default function AdminBillingPage() {
 
             {/* Client Particulars Grid */}
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0A0F18] border border-slate-200/90 dark:border-[#1E293B] space-y-3">
-              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
-                Client Contact & Tax Information
-              </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1">
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                  Client Corporate Particulars &amp; Tax Compliance
+                </span>
+                {isClientCompliant ? (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/60 shrink-0 self-start sm:self-auto">
+                    ✓ Populated from Onboarding (SARS &amp; CIPC Compliant)
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-300 dark:border-amber-800/60 shrink-0 self-start sm:self-auto">
+                    Standard Client Details
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1">Contact Person</label>
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1 font-semibold">
+                    Registered Legal Entity
+                  </label>
                   <input
                     type="text"
-                    value={clientContactPerson}
-                    onChange={(e) => setClientContactPerson(e.target.value)}
-                    placeholder="e.g. Malcolm Govender"
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs"
+                    value={clientLegalName}
+                    onChange={(e) => setClientLegalName(e.target.value)}
+                    placeholder="e.g. Vodacom Group Limited"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs font-semibold"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1">Client Email</label>
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1 font-semibold">
+                    Company Reg No (CIPC)
+                  </label>
                   <input
-                    type="email"
-                    value={clientEmail}
-                    onChange={(e) => setClientEmail(e.target.value)}
-                    placeholder="accounts@client.com"
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs"
+                    type="text"
+                    value={clientRegNo}
+                    onChange={(e) => setClientRegNo(e.target.value)}
+                    placeholder="e.g. 1993/005461/06"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1">Client VAT / Tax ID</label>
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1 font-semibold">
+                    Client VAT / Tax ID (SARS)
+                  </label>
                   <input
                     type="text"
                     value={clientVat}
                     onChange={(e) => setClientVat(e.target.value)}
-                    placeholder="4890123456"
+                    placeholder="e.g. 4010118149"
                     className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1 font-semibold">
+                    Client PO Ref / Order #
+                  </label>
+                  <input
+                    type="text"
+                    value={poNumber}
+                    onChange={(e) => setPoNumber(e.target.value)}
+                    placeholder="e.g. PO-89210-VDCM"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1">
+                    Contact Person / Attention
+                  </label>
+                  <input
+                    type="text"
+                    value={clientContactPerson}
+                    onChange={(e) => setClientContactPerson(e.target.value)}
+                    placeholder="e.g. Nombuso Khumalo"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1">
+                    Accounts Payable Email
+                  </label>
+                  <input
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="accounts.payable@client.com"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1">
+                    Registered Billing Address
+                  </label>
+                  <input
+                    type="text"
+                    value={clientAddress}
+                    onChange={(e) => setClientAddress(e.target.value)}
+                    placeholder="e.g. Vodacom Corporate Park, 082 Vodacom Boulevard, Midrand"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase mb-1">
+                    Direct Telephone
+                  </label>
+                  <input
+                    type="text"
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    placeholder="+27 11 546 1000"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-slate-900 dark:text-white text-xs"
                   />
                 </div>
               </div>

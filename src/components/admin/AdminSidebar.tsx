@@ -374,7 +374,7 @@ export function AdminSidebar() {
                 <div className="space-y-1">
                   {renderItem('/admin', 'Overview', LayoutDashboard, pathname === '/admin')}
                   {renderItem('/admin/clients', 'Clients & Websites', Users, pathname.startsWith('/admin/clients'), String(clients.length))}
-                  {renderItem('/admin/create', 'Create Website', Sparkles, pathname.startsWith('/admin/create'), 'Wizard', 'bg-blue-100 dark:bg-sky-950 text-bastion-blue dark:text-sky-300 border border-blue-200 dark:border-sky-800')}
+                  {renderItem('/admin/onboard', 'Onboard Client', UserPlus, pathname.startsWith('/admin/onboard'), 'Wizard', 'bg-blue-100 dark:bg-sky-950 text-bastion-blue dark:text-sky-300 border border-blue-200 dark:border-sky-800')}
                   {renderItem('/admin/billing', 'Commercial & Billing', CreditCard, pathname.startsWith('/admin/billing'))}
                 </div>
               </div>
@@ -391,6 +391,7 @@ export function AdminSidebar() {
                 <div className="space-y-1">
                   {renderItem('/admin/brand', 'Brand DNA & Kits', Palette, pathname.startsWith('/admin/brand'), 'DNA', 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800')}
                   {renderItem('/admin/editor', 'Visual Page Editor', Edit3, pathname.startsWith('/admin/editor'), 'Zones', 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800')}
+                  {renderItem('/admin/create', 'Canvas Site Builder', Sparkles, pathname.startsWith('/admin/create'))}
                   {renderItem('/admin/blueprints', 'Blueprints & Templates', Layers, pathname.startsWith('/admin/blueprints'))}
                   {renderItem('/admin/design-system', 'Tokens & Tokens CSS', SlidersHorizontal, pathname.startsWith('/admin/design-system'))}
                 </div>

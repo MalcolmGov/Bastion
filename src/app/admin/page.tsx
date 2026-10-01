@@ -149,15 +149,6 @@ export default function MoveStudioOverviewPage() {
     }
   };
 
-  const suggestionChips = [
-    { label: 'Vodacom Group', query: 'Vodacom' },
-    { label: 'Gold Fields', query: 'Gold Fields' },
-    { label: 'Solaris Energy', query: 'Solaris' },
-    { label: 'Apex Advisory', query: 'Apex' },
-    { label: 'Brand DNA Extractor', query: 'Brand DNA' },
-    { label: 'Edge Webhooks', query: 'Webhooks' }
-  ];
-
   const displayName = (user?.name && !user.name.toLowerCase().includes('admin') && !user.name.toLowerCase().includes('corporate'))
     ? user.name.split(' ')[0]
     : 'Malcolm';
@@ -323,21 +314,6 @@ export default function MoveStudioOverviewPage() {
                   </div>
                 </form>
               </div>
-
-              {/* Suggestion Chips */}
-              <div className="flex items-center gap-2 pt-0.5 flex-wrap text-xs text-slate-500 dark:text-slate-400">
-                <span className="font-semibold text-slate-400 dark:text-slate-500">Quick Access:</span>
-                {suggestionChips.map((chip, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setSearchQuery(chip.query)}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100/80 dark:bg-slate-800/60 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 border border-slate-200/60 dark:border-slate-700/50 font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:text-slate-100 transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>{chip.label}</span>
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Right 4 Cols: Live Edge Telemetry Command Hub */}
@@ -389,19 +365,6 @@ export default function MoveStudioOverviewPage() {
                   <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full w-[100%]" />
                 </div>
               </div>
-
-              {/* Quick Jump Action Button */}
-              <button
-                type="button"
-                onClick={() => router.push('/admin/editor')}
-                className="w-full py-2.5 px-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-semibold flex items-center justify-between transition-all group cursor-pointer shadow-xs hover:shadow-md"
-              >
-                <div className="flex items-center gap-2">
-                  <Edit3 className="w-3.5 h-3.5" style={{ color: primaryCol }} />
-                  <span>Launch Visual Page Editor</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-              </button>
             </div>
           </div>
             </section>

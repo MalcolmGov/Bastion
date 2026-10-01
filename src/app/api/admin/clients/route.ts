@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { WebsiteAssembler } from '@/lib/studio/assembler';
+import { hashPassword } from '@/lib/auth/auth';
 
 export async function GET() {
   try {
@@ -20,14 +21,36 @@ export async function GET() {
       settings: typeof w.settings_json === 'string' ? JSON.parse(w.settings_json) : (w.settings_json || {})
     }));
 
-    const clients = clientsRes.rows.map(c => ({
-      id: String(c.id),
-      name: String(c.name),
-      slug: String(c.slug),
-      industry: String(c.industry),
-      logoUrl: c.logo_url ? String(c.logo_url) : undefined,
-      websites: websites.filter(w => w.clientId === String(c.id))
-    }));
+    const clients = clientsRes.rows.map((c: any) => {
+      let billingDetails = undefined;
+      if (c.billing_details_json) {
+        try {
+          billingDetails = typeof c.billing_details_json === 'string'
+            ? JSON.parse(c.billing_details_json)
+            : c.billing_details_json;
+        } catch (_) {}
+      } else if (c.primary_contact_json) {
+        try {
+          const parsed = typeof c.primary_contact_json === 'string'
+            ? JSON.parse(c.primary_contact_json)
+            : c.primary_contact_json;
+          if (parsed && parsed.billingDetails) {
+            billingDetails = parsed.billingDetails;
+          }
+        } catch (_) {}
+      }
+
+      return {
+        id: String(c.id),
+        name: String(c.name),
+        slug: String(c.slug),
+        industry: String(c.industry),
+        logoUrl: c.logo_url ? String(c.logo_url) : undefined,
+        primaryContact: typeof c.primary_contact_json === 'string' ? JSON.parse(c.primary_contact_json) : (c.primary_contact_json || undefined),
+        billingDetails,
+        websites: websites.filter(w => w.clientId === String(c.id))
+      };
+    });
 
     return NextResponse.json({ clients, websites });
   } catch (err: any) {
@@ -47,10 +70,16 @@ export async function POST(req: NextRequest) {
       blueprintId = 'corporate',
       designCollectionId = 'editorial',
       primaryBrandColor = '#0F172A',
+      secondaryBrandColor = '#1E293B',
       accentBrandColor = '#2563EB',
+      headingFont = 'Plus Jakarta Sans',
+      bodyFont = 'Inter',
       tagline,
       services,
-      contactInfo
+      contactInfo,
+      billingDetails,
+      enabledModules,
+      initialUser
     } = body;
 
     if (!name) {
@@ -61,6 +90,7 @@ export async function POST(req: NextRequest) {
     const clientId = `client_${slug.replace(/[^a-z0-9]/gi, '_')}`;
     const siteSlug = slug;
     const websiteName = `${name} Corporate Website`;
+    const now = new Date().toISOString();
 
     const db = getDb();
 
@@ -78,13 +108,20 @@ export async function POST(req: NextRequest) {
         },
         colors: {
           primary: { name: 'Brand Primary', value: primaryBrandColor, status: 'approved' },
-          secondary: { name: 'Dark Ink', value: '#0F172A', status: 'approved' },
+          secondary: { name: 'Dark Ink', value: secondaryBrandColor || '#0F172A', status: 'approved' },
           accent: { name: 'Brand Accent', value: accentBrandColor, status: 'approved' },
           background: { name: 'Light Canvas', value: '#F8FAFC', status: 'approved' },
           surface: { name: 'White Surface', value: '#FFFFFF', status: 'approved' },
           textPrimary: { name: 'Dark Ink', value: '#0F172A', status: 'approved' },
           textMuted: { name: 'Muted Ink', value: '#64748B', status: 'approved' },
           hairline: { name: 'Hairline Divider', value: '#E2E8F0', status: 'approved' }
+        },
+        typography: {
+          headingFont: headingFont || 'Plus Jakarta Sans',
+          bodyFont: bodyFont || 'Inter',
+          headingWeight: '700',
+          scaleRatio: 1.25,
+          status: 'approved'
         },
         voiceAndMessaging: {
           tagline: tagline || `Official corporate portal and verified disclosures for ${name}.`,
@@ -108,18 +145,97 @@ export async function POST(req: NextRequest) {
       }
     }, db);
 
-    // Update industry, logo, domain if specified
-    const now = new Date().toISOString();
-    await db.execute({
-      sql: `UPDATE clients SET industry = ?, logo_url = ?, updated_at = ? WHERE id = ?`,
-      args: [industry, logoUrl || null, now, clientId]
-    });
+    // Update industry, logo, domain, primary contact details, and billing particulars
+    try {
+      await db.execute({
+        sql: `UPDATE clients SET industry = ?, logo_url = ?, primary_contact_json = ?, billing_details_json = ?, updated_at = ? WHERE id = ?`,
+        args: [
+          industry,
+          logoUrl || null,
+          contactInfo ? JSON.stringify(contactInfo) : null,
+          billingDetails ? JSON.stringify(billingDetails) : null,
+          now,
+          clientId
+        ]
+      });
+    } catch (_) {
+      // Fallback if column not yet added
+      await db.execute({
+        sql: `UPDATE clients SET industry = ?, logo_url = ?, primary_contact_json = ?, updated_at = ? WHERE id = ?`,
+        args: [
+          industry,
+          logoUrl || null,
+          contactInfo ? JSON.stringify({ ...contactInfo, billingDetails }) : null,
+          now,
+          clientId
+        ]
+      });
+    }
 
     if (primaryDomain) {
       await db.execute({
         sql: `UPDATE websites SET primary_domain = ?, updated_at = ? WHERE client_id = ?`,
         args: [primaryDomain, now, clientId]
       });
+    }
+
+    // Merge enabled modules into website settings_json if supplied
+    if (enabledModules) {
+      try {
+        const currentWebsite = await db.execute({
+          sql: `SELECT settings_json FROM websites WHERE id = ?`,
+          args: [assembleResult.websiteId]
+        });
+        let settings: any = {};
+        if (currentWebsite.rows[0]?.settings_json) {
+          settings = typeof currentWebsite.rows[0].settings_json === 'string'
+            ? JSON.parse(currentWebsite.rows[0].settings_json as string)
+            : currentWebsite.rows[0].settings_json;
+        }
+        settings.enabledModules = {
+          ...(settings.enabledModules || {}),
+          ...enabledModules
+        };
+        await db.execute({
+          sql: `UPDATE websites SET settings_json = ?, updated_at = ? WHERE id = ?`,
+          args: [JSON.stringify(settings), now, assembleResult.websiteId]
+        });
+      } catch (modErr) {
+        console.warn('Could not merge custom module settings:', modErr);
+      }
+    }
+
+    // Provision initial client user if requested
+    let createdUser: any = null;
+    if (initialUser && initialUser.email) {
+      const userEmail = String(initialUser.email).toLowerCase().trim();
+      const userName = String(initialUser.name || `${name} Administrator`).trim();
+      const userRole = String(initialUser.role || 'content_editor');
+      const rawPassword = initialUser.password || `${name.replace(/[^a-zA-Z0-9]/g, '')}2026!`;
+      const passwordHash = hashPassword(rawPassword);
+      const userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+      await db.execute({
+        sql: `INSERT OR REPLACE INTO users (id, name, email, password_hash, role, region_scope, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          userId,
+          userName,
+          userEmail,
+          passwordHash,
+          userRole,
+          name, // Scoped to this corporate client
+          now
+        ]
+      });
+
+      createdUser = {
+        id: userId,
+        name: userName,
+        email: userEmail,
+        role: userRole,
+        temporaryPassword: rawPassword
+      };
     }
 
     return NextResponse.json({
@@ -129,18 +245,21 @@ export async function POST(req: NextRequest) {
         name,
         slug,
         industry,
-        logoUrl
+        logoUrl,
+        primaryDomain,
+        billingDetails
       },
       website: {
         id: assembleResult.websiteId,
         name: websiteName,
         slug: siteSlug,
         previewUrl: assembleResult.previewUrl
-      }
+      },
+      user: createdUser,
+      compositionsCount: assembleResult.compositions.length
     });
   } catch (err: any) {
-    console.error('Failed to create client:', err);
+    console.error('Failed to onboard client:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-

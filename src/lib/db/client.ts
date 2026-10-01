@@ -203,6 +203,20 @@ async function runInitSchema(db: Client): Promise<void> {
       console.warn('[DB] Schema statement warning:', e);
     }
   }
+
+  // Safe incremental schema column migrations
+  try {
+    await db.execute(`ALTER TABLE clients ADD COLUMN billing_details_json TEXT`);
+  } catch (_) {}
+  try {
+    await db.execute(`ALTER TABLE billing_docs ADD COLUMN client_legal_name TEXT`);
+  } catch (_) {}
+  try {
+    await db.execute(`ALTER TABLE billing_docs ADD COLUMN client_reg_no TEXT`);
+  } catch (_) {}
+  try {
+    await db.execute(`ALTER TABLE billing_docs ADD COLUMN po_number TEXT`);
+  } catch (_) {}
 }
 
 async function seedEssentialUsers(db: Client): Promise<void> {

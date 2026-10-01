@@ -173,6 +173,7 @@ CREATE TABLE IF NOT EXISTS clients (
   industry TEXT NOT NULL,
   logo_url TEXT,
   primary_contact_json TEXT,
+  billing_details_json TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -282,12 +283,15 @@ CREATE TABLE IF NOT EXISTS billing_docs (
   company_phone TEXT,
   company_vat TEXT,
   company_reg_no TEXT,
+  client_legal_name TEXT,
+  client_reg_no TEXT,
   client_address TEXT,
   client_email TEXT,
   client_phone TEXT,
   client_vat TEXT,
   client_contact_person TEXT,
   payment_terms TEXT,
+  po_number TEXT,
   swift_code TEXT,
   sent_at TEXT,
   last_reminded_at TEXT,

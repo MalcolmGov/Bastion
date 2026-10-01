@@ -44,12 +44,15 @@ export interface BillingDoc {
   companyRegNo?: string;
 
   // Client Details
+  clientLegalName?: string;
+  clientRegNo?: string;
   clientAddress?: string;
   clientEmail?: string;
   clientPhone?: string;
   clientVat?: string;
   clientContactPerson?: string;
   paymentTerms?: string;
+  poNumber?: string;
 
   // Lifecycle & Reminders
   sentAt?: string;

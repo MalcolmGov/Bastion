@@ -39,6 +39,10 @@ export async function runMoveStudioMigrations(db: DbClient): Promise<void> {
     { table: 'audit_log', col: 'client_id TEXT' },
     { table: 'scheduled_jobs', col: 'site_id TEXT' },
     { table: 'scheduled_jobs', col: 'client_id TEXT' },
+    { table: 'clients', col: 'billing_details_json TEXT' },
+    { table: 'billing_docs', col: 'client_legal_name TEXT' },
+    { table: 'billing_docs', col: 'client_reg_no TEXT' },
+    { table: 'billing_docs', col: 'po_number TEXT' },
   ];
 
   for (const { table, col } of alterColumns) {
@@ -70,8 +74,8 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
 
   // --- CLIENT 1: Gold Fields Limited (Preserved Corporate Flagship) ---
   await db.execute({
-    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       'client_goldfields',
       'Gold Fields Limited',
@@ -79,6 +83,18 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
       'mining_resources',
       '/assets/gold-fields-logo.svg',
       JSON.stringify({ name: 'Sipho Dlamini', email: 'communications@goldfields.com', phone: '+27 11 562 9700' }),
+      JSON.stringify({
+        legalEntityName: 'Gold Fields Limited',
+        registrationNumber: '1968/004880/06',
+        vatNumber: '4690104820',
+        billingAddress: '150 Helen Road, Sandown, Sandton, Johannesburg, 2196, South Africa',
+        billingContactName: 'Sipho Dlamini',
+        billingEmail: 'accounts.payable@goldfields.com',
+        billingPhone: '+27 11 562 9700',
+        currency: 'R',
+        paymentTerms: 'Net 30 Days',
+        poNumberRequired: true
+      }),
       now,
       now
     ]
@@ -148,8 +164,8 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
 
   // --- CLIENT 2: Apex Advisory Partners (Professional Services Blueprint / Contemporary Collection) ---
   await db.execute({
-    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       'client_apex_advisory',
       'Apex Advisory Partners',
@@ -157,6 +173,18 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
       'professional_services',
       '/assets/apex-advisory-logo.svg',
       JSON.stringify({ name: 'Alexandra Vance', email: 'alexandra.vance@apexadvisory.com', phone: '+44 20 7946 0912' }),
+      JSON.stringify({
+        legalEntityName: 'Apex Advisory Partners (Pty) Ltd',
+        registrationNumber: '2018/341920/07',
+        vatNumber: '4720194812',
+        billingAddress: 'Katherine & West Building, 114 West Street, Sandton, 2196, South Africa',
+        billingContactName: 'Alexandra Vance',
+        billingEmail: 'invoices@apexadvisory.co.za',
+        billingPhone: '+27 11 884 2100',
+        currency: 'R',
+        paymentTerms: 'Net 14 Days',
+        poNumberRequired: false
+      }),
       now,
       now
     ]
@@ -428,8 +456,8 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
 
   // --- CLIENT 3: Lumina Dining & Experiences (Hospitality Blueprint / Immersive Collection) ---
   await db.execute({
-    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, primary_contact_json, billing_details_json, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       'client_lumina',
       'Lumina Botanical Dining',
@@ -437,6 +465,18 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
       'hospitality',
       '/assets/lumina-logo.svg',
       JSON.stringify({ name: 'Chef Sebastien Roy', email: 'reservations@luminadining.com', phone: '+27 21 488 3000' }),
+      JSON.stringify({
+        legalEntityName: 'Lumina Hospitality Group (Pty) Ltd',
+        registrationNumber: '2022/681029/07',
+        vatNumber: '4610294817',
+        billingAddress: 'Bree Street Studios, 120 Bree Street, Cape Town, 8001, South Africa',
+        billingContactName: 'Chef Sebastien Roy',
+        billingEmail: 'accounts@luminadining.com',
+        billingPhone: '+27 21 488 3000',
+        currency: 'R',
+        paymentTerms: 'Net 7 Days',
+        poNumberRequired: false
+      }),
       now,
       now
     ]

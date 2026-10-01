@@ -96,14 +96,20 @@ export function CommercialDocumentTemplate({
   };
 
   // Client Details resolution
-  const resolvedClientName = client?.name || doc.companyName || 'Corporate Client';
+  const resolvedClientName =
+    doc.clientLegalName || (client as any)?.billingDetails?.legalEntityName || client?.name || doc.companyName || 'Corporate Client';
+  const resolvedClientReg = doc.clientRegNo || (client as any)?.billingDetails?.registrationNumber || '';
+  const resolvedPoNumber = doc.poNumber || '';
   const resolvedContactPerson =
-    doc.clientContactPerson || client?.contact?.name || 'Accounts Payable & Commercial Management';
-  const resolvedClientEmail = doc.clientEmail || client?.contact?.email || 'accounts@client.com';
-  const resolvedClientPhone = doc.clientPhone || client?.contact?.phone || '+27 (0)11 000 0000';
+    doc.clientContactPerson || (client as any)?.billingDetails?.billingContactName || client?.contact?.name || 'Accounts Payable & Commercial Management';
+  const resolvedClientEmail =
+    doc.clientEmail || (client as any)?.billingDetails?.billingEmail || client?.contact?.email || 'accounts@client.com';
+  const resolvedClientPhone =
+    doc.clientPhone || (client as any)?.billingDetails?.billingPhone || client?.contact?.phone || '+27 (0)11 000 0000';
   const resolvedClientAddress =
-    doc.clientAddress || client?.contact?.address || 'Metropolitan Business District, Johannesburg, South Africa';
-  const resolvedClientVat = doc.clientVat || '4890123456 (Standard Corporate Rate)';
+    doc.clientAddress || (client as any)?.billingDetails?.billingAddress || client?.contact?.address || 'Metropolitan Business District, Johannesburg, South Africa';
+  const resolvedClientVat =
+    doc.clientVat || (client as any)?.billingDetails?.vatNumber || '4890123456 (Standard Corporate Rate)';
 
   // Bastion Company Details
   const companyName = doc.companyName || 'Bastion Group (Pty) Ltd';
@@ -322,6 +328,14 @@ export function CommercialDocumentTemplate({
                   <span>{doc.paymentTerms}</span>
                 </div>
               )}
+              {resolvedPoNumber && (
+                <div className="flex sm:justify-end items-center gap-2 text-xs pt-1">
+                  <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider">Client PO Ref:</span>
+                  <strong className="font-mono text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60">
+                    {resolvedPoNumber}
+                  </strong>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -351,9 +365,16 @@ export function CommercialDocumentTemplate({
 
           {/* Client / Billed To */}
           <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/70 space-y-1.5">
-            <span className="text-[10px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-400">
-              Client / Billed To
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                Client / Billed To
+              </span>
+              {resolvedClientReg && (
+                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                  CIPC Reg: <strong className="text-slate-700 dark:text-slate-300">{resolvedClientReg}</strong>
+                </span>
+              )}
+            </div>
             <div className="text-sm font-bold text-slate-900 dark:text-white">
               {resolvedClientName}
             </div>
@@ -362,10 +383,17 @@ export function CommercialDocumentTemplate({
                 Attn: {resolvedContactPerson}
               </p>
               <p>{resolvedClientAddress}</p>
-              <p className="pt-1 text-[11px]">
-                VAT / Tax ID: <span className="font-mono text-slate-700 dark:text-slate-300">{resolvedClientVat}</span>
-              </p>
-              <p className="text-[11px] text-slate-500">
+              <div className="flex flex-wrap items-center gap-x-3 pt-1 text-[11px]">
+                <span>
+                  VAT / Tax ID: <strong className="font-mono text-slate-700 dark:text-slate-300">{resolvedClientVat}</strong>
+                </span>
+                {resolvedPoNumber && (
+                  <span>
+                    • PO Ref: <strong className="font-mono text-emerald-600 dark:text-emerald-400">{resolvedPoNumber}</strong>
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 pt-0.5">
                 Email: {resolvedClientEmail} • Tel: {resolvedClientPhone}
               </p>
             </div>

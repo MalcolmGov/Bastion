@@ -26,6 +26,7 @@ import {
   UserPlus
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
+import { ClientOnboardingWizard } from '@/components/admin/ClientOnboardingWizard';
 
 export default function ClientsAndWebsitesPage() {
   const router = useRouter();
@@ -33,55 +34,8 @@ export default function ClientsAndWebsitesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('all');
 
-  // Quick Onboard Client Modal state
+  // Client Onboarding Wizard Modal state
   const [showOnboardModal, setShowOnboardModal] = useState(false);
-  const [clientName, setClientName] = useState('');
-  const [clientIndustry, setClientIndustry] = useState('corporate');
-  const [clientDomain, setClientDomain] = useState('');
-  const [clientBrandColor, setClientBrandColor] = useState('#2563EB');
-  const [isOnboarding, setIsOnboarding] = useState(false);
-  const [onboardedResult, setOnboardedResult] = useState<any>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const applyPreset = (name: string, industry: string, domain: string, color: string) => {
-    setClientName(name);
-    setClientIndustry(industry);
-    setClientDomain(domain);
-    setClientBrandColor(color);
-  };
-
-  const handleOnboardClient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!clientName.trim()) return;
-    setIsOnboarding(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch('/api/admin/clients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: clientName.trim(),
-          industry: clientIndustry,
-          primaryDomain: clientDomain.trim() || undefined,
-          primaryBrandColor: clientBrandColor
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to onboard client');
-
-      await refreshClients();
-      if (data.client?.id) {
-        setActiveClientId(data.client.id);
-      }
-      setOnboardedResult(data);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Onboarding failed');
-    } finally {
-      setIsOnboarding(false);
-    }
-  };
 
   const industries = [
     { id: 'all', label: 'All Industries' },
@@ -133,23 +87,19 @@ export default function ClientsAndWebsitesPage() {
         <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto flex-wrap">
           <button
             type="button"
-            onClick={() => {
-              setShowOnboardModal(true);
-              setOnboardedResult(null);
-              setErrorMsg(null);
-            }}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wider uppercase transition shadow-md shadow-purple-500/20 flex items-center space-x-2 cursor-pointer"
+            onClick={() => setShowOnboardModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wider uppercase transition shadow-md shadow-purple-500/20 flex items-center space-x-2 cursor-pointer active:scale-[0.98]"
           >
             <Sparkles className="w-4 h-4 text-purple-200" />
             <span>Onboard Client</span>
           </button>
 
           <Link
-            href="/admin/create"
+            href="/admin/onboard"
             className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs tracking-wider uppercase transition flex items-center space-x-2 cursor-pointer"
           >
             <PlusCircle className="w-4 h-4 text-purple-500" />
-            <span>Full Assembly Wizard</span>
+            <span>Full Onboarding Wizard</span>
           </Link>
         </div>
       </div>
@@ -382,223 +332,13 @@ export default function ClientsAndWebsitesPage() {
         })}
       </div>
 
-      {/* Quick Onboard Client Modal */}
+      {/* Proper Bastion Client Onboarding Wizard Modal */}
       {showOnboardModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="bg-[#0C111C] border border-[#1E293B] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-[#1E293B] pb-4">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-9 h-9 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">Onboard Corporate Client</h3>
-                  <p className="text-xs text-slate-400">Bastion Multi-Tenant Provisioning Engine</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowOnboardModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {errorMsg && (
-              <div className="p-3 rounded-xl bg-red-950/60 border border-red-800 text-xs text-red-300">
-                {errorMsg}
-              </div>
-            )}
-
-            {onboardedResult ? (
-              /* Success View */
-              <div className="space-y-5 py-2">
-                <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/80 flex items-start space-x-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-sm font-bold text-emerald-300">
-                      {onboardedResult.client?.name} Successfully Provisioned!
-                    </div>
-                    <div className="text-xs text-emerald-400/80 mt-1">
-                      Corporate tenant created with dedicated website, initial brand kit, and page compositions.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between p-2.5 rounded-lg bg-[#080D14] border border-[#1E293B]">
-                    <span className="text-slate-400">Tenant Identifier:</span>
-                    <span className="font-mono text-white font-bold">{onboardedResult.client?.id}</span>
-                  </div>
-                  <div className="flex justify-between p-2.5 rounded-lg bg-[#080D14] border border-[#1E293B]">
-                    <span className="text-slate-400">Website Slug:</span>
-                    <span className="font-mono text-purple-300 font-bold">{onboardedResult.website?.slug}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowOnboardModal(false);
-                      router.push(`/admin/editor?siteSlug=${onboardedResult.website?.slug}`);
-                    }}
-                    className="p-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                    <span>Visual Editor</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowOnboardModal(false);
-                      setPortalViewMode('client');
-                      router.push('/admin');
-                    }}
-                    className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer"
-                  >
-                    <Building className="w-4 h-4 text-emerald-400" />
-                    <span>Client CMS</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowOnboardModal(false);
-                      router.push('/admin/users');
-                    }}
-                    className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1 transition cursor-pointer"
-                  >
-                    <UserPlus className="w-4 h-4 text-amber-400" />
-                    <span>Invite Editors</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* Input Form */
-              <form onSubmit={handleOnboardClient} className="space-y-4">
-                {/* 1-Click Presets */}
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-                    Quick 1-Click Corporate Presets
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('Vodacom Group', 'telecom', 'vodacom.co.za', '#E60000')}
-                      className="p-2 rounded-lg bg-[#080D14] hover:bg-[#141C29] border border-[#1E293B] text-left text-slate-300 hover:text-white transition flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="font-semibold">📱 Vodacom Group</span>
-                      <span className="text-[10px] text-red-400 font-mono">Telco</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('Solaris Clean Energy', 'clean_energy', 'solaris-energy.com', '#10B981')}
-                      className="p-2 rounded-lg bg-[#080D14] hover:bg-[#141C29] border border-[#1E293B] text-left text-slate-300 hover:text-white transition flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="font-semibold">⚡ Solaris Clean Energy</span>
-                      <span className="text-[10px] text-emerald-400 font-mono">Energy</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('Apex Advisory Partners', 'finance', 'apex-advisory.com', '#7C3AED')}
-                      className="p-2 rounded-lg bg-[#080D14] hover:bg-[#141C29] border border-[#1E293B] text-left text-slate-300 hover:text-white transition flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="font-semibold">💼 Apex Advisory</span>
-                      <span className="text-[10px] text-purple-400 font-mono">Wealth</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('Gold Fields Limited', 'mining_resources', 'goldfields.com', '#C99700')}
-                      className="p-2 rounded-lg bg-[#080D14] hover:bg-[#141C29] border border-[#1E293B] text-left text-slate-300 hover:text-white transition flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="font-semibold">⛏️ Gold Fields</span>
-                      <span className="text-[10px] text-amber-400 font-mono">Mining</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs text-slate-300 font-semibold">Corporate Client Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Vodacom Group"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-[#080D14] border border-[#1E293B] text-white focus:outline-hidden focus:border-purple-500 font-medium"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-300 font-semibold">Industry Sector</label>
-                    <select
-                      value={clientIndustry}
-                      onChange={(e) => setClientIndustry(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl bg-[#080D14] border border-[#1E293B] text-white focus:outline-hidden focus:border-purple-500 font-medium"
-                    >
-                      <option value="corporate">Corporate &amp; Enterprise</option>
-                      <option value="telecom">Telecommunications &amp; 5G</option>
-                      <option value="clean_energy">Clean Energy &amp; Renewables</option>
-                      <option value="finance">Wealth &amp; Financial Services</option>
-                      <option value="mining_resources">Mining &amp; Natural Resources</option>
-                      <option value="technology">Digital &amp; Technology</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-300 font-semibold">Primary Domain</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. vodacom.co.za"
-                      value={clientDomain}
-                      onChange={(e) => setClientDomain(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl bg-[#080D14] border border-[#1E293B] text-white focus:outline-hidden focus:border-purple-500 font-mono font-medium"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs text-slate-300 font-semibold">Primary Brand Color</label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="color"
-                      value={clientBrandColor}
-                      onChange={(e) => setClientBrandColor(e.target.value)}
-                      className="w-8 h-8 rounded-lg bg-transparent border-0 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={clientBrandColor}
-                      onChange={(e) => setClientBrandColor(e.target.value)}
-                      className="px-3 py-1.5 text-xs font-mono rounded-lg bg-[#080D14] border border-[#1E293B] text-white w-28 uppercase"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end space-x-2.5 pt-3 border-t border-[#1E293B]">
-                  <button
-                    type="button"
-                    onClick={() => setShowOnboardModal(false)}
-                    className="px-4 py-2 rounded-xl bg-[#141C29] text-slate-300 hover:text-white text-xs font-medium cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isOnboarding}
-                    className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase tracking-wider transition shadow-sm disabled:opacity-50 cursor-pointer flex items-center space-x-1.5"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>{isOnboarding ? 'Provisioning...' : 'Provision Client & Website'}</span>
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200">
+          <ClientOnboardingWizard
+            isModal
+            onClose={() => setShowOnboardModal(false)}
+          />
         </div>
       )}
     </div>

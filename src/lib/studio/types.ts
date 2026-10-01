@@ -51,6 +51,23 @@ export type BrandAttributeStatus =
   | 'approved'
   | 'needs_review';
 
+export interface ClientBillingDetails {
+  legalEntityName?: string;
+  registrationNumber?: string;
+  vatNumber?: string;
+  taxExempt?: boolean;
+  billingContactName?: string;
+  billingEmail?: string;
+  billingPhone?: string;
+  billingAddress?: string;
+  country?: string;
+  currency?: string;
+  paymentTerms?: string;
+  poNumberRequired?: boolean;
+  costCenter?: string;
+  notes?: string;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -61,7 +78,10 @@ export interface Client {
     name: string;
     email: string;
     phone?: string;
+    role?: string;
+    address?: string;
   };
+  billingDetails?: ClientBillingDetails;
   createdAt: string;
   updatedAt: string;
 }
