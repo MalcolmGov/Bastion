@@ -24,8 +24,7 @@ export default async function PublishedResultsPage({ params }: { params: Promise
     return (
       <iframe
         title={stored.title}
-        srcDoc={stored.document.presentationHtml}
-        sandbox="allow-popups allow-popups-to-escape-sandbox"
+        src={`/results/${slug}/document`}
         className="block h-screen w-full border-0 bg-white"
       />
     );
