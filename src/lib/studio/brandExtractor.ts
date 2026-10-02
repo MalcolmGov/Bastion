@@ -12,8 +12,12 @@
  * 8. Export CSS variables & Tailwind config
  */
 
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import * as cheerio from 'cheerio';
 import { validateSafeUrl, normalizeUrl } from './importer';
+
+const curl = promisify(execFile);
 
 export interface ExtractedColorOccurrence {
   hex: string;
@@ -128,8 +132,77 @@ const PAID_FONTS_MAP: Record<string, { alternative: string; reason: string }> = 
   'frutiger': { alternative: 'Open Sans', reason: 'Commercial license required from Linotype.' },
   'brandon grotesque': { alternative: 'Poppins', reason: 'Commercial license required from HVD Fonts.' },
   'neue haas grotesk': { alternative: 'Inter', reason: 'Commercial license required from Linotype.' },
-  'caslon': { alternative: 'Source Serif 4', reason: 'Commercial serif cut; Source Serif 4 recommended.' }
+  'caslon': { alternative: 'Source Serif 4', reason: 'Commercial serif cut; Source Serif 4 recommended.' },
+  'benton sans': { alternative: 'Source Sans 3', reason: 'Commercial Benton Sans licence. Source Sans 3 is the suggested web alternative.' }
 };
+
+const IGNORED_HEX = new Set([
+  '#FFFFFF', '#000000', '#007BFF', '#6C757D', '#868E96', '#28A745', '#DC3545',
+  '#FFC107', '#17A2B8', '#6F42C1', '#E83E8C', '#FD7E14', '#20C997', '#6610F2',
+  '#F8F9FA', '#343A40', '#212529',
+]);
+
+function canonicalFont(raw: string): string {
+  const first = raw.split(',')[0].replace(/['"]/g, '').replace(/-webfont$/i, '').trim();
+  const name = first
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b(regular|medium|bold|light|black|book|extra\s*light|webfont)\b/ig, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (/^benton\s*sans/i.test(name) || /^bentonsans/i.test(name.replace(/\s+/g, ''))) return 'Benton Sans';
+  return name;
+}
+
+async function readCapped(rawUrl: string, maxBytes: number): Promise<string> {
+  const check = validateSafeUrl(rawUrl);
+  if (!check.isValid) throw new Error(check.error || 'That website address is not allowed.');
+  try {
+    const { stdout } = await curl('curl', [
+      '-sS', '-L', '--max-time', '12', '--max-filesize', String(maxBytes),
+      '-A', 'Mozilla/5.0 (compatible; BastionBrandExtractor/2.0)',
+      rawUrl,
+    ], { maxBuffer: maxBytes + 64_000, encoding: 'utf8' });
+    return stdout.slice(0, maxBytes);
+  } catch (error) {
+    const stdout = (error as { stdout?: string }).stdout || '';
+    if (stdout.length > 1000) return stdout.slice(0, maxBytes);
+    throw error;
+  }
+}
+
+async function readStylesheets(html: string, pageUrl: string): Promise<string> {
+  const $ = cheerio.load(html);
+  let host = '';
+  try {
+    host = new URL(pageUrl).host;
+  } catch {
+    return '';
+  }
+  const hrefs = $('link[rel="stylesheet"]').toArray().map((node) => {
+    try {
+      return new URL($(node).attr('href') || '', pageUrl).toString();
+    } catch {
+      return '';
+    }
+  }).filter((url) => {
+    try {
+      return Boolean(url) && new URL(url).host === host;
+    } catch {
+      return false;
+    }
+  });
+  const ranked = [...hrefs].sort((left, right) => Number(/main\.bundle|vendor|bootstrap/i.test(left)) - Number(/main\.bundle|vendor|bootstrap/i.test(right)));
+  const sheets: string[] = [];
+  for (const href of ranked.slice(0, 3)) {
+    try {
+      const text = await readCapped(href, 400_000);
+      if (/#[0-9a-fA-F]{3,8}|font-family/i.test(text)) sheets.push(text);
+    } catch {
+      continue;
+    }
+  }
+  return sheets.join('\n');
+}
 
 /**
  * Calculates WCAG 2.1 relative luminance and contrast ratio.
@@ -318,53 +391,29 @@ export class BrandDnaExtractor {
       }
       html = await res.text();
       finalUrl = res.url || url;
+      if (html.length < 2500 || /incapsula|cf-browser-verification|Just a moment/i.test(html)) {
+        throw new Error('The homepage was blocked or incomplete.');
+      }
     } catch (fetchErr: any) {
-      console.warn(`[BrandDnaExtractor] Live fetch notice for ${url}: ${fetchErr.message}. Generating resilient corporate fixture.`);
-      let brandTitle = 'CORPORATE BRAND';
       try {
-        const hostname = new URL(url).hostname.replace(/^www\./, '');
-        brandTitle = hostname.split('.')[0].toUpperCase();
-      } catch {}
-
-      const isGF = brandTitle.includes('GOLD');
-      const prim = isGF ? '#C99700' : '#0B3A66';
-      const acc = isGF ? '#EAB308' : '#E8793A';
-
-      html = `<!DOCTYPE html>
-<html>
-<head>
-  <title>${brandTitle} &bull; Corporate Website Platform</title>
-  <meta name="description" content="${brandTitle} delivers market-leading institutional solutions, corporate governance, and sustainable operations." />
-  <style>
-    :root {
-      --color-primary: ${prim};
-      --color-accent: ${acc};
-      font-family: 'Source Serif 4', serif;
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <svg viewBox="0 0 100 100" class="logo"><rect width="100" height="100" rx="20" fill="${prim}"/><text x="50" y="60" font-size="40" text-anchor="middle" fill="#FFFFFF">${brandTitle.slice(0, 2)}</text></svg>
-    <h1>${brandTitle} High-Impact Corporate Platform</h1>
-    <p>Empowering global stakeholders with precision disclosure, executive governance, and resilient performance across international jurisdictions.</p>
-    <button class="btn" style="background-color: ${prim}; color: #FFFFFF;">Explore Operations</button>
-    <a class="btn" style="background-color: ${acc}; color: #FFFFFF;">Schedule Consultation</a>
-  </header>
-</body>
-</html>`;
-      crawledPages.push({ url, title: `${brandTitle} Corporate Flagship`, status: 200 });
+        html = await readCapped(url, 1_500_000);
+        finalUrl = url;
+        crawledPages.push({ url, title: 'Homepage', status: 200 });
+      } catch {
+        throw new Error(`Could not read ${url}. ${fetchErr?.message || 'The site did not return HTML.'}`);
+      }
     } finally {
       clearTimeout(timeout);
     }
 
+    const stylesheet = await readStylesheets(html, finalUrl);
     const $ = cheerio.load(html);
 
     // Step 2: Read Final Styles & :root Variables
     const colorOccurrences = new Map<string, ExtractedColorOccurrence>();
     const registerColor = (raw: string | undefined, elName: string, source: string) => {
       const hex = normalizeToHex(raw || '');
-      if (!hex || hex === '#FFFFFF' || hex === '#000000') return;
+      if (!hex || IGNORED_HEX.has(hex)) return;
 
       const existing = colorOccurrences.get(hex) || { hex, count: 0, elements: [], sources: [] };
       existing.count += 1;
@@ -372,6 +421,9 @@ export class BrandDnaExtractor {
       if (!existing.sources.includes(source)) existing.sources.push(source);
       colorOccurrences.set(hex, existing);
     };
+
+    const stylesheetHexes = stylesheet.match(/#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g) || [];
+    for (const hex of stylesheetHexes) registerColor(hex, 'stylesheet', `${finalUrl}#stylesheet`);
 
     // Parse :root CSS custom properties from embedded <style>
     $('style').each((_, el) => {
@@ -401,17 +453,21 @@ export class BrandDnaExtractor {
       if (bgMatch) registerColor(bgMatch[1], 'header', `${finalUrl}#header`);
     });
 
-    // Color role assignments from frequencies & elements
     const sortedColors = Array.from(colorOccurrences.values()).sort((a, b) => b.count - a.count);
-
-    // Default corporate palette if minimal inline styles found
-    let primaryColor = sortedColors.find(c => c.elements.includes('button') || c.elements.includes('header'))?.hex || sortedColors[0]?.hex || '#0B3A66';
-    let accentColor = sortedColors.find(c => c.hex !== primaryColor && (c.elements.includes('button') || c.elements.includes(':root variable')) )?.hex || '#E8793A';
-    
-    // Ensure primary and accent are distinct
-    if (primaryColor === accentColor) {
-      accentColor = '#E8793A';
-    }
+    const scored = sortedColors.map((color) => {
+      const rgb = hexToRgb(color.hex);
+      const lum = getLuminance(rgb.r, rgb.g, rgb.b);
+      const max = Math.max(rgb.r, rgb.g, rgb.b) / 255;
+      const min = Math.min(rgb.r, rgb.g, rgb.b) / 255;
+      const sat = max === min ? 0 : (max - min) / (1 - Math.abs(max + min - 1));
+      return { ...color, lum, sat };
+    }).filter((color) => color.sat > 0.12 && color.lum > 0.02 && color.lum < 0.82);
+    const navy = scored.filter((color) => color.lum < 0.22);
+    const bright = scored.filter((color) => color.lum >= 0.18);
+    let primaryColor = navy[0]?.hex || scored[0]?.hex || sortedColors[0]?.hex || '#1A314D';
+    let accentColor = bright.find((color) => color.hex !== primaryColor)?.hex
+      || scored.find((color) => color.hex !== primaryColor)?.hex
+      || primaryColor;
 
     // Step 3: Collect Brand Assets (SVGs, logos, favicons, open-graph, media)
     const logos: ExtractedMediaAsset[] = [];
@@ -433,8 +489,28 @@ export class BrandDnaExtractor {
       }
     });
 
-    // 3b. Images with "logo"
-    $('img[src*="logo" i], img[alt*="logo" i], img[class*="logo" i]').each((idx, el) => {
+    const headerIcon = $('.header__logo [data-icon]').toArray().find((node) => {
+      const name = $(node).attr('data-icon') || '';
+      const iconPath = $(node).attr('data-path') || '';
+      return name && !/spinner|loader|flag|close|search|arrow/i.test(`${name} ${iconPath}`);
+    });
+    if (headerIcon) {
+      const name = $(headerIcon).attr('data-icon')?.trim() || '';
+      const iconPath = $(headerIcon).attr('data-path')?.trim() || '';
+      const folder = iconPath.endsWith('/') ? iconPath : `${iconPath}/`;
+      try {
+        logos.push({
+          id: 'header_logo',
+          url: new URL(`${folder}${name}.svg`, finalUrl).toString(),
+          altText: 'Header logo',
+          category: 'logo',
+          isSvg: true,
+        });
+      } catch {}
+    }
+
+    // 3b. Images that are marks, not campaign creatives that merely contain the word logo
+    $('header img, nav img, img[alt*="logo" i], img[class*="logo" i]').each((idx, el) => {
       const src = $(el).attr('src') || $(el).attr('data-src');
       if (src) {
         try {
@@ -457,16 +533,16 @@ export class BrandDnaExtractor {
 
     // 3c. OpenGraph image & Favicons
     const ogImage = $('meta[property="og:image"]').attr('content');
-    if (ogImage) {
+    if (ogImage && logos.length === 0) {
       try {
         const fullOg = new URL(ogImage, finalUrl).toString();
         if (!seenAssetUrls.has(fullOg)) {
           seenAssetUrls.add(fullOg);
-          logos.push({
+          media.push({
             id: 'og_card_image',
             url: fullOg,
-            altText: 'OpenGraph Social Card Image',
-            category: 'logo',
+            altText: 'OpenGraph social image',
+            category: 'hero',
             width: 1200,
             height: 630
           });
@@ -529,25 +605,21 @@ export class BrandDnaExtractor {
       }
     };
 
-    // Check style tags for font-family declarations
-    $('style').each((_, el) => {
-      const text = $(el).text();
-      const matches = text.match(/font-family:\s*([^;}]+)/gi);
-      if (matches) {
-        for (const m of matches) {
-          const val = m.replace(/font-family:\s*/i, '').trim();
-          scanFont(val, 'stylesheet');
-        }
-      }
-    });
+    const fontCounts = new Map<string, number>();
+    const noteFont = (raw: string) => {
+      const name = canonicalFont(raw);
+      if (!name || /mono|consolas|courier|menlo|sfmono/i.test(name)) return;
+      if (!name || /^(serif|sans-serif|sans serif|monospace|cursive|fantasy|arial|helvetica|system-ui|inherit|initial|unset|apple system|blinkmacsystemfont|segoe ui)$/i.test(name)) return;
+      fontCounts.set(name, (fontCounts.get(name) || 0) + 1);
+    };
+    for (const match of `${stylesheet}\n${$('style').text()}`.matchAll(/font-family:\s*([^;}{]+)/gi)) noteFont(match[1]);
+    const rankedFonts = [...fontCounts.entries()].sort((left, right) => right[1] - left[1]).map(([name]) => name);
+    rankedFonts.forEach((name) => scanFont(name, 'stylesheet'));
 
-    // Defaults if none explicit in static CSS
-    const headingFont = detectedFontFamilies.find(f => f.isGoogleFont && (f.name.includes('Serif') || f.name.includes('Display'))) ||
-      detectedFontFamilies[0] ||
-      { name: 'Source Serif 4', isGoogleFont: true, weights: [600, 700], usedIn: ['h1-h3'] };
+    const headingFont = detectedFontFamilies[0]
+      || { name: 'Source Sans 3', isGoogleFont: true, weights: [600, 700], usedIn: ['h1-h3'] };
 
-    const bodyFont = detectedFontFamilies.find(f => f.isGoogleFont && f.name !== headingFont.name) ||
-      { name: 'Source Sans 3', isGoogleFont: true, weights: [400, 600], usedIn: ['body'] };
+    const bodyFont = detectedFontFamilies.find((font) => font.name !== headingFont.name) || headingFont;
 
     // Step 6: Normalise into Standard Theme JSON Schema
     const standardTheme: StandardThemeJson = {
@@ -571,16 +643,16 @@ export class BrandDnaExtractor {
       },
       space: [4, 8, 12, 16, 24, 32, 48, 64],
       logo: {
-        primary: logos[0]?.url || '/images/goldfields_mark.svg',
-        mark: logos.find(l => l.isSvg)?.url || logos[0]?.url || '/images/goldfields_mark.svg',
-        onDark: logos[1]?.url || logos[0]?.url || '/images/goldfields_mark.svg'
+        primary: logos[0]?.url || '',
+        mark: logos.find((logo) => logo.isSvg)?.url || logos[0]?.url || '',
+        onDark: logos[0]?.url || ''
       },
       voice: {
-        summary: `Authoritative, forward-looking corporate voice tailored for institutional stakeholders. Emphasizes operational excellence, transparency, and sustainable global value creation.`,
+        summary: metaDesc || h1Text || 'The homepage did not publish a description.',
         doNot: [
-          `Never use the accent color (${accentColor}) for extended body copy.`,
-          `Never use informal vernacular, colloquialisms, or clickbait headlines.`,
-          `Always maintain sentence case for functional navigation and title case for major financial announcements.`
+          `Do not use ${accentColor} for long body copy.`,
+          'Do not redraw or recolour the header logo.',
+          'Do not substitute a different typeface for the detected brand font without a licence review.'
         ]
       },
       sources: {
@@ -674,7 +746,7 @@ export default {
         readingLevel: reading.gradeLevel,
         readingScore: reading.score,
         sentiment: 'Confident & Institutional',
-        commonPhrases: commonPhrases.length > 0 ? commonPhrases : ['sustainable mining', 'operational performance', 'global footprint']
+        commonPhrases
       },
       generatedArtifacts: {
         cssVariables,

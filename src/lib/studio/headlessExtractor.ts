@@ -15,12 +15,13 @@ import puppeteer, { Browser, Page } from 'puppeteer-core';
 import * as cheerio from 'cheerio';
 import { JobManager } from './worker';
 import { validateSafeUrl, normalizeUrl } from './importer';
-import type {
-  BrandKitDnaResult,
-  ExtractedColorOccurrence,
-  ExtractedFontOccurrence,
-  ExtractedMediaAsset,
-  StandardThemeJson
+import {
+  BrandDnaExtractor,
+  type BrandKitDnaResult,
+  type ExtractedColorOccurrence,
+  type ExtractedFontOccurrence,
+  type ExtractedMediaAsset,
+  type StandardThemeJson
 } from './brandExtractor';
 
 // Popular Google Fonts reference set
@@ -42,7 +43,9 @@ const FONT_ALTERNATIVES: Record<string, { googleFont: string; note: string }> = 
   'neue haas grotesk': { googleFont: 'Inter', note: 'Commercial font. Recommended Google Font: Inter' },
   'garamond': { googleFont: 'Cormorant Garamond', note: 'Commercial serif. Recommended Google Font: Cormorant Garamond' },
   'times new roman': { googleFont: 'Merriweather', note: 'Legacy system font. Recommended Google Font: Merriweather or Lora' },
-  'arial': { googleFont: 'Plus Jakarta Sans', note: 'System font. Modern executive alternative: Plus Jakarta Sans' }
+  'arial': { googleFont: 'Plus Jakarta Sans', note: 'System font. Modern executive alternative: Plus Jakarta Sans' },
+  'benton sans': { googleFont: 'Source Sans 3', note: 'Commercial Benton Sans licence. Suggested web alternative: Source Sans 3' },
+  'benton-sans-regular': { googleFont: 'Source Sans 3', note: 'Commercial Benton Sans licence. Suggested web alternative: Source Sans 3' }
 };
 
 // Locate Chrome executable path
@@ -51,6 +54,7 @@ function findChromeExecutable(): string | null {
     process.env.PUPPETEER_EXECUTABLE_PATH,
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/usr/local/bin/google-chrome',
     '/usr/bin/google-chrome',
     '/usr/bin/google-chrome-stable',
     '/usr/bin/chromium-browser',
@@ -168,7 +172,10 @@ export class HeadlessBrandExtractor {
           ]
         });
       } else {
-        JobManager.appendLog(jobId, 'Native Chromium not found. Utilizing high-performance Cheerio crawler engine fallback.', 'warn');
+        JobManager.appendLog(jobId, 'Native Chromium not found. Reading the public HTML and linked stylesheets.', 'warn');
+        const result = await new BrandDnaExtractor().extractBrandKit(safeUrl);
+        JobManager.completeJob(jobId, result);
+        return result;
       }
 
       // Step 2: Render Homepage & Execute JavaScript
@@ -183,7 +190,7 @@ export class HeadlessBrandExtractor {
         await page.setViewport({ width: 1440, height: 900 });
         await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 (Bastion Brand DNA Extractor)');
 
-        const response = await page.goto(safeUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+        const response = await page.goto(safeUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
         const title = await page.title();
         crawledPages.push({ url: safeUrl, title, status: response ? response.status() : 200 });
         JobManager.appendLog(jobId, `Loaded homepage: "${title}" (Status ${crawledPages[0].status})`);
@@ -275,11 +282,12 @@ export class HeadlessBrandExtractor {
           }
 
           // 4. Asset extraction (SVGs and Images)
-          const svgs = Array.from(document.querySelectorAll('svg')).slice(0, 10).map((s, idx) => ({
+          const headerIcon = document.querySelector('.header__logo [data-icon]');
+          const svgs = Array.from(document.querySelectorAll('.header__logo svg, header svg, [class*="logo"] svg')).slice(0, 4).map((s, idx) => ({
             id: `svg_${idx}`,
             outerHTML: s.outerHTML,
             viewBox: s.getAttribute('viewBox') || '',
-            className: s.className || ''
+            className: (s.getAttribute('class') || '')
           }));
 
           const imgs = Array.from(document.querySelectorAll('img')).slice(0, 20).map(img => ({
@@ -317,6 +325,10 @@ export class HeadlessBrandExtractor {
             cardStyle,
             colorCounts: Object.entries(colorCounts).map(([k, v]) => ({ color: k, count: v.count, elements: Array.from(v.elements) })),
             fontCounts: Object.entries(fontCounts).map(([k, v]) => ({ font: k, count: v.count, weights: Array.from(v.weights), usedIn: Array.from(v.usedIn) })),
+            headerIcon: headerIcon ? {
+              name: headerIcon.getAttribute('data-icon') || '',
+              path: headerIcon.getAttribute('data-path') || '',
+            } : null,
             svgs,
             imgs,
             navLinks,
@@ -355,10 +367,23 @@ export class HeadlessBrandExtractor {
       const media: ExtractedMediaAsset[] = [];
 
       if (homepageData) {
-        // Collect SVGs
+        const icon = homepageData.headerIcon;
+        if (icon?.name && icon.path && !/spinner|loader|flag|close|search|arrow/i.test(icon.name)) {
+          const folder = icon.path.endsWith('/') ? icon.path : `${icon.path}/`;
+          try {
+            logos.push({
+              id: 'header_logo',
+              url: new URL(`${folder}${icon.name}.svg`, safeUrl).toString(),
+              altText: 'Header logo',
+              category: 'logo',
+              isSvg: true,
+            });
+            JobManager.appendLog(jobId, `Header logo: ${icon.name}.svg`);
+          } catch {}
+        }
         for (const [idx, s] of (homepageData.svgs || []).entries()) {
-          const isLogo = /logo|brand|emblem/i.test(s.className) || idx === 0;
-          if (isLogo) {
+          const isLogo = /logo|brand|emblem/i.test(s.className || '');
+          if (isLogo && s.outerHTML.length < 200_000) {
             logos.push({
               id: `svg_logo_${idx}`,
               url: `data:image/svg+xml;utf8,${encodeURIComponent(s.outerHTML)}`,
@@ -373,7 +398,7 @@ export class HeadlessBrandExtractor {
 
         // Collect Images
         for (const [idx, img] of (homepageData.imgs || []).entries()) {
-          const isLogo = /logo|brand|identity/i.test(img.src) || /logo|brand/i.test(img.alt) || /logo/i.test(img.className);
+          const isLogo = /logo|brand/i.test(img.alt || '') || /logo/i.test(img.className || '');
           const asset: ExtractedMediaAsset = {
             id: `media_${idx}`,
             url: img.src,
@@ -388,15 +413,8 @@ export class HeadlessBrandExtractor {
         }
       }
 
-      // Fallback logo placeholder if none detected
       if (logos.length === 0) {
-        logos.push({
-          id: 'logo_primary_default',
-          url: '/assets/bastion-original-logo-hd.png',
-          altText: 'Bastion Group Logo',
-          category: 'logo',
-          isSvg: false
-        });
+        JobManager.appendLog(jobId, 'No header logo was found on the page.', 'warn');
       }
 
       // Step 5: Analyzing Copy, Voice & Sentiment
@@ -511,9 +529,9 @@ export class HeadlessBrandExtractor {
         },
         space: [0, 4, 8, 12, 16, 24, 32, 48, 64],
         logo: {
-          primary: logos[0]?.url || '/assets/bastion-original-logo-hd.png',
-          mark: logos[0]?.url || '/assets/bastion-original-white-hd.png',
-          onDark: logos.find(l => l.url.includes('white'))?.url || '/assets/bastion-original-white-hd.png'
+          primary: logos[0]?.url || '',
+          mark: logos[0]?.url || '',
+          onDark: logos[0]?.url || ''
         },
         voice: {
           summary: `${crawledPages[0]?.title || 'Corporate Organization'} communicates with an ${reading.score < 50 ? 'authoritative, institutional tone focused on regulatory compliance and market leadership' : 'approachable, customer-aligned perspective emphasizing execution reliability'}.`,
@@ -561,8 +579,15 @@ export class HeadlessBrandExtractor {
       JobManager.completeJob(jobId, result);
       return result;
     } catch (err: any) {
-      JobManager.failJob(jobId, err.message || 'Headless extraction encountered an error');
-      throw err;
+      try {
+        JobManager.appendLog(jobId, `Browser render failed (${err?.message || 'unknown'}). Reading the public HTML instead.`, 'warn');
+        const result = await new BrandDnaExtractor().extractBrandKit(safeUrl);
+        JobManager.completeJob(jobId, result);
+        return result;
+      } catch (staticErr: any) {
+        JobManager.failJob(jobId, staticErr?.message || err?.message || 'Headless extraction encountered an error');
+        throw staticErr;
+      }
     } finally {
       if (browser) {
         try {

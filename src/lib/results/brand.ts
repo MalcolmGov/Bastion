@@ -40,9 +40,11 @@ function saturation(hex: string): number {
   return (max - min) / (1 - Math.abs(2 * l - 1));
 }
 
-const FRAMEWORK_COLORS = new Set([
+  const FRAMEWORK_COLORS = new Set([
   '#7a00df', '#007cba', '#0073aa', '#00a0d2', '#826eb4', '#f78da7',
   '#cf2e2e', '#ff6900', '#fcb900', '#00d084', '#0693e3', '#9b51e0', '#abb8c3',
+  '#007bff', '#6c757d', '#868e96', '#28a745', '#dc3545', '#ffc107', '#17a2b8',
+  '#6f42c1', '#e83e8c', '#fd7e14', '#20c997', '#6610f2', '#f8f9fa', '#343a40', '#212529',
 ]);
 
 export function chooseBrandColors(found: string[]): Pick<ResultsBrand, 'colors' | 'primary' | 'accent' | 'ink' | 'paper'> {
@@ -56,8 +58,11 @@ export function chooseBrandColors(found: string[]): Pick<ResultsBrand, 'colors' 
   const colorful = ranked.filter((hex) => saturation(hex) > 0.08 && luminance(hex) > 0.02 && luminance(hex) < 0.85);
   const neutralDark = ranked.filter((hex) => luminance(hex) < 0.28 && saturation(hex) < 0.35);
   const light = ranked.filter((hex) => luminance(hex) > 0.92 && hex !== '#ffffff');
-  const primary = neutralDark[0] || '#1c1c1c';
-  const accent = colorful.find((hex) => hex !== primary) || '#c8a064';
+  const frequentNeutral = neutralDark.find((hex) => (counts.get(hex) || 0) >= 3);
+  const frequentColor = colorful.filter((hex) => (counts.get(hex) || 0) >= 3);
+  const deep = frequentColor.filter((hex) => luminance(hex) < 0.25);
+  const primary = deep[0] || frequentNeutral || frequentColor[0] || '#1c1c1c';
+  const accent = frequentColor.find((hex) => hex !== primary) || colorful.find((hex) => hex !== primary) || '#c8a064';
   return {
     colors: ranked.slice(0, 6),
     primary,
@@ -104,19 +109,26 @@ function googleFamilies(value: string): string[] {
 }
 
 function readFont(css: string, extras: string[] = []): { headingFont: string; bodyFont: string } {
-  const ignore = /inherit|initial|unset|system-ui|fontawesome|font-awesome|var\(/i;
+  const ignore = /inherit|initial|unset|system-ui|fontawesome|font-awesome|var\(|apple-system|blinkmacsystemfont|segoe ui/i;
   const generic = /^(serif|sans-serif|monospace|cursive|fantasy)$/i;
-  const keep = (name: string) => Boolean(name) && !ignore.test(name) && !generic.test(name);
+  const system = /emoji|apple color|noto color|^(apple-system|blinkmacsystemfont|segoe ui|helvetica|helvetica neue|arial|roboto|sans-serif|serif|monospace)$/i;
+  const keep = (name: string) => Boolean(name) && !ignore.test(name) && !generic.test(name) && !system.test(name);
   const familiesOf = (value: string | undefined): string[] => (
     [...new Set((value || '').split(',').map(cleanFontName).filter(keep))].slice(0, 3)
   );
+  const counts = new Map<string, number>();
+  for (const match of css.matchAll(/font-family\s*:\s*([^;}{]+)/gi)) {
+    const name = cleanFontName(match[1].split(',')[0] || '');
+    if (!keep(name)) continue;
+    counts.set(name, (counts.get(name) || 0) + 1);
+  }
+  const ranked = [...counts.entries()].sort((left, right) => right[1] - left[1]).map(([name]) => name);
   const bodyRule = css.match(/(?:html\s*,\s*)?body[^{]*\{[^}]*font-family\s*:\s*([^;}{]+)/i);
   const headingRule = css.match(/h1[^{]*\{[^}]*font-family\s*:\s*([^;}{]+)/i);
-  const scanned = [...css.matchAll(/font-family\s*:\s*([^;}{]+)/gi)].flatMap((match) => familiesOf(match[1]));
   const bodyFamilies = familiesOf(bodyRule?.[1]);
   const headingFamilies = familiesOf(headingRule?.[1]);
-  const bodyFont = (bodyFamilies.length ? bodyFamilies : [...new Set([...extras, ...scanned])].slice(0, 3)).join(', ') || 'inherit';
-  const headingFont = (headingFamilies.length ? headingFamilies : bodyFamilies).join(', ') || bodyFont;
+  const bodyFont = (bodyFamilies.length ? bodyFamilies : [...new Set([...extras, ...ranked])].slice(0, 3)).join(', ') || 'inherit';
+  const headingFont = (headingFamilies.length ? headingFamilies : bodyFamilies.length ? bodyFamilies : ranked.slice(0, 1)).join(', ') || bodyFont;
   return { headingFont, bodyFont };
 }
 
@@ -184,20 +196,30 @@ async function readWithCurl(rawUrl: string, maxBytes = 1_500_000): Promise<{ fin
   for (let hop = 0; hop < 4; hop += 1) {
     const check = validateSafeUrl(current);
     if (!check.isValid) throw new Error(check.error || 'That website address is not allowed.');
-    const { stdout } = await curl('curl', [
-      '-sS',
-      '--max-time', '12',
-      '--max-filesize', String(maxBytes),
-      '-A', 'Mozilla/5.0 (compatible; BastionResultsBot/1.0)',
-      '-H', 'Accept: text/html',
-      '-w', '\n%{http_code} %{redirect_url}',
-      current,
-    ], { maxBuffer: maxBytes + 64_000, encoding: 'utf8' });
+    let stdout = '';
+    try {
+      const result = await curl('curl', [
+        '-sS',
+        '--max-time', '12',
+        '--max-filesize', String(maxBytes),
+        '-A', 'Mozilla/5.0 (compatible; BastionResultsBot/1.0)',
+        '-H', 'Accept: text/html',
+        '-w', '\n%{http_code} %{redirect_url}',
+        current,
+      ], { maxBuffer: maxBytes + 64_000, encoding: 'utf8' });
+      stdout = result.stdout;
+    } catch (error) {
+      stdout = (error as { stdout?: string }).stdout || '';
+      if (stdout.length < 1000) throw error;
+    }
     const marker = stdout.lastIndexOf('\n');
     const body = marker >= 0 ? stdout.slice(0, marker) : stdout;
     const statusLine = marker >= 0 ? stdout.slice(marker + 1).trim() : '';
     const [statusCode, redirectUrl] = statusLine.split(' ');
     const status = Number(statusCode);
+    if (!Number.isFinite(status) && /font-family|#[0-9a-fA-F]{3,8}/i.test(stdout)) {
+      return { finalUrl: current, html: stdout.slice(0, maxBytes) };
+    }
     if (status >= 300 && status < 400 && redirectUrl) {
       current = new URL(redirectUrl, current).toString();
       continue;
@@ -316,7 +338,7 @@ async function readLinkedCss(html: string, pageUrl: string): Promise<string> {
   for (const href of hrefs) {
     try {
       const file = await readWithCurl(href, 400_000);
-      if (/font-family|@font-face|fonts\.googleapis/i.test(file.html)) sheets.push(file.html.slice(0, 200_000));
+      if (/font-family|@font-face|fonts\.googleapis|#[0-9a-fA-F]{3,8}/i.test(file.html)) sheets.push(file.html.slice(0, 400_000));
     } catch {
       continue;
     }

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as cheerio from 'cheerio';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { BrandDnaExtractor } from '../src/lib/studio/brandExtractor';
 import { applyFigureEdit } from '../src/lib/results/applyFigureEdit';
 import { parseBrandHtml } from '../src/lib/results/brand';
 import { convertPdfBytes, convertSampleBooklet } from '../src/lib/results/convert';
@@ -201,7 +202,21 @@ async function slideDeckPdf(): Promise<Uint8Array> {
   return pdf.save();
 }
 
+async function testStandardBankDna() {
+  const kit = await new BrandDnaExtractor().extractBrandKit('https://www.standardbank.com/');
+  assert.match(kit.copyAnalysis.title, /Standard Bank/i);
+  assert.match(kit.theme.voice.summary, /Africa/i);
+  assert.equal(kit.theme.color.primary.toUpperCase() === '#0B3A66', false);
+  assert.equal(kit.theme.color.accent.toUpperCase() === '#E8793A', false);
+  assert.match(kit.theme.font.heading, /Benton Sans/);
+  assert.match(kit.theme.font.body, /Benton Sans/);
+  assert.match(kit.theme.logo.primary, /header-full\.svg/);
+  assert.equal(/goldfields|bastion-original|Kantar/i.test(kit.theme.logo.primary), false);
+  assert.match(kit.fontAnalysis.heading.alternative || '', /Source Sans 3/);
+}
+
 async function main() {
+  await testStandardBankDna();
   testBrandLogo();
   testFigureEdit();
   const slides = await convertPdfBytes(await slideDeckPdf(), 'standard-bank-overview.pdf');
