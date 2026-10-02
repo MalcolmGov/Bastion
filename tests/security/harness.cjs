@@ -1,7 +1,7 @@
-const fs = require('fs'), path = require('path'), vm = require('vm');
+const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const root = path.resolve(__dirname, '../..');
 const ts = require(path.join(root,'node_modules/typescript'));
-const nativeRequire = require('module').createRequire(path.join(root,'package.json'));
+const nativeRequire = require('node:module').createRequire(path.join(root,'package.json'));
 const { createClient } = nativeRequire('@libsql/client');
 const { NextRequest } = nativeRequire('next/server');
 
@@ -45,7 +45,8 @@ async function createHarness() {
       return nativeRequire(id);
     };
     const wrapper = `(function(require,module,exports,__filename,__dirname){${source}\n})`;
-    vm.runInThisContext(wrapper, { filename: file })(req, mod, mod.exports, file, path.dirname(file));
+    // NOSONAR: Test harness isolated execution
+    vm.runInThisContext(wrapper, { filename: file })(req, mod, mod.exports, file, path.dirname(file)); // NOSONAR
     return mod.exports;
   }
   const auth = load(path.join(root, 'src/lib/auth/auth.ts'));
@@ -93,9 +94,9 @@ async function createHarness() {
     db, load: (name) => load(path.join(root, 'src', name)), route, request,
     user: (user) => { currentUser = user ? { ...currentUser, ...user } : null; },
     emailCalls: () => emailCalls,
-    token: async (scopes = ['mcp:access', 'content:read', 'graphql:read'], siteId) =>
+    token: async (scopes = ['mcp:access', 'content:read', 'graphql:read'], siteId = null) =>
       (await load(path.join(root, 'src/lib/auth/apiToken.ts')).createApiToken({
-        name: 'Test', clientId: 'tenant-a', siteId, scopes
+        name: 'Test', clientId: 'tenant-a', siteId: siteId || undefined, scopes
       })).rawToken,
     close: () => db.close()
   };
