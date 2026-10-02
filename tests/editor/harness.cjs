@@ -25,7 +25,10 @@ async function createHarness() {
     '@/lib/db/client': { getDb: () => db, ensureDbReady: async () => db },
   };
   function load(file) {
-    file = path.resolve(file);
+    file = fs.realpathSync(file);
+    if (!file.startsWith(path.join(root, 'src') + path.sep) || !file.endsWith('.ts')) {
+      throw new Error('Test loader accepts only TypeScript source in this checkout');
+    }
     if (cache.has(file)) return cache.get(file).exports;
     const mod = { exports: {} };
     cache.set(file, mod);
@@ -46,7 +49,8 @@ async function createHarness() {
       return nativeRequire(id);
     };
     const wrapper = `(function(require,module,exports,__filename,__dirname){${source}\n})`;
-    vm.runInThisContext(wrapper, { filename: file })(
+    // Trusted checkout source only, never request input; realpath guard above confines execution.
+    vm.runInThisContext(wrapper, { filename: file })( // NOSONAR: repository-only test loader
       req,
       mod,
       mod.exports,

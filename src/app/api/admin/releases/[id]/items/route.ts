@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addItemToRelease, removeItemFromRelease } from '@/lib/releases/service';
-import { assertReleaseAccess, requireUser } from '@/lib/auth/guard';
+import { ReleaseValidationError, addItemToRelease, removeItemFromRelease } from '@/lib/releases/service';
+import { assertReleaseAccess, requirePermission } from '@/lib/auth/guard';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const gate = await requireUser();
+    const gate = await requirePermission('content:publish');
     if (!gate.ok) return gate.response;
     const { id } = await params;
     const access = await assertReleaseAccess(gate.user, id);
@@ -29,7 +29,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, item }, { status: 201 });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: err instanceof ReleaseValidationError ? 400 : 500 });
   }
 }
 
@@ -38,7 +38,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const gate = await requireUser();
+    const gate = await requirePermission('content:publish');
     if (!gate.ok) return gate.response;
     const { id } = await params;
     const access = await assertReleaseAccess(gate.user, id);
@@ -53,6 +53,6 @@ export async function DELETE(
     const success = await removeItemFromRelease(id, itemId);
     return NextResponse.json({ success });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: err instanceof ReleaseValidationError ? 400 : 500 });
   }
 }

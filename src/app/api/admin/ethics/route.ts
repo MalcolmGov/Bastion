@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guard';
+import { requirePermission, assertWhistleblowerAccess } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import {
   listWhistleblowerReports,
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const gate = await requireUser();
+    const gate = await requirePermission('ethics:read');
     if (!gate.ok) return gate.response;
     const user = gate.user;
 
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const gate = await requireUser();
+    const gate = await requirePermission('ethics:manage');
     if (!gate.ok) return gate.response;
     const user = gate.user;
 
@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const access = await assertWhistleblowerAccess(user, String(reportId));
+    if (!access.ok) return access.response;
 
     const created = await addWhistleblowerMessage({
       reportId: String(reportId),

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import { requireUser } from '@/lib/auth/guard';
+import { requireAgencyUser } from '@/lib/auth/guard';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 import { sendTransactionalEmail } from '@/lib/email/delivery';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
-    const gate = await requireUser();
+    const gate = await requireAgencyUser();
     if (!gate.ok) return gate.response;
 
     const body = await req.json().catch(() => ({}));
@@ -18,6 +18,13 @@ export async function POST(req: NextRequest) {
       sql: `SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1`,
       args: [targetEmail]
     });
+
+    if (userRes.rows.length === 0) {
+      return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+    }
+    if (body.clientId && userRes.rows[0].client_id !== body.clientId) {
+      return NextResponse.json({ error: 'User belongs to a different workspace.' }, { status: 409 });
+    }
 
     let recipientName = body.name || 'Malcolm Govender';
     let userRole = 'platform_admin';

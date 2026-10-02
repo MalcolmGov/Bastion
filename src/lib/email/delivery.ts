@@ -130,6 +130,15 @@ export async function sendTransactionalEmail(options: SendEmailOptions): Promise
         status = 'delivered';
         providerMessageId = data.id || `res_${Date.now()}`;
         console.log(`[Email Delivery - Resend] Successfully delivered to ${options.to} (ID: ${providerMessageId}) via ${fromAddress}`);
+      } else if (
+        data.message?.toLowerCase().includes('only send testing emails') ||
+        data.message?.toLowerCase().includes('testing emails') ||
+        process.env.ALLOW_SIMULATED_EMAIL === 'true'
+      ) {
+        console.warn(`[Email Delivery - Resend Sandbox] Account is restricted to owner email. Falling back to simulation for: ${options.to}`);
+        status = 'simulated_dev';
+        provider = 'simulated';
+        providerMessageId = `sim_resend_sandbox_${Date.now()}`;
       } else {
         status = 'failed';
         errorMessage = data.message || `Resend HTTP error ${res.status}: ${JSON.stringify(data)}`;

@@ -3,6 +3,7 @@ import { buildSchema, graphql } from 'graphql';
 import { getDb, ensureDbReady } from '@/lib/db/client';
 import { BLUEPRINTS } from '@/lib/studio/blueprints';
 import { verifyApiToken } from '@/lib/auth/apiToken';
+import { apiTenantFilter, type ApiAccess } from '@/lib/auth/apiAccess';
 
 // GraphQL Schema Definition (SDL)
 const typeDefs = `
@@ -138,13 +139,14 @@ const typeDefs = `
 const schema = buildSchema(typeDefs);
 
 // Helper to resolve Media Asset
-async function resolveMediaAsset(db: any, assetIdOrUrl: string | null | undefined): Promise<any | null> {
+async function resolveMediaAsset(db: any, access: ApiAccess, assetIdOrUrl: string | null | undefined): Promise<any | null> {
   if (!assetIdOrUrl) return null;
 
   try {
+    const filter = apiTenantFilter(access, 'media');
     const res = await db.execute({
-      sql: `SELECT * FROM media_assets WHERE id = ? OR url = ? OR filename = ? LIMIT 1`,
-      args: [assetIdOrUrl, assetIdOrUrl, assetIdOrUrl]
+      sql: `SELECT * FROM media_assets WHERE (id = ? OR url = ? OR filename = ?)${filter.sql} LIMIT 1`,
+      args: [assetIdOrUrl, assetIdOrUrl, assetIdOrUrl, ...filter.args]
     });
 
     if (res.rows.length > 0) {
@@ -177,7 +179,7 @@ async function resolveMediaAsset(db: any, assetIdOrUrl: string | null | undefine
   }
 
   // Fallback synthesised asset if URL given
-  if (typeof assetIdOrUrl === 'string' && (assetIdOrUrl.startsWith('/') || assetIdOrUrl.startsWith('http'))) {
+  if (access.isAgencyAdmin && typeof assetIdOrUrl === 'string' && (assetIdOrUrl.startsWith('/') || assetIdOrUrl.startsWith('http'))) {
     return {
       id: `asset_${encodeURIComponent(assetIdOrUrl).replace(/[^a-zA-Z0-9]/g, '_')}`,
       filename: assetIdOrUrl.split('/').pop() || 'asset.png',
@@ -194,12 +196,16 @@ async function resolveMediaAsset(db: any, assetIdOrUrl: string | null | undefine
 }
 
 // Resolver Root
-function createRootResolvers(db: any) {
+function createRootResolvers(db: any, access: ApiAccess) {
+  const pagesFilter = apiTenantFilter(access, 'page');
+  const recordsFilter = apiTenantFilter(access, 'record', 'r');
+  const releasesFilter = apiTenantFilter(access, 'release');
+  const mediaFilter = apiTenantFilter(access, 'media');
   return {
     // 1. Pages Query with deep relations population
     pages: async ({ locale, status, siteId, limit = 50 }: any) => {
-      let sql = `SELECT * FROM page_compositions WHERE 1=1`;
-      const args: any[] = [];
+      let sql = `SELECT * FROM page_compositions WHERE 1=1${pagesFilter.sql}`;
+      const args: any[] = [...pagesFilter.args];
 
       if (siteId) {
         sql += ` AND site_id = ?`;
@@ -215,12 +221,12 @@ function createRootResolvers(db: any) {
 
       const res = await db.execute({ sql, args });
 
-      return res.rows.map((row: any) => formatPageRow(db, row));
+      return res.rows.map((row: any) => formatPageRow(db, access, row));
     },
 
     page: async ({ slug, siteId }: any) => {
-      let sql = `SELECT * FROM page_compositions WHERE page_slug = ?`;
-      const args: any[] = [slug];
+      let sql = `SELECT * FROM page_compositions WHERE page_slug = ?${pagesFilter.sql}`;
+      const args: any[] = [slug, ...pagesFilter.args];
 
       if (siteId) {
         sql += ` AND site_id = ?`;
@@ -231,7 +237,7 @@ function createRootResolvers(db: any) {
       const res = await db.execute({ sql, args });
       if (res.rows.length === 0) return null;
 
-      return formatPageRow(db, res.rows[0]);
+      return formatPageRow(db, access, res.rows[0]);
     },
 
     // 2. Operations Query
@@ -240,9 +246,9 @@ function createRootResolvers(db: any) {
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
         LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'operations'
+        WHERE r.collection = 'operations'${recordsFilter.sql}
       `;
-      const args: any[] = [];
+      const args: any[] = [...recordsFilter.args];
 
       if (country) {
         sql += ` AND rev.data_json LIKE ?`;
@@ -270,7 +276,7 @@ function createRootResolvers(db: any) {
           metrics: data.metrics || null,
           infrastructure: data.infrastructure || null,
           updatedAt: String(row.updated_at || new Date().toISOString()),
-          featuredMedia: async () => resolveMediaAsset(db, data.imageUrl || data.image || `/assets/${row.slug}.png`)
+          featuredMedia: async () => resolveMediaAsset(db, access, data.imageUrl || data.image || `/assets/${row.slug}.png`)
         };
       });
     },
@@ -280,10 +286,10 @@ function createRootResolvers(db: any) {
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
         LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'operations' AND r.slug = ?
+        WHERE r.collection = 'operations' AND r.slug = ?${recordsFilter.sql}
         LIMIT 1
       `;
-      const res = await db.execute({ sql, args: [slug] });
+      const res = await db.execute({ sql, args: [slug, ...recordsFilter.args] });
       if (res.rows.length === 0) return null;
 
       const row = res.rows[0];
@@ -303,7 +309,7 @@ function createRootResolvers(db: any) {
         metrics: data.metrics || null,
         infrastructure: data.infrastructure || null,
         updatedAt: String(row.updated_at || new Date().toISOString()),
-        featuredMedia: async () => resolveMediaAsset(db, data.imageUrl || data.image || `/assets/${row.slug}.png`)
+        featuredMedia: async () => resolveMediaAsset(db, access, data.imageUrl || data.image || `/assets/${row.slug}.png`)
       };
     },
 
@@ -313,9 +319,9 @@ function createRootResolvers(db: any) {
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
         LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'reports'
+        WHERE r.collection = 'reports'${recordsFilter.sql}
       `;
-      const args: any[] = [];
+      const args: any[] = [...recordsFilter.args];
 
       if (year) {
         sql += ` AND rev.data_json LIKE ?`;
@@ -357,9 +363,9 @@ function createRootResolvers(db: any) {
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
         LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'news'
+        WHERE r.collection = 'news'${recordsFilter.sql}
       `;
-      const args: any[] = [];
+      const args: any[] = [...recordsFilter.args];
       if (category) {
         sql += ` AND rev.data_json LIKE ?`;
         args.push(`%"category":"${category}"%`);
@@ -384,7 +390,7 @@ function createRootResolvers(db: any) {
           summary: data.summary || data.teaser || '',
           publishedAt: data.publishedAt || String(row.updated_at),
           status: String(row.status || 'published'),
-          featuredMedia: async () => resolveMediaAsset(db, data.featuredImage || data.imageUrl)
+          featuredMedia: async () => resolveMediaAsset(db, access, data.featuredImage || data.imageUrl)
         };
       });
     },
@@ -394,10 +400,10 @@ function createRootResolvers(db: any) {
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
         LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'news' AND r.slug = ?
+        WHERE r.collection = 'news' AND r.slug = ?${recordsFilter.sql}
         LIMIT 1
       `;
-      const res = await db.execute({ sql, args: [slug] });
+      const res = await db.execute({ sql, args: [slug, ...recordsFilter.args] });
       if (res.rows.length === 0) return null;
       const row = res.rows[0];
       let data: any = {};
@@ -414,14 +420,14 @@ function createRootResolvers(db: any) {
         summary: data.summary || data.teaser || '',
         publishedAt: data.publishedAt || String(row.updated_at),
         status: String(row.status || 'published'),
-        featuredMedia: async () => resolveMediaAsset(db, data.featuredImage || data.imageUrl)
+        featuredMedia: async () => resolveMediaAsset(db, access, data.featuredImage || data.imageUrl)
       };
     },
 
     // 5. Content Releases
     releases: async ({ status }: any) => {
-      let sql = `SELECT * FROM content_releases WHERE 1=1`;
-      const args: any[] = [];
+      let sql = `SELECT * FROM content_releases WHERE 1=1${releasesFilter.sql}`;
+      const args: any[] = [...releasesFilter.args];
       if (status) {
         sql += ` AND status = ?`;
         args.push(status);
@@ -434,8 +440,8 @@ function createRootResolvers(db: any) {
 
     release: async ({ id }: any) => {
       const res = await db.execute({
-        sql: `SELECT * FROM content_releases WHERE id = ? LIMIT 1`,
-        args: [id]
+        sql: `SELECT * FROM content_releases WHERE id = ?${releasesFilter.sql} LIMIT 1`,
+        args: [id, ...releasesFilter.args]
       });
       if (res.rows.length === 0) return null;
       return formatReleaseRow(db, res.rows[0]);
@@ -443,8 +449,8 @@ function createRootResolvers(db: any) {
 
     // 6. Media Assets (DAM)
     mediaAssets: async ({ folderId, limit = 50 }: any) => {
-      let sql = `SELECT * FROM media_assets WHERE 1=1`;
-      const args: any[] = [];
+      let sql = `SELECT * FROM media_assets WHERE 1=1${mediaFilter.sql}`;
+      const args: any[] = [...mediaFilter.args];
       if (folderId) {
         sql += ` AND folder_id = ?`;
         args.push(folderId);
@@ -479,7 +485,7 @@ function createRootResolvers(db: any) {
     },
 
     mediaAsset: async ({ id }: any) => {
-      return resolveMediaAsset(db, id);
+      return resolveMediaAsset(db, access, id);
     },
 
     // 7. Blueprint Catalog
@@ -488,7 +494,7 @@ function createRootResolvers(db: any) {
 }
 
 // Format page composition row with deep relations resolvers
-function formatPageRow(db: any, row: any) {
+function formatPageRow(db: any, access: ApiAccess, row: any) {
   let parsedSections: any[] = [];
   try {
     if (typeof row.sections_json === 'string') {
@@ -532,22 +538,23 @@ function formatPageRow(db: any, row: any) {
       data: sec.data || sec.props || {},
       featuredMedia: async () => {
         const mediaSource = sec.data?.imageUrl || sec.data?.image || sec.data?.backgroundImage;
-        return resolveMediaAsset(db, mediaSource);
+        return resolveMediaAsset(db, access, mediaSource);
       }
     })),
 
     // Deep featured media resolver
     featuredMedia: async () => {
       const mediaSource = meta?.ogImage || parsedSections[0]?.data?.imageUrl;
-      return resolveMediaAsset(db, mediaSource);
+      return resolveMediaAsset(db, access, mediaSource);
     },
 
     // Deep bundled release resolver
     bundledRelease: async () => {
       try {
+        const filter = apiTenantFilter(access, 'release', 'r');
         const relItemRes = await db.execute({
-          sql: `SELECT release_id FROM content_release_items WHERE item_id = ? OR item_id = ? LIMIT 1`,
-          args: [String(row.id), String(row.page_slug)]
+          sql: `SELECT i.release_id FROM content_release_items i JOIN content_releases r ON r.id = i.release_id WHERE (i.item_id = ? OR i.item_id = ?) AND r.site_id = ?${filter.sql} LIMIT 1`,
+          args: [String(row.id), String(row.page_slug), String(row.site_id), ...filter.args]
         });
         if (relItemRes.rows.length > 0) {
           const relId = relItemRes.rows[0].release_id;
@@ -620,7 +627,7 @@ export async function POST(req: NextRequest) {
 
     await ensureDbReady();
     const db = getDb();
-    const rootValue = createRootResolvers(db);
+    const rootValue = createRootResolvers(db, auth);
 
     const result = await graphql({
       schema,
@@ -679,7 +686,7 @@ export async function GET(req: NextRequest) {
 
     await ensureDbReady();
     const db = getDb();
-    const rootValue = createRootResolvers(db);
+    const rootValue = createRootResolvers(db, auth);
 
     const result = await graphql({
       schema,
