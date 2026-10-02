@@ -441,3 +441,19 @@ test('website assistant reads authorized website context without selecting a pag
   assert.equal(data.parsedChanges.pages[0].pageSlug, 'home');
   assert.equal(data.parsedChanges.pages[0].sections[0].styles.theme, 'dark');
 });
+
+
+test('multi-page saves preserve existing history when a page version counter was reset', async (t) => {
+  const { h } = await setup(t);
+  const { saveWebsiteDrafts } = h.load('lib/studio/editor/saveComposition.ts');
+  await h.db.execute("INSERT INTO page_compositions VALUES('page-about','site-a','about','About','editorial','[]',NULL,1,'draft','2026-10-01','2026-10-01')");
+  await h.db.execute("INSERT INTO page_versions(id,composition_id,site_id,page_slug,version,sections_json,status) VALUES('pver_site-a_home_v2','page-a','site-a','home',2,'[]','draft')");
+  const results = await saveWebsiteDrafts(author, 'site-a', [
+    { pageSlug: 'home', expectedVersion: 1, sections },
+    { pageSlug: 'about', expectedVersion: 1, sections },
+  ]);
+  assert.deepEqual(results.map(page => page.version), [3, 2]);
+  const old = (await h.db.execute("SELECT sections_json FROM page_versions WHERE id='pver_site-a_home_v2'")).rows[0];
+  assert.equal(old.sections_json, '[]');
+  assert.equal((await h.db.execute("SELECT COUNT(*) AS total FROM page_versions WHERE page_slug='home'")).rows[0].total, 2);
+});

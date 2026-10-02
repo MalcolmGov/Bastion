@@ -471,7 +471,7 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
   ];
 
   await db.execute({
-    sql: `INSERT OR REPLACE INTO page_compositions (id, site_id, page_slug, title, layout_collection, sections_json, meta_json, version, status, created_at, updated_at)
+    sql: `INSERT OR IGNORE INTO page_compositions (id, site_id, page_slug, title, layout_collection, sections_json, meta_json, version, status, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       'comp_apex_home_v1',
@@ -699,7 +699,7 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
   ];
 
   await db.execute({
-    sql: `INSERT OR REPLACE INTO page_compositions (id, site_id, page_slug, title, layout_collection, sections_json, meta_json, version, status, created_at, updated_at)
+    sql: `INSERT OR IGNORE INTO page_compositions (id, site_id, page_slug, title, layout_collection, sections_json, meta_json, version, status, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       'comp_lumina_home_v1',
