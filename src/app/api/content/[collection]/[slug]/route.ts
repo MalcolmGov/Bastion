@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { verifyApiToken } from '@/lib/auth/apiToken';
+import { apiTenantFilter } from '@/lib/auth/apiAccess';
 
 export async function GET(
   req: NextRequest,
@@ -19,13 +20,15 @@ export async function GET(
     const effectiveClientId: string = auth.isAgencyAdmin
       ? (searchParams.get('clientId') || 'client_goldfields')
       : (auth.clientId || 'client_goldfields');
-    const siteId: string = auth.siteId || searchParams.get('siteId') || 'site_goldfields_flagship';
+    const siteId = auth.siteId || searchParams.get('siteId') || (auth.isAgencyAdmin ? 'site_goldfields_flagship' : null);
     const db = getDb();
+    const recordFilter = apiTenantFilter(auth, 'record', 'r');
 
     if (collection === 'pages') {
+      const filter = apiTenantFilter(auth.isAgencyAdmin ? { ...auth, isAgencyAdmin: false, clientId: effectiveClientId } : auth, 'page');
       const pageRes = await db.execute({
-        sql: `SELECT * FROM page_compositions WHERE (site_id = ? OR client_id = ?) AND page_slug = ? ${isPreview ? '' : "AND status = 'published'"} LIMIT 1`,
-        args: [siteId, effectiveClientId, slug],
+        sql: `SELECT * FROM page_compositions WHERE page_slug = ?${filter.sql}${siteId ? ' AND site_id = ?' : ''} ${isPreview ? '' : "AND status = 'published'"} LIMIT 1`,
+        args: [slug, ...filter.args, ...(siteId ? [siteId] : [])],
       });
 
       if (pageRes.rows.length === 0) {
@@ -57,13 +60,13 @@ export async function GET(
           ELSE r.current_published_revision_id = rev.id
         END
       )
-      WHERE r.collection = ? AND r.slug = ? AND (r.client_id = ? OR (r.client_id IS NULL AND ? = 'client_goldfields'))
+      WHERE r.collection = ? AND r.slug = ? AND (r.client_id = ? OR (r.client_id IS NULL AND ? = 'client_goldfields'))${recordFilter.sql}
       LIMIT 1
     `;
 
     const res = await db.execute({
       sql,
-      args: [isPreview ? 'true' : 'false', collection, slug, effectiveClientId, effectiveClientId],
+      args: [isPreview ? 'true' : 'false', collection, slug, effectiveClientId, effectiveClientId, ...recordFilter.args],
     });
 
     if (res.rows.length === 0) {

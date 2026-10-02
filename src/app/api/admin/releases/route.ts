@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { listReleases, createRelease } from '@/lib/releases/service';
-import { assertSiteAccess, requireUser } from '@/lib/auth/guard';
+import { ReleaseValidationError, listReleases, createRelease } from '@/lib/releases/service';
+import { assertSiteAccess, requireUser, requirePermission } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 
 export async function GET(request: NextRequest) {
@@ -18,13 +18,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ releases });
   } catch (err: any) {
     console.error('[API /api/admin/releases] Error listing releases:', err);
-    return NextResponse.json({ error: err.message || 'Failed to list releases' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Failed to list releases' }, { status: err instanceof ReleaseValidationError ? 400 : 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const gate = await requireUser();
+    const gate = await requirePermission('content:publish');
     if (!gate.ok) return gate.response;
     const body = await request.json();
     if (!body.name) {
@@ -49,6 +49,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, release }, { status: 201 });
   } catch (err: any) {
     console.error('[API /api/admin/releases] Error creating release:', err);
-    return NextResponse.json({ error: err.message || 'Failed to create release' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Failed to create release' }, { status: err instanceof ReleaseValidationError ? 400 : 500 });
   }
 }

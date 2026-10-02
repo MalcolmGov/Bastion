@@ -6,6 +6,9 @@
  */
 
 import { getDb } from '@/lib/db/client';
+import crypto from 'crypto';
+import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
+import { apiTenantFilter, assertApiScope, assertApiSiteAccess, type ApiAccess } from '@/lib/auth/apiAccess';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import { extractFromGitHubRepo, getActiveGitHubIntegration } from '@/lib/github/client';
 
@@ -191,15 +194,23 @@ export const MCP_RESOURCES: McpResource[] = [
 /**
  * Handles MCP Tool Execution
  */
-export async function handleMcpToolCall(name: string, args: Record<string, any>): Promise<any> {
+export async function handleMcpToolCall(name: string, args: Record<string, any>, access: ApiAccess): Promise<any> {
+  assertApiScope(access, 'mcp:access');
+  const operationScopes: Record<string, string> = {
+    list_clients: 'content:read', query_content: 'content:read', get_entry: 'content:read',
+    get_page_composition: 'content:read', create_entry: 'content:create',
+    update_entry: 'content:edit', publish_entry: 'content:publish', save_page_composition: 'content:edit'
+  };
+  if (operationScopes[name]) assertApiScope(access, operationScopes[name]);
+  if (name === 'extract_brand_dna' && !access.isAgencyAdmin) throw new Error('Forbidden: agency staff only');
   const db = getDb();
+  const recordFilter = apiTenantFilter(access, 'record');
+  const pageFilter = apiTenantFilter(access, 'page');
 
   switch (name) {
     case 'list_clients': {
-      const sql = args.status
-        ? `SELECT c.*, w.primary_domain, w.status as website_status FROM clients c LEFT JOIN websites w ON c.id = w.client_id WHERE w.status = ? ORDER BY c.name ASC`
-        : `SELECT c.*, w.primary_domain, w.status as website_status FROM clients c LEFT JOIN websites w ON c.id = w.client_id ORDER BY c.name ASC`;
-      const queryArgs = args.status ? [args.status] : [];
+      const sql = `SELECT c.*, w.primary_domain, w.status as website_status FROM clients c LEFT JOIN websites w ON c.id = w.client_id WHERE 1=1${access.isAgencyAdmin ? '' : ' AND c.id = ?'}${access.siteId ? ' AND w.id = ?' : ''}${args.status ? ' AND w.status = ?' : ''} ORDER BY c.name ASC`;
+      const queryArgs = [...(access.isAgencyAdmin ? [] : [access.clientId!]), ...(access.siteId ? [access.siteId] : []), ...(args.status ? [args.status] : [])];
       const res = await db.execute({ sql, args: queryArgs });
       return { clients: res.rows };
     }
@@ -220,19 +231,20 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>)
 
     case 'query_content': {
       const { collection, status, query, limit = 20, offset = 0, siteId } = args;
-      const conditions: string[] = ['collection = ?'];
+      const filter = apiTenantFilter(access, 'record', 'r');
+      const conditions: string[] = ['r.collection = ?'];
       const queryArgs: any[] = [collection];
 
       if (status) {
-        conditions.push('status = ?');
+        conditions.push('r.status = ?');
         queryArgs.push(status);
       }
       if (siteId) {
-        conditions.push('(site_id = ? OR site_id IS NULL)');
+        conditions.push('r.site_id = ?');
         queryArgs.push(siteId);
       }
       if (query) {
-        conditions.push('(title LIKE ? OR slug LIKE ?)');
+        conditions.push('(r.title LIKE ? OR r.slug LIKE ?)');
         queryArgs.push(`%${query}%`, `%${query}%`);
       }
 
@@ -241,11 +253,11 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>)
                rev.data_json
         FROM content_records r
         LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id OR r.current_draft_revision_id = rev.id
-        WHERE ${conditions.join(' AND ')}
+        WHERE ${conditions.join(' AND ')}${filter.sql}
         ORDER BY r.updated_at DESC
         LIMIT ? OFFSET ?
       `;
-      queryArgs.push(limit, offset);
+      queryArgs.push(...filter.args, limit, offset);
 
       const res = await db.execute({ sql, args: queryArgs });
       const entries = res.rows.map((r: any) => ({
@@ -267,11 +279,11 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>)
       let queryArgs: any[] = [];
 
       if (id) {
-        sql = `SELECT * FROM content_records WHERE id = ? LIMIT 1`;
-        queryArgs = [id];
+        sql = `SELECT * FROM content_records WHERE id = ?${recordFilter.sql} LIMIT 1`;
+        queryArgs = [id, ...recordFilter.args];
       } else if (slug && collection) {
-        sql = `SELECT * FROM content_records WHERE slug = ? AND collection = ? LIMIT 1`;
-        queryArgs = [slug, collection];
+        sql = `SELECT * FROM content_records WHERE slug = ? AND collection = ?${recordFilter.sql} LIMIT 1`;
+        queryArgs = [slug, collection, ...recordFilter.args];
       } else {
         throw new Error('Must provide either id or (slug and collection)');
       }
@@ -308,35 +320,48 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>)
     }
 
     case 'create_entry': {
-      const { collection, title, slug, data, siteId = 'site_apex_strategy', status = 'published' } = args;
+      const { collection, title, slug, data, status = 'draft' } = args;
+      const siteId = args.siteId || access.siteId || (access.isAgencyAdmin ? 'site_apex_strategy' : null);
+      if (!siteId) throw new Error('siteId is required');
+      await assertApiSiteAccess(db, access, siteId);
+      if (status === 'published') {
+        assertApiScope(access, 'content:publish');
+        if (!access.isAgencyAdmin && ['reports', 'news'].includes(collection)) {
+          throw new Error('Sensitive disclosures must be created as drafts and independently approved');
+        }
+      }
+      const site = await db.execute({ sql: 'SELECT client_id FROM websites WHERE id = ?', args: [siteId] });
+      const clientId = String(site.rows[0].client_id);
       const cleanSlug = slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const recordId = `rec_${collection}_${Date.now()}`;
-      const revId = `rev_${Date.now()}`;
+      const recordId = `rec_${collection}_${crypto.randomUUID()}`;
+      const revId = `rev_${crypto.randomUUID()}`;
       const now = new Date().toISOString();
 
-      await db.execute({
-        sql: `INSERT INTO content_records (id, collection, slug, title, status, current_published_revision_id, current_draft_revision_id, site_id, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [recordId, collection, cleanSlug, title, status, status === 'published' ? revId : null, revId, siteId, now, now]
-      });
+      await db.batch([
+        {
+          sql: `INSERT INTO content_records (id, collection, slug, title, status, current_published_revision_id, current_draft_revision_id, site_id, client_id, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [recordId, collection, cleanSlug, title, status, status === 'published' ? revId : null, revId, siteId, clientId, now, now]
+        },
+        {
+          sql: `INSERT INTO revisions (id, record_id, revision_number, data_json, content_hash, author_id, created_at, status)
+              VALUES (?, ?, 1, ?, ?, ?, ?, ?)`,
+          args: [revId, recordId, JSON.stringify(data), crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex'), access.actorId || null, now, status]
+        }
 
-      await db.execute({
-        sql: `INSERT INTO revisions (id, record_id, revision_number, data_json, content_hash, author_id, created_at, status)
-              VALUES (?, ?, 1, ?, 'mcp_hash', 'usr_mcp_agent', ?, ?)`,
-        args: [revId, recordId, JSON.stringify(data), now, status]
-      });
+      ], 'write');
 
       return { success: true, id: recordId, slug: cleanSlug, status };
     }
 
     case 'update_entry': {
       const { id, title, data, reviewComments = 'Updated via MCP AI Agent' } = args;
-      const entryRes = await db.execute({ sql: `SELECT * FROM content_records WHERE id = ? LIMIT 1`, args: [id] });
+      const entryRes = await db.execute({ sql: `SELECT * FROM content_records WHERE id = ?${recordFilter.sql} LIMIT 1`, args: [id, ...recordFilter.args] });
       if (entryRes.rows.length === 0) throw new Error(`Record ${id} not found`);
 
       const entry = entryRes.rows[0];
       const now = new Date().toISOString();
-      const revId = `rev_${Date.now()}`;
+      const revId = `rev_${crypto.randomUUID()}`;
 
       // Get latest revision number
       const maxRevRes = await db.execute({
@@ -347,12 +372,12 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>)
 
       await db.execute({
         sql: `INSERT INTO revisions (id, record_id, revision_number, data_json, content_hash, author_id, created_at, status, review_comments)
-              VALUES (?, ?, ?, ?, 'mcp_hash', 'usr_mcp_agent', ?, 'draft', ?)`,
-        args: [revId, id, nextRev, JSON.stringify(data), now, reviewComments]
+              VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?)`,
+        args: [revId, id, nextRev, JSON.stringify(data), crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex'), access.actorId || null, now, reviewComments]
       });
 
       await db.execute({
-        sql: `UPDATE content_records SET title = COALESCE(?, title), current_draft_revision_id = ?, updated_at = ? WHERE id = ?`,
+        sql: `UPDATE content_records SET title = COALESCE(?, title), current_draft_revision_id = ?, status = 'draft', updated_at = ? WHERE id = ?`,
         args: [title || null, revId, now, id]
       });
 
@@ -361,11 +386,14 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>)
 
     case 'publish_entry': {
       const { id } = args;
-      const entryRes = await db.execute({ sql: `SELECT * FROM content_records WHERE id = ? LIMIT 1`, args: [id] });
+      const entryRes = await db.execute({ sql: `SELECT * FROM content_records WHERE id = ?${recordFilter.sql} LIMIT 1`, args: [id, ...recordFilter.args] });
       if (entryRes.rows.length === 0) throw new Error(`Record ${id} not found`);
 
       const entry = entryRes.rows[0];
       const draftRevId = entry.current_draft_revision_id || entry.current_published_revision_id;
+      if (!access.isAgencyAdmin) {
+        await assertDisclosureApproval(db, String(entry.collection), String(draftRevId || ''));
+      }
       const now = new Date().toISOString();
 
       await db.execute({
@@ -401,8 +429,8 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>)
     case 'get_page_composition': {
       const { siteId, pageSlug = 'home' } = args;
       const res = await db.execute({
-        sql: `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = ? LIMIT 1`,
-        args: [siteId, pageSlug]
+        sql: `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = ?${pageFilter.sql} LIMIT 1`,
+        args: [siteId, pageSlug, ...pageFilter.args]
       });
 
       if (res.rows.length === 0) {
@@ -427,7 +455,9 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>)
     }
 
     case 'save_page_composition': {
-      const { siteId, pageSlug, title = 'Page', sections, status = 'published' } = args;
+      const { siteId, pageSlug, title = 'Page', sections, status = 'draft' } = args;
+      await assertApiSiteAccess(db, access, siteId);
+      if (status === 'published') assertApiScope(access, 'content:publish');
       const compId = `comp_${siteId}_${pageSlug}_v1`;
       const now = new Date().toISOString();
 
@@ -501,11 +531,16 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>)
 /**
  * Handles MCP Resource Read
  */
-export async function handleMcpResourceRead(uri: string): Promise<{ mimeType: string; text: string }> {
+export async function handleMcpResourceRead(uri: string, access: ApiAccess): Promise<{ mimeType: string; text: string }> {
+  assertApiScope(access, 'mcp:access');
+  if (uri !== 'bastion://components') assertApiScope(access, 'content:read');
   const db = getDb();
 
   if (uri === 'bastion://telemetry/fleet') {
-    const clientsRes = await db.execute(`SELECT c.id, c.name, c.slug, w.primary_domain as domain, COALESCE(w.status, 'active') as status FROM clients c LEFT JOIN websites w ON c.id = w.client_id`);
+    const clientsRes = await db.execute({
+      sql: `SELECT c.id, c.name, c.slug, w.primary_domain as domain, COALESCE(w.status, 'active') as status FROM clients c LEFT JOIN websites w ON c.id = w.client_id WHERE 1=1${access.isAgencyAdmin ? '' : ' AND c.id = ?'}${access.siteId ? ' AND w.id = ?' : ''}`,
+      args: [...(access.isAgencyAdmin ? [] : [access.clientId!]), ...(access.siteId ? [access.siteId] : [])]
+    });
     return {
       mimeType: 'application/json',
       text: JSON.stringify({
@@ -519,7 +554,10 @@ export async function handleMcpResourceRead(uri: string): Promise<{ mimeType: st
   }
 
   if (uri === 'bastion://clients') {
-    const clientsRes = await db.execute(`SELECT * FROM clients ORDER BY name ASC`);
+    const clientsRes = await db.execute({
+      sql: `SELECT * FROM clients${access.isAgencyAdmin ? '' : ' WHERE id = ?'} ORDER BY name ASC`,
+      args: access.isAgencyAdmin ? [] : [access.clientId!]
+    });
     return {
       mimeType: 'application/json',
       text: JSON.stringify({ clients: clientsRes.rows }, null, 2)
