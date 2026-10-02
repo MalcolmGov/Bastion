@@ -2,15 +2,21 @@
 
 import React, { useEffect, useState } from 'react';
 import { DataTable } from '@/components/admin/DataTable';
+import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 
 export default function AdminJobsPage() {
+  const { activeClient } = useStudioWorkspace();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/admin/content/jobs');
+        setLoading(true);
+        const queryParams = new URLSearchParams();
+        if (activeClient?.id) queryParams.set('clientId', activeClient.id);
+
+        const res = await fetch(`/api/admin/content/jobs?${queryParams.toString()}`);
         if (res.ok) {
           const json = await res.json();
           setRecords(json.records || []);
@@ -22,7 +28,7 @@ export default function AdminJobsPage() {
       }
     }
     load();
-  }, []);
+  }, [activeClient?.id]);
 
   if (loading) {
     return (
@@ -32,11 +38,22 @@ export default function AdminJobsPage() {
     );
   }
 
+  const isGoldFields = activeClient?.id === 'client_goldfields';
+  const clientName = activeClient?.name || 'Corporate';
+
+  const title = isGoldFields
+    ? 'Global Careers & Mining Vacancies'
+    : `${clientName} Careers & Open Opportunities`;
+
+  const description = isGoldFields
+    ? 'Manage open roles across underground mining, metallurgy, geotechnical engineering, community liaison, and corporate leadership.'
+    : `Career opportunities, job postings, candidate requirements, and departmental hiring for ${clientName}.`;
+
   return (
     <DataTable
-      title="Global Careers & Mining Vacancies"
+      title={title}
       collection="jobs"
-      description="Manage open roles across underground mining, metallurgy, geotechnical engineering, community liaison, and corporate leadership."
+      description={description}
       records={records}
       createUrl="/admin/jobs/new"
     />

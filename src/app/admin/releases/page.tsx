@@ -96,7 +96,10 @@ export default function AdminReleasesPage() {
   const fetchReleases = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/releases?siteId=${activeSite?.id || 'site_goldfields_global'}`);
+      const params = new URLSearchParams();
+      if (activeClient?.id) params.set('clientId', activeClient.id);
+      if (activeSite?.id) params.set('siteId', activeSite.id);
+      const res = await fetch(`/api/admin/releases?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setReleases(data.releases || []);
@@ -111,7 +114,7 @@ export default function AdminReleasesPage() {
 
   useEffect(() => {
     fetchReleases();
-  }, [activeSite]);
+  }, [activeClient?.id, activeSite?.id]);
 
   const loadReleaseDetails = async (release: ContentRelease) => {
     setSelectedRelease(release);

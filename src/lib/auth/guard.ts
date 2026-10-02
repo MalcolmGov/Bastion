@@ -43,9 +43,73 @@ export function clientOwns(user: StudioUser, clientId: string | null | undefined
   return !!clientId && clientId === user.client_id;
 }
 
-export function tenantClause(user: StudioUser, column = 'client_id'): { sql: string; args: string[] } {
-  if (isAgencyUser(user)) return { sql: '', args: [] };
-  return { sql: ` AND ${column} = ?`, args: [user.client_id || ''] };
+export function extractTenantFromRequest(req?: Request | any): string | null {
+  if (!req) return null;
+  try {
+    // 1. Check query parameters
+    let url: URL | null = null;
+    if (typeof req.url === 'string') {
+      url = new URL(req.url, 'http://localhost');
+    } else if (req.nextUrl) {
+      url = req.nextUrl;
+    }
+    const fromQuery = url?.searchParams.get('clientId');
+    if (fromQuery && fromQuery.trim()) return fromQuery.trim();
+
+    // 2. Check headers
+    if (req.headers) {
+      const fromHeader = typeof req.headers.get === 'function'
+        ? (req.headers.get('x-client-id') || req.headers.get('x-tenant-id'))
+        : (req.headers['x-client-id'] || req.headers['x-tenant-id']);
+      if (fromHeader && String(fromHeader).trim()) return String(fromHeader).trim();
+
+      // 3. Check Cookie header
+      const cookieHeader = typeof req.headers.get === 'function' ? req.headers.get('cookie') : req.headers.cookie;
+      if (cookieHeader) {
+        const match = String(cookieHeader).match(/bastion_active_client_id=([^;]+)/);
+        if (match && match[1]) return decodeURIComponent(match[1].trim());
+      }
+    }
+
+    // 4. Check NextRequest cookies map if present
+    if (req.cookies && typeof req.cookies.get === 'function') {
+      const cookieVal = req.cookies.get('bastion_active_client_id')?.value;
+      if (cookieVal && cookieVal.trim()) return cookieVal.trim();
+    }
+  } catch {
+    // Fallback if URL parsing encounters relative paths
+  }
+  return null;
+}
+
+export function resolveTargetClientId(
+  user: StudioUser,
+  req?: Request | any,
+  explicitClientId?: string | null
+): string | null {
+  if (!isAgencyUser(user)) {
+    return user.client_id || null;
+  }
+  if (explicitClientId && explicitClientId.trim()) {
+    return explicitClientId.trim();
+  }
+  const fromReq = extractTenantFromRequest(req);
+  if (fromReq) return fromReq;
+  return null;
+}
+
+export function tenantClause(
+  user: StudioUser,
+  column = 'client_id',
+  explicitTargetClientId?: string | null
+): { sql: string; args: string[] } {
+  if (!isAgencyUser(user)) {
+    return { sql: ` AND ${column} = ?`, args: [user.client_id || ''] };
+  }
+  if (explicitTargetClientId && explicitTargetClientId.trim()) {
+    return { sql: ` AND ${column} = ?`, args: [explicitTargetClientId.trim()] };
+  }
+  return { sql: '', args: [] };
 }
 
 export async function assertSiteAccess(user: StudioUser, siteId: string): Promise<Guard> {

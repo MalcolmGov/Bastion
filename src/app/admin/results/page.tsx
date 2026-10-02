@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { ResultsCodingChat } from '@/components/results/ResultsCodingChat';
 import { InteractiveResultsViewer } from '@/components/results/InteractiveResultsViewer';
 import { applyFigureEdit } from '@/lib/results/applyFigureEdit';
@@ -11,6 +12,7 @@ import type { ResultsBrand, ResultsDocument, StoredResultsDocument } from '@/lib
 const STEPS = ['Converter', 'Brand', 'PDF', 'Code and publish'];
 
 export default function ResultsStudioPage() {
+  const { activeClient } = useStudioWorkspace();
   const [documents, setDocuments] = useState<StoredResultsDocument[]>([]);
   const [current, setCurrent] = useState<StoredResultsDocument | null>(null);
   const [step, setStep] = useState(0);
@@ -22,7 +24,8 @@ export default function ResultsStudioPage() {
   const [previewMode, setPreviewMode] = useState<'analytics' | 'document'>('analytics');
 
   async function refresh() {
-    const response = await fetch('/api/admin/results');
+    const url = '/api/admin/results' + (activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '');
+    const response = await fetch(url);
     if (!response.ok) return;
     const body = await response.json();
     setDocuments(body.documents || []);
@@ -30,7 +33,7 @@ export default function ResultsStudioPage() {
 
   useEffect(() => {
     refresh().catch(() => setError('Could not load saved results.'));
-  }, []);
+  }, [activeClient?.id]);
 
   async function extractBrand() {
     setBusy('brand');
@@ -61,6 +64,7 @@ export default function ResultsStudioPage() {
       if (payload.file) {
         const form = new FormData();
         form.set('file', payload.file);
+        if (activeClient?.id) form.set('clientId', activeClient.id);
         if (brand) form.set('brand', JSON.stringify(brand));
         response = await fetch('/api/admin/results/convert', { method: 'POST', body: form });
       } else {
@@ -71,6 +75,7 @@ export default function ResultsStudioPage() {
             sample: payload.sample || undefined,
             example: payload.example,
             brand,
+            clientId: activeClient?.id,
           }),
         });
       }

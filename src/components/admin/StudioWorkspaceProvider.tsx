@@ -65,17 +65,42 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
         const data = await res.json();
         setClients(data.clients || []);
 
-        // Restore saved client from localStorage if available
-        const savedClientId = typeof window !== 'undefined' ? localStorage.getItem('move_studio_active_client') : null;
+        // Check cookie first, then localStorage
+        let savedClientId: string | null = null;
+        if (typeof document !== 'undefined') {
+          const cookieMatch = document.cookie.match(/(?:^|;\s*)bastion_active_client_id=([^;]+)/);
+          if (cookieMatch) {
+            savedClientId = decodeURIComponent(cookieMatch[1]);
+          }
+        }
+        if (!savedClientId && typeof window !== 'undefined') {
+          savedClientId = localStorage.getItem('bastion_active_client_id') || localStorage.getItem('move_studio_active_client');
+        }
+
         const savedSiteId = typeof window !== 'undefined' ? localStorage.getItem('move_studio_active_site') : null;
         if (savedClientId && data.clients.some((c: any) => c.id === savedClientId)) {
           setActiveClientIdState(savedClientId);
-          if (savedSiteId) setActiveSiteIdState(savedSiteId);
+          if (typeof window !== 'undefined') {
+            document.cookie = `bastion_active_client_id=${encodeURIComponent(savedClientId)}; path=/; max-age=31536000; SameSite=Lax`;
+            localStorage.setItem('bastion_active_client_id', savedClientId);
+            localStorage.setItem('move_studio_active_client', savedClientId);
+          }
+          const matchedClient = data.clients.find((c: any) => c.id === savedClientId);
+          if (savedSiteId && matchedClient?.websites?.some((w: any) => w.id === savedSiteId)) {
+            setActiveSiteIdState(savedSiteId);
+          } else if (matchedClient?.websites?.[0]) {
+            setActiveSiteIdState(matchedClient.websites[0].id);
+          }
         } else if (data.clients.length > 0) {
           // Default to Gold Fields if present, else first client
           const goldfields = data.clients.find((c: any) => c.id === 'client_goldfields');
           const target = goldfields || data.clients[0];
           setActiveClientIdState(target.id);
+          if (typeof window !== 'undefined') {
+            document.cookie = `bastion_active_client_id=${encodeURIComponent(target.id)}; path=/; max-age=31536000; SameSite=Lax`;
+            localStorage.setItem('bastion_active_client_id', target.id);
+            localStorage.setItem('move_studio_active_client', target.id);
+          }
           if (target.websites?.[0]) {
             setActiveSiteIdState(target.websites[0].id);
           }
@@ -120,6 +145,8 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     setActiveClientIdState(id);
     if (typeof window !== 'undefined') {
       localStorage.setItem('move_studio_active_client', id);
+      document.cookie = `bastion_active_client_id=${encodeURIComponent(id)}; path=/; max-age=31536000; SameSite=Lax`;
+      window.dispatchEvent(new CustomEvent('studio-active-client-changed', { detail: { clientId: id } }));
     }
     const found = clients.find(c => c.id === id);
     if (found?.websites?.[0]) {

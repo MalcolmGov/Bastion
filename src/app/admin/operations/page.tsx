@@ -2,15 +2,21 @@
 
 import React, { useEffect, useState } from 'react';
 import { DataTable } from '@/components/admin/DataTable';
+import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 
 export default function AdminOperationsPage() {
+  const { activeClient } = useStudioWorkspace();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/admin/content/operations');
+        setLoading(true);
+        const queryParams = new URLSearchParams();
+        if (activeClient?.id) queryParams.set('clientId', activeClient.id);
+
+        const res = await fetch(`/api/admin/content/operations?${queryParams.toString()}`);
         if (res.ok) {
           const json = await res.json();
           setRecords(json.records || []);
@@ -22,7 +28,7 @@ export default function AdminOperationsPage() {
       }
     }
     load();
-  }, []);
+  }, [activeClient?.id]);
 
   if (loading) {
     return (
@@ -32,11 +38,22 @@ export default function AdminOperationsPage() {
     );
   }
 
+  const isGoldFields = activeClient?.id === 'client_goldfields';
+  const clientName = activeClient?.name || 'Corporate';
+
+  const title = isGoldFields
+    ? 'Global Operations & Mining Assets'
+    : `${clientName} Operations & Business Units`;
+
+  const description = isGoldFields
+    ? 'Manage 10 global mining assets across Australia, South Africa, Ghana, Peru, and Chile including production figures, reserve estimates, and renewable infrastructure.'
+    : `Operational divisions, regional facilities, and performance metrics for ${clientName}.`;
+
   return (
     <DataTable
-      title="Global Operations & Mining Assets"
+      title={title}
       collection="operations"
-      description="Manage 10 global mining assets across Australia, South Africa, Ghana, Peru, and Chile including production figures, reserve estimates, and renewable infrastructure."
+      description={description}
       records={records}
       createUrl="/admin/operations/new"
     />

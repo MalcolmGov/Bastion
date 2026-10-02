@@ -95,8 +95,8 @@ async function main() {
 
     // Insert record first so revisions foreign key succeeds
     await db.execute({
-      sql: `INSERT OR REPLACE INTO content_records (id, collection, slug, title, status, current_published_revision_id, current_draft_revision_id, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [id, collection, slug, title, 'published', revId, revId, 'usr_admin', now, now]
+      sql: `INSERT OR REPLACE INTO content_records (id, collection, slug, title, status, current_published_revision_id, current_draft_revision_id, owner_id, client_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [id, collection, slug, title, 'published', revId, revId, 'usr_admin', 'client_goldfields', now, now]
     });
 
     await db.execute({

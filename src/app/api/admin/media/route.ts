@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureDbReady } from '@/lib/db/client';
 import { getCurrentUser } from '@/lib/auth/auth';
-import { tenantClause } from '@/lib/auth/guard';
+import { tenantClause, resolveTargetClientId } from '@/lib/auth/guard';
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     const folder = url.searchParams.get('folder') || '';
 
     const db = await ensureDbReady();
-    const scope = tenantClause(user, 'client_id');
+    const targetClientId = resolveTargetClientId(user, req);
+    const scope = tenantClause(user, 'client_id', targetClientId);
     let sql = `SELECT * FROM media_assets WHERE 1=1${scope.sql}`;
     const args: any[] = [...scope.args];
 
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     const res = await db.execute({ sql, args });
 
     // Also fetch folders
-    const folderScope = tenantClause(user, 'client_id');
+    const folderScope = tenantClause(user, 'client_id', targetClientId);
     const foldersRes = await db.execute({
       sql: `SELECT * FROM media_folders WHERE 1=1${folderScope.sql} ORDER BY name ASC`,
       args: folderScope.args

@@ -2,15 +2,19 @@
 
 import React, { useEffect, useState } from 'react';
 import { DataTable } from '@/components/admin/DataTable';
+import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 
 export default function AdminReportsPage() {
+  const { activeClient } = useStudioWorkspace();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/admin/content/reports');
+        setLoading(true);
+        const query = activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '';
+        const res = await fetch(`/api/admin/content/reports${query}`);
         if (res.ok) {
           const json = await res.json();
           setRecords(json.records || []);
@@ -22,7 +26,7 @@ export default function AdminReportsPage() {
       }
     }
     load();
-  }, []);
+  }, [activeClient?.id]);
 
   if (loading) {
     return (

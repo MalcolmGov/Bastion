@@ -2,15 +2,21 @@
 
 import React, { useEffect, useState } from 'react';
 import { DataTable } from '@/components/admin/DataTable';
+import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 
 export default function AdminSuppliersPage() {
+  const { activeClient } = useStudioWorkspace();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/admin/content/suppliers');
+        setLoading(true);
+        const queryParams = new URLSearchParams();
+        if (activeClient?.id) queryParams.set('clientId', activeClient.id);
+
+        const res = await fetch(`/api/admin/content/suppliers?${queryParams.toString()}`);
         if (res.ok) {
           const json = await res.json();
           setRecords(json.records || []);
@@ -22,7 +28,7 @@ export default function AdminSuppliersPage() {
       }
     }
     load();
-  }, []);
+  }, [activeClient?.id]);
 
   if (loading) {
     return (
@@ -32,11 +38,13 @@ export default function AdminSuppliersPage() {
     );
   }
 
+  const clientName = activeClient?.name || 'Corporate';
+
   return (
     <DataTable
-      title="Regional Supplier Portals & Guidelines"
+      title={`${clientName} Supplier Portals & Guidelines`}
       collection="suppliers"
-      description="Procurement standards, host-community preference criteria, compliance checklists (MHSA, B-BBEE, anti-bribery), and Coupa portal guidance."
+      description={`Procurement standards, host-community preference criteria, compliance checklists, and vendor onboarding guidance for ${clientName}.`}
       records={records}
       createUrl="/admin/suppliers/new"
     />

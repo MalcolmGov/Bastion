@@ -96,7 +96,8 @@ export default function MoveStudioOverviewPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const res = await fetch('/api/admin/dashboard');
+        const query = activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '';
+        const res = await fetch(`/api/admin/dashboard${query}`);
         if (res.ok) {
           const json = await res.json();
           setData(json);
@@ -108,7 +109,7 @@ export default function MoveStudioOverviewPage() {
       }
     }
     loadDashboard();
-  }, []);
+  }, [activeClient?.id]);
 
   // If in Client CMS Mode, render the calm, distraction-free Client CMS Workspace
   if (portalViewMode === 'client' && activeClient) {

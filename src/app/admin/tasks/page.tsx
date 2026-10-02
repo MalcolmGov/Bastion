@@ -115,7 +115,8 @@ export default function AdminTasksPage() {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/dashboard');
+      const query = activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '';
+      const res = await fetch(`/api/admin/dashboard${query}`);
       if (res.ok) {
         const json = await res.json();
         setTasks(json.pendingItems || []);
@@ -129,7 +130,7 @@ export default function AdminTasksPage() {
 
   useEffect(() => {
     loadTasks();
-  }, []);
+  }, [activeClient?.id]);
 
   // Filter tasks by active stage tab
   const filteredTasks = useMemo(() => {

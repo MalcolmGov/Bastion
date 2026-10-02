@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
+import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { FocalPointPicker } from '@/components/studio/FocalPointPicker';
 import {
   Image as ImageIcon,
@@ -23,6 +24,7 @@ import {
 
 export default function AdminMediaPage() {
   const { user } = useAdminAuth();
+  const { activeClient } = useStudioWorkspace();
   const [assets, setAssets] = useState<any[]>([]);
   const [folders, setFolders] = useState<any[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string>('all');
@@ -56,6 +58,7 @@ export default function AdminMediaPage() {
       if (search) q.set('search', search);
       if (formatFilter !== 'all') q.set('mime', formatFilter);
       if (selectedFolder !== 'all') q.set('folder', selectedFolder);
+      if (activeClient?.id) q.set('clientId', activeClient.id);
 
       const res = await fetch(`/api/admin/media?${q.toString()}`);
       if (res.ok) {
@@ -70,7 +73,7 @@ export default function AdminMediaPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, formatFilter, selectedFolder]);
+  }, [search, formatFilter, selectedFolder, activeClient?.id]);
 
   useEffect(() => {
     loadAssets();
@@ -105,7 +108,8 @@ export default function AdminMediaPage() {
           caption: editCaption,
           folder_id: editFolderId,
           focal_x: editFocalX,
-          focal_y: editFocalY
+          focal_y: editFocalY,
+          clientId: activeClient?.id
         })
       });
 
@@ -141,6 +145,7 @@ export default function AdminMediaPage() {
       formData.append('file', fileToUpload);
       if (uploadAlt) formData.append('alt_text', uploadAlt);
       if (uploadFolder) formData.append('folder_id', uploadFolder);
+      if (activeClient?.id) formData.append('clientId', activeClient.id);
 
       const res = await fetch('/api/admin/media/upload', {
         method: 'POST',

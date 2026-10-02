@@ -1,32 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { hashPassword } from '@/lib/auth/auth';
-import { requireAgencyUser, requireUser } from '@/lib/auth/guard';
+import { requireAgencyUser, requireUser, resolveTargetClientId } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const gate = await requireUser();
     if (!gate.ok) return gate.response;
     const user = gate.user;
 
     const db = getDb();
-    const result = isAgencyUser(user)
-      ? await db.execute(`
-          SELECT id, name, email, role, region_scope, client_id, created_at, last_login
-          FROM users
-          ORDER BY created_at DESC
-        `)
-      : await db.execute({
+    const targetClientId = resolveTargetClientId(user, req);
+
+    const result = targetClientId
+      ? await db.execute({
           sql: `
             SELECT id, name, email, role, region_scope, client_id, created_at, last_login
             FROM users
             WHERE client_id = ?
             ORDER BY created_at DESC
           `,
-          args: [user.client_id]
-        });
+          args: [targetClientId]
+        })
+      : (isAgencyUser(user)
+          ? await db.execute(`
+              SELECT id, name, email, role, region_scope, client_id, created_at, last_login
+              FROM users
+              ORDER BY created_at DESC
+            `)
+          : await db.execute({
+              sql: `
+                SELECT id, name, email, role, region_scope, client_id, created_at, last_login
+                FROM users
+                WHERE client_id = ?
+                ORDER BY created_at DESC
+              `,
+              args: [user.client_id]
+            }));
 
     return NextResponse.json({ users: result.rows });
   } catch (err: any) {

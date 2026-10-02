@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guard';
+import { requireUser, resolveTargetClientId } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import { readStoredBrand } from '@/lib/results/brand';
 import { convertMerafeExample, convertPdfBytes, convertSampleBooklet } from '@/lib/results/convert';
@@ -8,15 +8,14 @@ import { saveResultsDocument } from '@/lib/results/store';
 
 export const runtime = 'nodejs';
 
-function clientForUser(user: { client_id: string | null }, requested: string | null, agency: boolean): string | null {
-  return agency ? requested : user.client_id;
+function clientForUser(user: any, requested: string | null, req: NextRequest): string | null {
+  return resolveTargetClientId(user, req, requested) || (isAgencyUser(user) ? 'client_goldfields' : user.client_id);
 }
 
 export async function POST(req: NextRequest) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const user = gate.user;
-  const agency = isAgencyUser(user);
 
   try {
     const contentType = req.headers.get('content-type') || '';
@@ -26,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     if (contentType.includes('application/json')) {
       const body = await req.json();
-      clientId = clientForUser(user, body.clientId || null, agency);
+      clientId = clientForUser(user, body.clientId || null, req);
       brandInput = body.brand;
       if (body.example === 'merafe') document = await convertMerafeExample();
       else if (body.sample) document = await convertSampleBooklet();
@@ -34,7 +33,7 @@ export async function POST(req: NextRequest) {
     } else {
       const form = await req.formData();
       const file = form.get('file');
-      clientId = clientForUser(user, String(form.get('clientId') || '') || null, agency);
+      clientId = clientForUser(user, String(form.get('clientId') || '') || null, req);
       const brandField = form.get('brand');
       if (typeof brandField === 'string' && brandField) {
         brandInput = parseBrandField(brandField);

@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser } from '@/lib/auth/auth';
 import { isAgencyUser } from '@/lib/auth/roles';
+import { resolveTargetClientId } from '@/lib/auth/guard';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -11,8 +12,9 @@ export async function GET() {
     }
 
     const db = getDb();
-    const scoped = !isAgencyUser(user);
-    const clientId = user.client_id || '';
+    const targetClientId = resolveTargetClientId(user, req);
+    const scoped = Boolean(targetClientId);
+    const clientId = targetClientId || '';
 
     const statusCounts = await db.execute({
       sql: `SELECT status, COUNT(*) as count FROM content_records ${scoped ? 'WHERE client_id = ?' : ''} GROUP BY status`,

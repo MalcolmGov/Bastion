@@ -72,12 +72,13 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [activeClient?.id]);
 
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/users');
+      const query = activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '';
+      const res = await fetch(`/api/admin/users${query}`);
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);

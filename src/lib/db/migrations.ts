@@ -600,6 +600,145 @@ export const migrations: Migration[] = [
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_tender_subs_tender ON tender_submissions(tender_id, created_at DESC);`);
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_tender_subs_client ON tender_submissions(client_id);`);
     }
+  },
+  {
+    version: 13,
+    name: '013_strict_multi_tenant_data_isolation',
+    up: async (db: Client) => {
+      // 1. Assign unassigned content_records to client_goldfields
+      await db.execute(`UPDATE content_records SET client_id = 'client_goldfields' WHERE client_id IS NULL OR client_id = ''`);
+      
+      // 2. Ensure media_folders table exists and assign unassigned media_assets and media_folders to client_goldfields
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS media_folders (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          slug TEXT NOT NULL,
+          client_id TEXT,
+          site_id TEXT,
+          parent_id TEXT,
+          created_at TEXT NOT NULL
+        )
+      `);
+      await db.execute(`UPDATE media_assets SET client_id = 'client_goldfields' WHERE client_id IS NULL OR client_id = ''`);
+      await db.execute(`UPDATE media_folders SET client_id = 'client_goldfields' WHERE client_id IS NULL OR client_id = ''`);
+      
+      // 3. Ensure results_documents table exists and assign unassigned results_documents to client_bastion
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS results_documents (
+          id TEXT PRIMARY KEY,
+          client_id TEXT,
+          slug TEXT UNIQUE NOT NULL,
+          title TEXT NOT NULL,
+          status TEXT NOT NULL,
+          source_filename TEXT,
+          document_json TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          published_at TEXT
+        )
+      `);
+      await db.execute(`UPDATE results_documents SET client_id = 'client_bastion' WHERE client_id IS NULL OR client_id = ''`);
+
+      // 4. Ensure starter content_records exist for each client in the database
+      const clientsRes = await db.execute(`SELECT id, name, slug FROM clients`);
+      const now = new Date().toISOString();
+
+      for (const row of clientsRes.rows) {
+        const cId = String(row.id);
+        const cName = String(row.name);
+        const cSlug = String(row.slug || cId.replace('client_', ''));
+
+        if (cId === 'client_goldfields') continue;
+
+        const pagesRes = await db.execute({
+          sql: `SELECT count(*) as c FROM content_records WHERE client_id = ? AND collection = 'pages'`,
+          args: [cId]
+        });
+        const count = Number(pagesRes.rows[0]?.c || 0);
+
+        if (count === 0) {
+          const starterPages = [
+            {
+              slug: 'home',
+              title: `${cName} — Flagship Homepage`,
+              tagline: `Welcome to the official digital portal for ${cName}.`,
+            },
+            {
+              slug: 'about',
+              title: `About ${cName} — Purpose & Leadership`,
+              tagline: `Enterprise stewardship, executive board leadership, and corporate governance at ${cName}.`,
+            },
+            {
+              slug: 'services',
+              title: `${cName} Capabilities & Solutions`,
+              tagline: `Core specialist services, client engagement models, and execution frameworks.`,
+            },
+            {
+              slug: 'reports',
+              title: `${cName} Disclosures & Financial Reports`,
+              tagline: `Audited financial disclosures, regulatory announcements, and governance documentation.`,
+            },
+            {
+              slug: 'contact',
+              title: `Contact & Corporate Directory — ${cName}`,
+              tagline: `Direct stakeholder communication channels and regional office locations.`,
+            },
+            {
+              slug: 'news',
+              title: `${cName} Announcements & Media Releases`,
+              tagline: `Official executive statements, corporate press releases, and market updates.`,
+            }
+          ];
+
+          for (const page of starterPages) {
+            const recId = `page_${cSlug}_${page.slug}`;
+            const revId = `rev_${recId}_v1`;
+            const dataJson = JSON.stringify({
+              title: page.title,
+              slug: page.slug,
+              tagline: page.tagline,
+              clientName: cName,
+              clientId: cId,
+              status: 'published'
+            }, null, 2);
+
+            await db.execute({
+              sql: `INSERT OR REPLACE INTO content_records (id, collection, slug, title, status, current_published_revision_id, current_draft_revision_id, owner_id, client_id, created_at, updated_at)
+                    VALUES (?, 'pages', ?, ?, 'published', ?, ?, 'usr_admin', ?, ?, ?)`,
+              args: [recId, page.slug, page.title, revId, revId, cId, now, now]
+            });
+
+            await db.execute({
+              sql: `INSERT OR REPLACE INTO revisions (id, record_id, revision_number, data_json, content_hash, author_id, created_at, status)
+                    VALUES (?, ?, 1, ?, 'seeded_hash', 'usr_admin', ?, 'published')`,
+              args: [revId, recId, dataJson, now]
+            });
+          }
+        }
+
+        // Check if client has media folders
+        const folderRes = await db.execute({
+          sql: `SELECT count(*) as c FROM media_folders WHERE client_id = ?`,
+          args: [cId]
+        });
+        if (Number(folderRes.rows[0]?.c || 0) === 0) {
+          const defaultFolders = [
+            'Logos & Brand DNA',
+            'Executive Photography',
+            'Regulatory Filings & PDFs',
+            'Press & Media Assets',
+            'Website Banners'
+          ];
+          for (let i = 0; i < defaultFolders.length; i++) {
+            await db.execute({
+              sql: `INSERT OR IGNORE INTO media_folders (id, name, client_id, created_at) VALUES (?, ?, ?, ?)`,
+              args: [`fld_${cSlug}_${i + 1}`, defaultFolders[i], cId, now]
+            });
+          }
+        }
+      }
+    }
   }
 ];
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser, hasPermission } from '@/lib/auth/auth';
-import { clientOwns, tenantClause } from '@/lib/auth/guard';
+import { clientOwns, tenantClause, resolveTargetClientId } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import crypto from 'crypto';
 
@@ -23,14 +23,15 @@ export async function GET(
     const db = getDb();
     let sql = `
       SELECT r.id, r.collection, r.slug, r.title, r.status, r.current_published_revision_id,
-             r.current_draft_revision_id, r.owner_id, r.created_at, r.updated_at,
+             r.current_draft_revision_id, r.owner_id, r.client_id, r.created_at, r.updated_at,
              u.name as owner_name
       FROM content_records r
       LEFT JOIN users u ON r.owner_id = u.id
       WHERE r.collection = ?
     `;
     const args: any[] = [collection];
-    const scope = tenantClause(user, 'r.client_id');
+    const targetClientId = resolveTargetClientId(user, req);
+    const scope = tenantClause(user, 'r.client_id', targetClientId);
     sql += scope.sql;
     args.push(...scope.args);
 
@@ -89,7 +90,7 @@ export async function POST(
 
     const dataJson = JSON.stringify(data || {}, null, 2);
     const contentHash = crypto.createHash('sha256').update(dataJson).digest('hex');
-    const requestedClientId = typeof body.clientId === 'string' ? body.clientId : null;
+    const requestedClientId = resolveTargetClientId(user, req, typeof body.clientId === 'string' ? body.clientId : null);
     const clientId = isAgencyUser(user) ? (requestedClientId || 'client_goldfields') : user.client_id;
 
     // 1. Insert record in draft status

@@ -237,6 +237,84 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Provision starter isolated content_records (pages) and media_folders for the newly onboarded client
+    try {
+      const starterPages = [
+        {
+          slug: 'home',
+          title: `${name} — Flagship Homepage`,
+          tagline: tagline || `Official digital presence and disclosures for ${name}.`
+        },
+        {
+          slug: 'about',
+          title: `About ${name} — Leadership & Governance`,
+          tagline: `Enterprise stewardship, executive leadership, and governance at ${name}.`
+        },
+        {
+          slug: 'services',
+          title: `${name} Capabilities & Solutions`,
+          tagline: `Core specialist services, client engagement models, and execution frameworks.`
+        },
+        {
+          slug: 'reports',
+          title: `${name} Disclosures & Financial Reports`,
+          tagline: `Audited financial disclosures, regulatory announcements, and governance documentation.`
+        },
+        {
+          slug: 'contact',
+          title: `Contact & Corporate Directory — ${name}`,
+          tagline: `Direct stakeholder communication channels and regional office locations.`
+        },
+        {
+          slug: 'news',
+          title: `${name} Announcements & Media Releases`,
+          tagline: `Official executive statements, corporate press releases, and market updates.`
+        }
+      ];
+
+      for (const p of starterPages) {
+        const recId = `page_${slug.replace(/[^a-z0-9]/gi, '_')}_${p.slug}`;
+        const revId = `rev_${recId}_v1`;
+        const dataJson = JSON.stringify({
+          title: p.title,
+          slug: p.slug,
+          tagline: p.tagline,
+          clientName: name,
+          clientId,
+          status: 'published'
+        }, null, 2);
+
+        await db.execute({
+          sql: `INSERT OR REPLACE INTO content_records (id, collection, slug, title, status, current_published_revision_id, current_draft_revision_id, owner_id, client_id, created_at, updated_at)
+                VALUES (?, 'pages', ?, ?, 'published', ?, ?, 'usr_admin', ?, ?, ?)`,
+          args: [recId, p.slug, p.title, revId, revId, clientId, now, now]
+        });
+
+        await db.execute({
+          sql: `INSERT OR REPLACE INTO revisions (id, record_id, revision_number, data_json, content_hash, author_id, created_at, status)
+                VALUES (?, ?, 1, ?, 'seeded_hash', 'usr_admin', ?, 'published')`,
+          args: [revId, recId, dataJson, now]
+        });
+      }
+
+      // Provision default DAM media folders
+      const defaultFolders = [
+        'Logos & Brand DNA',
+        'Executive Photography',
+        'Regulatory Filings & PDFs',
+        'Press & Media Assets',
+        'Website Banners'
+      ];
+      for (let i = 0; i < defaultFolders.length; i++) {
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO media_folders (id, name, client_id, created_at) VALUES (?, ?, ?, ?)`,
+          args: [`fld_${slug.replace(/[^a-z0-9]/gi, '_')}_${i + 1}`, defaultFolders[i], clientId, now]
+        });
+      }
+    } catch (pageProvisionErr) {
+      console.warn('Could not auto-provision starter client content records:', pageProvisionErr);
+    }
+
     // Provision initial client user if requested and deliver welcome credentials via Resend
     let createdUser: any = null;
     let emailDelivery: any = null;

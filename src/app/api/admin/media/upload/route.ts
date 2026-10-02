@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser } from '@/lib/auth/auth';
 import { isAgencyUser } from '@/lib/auth/roles';
+import { resolveTargetClientId } from '@/lib/auth/guard';
 import { put } from '@vercel/blob';
 import fs from 'fs';
 import path from 'path';
@@ -77,21 +78,13 @@ export async function POST(req: NextRequest) {
 
     // 4. Client Isolation
     const requestedClient = formData.get('clientId');
-    let clientId: string | null = null;
-
-    if (isAgencyUser(user)) {
-      if (typeof requestedClient === 'string' && requestedClient.trim()) {
-        clientId = requestedClient.trim();
-      } else {
-        return NextResponse.json({
-          error: 'Agency uploads must specify an explicit target clientId.'
-        }, { status: 400 });
-      }
-    } else {
-      clientId = user.client_id;
-      if (!clientId) {
-        return NextResponse.json({ error: 'User is not assigned to a client workspace.' }, { status: 403 });
-      }
+    const clientId = resolveTargetClientId(user, req, requestedClient ? String(requestedClient) : null);
+    if (!clientId) {
+      return NextResponse.json({
+        error: isAgencyUser(user)
+          ? 'Agency uploads must specify an explicit target clientId or active workspace.'
+          : 'User is not assigned to a client workspace.'
+      }, { status: 400 });
     }
 
     const cleanFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
