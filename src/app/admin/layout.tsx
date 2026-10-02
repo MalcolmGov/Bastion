@@ -6,12 +6,13 @@ import { ThemeProvider } from '@/components/admin/ThemeProvider';
 import { AdminAuthProvider } from '@/components/admin/AdminAuthProvider';
 import { StudioWorkspaceProvider } from '@/components/admin/StudioWorkspaceProvider';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { MobileStudioNavigation } from '@/components/admin/MobileStudioNavigation';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { ClientSandboxBanner } from '@/components/admin/ClientSandboxBanner';
 import { DashboardCustomizerProvider } from '@/components/admin/DashboardCustomizerProvider';
 import { ZaraVoiceCopilot } from '@/components/copilot/ZaraVoiceCopilot';
 
-export function FloatingCopilotButton() {
+function FloatingCopilotButton() {
   return <ZaraVoiceCopilot />;
 }
 
@@ -24,6 +25,9 @@ export default function AdminRootLayout({
 }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/admin/login';
+
+  // Embedded previews authenticate on the server and render without studio chrome.
+  if (/^\/admin\/releases\/[^/]+\/preview\/[^/]+$/.test(pathname)) return <>{children}</>;
 
   if (isLoginPage) {
     return (
@@ -44,13 +48,14 @@ export default function AdminRootLayout({
           <DashboardCustomizerProvider>
             <div className="min-h-screen bg-[#FAFAFE] dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex font-sans antialiased tracking-[-0.011em] transition-colors duration-150">
               {/* Left Sticky Sidebar */}
-              <AdminSidebar />
+              <div className="hidden md:block"><AdminSidebar /></div>
 
               {/* Main Content Area */}
               <div className="flex-1 flex flex-col min-w-0">
-                <AdminHeader />
+                <MobileStudioNavigation />
+                <div className="hidden md:block"><AdminHeader /></div>
                 <ClientSandboxBanner />
-                <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
                   {children}
                 </main>
               </div>

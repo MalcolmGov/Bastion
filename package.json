@@ -10,6 +10,7 @@
     "lint:ci": "eslint src",
     "typecheck": "tsc --noEmit",
     "test:security": "node --test tests/security/*.test.cjs",
+    "test:workspace": "node --test tests/workspace/*.test.cjs",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
