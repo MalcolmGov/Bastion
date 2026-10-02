@@ -604,103 +604,138 @@ export function ClientCmsHome({
           {/* 2. 4 Metric Cards (Row 1) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: Published pages */}
-            <div className="p-4 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/60">
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between group relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100/70 dark:from-emerald-950/60 dark:to-teal-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/80 dark:border-emerald-800/60 shadow-2xs">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Published pages</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[28px] font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight leading-none">
                       {publishedPagesCount > 0 ? publishedPagesCount : 24}
                     </span>
-                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-0.5">
                       &uarr; 14%
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">+3 this week</div>
+                  <div className="text-[11px] text-slate-400 font-medium mt-1">+3 this week</div>
                 </div>
               </div>
-              <svg viewBox="0 0 70 28" className="w-16 h-7 stroke-emerald-500 fill-none stroke-2 shrink-0">
-                <path d="M2 20 C18 24 25 15 38 12 C48 10 55 14 68 4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <div className="w-20 h-9 shrink-0 relative flex items-center justify-end">
+                <svg viewBox="0 0 80 32" className="w-full h-full overflow-visible">
+                  <defs>
+                    <linearGradient id="spark1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10B981" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M 2 24 C 20 28, 32 18, 46 15 C 58 12, 66 16, 78 5 L 78 30 L 2 30 Z" fill="url(#spark1)" />
+                  <path d="M 2 24 C 20 28, 32 18, 46 15 C 58 12, 66 16, 78 5" fill="none" stroke="#10B981" strokeWidth="2.2" strokeLinecap="round" />
+                  <circle cx="78" cy="5" r="3" fill="#10B981" />
+                </svg>
+              </div>
             </div>
 
             {/* Card 2: Drafts */}
-            <div className="p-4 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/60">
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between group relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100/70 dark:from-blue-950/60 dark:to-indigo-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/80 dark:border-blue-800/60 shadow-2xs">
                   <Edit3 className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Drafts</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[28px] font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight leading-none">
                       {draftRevisionsCount > 0 ? draftRevisionsCount : 6}
                     </span>
-                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400">
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-800/60 flex items-center gap-0.5">
                       &uarr; 2
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">vs. last week</div>
+                  <div className="text-[11px] text-slate-400 font-medium mt-1">vs. last week</div>
                 </div>
               </div>
-              <svg viewBox="0 0 70 28" className="w-16 h-7 stroke-blue-500 fill-none stroke-2 shrink-0">
-                <path d="M2 18 C15 22 25 18 38 15 C48 13 58 7 68 5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <div className="w-20 h-9 shrink-0 relative flex items-center justify-end">
+                <svg viewBox="0 0 80 32" className="w-full h-full overflow-visible">
+                  <defs>
+                    <linearGradient id="spark2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#2563EB" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M 2 22 C 18 26, 32 20, 46 18 C 58 16, 68 10, 78 6 L 78 30 L 2 30 Z" fill="url(#spark2)" />
+                  <path d="M 2 22 C 18 26, 32 20, 46 18 C 58 16, 68 10, 78 6" fill="none" stroke="#2563EB" strokeWidth="2.2" strokeLinecap="round" />
+                  <circle cx="78" cy="6" r="3" fill="#2563EB" />
+                </svg>
+              </div>
             </div>
 
             {/* Card 3: Awaiting approval */}
-            <div className="p-4 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-800/60">
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between group relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100/70 dark:from-amber-950/60 dark:to-orange-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200/80 dark:border-amber-800/60 shadow-2xs">
                   <User className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Awaiting approval</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[28px] font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight leading-none">
                       {pendingApprovalsCount > 0 ? pendingApprovalsCount : 3}
                     </span>
-                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-0.5">
                       &darr; 2
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">vs. last week</div>
+                  <div className="text-[11px] text-slate-400 font-medium mt-1">vs. last week</div>
                 </div>
               </div>
-              <svg viewBox="0 0 70 28" className="w-16 h-7 stroke-amber-500 fill-none stroke-2 shrink-0">
-                <path d="M2 16 C15 12 25 22 38 16 C50 11 58 13 68 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <div className="w-20 h-9 shrink-0 relative flex items-center justify-end">
+                <svg viewBox="0 0 80 32" className="w-full h-full overflow-visible">
+                  <defs>
+                    <linearGradient id="spark3" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M 2 18 C 18 14, 30 24, 46 18 C 58 14, 68 16, 78 9 L 78 30 L 2 30 Z" fill="url(#spark3)" />
+                  <path d="M 2 18 C 18 14, 30 24, 46 18 C 58 14, 68 16, 78 9" fill="none" stroke="#F59E0B" strokeWidth="2.2" strokeLinecap="round" />
+                  <circle cx="78" cy="9" r="3" fill="#F59E0B" />
+                </svg>
+              </div>
             </div>
 
             {/* Card 4: Website health */}
-            <div className="p-4 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/60">
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between group relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100/70 dark:from-emerald-950/60 dark:to-teal-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/80 dark:border-emerald-800/60 shadow-2xs">
                   <Activity className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Website health</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[28px] font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight leading-none">
                       99.9%
                     </span>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       Healthy
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">Edge latency &lt;50ms</div>
+                  <div className="text-[11px] text-slate-400 font-medium mt-1">Edge latency &lt;50ms</div>
                 </div>
               </div>
-              <div className="flex items-end gap-1 h-7 shrink-0">
-                <div className="w-1.5 h-[10px] bg-emerald-500 rounded-xs" />
-                <div className="w-1.5 h-[14px] bg-emerald-500 rounded-xs" />
-                <div className="w-1.5 h-[18px] bg-emerald-500 rounded-xs" />
-                <div className="w-1.5 h-[22px] bg-emerald-500 rounded-xs" />
-                <div className="w-1.5 h-[25px] bg-emerald-500 rounded-xs" />
-                <div className="w-1.5 h-[28px] bg-emerald-500 rounded-xs" />
+              <div className="flex items-end gap-1.5 h-8 shrink-0 px-1">
+                <div className="w-1.5 h-[10px] bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-full shadow-2xs" />
+                <div className="w-1.5 h-[14px] bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-full shadow-2xs" />
+                <div className="w-1.5 h-[18px] bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-full shadow-2xs" />
+                <div className="w-1.5 h-[22px] bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-full shadow-2xs" />
+                <div className="w-1.5 h-[26px] bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-full shadow-2xs" />
+                <div className="w-1.5 h-[30px] bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-full shadow-2xs" />
               </div>
             </div>
           </div>
@@ -708,36 +743,36 @@ export function ClientCmsHome({
           {/* 3. Middle Section (Grid 12 Columns: 7 & 5) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Column (7 cols): Content Pipeline */}
-            <div className="lg:col-span-7 rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+            <div className="lg:col-span-7 rounded-2xl p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between">
               <div>
                 {/* Header */}
-                <div className="flex items-center justify-between pb-3">
+                <div className="flex items-center justify-between pb-3.5">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-600" />
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">Content pipeline</h3>
                   </div>
                   <Link
                     href="/admin/pages"
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition group"
                   >
                     <span>View all content</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2 text-xs">
+                <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 w-fit text-xs mb-3">
                   <button
                     type="button"
                     onClick={() => setPipelineTab('all')}
-                    className={`pb-1 font-semibold flex items-center gap-1.5 transition cursor-pointer border-b-2 ${
+                    className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                       pipelineTab === 'all'
-                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>All content</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-bold">
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${pipelineTab === 'all' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
                       24
                     </span>
                   </button>
@@ -745,14 +780,14 @@ export function ClientCmsHome({
                   <button
                     type="button"
                     onClick={() => setPipelineTab('drafts')}
-                    className={`pb-1 font-semibold flex items-center gap-1.5 transition cursor-pointer border-b-2 ${
+                    className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                       pipelineTab === 'drafts'
-                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>Drafts</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${pipelineTab === 'drafts' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
                       6
                     </span>
                   </button>
@@ -760,14 +795,14 @@ export function ClientCmsHome({
                   <button
                     type="button"
                     onClick={() => setPipelineTab('in_review')}
-                    className={`pb-1 font-semibold flex items-center gap-1.5 transition cursor-pointer border-b-2 ${
+                    className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                       pipelineTab === 'in_review'
-                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>In review</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${pipelineTab === 'in_review' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
                       3
                     </span>
                   </button>
@@ -775,14 +810,14 @@ export function ClientCmsHome({
                   <button
                     type="button"
                     onClick={() => setPipelineTab('scheduled')}
-                    className={`pb-1 font-semibold flex items-center gap-1.5 transition cursor-pointer border-b-2 ${
+                    className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                       pipelineTab === 'scheduled'
-                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                        ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>Scheduled</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${pipelineTab === 'scheduled' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
                       2
                     </span>
                   </button>
@@ -864,33 +899,33 @@ export function ClientCmsHome({
             </div>
 
             {/* Right Column (5 cols): Needs Attention & Next Release */}
-            <div className="lg:col-span-5 space-y-4">
+            <div className="lg:col-span-5 space-y-5">
               {/* Needs your attention card */}
-              <div className="rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <div className="rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.07)] transition-all duration-300">
+                <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-800/80">
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-amber-500" />
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">Needs your attention</h3>
                   </div>
                   <Link
                     href="/admin/tasks"
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition group"
                   >
                     <span>Review all</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                 </div>
 
-                <div className="space-y-3 pt-3">
+                <div className="space-y-2.5 pt-3">
                   {attentionItems.map((att) => (
-                    <div key={att.id} className="flex items-center justify-between gap-3">
-                      <div className="flex items-start gap-2.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 shrink-0" />
-                        <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-400 flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-slate-800">
-                          <FileText className="w-4 h-4" />
+                    <div key={att.id} className="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-200 flex items-center justify-between gap-3 group">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
+                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
+                          <FileText className="w-4 h-4 text-blue-600" />
                         </div>
                         <div className="truncate">
-                          <div className="font-semibold text-xs text-slate-900 dark:text-white truncate">
+                          <div className="font-semibold text-xs text-slate-900 dark:text-white truncate group-hover:text-blue-600 transition-colors">
                             {att.title}
                           </div>
                           <div className="text-[10px] text-slate-400 truncate">
@@ -901,7 +936,7 @@ export function ClientCmsHome({
 
                       <Link
                         href={att.href}
-                        className="px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-blue-600 font-semibold text-xs transition shrink-0"
+                        className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 border border-slate-200/90 dark:border-slate-700 hover:border-blue-300 font-semibold text-xs transition-all shadow-2xs shrink-0 active:scale-95"
                       >
                         Review
                       </Link>
@@ -911,28 +946,28 @@ export function ClientCmsHome({
               </div>
 
               {/* Next release card */}
-              <div className="rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <div className="rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.07)] transition-all duration-300">
+                <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-800/80">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-blue-600" />
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">Next release</h3>
                   </div>
                   <Link
                     href="/admin/releases"
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition group"
                   >
                     <span>View release calendar</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                 </div>
 
                 <div className="flex items-center justify-between gap-3 pt-3">
                   <div className="flex items-center gap-3 min-w-0">
                     {/* Date Block */}
-                    <div className="w-12 h-14 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center shrink-0 text-center">
+                    <div className="w-13 h-14 rounded-xl border border-slate-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-slate-100/70 dark:from-slate-900 dark:to-slate-800/80 flex flex-col items-center justify-center shrink-0 text-center shadow-2xs">
                       <span className="text-[9px] font-bold text-rose-500 uppercase tracking-tight">OCT</span>
                       <span className="text-base font-bold text-slate-900 dark:text-white leading-none">06</span>
-                      <span className="text-[9px] text-slate-400 uppercase">Mon</span>
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Mon</span>
                     </div>
 
                     <div className="truncate">
@@ -948,11 +983,11 @@ export function ClientCmsHome({
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Link
                       href="/admin/releases"
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 font-semibold text-xs transition"
+                      className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-blue-50 hover:text-blue-600 border border-slate-200/90 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-all shadow-2xs"
                     >
                       Manage release
                     </Link>
-                    <button type="button" className="p-1 text-slate-400 hover:text-slate-700">
+                    <button type="button" className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
                   </div>
@@ -964,22 +999,22 @@ export function ClientCmsHome({
           {/* 4. Bottom Section (Grid 12 Columns: 7 & 5) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Column (7 cols): Audience Overview */}
-            <div className="lg:col-span-7 rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+            <div className="lg:col-span-7 rounded-2xl p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between pb-2">
+                <div className="flex items-center justify-between pb-3">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-blue-600" />
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">Audience overview</h3>
                   </div>
-                  <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold">
+                  <div className="flex items-center p-1 rounded-xl bg-slate-100/90 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/70 text-[11px] font-semibold gap-0.5">
                     {(['7D', '30D', '90D'] as const).map((r) => (
                       <button
                         key={r}
                         type="button"
                         onClick={() => setAudienceRange(r)}
-                        className={`px-2.5 py-0.5 rounded-md transition cursor-pointer ${
+                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
                           audienceRange === r
-                            ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold shadow-2xs'
+                            ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold shadow-2xs'
                             : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
@@ -989,14 +1024,14 @@ export function ClientCmsHome({
                   </div>
                 </div>
 
-                <div className="mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">28,460</span>
-                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                <div className="mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[28px] font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight leading-none">28,460</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60">
                       &uarr; 12%
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="text-[11px] text-slate-400 font-medium mt-1">
                     visitors to {site?.primaryDomain || (client as any)?.primaryDomain || (isGoldFields ? 'goldfields.com' : `${client?.slug || 'aurum'}.bastion.digital`)}
                   </div>
                 </div>
@@ -1032,7 +1067,7 @@ export function ClientCmsHome({
                           strokeWidth={2.5}
                           fillOpacity={1}
                           fill="url(#audienceCurveGradient)"
-                          dot={{ r: 3, fill: '#2563EB', stroke: '#FFFFFF', strokeWidth: 2 }}
+                          dot={{ r: 3.5, fill: '#2563EB', stroke: '#FFFFFF', strokeWidth: 2 }}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -1042,64 +1077,64 @@ export function ClientCmsHome({
             </div>
 
             {/* Right Column (5 cols): Investor Downloads */}
-            <div className="lg:col-span-5 rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+            <div className="lg:col-span-5 rounded-2xl p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between pb-2">
+                <div className="flex items-center justify-between pb-3">
                   <div className="flex items-center gap-2">
                     <Download className="w-4 h-4 text-blue-600" />
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">Investor downloads</h3>
                   </div>
                   <Link
                     href="/admin/reports"
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition group"
                   >
                     <span>View full report</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                 </div>
 
                 <div className="mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">9,870</span>
-                    <span className="text-xs text-slate-400">total downloads</span>
-                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[28px] font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight leading-none">9,870</span>
+                    <span className="text-xs text-slate-400 font-medium">total downloads</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60">
                       &uarr; 18%
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="text-[11px] text-slate-400 font-medium mt-1">
                     vs. previous 30 days
                   </div>
                 </div>
 
                 {/* Progress bars list */}
-                <div className="space-y-3.5">
+                <div className="space-y-4">
                   <div>
-                    <div className="flex items-center justify-between text-xs mb-1">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="font-medium text-slate-700 dark:text-slate-300">Annual results 2026</span>
                       <span className="font-bold text-slate-900 dark:text-white tabular-nums">3,820 (39%)</span>
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 rounded-full" style={{ width: '39%' }} />
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 rounded-full shadow-2xs" style={{ width: '39%' }} />
                     </div>
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between text-xs mb-1">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="font-medium text-slate-700 dark:text-slate-300">Sustainability report</span>
                       <span className="font-bold text-slate-900 dark:text-white tabular-nums">2,450 (25%)</span>
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 rounded-full" style={{ width: '25%' }} />
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 rounded-full shadow-2xs" style={{ width: '25%' }} />
                     </div>
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between text-xs mb-1">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="font-medium text-slate-700 dark:text-slate-300">Investor presentation</span>
                       <span className="font-bold text-slate-900 dark:text-white tabular-nums">1,980 (20%)</span>
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 rounded-full" style={{ width: '20%' }} />
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 rounded-full shadow-2xs" style={{ width: '20%' }} />
                     </div>
                   </div>
                 </div>
@@ -1108,13 +1143,16 @@ export function ClientCmsHome({
           </div>
 
           {/* 5. Synced Status Line */}
-          <div className="flex items-center justify-end gap-2 text-xs text-slate-500 pt-2">
+          <div className="flex items-center justify-end gap-2.5 text-xs text-slate-500 pt-3">
             <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
-              <CheckCircle2 className="w-4 h-4" />
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
               <span>All changes synced</span>
             </span>
             <span className="text-slate-300 dark:text-slate-700">|</span>
-            <span>Last synced 02 Oct 2025, 14:32</span>
+            <span className="font-medium">Last synced 02 Oct 2025, 14:32</span>
           </div>
 
           {/* 6. Expandable Advanced Diagnostics & Feature Directory (Preserving 100% of underlying tools) */}

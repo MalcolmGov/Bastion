@@ -131,10 +131,10 @@ export function AdminSidebar() {
       : '/';
 
   const getNavItemProps = (isActive: boolean) => ({
-    className: `flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all relative cursor-pointer ${
+    className: `group flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 relative cursor-pointer select-none ${
       isActive
-        ? 'bg-[#2563EB] text-white shadow-xs font-semibold'
-        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+        ? 'bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 text-white font-semibold shadow-md shadow-blue-600/30 ring-1 ring-white/20'
+        : 'text-slate-300 hover:text-white hover:bg-white/[0.08] active:bg-white/[0.12]'
     }`
   });
 
@@ -152,15 +152,15 @@ export function AdminSidebar() {
       const iconButton = (
         <div
           title={`${label}${badge ? ` [${badge}]` : ''}`}
-          className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center transition-all relative cursor-pointer group ${
+          className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition-all duration-200 relative cursor-pointer group ${
             isActive
-              ? 'bg-[#2563EB] text-white shadow-xs font-bold'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-white/20 font-bold'
+              : 'text-slate-400 hover:text-white hover:bg-white/[0.08]'
           }`}
         >
-          <Icon className="w-4 h-4 shrink-0" />
+          <Icon className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
           {badge && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-400 ring-2 ring-[#0B1420]" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-400 ring-2 ring-[#0D1522]" />
           )}
         </div>
       );
@@ -179,15 +179,17 @@ export function AdminSidebar() {
     // Expanded view
     const expandedButton = (
       <div {...getNavItemProps(isActive)}>
-        <div className="flex items-center space-x-2.5 truncate">
-          <Icon className="w-4 h-4 shrink-0" />
-          <span className="truncate">{label}</span>
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <Icon className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-400 group-hover:scale-105'}`} />
+          <span className="truncate tracking-[-0.01em]">{label}</span>
         </div>
-        {badge && (
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${badgeClass || 'bg-slate-800 text-slate-300'}`}>
+        {badge ? (
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0 ${badgeClass || (isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300')}`}>
             {badge}
           </span>
-        )}
+        ) : isActive ? (
+          <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)] shrink-0" />
+        ) : null}
       </div>
     );
 
@@ -205,7 +207,7 @@ export function AdminSidebar() {
   const resultsSection = (
     <div>
       {!isCollapsed && (
-        <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/90">
           Results
         </div>
       )}
@@ -224,7 +226,7 @@ export function AdminSidebar() {
     <aside
       className={`${
         isCollapsed ? 'w-16' : 'w-64'
-      } bg-[#0B1420] text-slate-300 border-r border-slate-800/80 flex flex-col justify-between h-screen sticky top-0 shrink-0 z-20 overflow-x-hidden transition-all duration-300 ease-in-out`}
+      } bg-[#0D1522] text-slate-300 border-r border-slate-800/90 flex flex-col justify-between h-screen sticky top-0 shrink-0 z-20 overflow-x-hidden transition-all duration-300 ease-in-out`}
     >
       <div className="flex-1 flex flex-col min-h-0">
         {/* Brand Header */}
@@ -246,30 +248,35 @@ export function AdminSidebar() {
           ) : (
             <>
               {/* Wordmark Header */}
-              <div className="flex items-center justify-start pb-0.5">
-                <Link href="/admin" className="inline-flex">
-                  <div className="border border-slate-700/90 rounded-md px-2.5 py-1 inline-flex items-center bg-slate-900/40">
+              <div className="flex items-center justify-between pb-0.5">
+                <Link href="/admin" className="inline-flex items-center gap-2 group">
+                  <div className="border border-slate-700/80 bg-slate-900/60 rounded-lg px-2.5 py-1 inline-flex items-center gap-1.5 shadow-xs group-hover:border-slate-600 transition-colors">
+                    <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-400 shadow-[0_0_6px_rgba(59,130,246,0.8)]" />
                     <span className="font-serif font-bold text-sm tracking-tight text-white">Bastion</span>
                   </div>
                 </Link>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-300 border border-slate-700/60">
+                  CMS
+                </span>
               </div>
 
               {/* Workspace Switcher Card */}
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800/90 shadow-2xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-slate-700/80 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer group">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/25 ring-1 ring-white/20">
                     {activeClient?.name ? activeClient.name.substring(0, 2).toUpperCase() : 'AU'}
                   </div>
-                  <div className="truncate text-left">
-                    <div className="font-bold text-xs text-white truncate leading-tight">
+                  <div className="min-w-0 text-left">
+                    <div className="font-bold text-xs text-white truncate leading-tight group-hover:text-blue-300 transition-colors" title={activeClient?.name || 'Aurum Energy & Resources'}>
                       {activeClient?.name || 'Aurum Energy & Resources'}
                     </div>
-                    <div className="text-[10px] text-slate-400 font-medium">
-                      Corporate CMS
+                    <div className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Corporate CMS</span>
                     </div>
                   </div>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 group-hover:translate-y-0.5 transition-all shrink-0 ml-1" />
               </div>
             </>
           )}
@@ -282,13 +289,13 @@ export function AdminSidebar() {
             <>
               <div>
                 {!isCollapsed && (
-                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/90">
                     {activeClient?.name ? `${activeClient.name.toUpperCase()} CONTENT` : 'AURUM ENERGY & RESOURCES CONTENT'}
                   </div>
                 )}
                 <div className="space-y-1">
                   {renderItem('/admin', 'Executive Overview', Home, pathname === '/admin')}
-                  {renderItem('/admin/pages', 'Pages & Navigation', FileText, pathname === '/admin/pages')}
+                  {renderItem('/admin/pages', 'Pages & Navigation', FileText, pathname === '/admin/pages', '24')}
                   {isGoldFields ? (
                     <>
                       {renderItem('/admin/operations', 'Mining Operations', Compass, pathname.startsWith('/admin/operations'))}
@@ -305,16 +312,16 @@ export function AdminSidebar() {
                 </div>
               </div>
 
-              <div className="my-2.5 border-t border-slate-800/80 mx-2" />
+              <div className="my-3.5 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent mx-2" />
 
               {resultsSection}
 
-              <div className="my-2.5 border-t border-slate-800/80 mx-2" />
+              <div className="my-3.5 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent mx-2" />
 
               {/* Authoring & Media Tools */}
               <div>
                 {!isCollapsed && (
-                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/90">
                     AUTHORING &amp; ASSETS
                   </div>
                 )}
@@ -325,19 +332,19 @@ export function AdminSidebar() {
                 </div>
               </div>
 
-              <div className="my-2.5 border-t border-slate-800/80 mx-2" />
+              <div className="my-3.5 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent mx-2" />
 
               {/* Publishing & Governance */}
               <div>
                 {!isCollapsed && (
-                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/90">
                     GOVERNANCE &amp; RELEASES
                   </div>
                 )}
                 <div className="space-y-1">
-                  {renderItem('/admin/releases', 'Content Releases', Send, pathname.startsWith('/admin/releases'))}
+                  {renderItem('/admin/releases', 'Content Releases', Send, pathname.startsWith('/admin/releases'), 'Oct 06')}
                   {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'))}
-                  {renderItem('/admin/tasks', 'Approvals & Sign-Off', CheckCircle, pathname.startsWith('/admin/tasks'))}
+                  {renderItem('/admin/tasks', 'Approvals & Sign-Off', CheckCircle, pathname.startsWith('/admin/tasks'), '3')}
                   {renderItem('/admin/users', 'Authorized Editors', Users, pathname.startsWith('/admin/users'))}
                 </div>
               </div>
@@ -487,21 +494,24 @@ export function AdminSidebar() {
         {/* User Profile Chip */}
         {!isCollapsed && (
           <div className="p-2 border-t border-slate-800/80">
-            <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-800/50 transition cursor-pointer">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/70 border border-slate-800/80 hover:border-slate-700/80 transition-all duration-200 cursor-pointer group">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-900 font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                  {user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'MG'}
+                <div className="relative shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-200 to-white text-slate-900 font-bold text-xs flex items-center justify-center shadow-xs ring-1 ring-white/40">
+                    {user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'AE'}
+                  </div>
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0D1522]" />
                 </div>
                 <div className="truncate text-left">
-                  <div className="font-semibold text-xs text-white truncate leading-tight">
-                    {user?.name || 'Malcolm Govender'}
+                  <div className="font-semibold text-xs text-white truncate leading-tight group-hover:text-blue-300 transition-colors">
+                    {user?.name || 'Aurum Energy Editor'}
                   </div>
-                  <div className="text-[10px] text-slate-400 font-medium">
-                    {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator'}
+                  <div className="text-[10px] text-slate-400 font-medium truncate">
+                    {user?.role ? user.role.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 'Corporate Editor'} &bull; Online
                   </div>
                 </div>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-colors shrink-0 ml-1" />
             </div>
           </div>
         )}
