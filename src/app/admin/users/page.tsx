@@ -34,7 +34,8 @@ interface UserRecord {
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAdminAuth();
-  const { clients, activeClient } = useStudioWorkspace();
+  const { clients, activeClient, portalViewMode } = useStudioWorkspace();
+  const isClientPortal = portalViewMode === 'client';
 
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,32 +173,38 @@ export default function AdminUsersPage() {
   const roleBadge = (role: string) => {
     switch (role) {
       case 'platform_admin':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-800">Platform Admin</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800">Platform Admin</span>;
       case 'content_editor':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800">Content Editor</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800">Content Editor</span>;
       case 'reviewer':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-950 text-sky-300 border border-sky-800">Reviewer</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/70 dark:text-sky-300 dark:border-sky-800">Compliance Reviewer</span>;
       case 'publisher':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">Corporate Publisher</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800">Corporate Publisher</span>;
       default:
-        return <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700">{role}</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">{role}</span>;
     }
   };
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
       {/* Page Header */}
-      <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-[#0C121D] via-[#101726] to-[#141E30] border border-[#1E2E44] shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-[#0C121D] border border-slate-200/80 dark:border-[#1E2E44] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center space-x-2 text-xs font-mono font-bold uppercase text-amber-400 mb-1.5">
-            <UserPlus className="w-4 h-4 text-amber-400" />
-            <span>Corporate Governance &bull; Team &bull; Operated by Bastion Group</span>
+          <div className="flex items-center space-x-2 text-xs font-mono font-bold uppercase text-amber-600 dark:text-amber-400 mb-1.5">
+            <UserPlus className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span>
+              {isClientPortal
+                ? 'Corporate Governance • Authorized Editors'
+                : 'Agency Governance • Bastion CMS Team & Access'}
+            </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            CMS Team Access &amp; User Invitations
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+            {isClientPortal ? 'Authorized Editors & Team Access' : 'CMS Team Access & User Invitations'}
           </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Provision client and agency editors, enforce two-person JSE/NYSE publishing controls, and dispatch luxury visual welcome emailers with one-click sign-in access.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            {isClientPortal
+              ? 'Provision verified corporate editors, assign content authoring permissions, and dispatch executive welcome invitations with secure sign-in access.'
+              : 'Provision client and agency editors, enforce multi-tier approval controls, and dispatch luxury visual welcome emailers with one-click sign-in access.'}
           </p>
         </div>
 
@@ -205,9 +212,9 @@ export default function AdminUsersPage() {
           <button
             type="button"
             onClick={() => setShowInviteModal(true)}
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs tracking-wider uppercase transition shadow-md shadow-amber-500/20"
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-gradient-to-r dark:from-amber-500 dark:to-amber-600 dark:hover:from-amber-400 dark:hover:to-amber-500 dark:text-black font-bold text-xs tracking-wider uppercase transition shadow-xs cursor-pointer"
           >
-            <UserPlus className="w-4 h-4 text-black" />
+            <UserPlus className="w-4 h-4" />
             <span>Invite New User</span>
           </button>
         </div>
@@ -217,21 +224,21 @@ export default function AdminUsersPage() {
       {notification && (
         <div className={`p-4 rounded-xl border flex items-center justify-between animate-fadeIn ${
           notification.type === 'success'
-            ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-200'
-            : 'bg-rose-950/60 border-rose-800/80 text-rose-200'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/60 dark:border-emerald-800/80 dark:text-emerald-200'
+            : 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/60 dark:border-rose-800/80 dark:text-rose-200'
         }`}>
           <div className="flex items-center space-x-2.5 text-xs font-medium">
             {notification.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
             )}
             <span>{notification.message}</span>
           </div>
           <button
             type="button"
             onClick={() => setNotification(null)}
-            className="text-xs opacity-60 hover:opacity-100"
+            className="text-xs opacity-60 hover:opacity-100 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -239,43 +246,43 @@ export default function AdminUsersPage() {
       )}
 
       {/* Active Users Table Card */}
-      <div className="p-6 rounded-2xl bg-[#0D121B] border border-[#1E293B] space-y-4">
+      <div className="p-6 rounded-2xl bg-white dark:bg-[#0D121B] border border-slate-200/80 dark:border-[#1E293B] shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
               Provisioned Portal Users ({users.length})
             </h2>
-            <p className="text-xs text-slate-400">
-              Users with authenticated access to edit, review, or publish content disclosures.
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Users with authenticated access to edit, review, or publish corporate content.
             </p>
           </div>
           <button
             type="button"
             onClick={loadUsers}
-            className="p-2 rounded-lg bg-[#141C2A] hover:bg-[#1E2838] border border-[#232F42] text-slate-400 hover:text-white transition"
+            className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#141C2A] dark:hover:bg-[#1E2838] border border-slate-200 dark:border-[#232F42] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
             title="Refresh Users"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="border border-[#1E293B] rounded-xl overflow-hidden divide-y divide-[#1E293B]">
+        <div className="border border-slate-200/80 dark:border-[#1E293B] rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-[#1E293B]">
           {users.map((u) => (
             <div
               key={u.id}
-              className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#121A28] transition"
+              className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-transparent hover:bg-slate-50/80 dark:hover:bg-[#121A28] transition"
             >
               <div className="flex items-center space-x-3.5 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center font-bold text-amber-400 text-sm shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-amber-500/10 border border-slate-200 dark:border-amber-500/30 flex items-center justify-center font-bold text-slate-700 dark:text-amber-400 text-sm shrink-0">
                   {u.name[0] || 'U'}
                 </div>
                 <div className="truncate">
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm font-semibold text-white truncate">{u.name}</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{u.name}</span>
                     {roleBadge(u.role)}
                   </div>
-                  <div className="text-xs text-slate-400 font-mono mt-0.5 truncate">
-                    {u.email} &bull; Scope: <span className="text-amber-300">{u.region_scope || 'All'}</span>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
+                    {u.email} &bull; Scope: <span className="text-slate-800 dark:text-amber-300 font-medium">{u.region_scope || 'All'}</span>
                   </div>
                 </div>
               </div>
@@ -284,7 +291,7 @@ export default function AdminUsersPage() {
                 <button
                   type="button"
                   onClick={() => handlePreviewEmailForUser(u)}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#141E2D] hover:bg-[#1E2E44] border border-[#24354D] text-sky-300 hover:text-white text-xs font-medium transition"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#141E2D] dark:hover:bg-[#1E2E44] border border-slate-200 dark:border-[#24354D] text-slate-700 dark:text-sky-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition cursor-pointer"
                   title="Preview visual welcome emailer for this user"
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -300,7 +307,7 @@ export default function AdminUsersPage() {
                       message: `Welcome emailer prepared for ${u.name} (${u.email})! Review below or copy HTML.`
                     });
                   }}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-amber-950/60 hover:bg-amber-900/60 border border-amber-800/60 text-amber-300 text-xs font-semibold transition"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:border-amber-800/60 dark:text-amber-300 text-xs font-semibold transition cursor-pointer"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   <span>Send Welcome</span>
@@ -323,7 +330,7 @@ export default function AdminUsersPage() {
               <button
                 type="button"
                 onClick={() => setShowInviteModal(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -331,36 +338,36 @@ export default function AdminUsersPage() {
 
             <form onSubmit={handleInviteUser} className="space-y-4 text-xs">
               <div className="space-y-1">
-                <label className="text-slate-300 font-medium">Full Name</label>
+                <label className="text-slate-700 dark:text-slate-300 font-medium">Full Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Malcolm Govender"
                   value={inviteName}
                   onChange={(e) => setInviteName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#070B12] border border-[#1E293B] text-white focus:outline-hidden focus:border-amber-500 font-medium"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 font-medium"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-300 font-medium">Corporate Email Address</label>
+                <label className="text-slate-700 dark:text-slate-300 font-medium">Corporate Email Address</label>
                 <input
                   type="email"
                   required
                   placeholder="e.g. malcolm@bastiongroup.co.za"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#070B12] border border-[#1E293B] text-white focus:outline-hidden focus:border-amber-500 font-medium"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Assigned Role</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-medium">Assigned Role</label>
                   <select
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#070B12] border border-[#1E293B] text-white focus:outline-hidden focus:border-amber-500 font-medium"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 font-medium"
                   >
                     <option value="content_editor">Content Editor</option>
                     <option value="reviewer">Compliance Reviewer</option>
@@ -371,11 +378,11 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-300 font-medium">Client Organisation</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-medium">Client Organisation</label>
                   <select
                     value={inviteClientName}
                     onChange={(e) => setInviteClientName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#070B12] border border-[#1E293B] text-white focus:outline-hidden focus:border-amber-500 font-medium"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 font-medium"
                   >
                     <option value="Bastion Group">Bastion Group (Platform Owner)</option>
                     {clients.map((c) => (
@@ -387,25 +394,25 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#070B12] border border-[#1E293B] flex items-center space-x-2 text-[11px] text-slate-400">
-                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400">
+                <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
                 <span>
-                  Initial temporary password will be set to <code className="text-amber-300 font-mono">{dynamicTempPassword}</code> and sent in the visual welcome emailer.
+                  Initial temporary password will be set to <code className="text-amber-600 dark:text-amber-300 font-mono font-semibold">{dynamicTempPassword}</code> and sent in the visual welcome emailer.
                 </span>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-[#1E293B]">
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100 dark:border-[#1E293B]">
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 rounded-xl bg-[#141C2A] text-slate-300 hover:text-white"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-[#141C2A] dark:text-slate-300 dark:hover:text-white cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-black font-bold uppercase tracking-wider shadow-md shadow-amber-500/20 disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-gradient-to-r dark:from-amber-500 dark:to-amber-600 dark:hover:from-amber-400 dark:text-black font-bold uppercase tracking-wider shadow-xs disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? 'Provisioning...' : 'Provision & Generate Emailer'}
                 </button>
@@ -417,23 +424,23 @@ export default function AdminUsersPage() {
 
       {/* Visual Email Previewer Drawer / Modal */}
       {previewEmailHtml && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn">
-          <div className="bg-[#090D15] border border-[#23354C] rounded-2xl max-w-4xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#090D15] border border-slate-200 dark:border-[#23354C] rounded-2xl max-w-4xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             {/* Modal Header */}
-            <div className="p-4 border-b border-[#1E2E44] bg-[#0C1320] flex items-center justify-between">
+            <div className="p-4 border-b border-slate-200 dark:border-[#1E2E44] bg-slate-50 dark:bg-[#0C1320] flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-xs">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/40 flex items-center justify-center text-amber-700 dark:text-amber-400 font-bold text-xs">
                   ✉
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center space-x-2">
                     <span>Visual Welcome Emailer Preview</span>
-                    <span className="text-[10px] px-2 py-0.2 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-800">
+                    <span className="text-[10px] px-2 py-0.2 rounded font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800">
                       Live Render
                     </span>
                   </h3>
-                  <div className="text-[11px] text-slate-400">
-                    Recipient: <strong className="text-slate-200">{previewUser?.name}</strong> ({previewUser?.email}) &bull; Client: {previewUser?.clientName}
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Recipient: <strong className="text-slate-700 dark:text-slate-200">{previewUser?.name}</strong> ({previewUser?.email}) &bull; Client: {previewUser?.clientName}
                   </div>
                 </div>
               </div>
@@ -441,14 +448,14 @@ export default function AdminUsersPage() {
               {/* Controls */}
               <div className="flex items-center space-x-2">
                 {/* View Device Switcher */}
-                <div className="flex items-center bg-[#131E2D] p-0.5 rounded-lg border border-[#24354D]">
+                <div className="flex items-center bg-slate-200/80 dark:bg-[#131E2D] p-0.5 rounded-lg border border-slate-200 dark:border-[#24354D]">
                   <button
                     type="button"
                     onClick={() => setPreviewDevice('desktop')}
-                    className={`px-2.5 py-1 rounded text-xs flex items-center space-x-1 transition ${
+                    className={`px-2.5 py-1 rounded text-xs flex items-center space-x-1 transition cursor-pointer ${
                       previewDevice === 'desktop'
-                        ? 'bg-sky-500 text-white font-bold'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-white dark:bg-sky-500 text-slate-900 dark:text-white font-bold shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <Monitor className="w-3.5 h-3.5" />
@@ -457,10 +464,10 @@ export default function AdminUsersPage() {
                   <button
                     type="button"
                     onClick={() => setPreviewDevice('mobile')}
-                    className={`px-2.5 py-1 rounded text-xs flex items-center space-x-1 transition ${
+                    className={`px-2.5 py-1 rounded text-xs flex items-center space-x-1 transition cursor-pointer ${
                       previewDevice === 'mobile'
-                        ? 'bg-sky-500 text-white font-bold'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-white dark:bg-sky-500 text-slate-900 dark:text-white font-bold shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <Smartphone className="w-3.5 h-3.5" />
@@ -472,7 +479,7 @@ export default function AdminUsersPage() {
                 <button
                   type="button"
                   onClick={handleCopyHtml}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#141E2D] hover:bg-[#1E2E44] border border-[#24354D] text-slate-200 hover:text-white text-xs font-semibold transition"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 dark:bg-[#141E2D] dark:hover:bg-[#1E2E44] border border-slate-200 dark:border-[#24354D] text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white text-xs font-semibold transition cursor-pointer shadow-xs"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   <span>{copySuccess ? 'Copied HTML!' : 'Copy HTML'}</span>
@@ -482,7 +489,7 @@ export default function AdminUsersPage() {
                 <button
                   type="button"
                   onClick={() => setPreviewEmailHtml(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1E2E44] transition"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1E2E44] transition cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -490,24 +497,24 @@ export default function AdminUsersPage() {
             </div>
 
             {/* Email Iframe Canvas Container */}
-            <div className="flex-1 bg-[#05070C] p-4 sm:p-6 overflow-auto flex items-center justify-center">
+            <div className="flex-1 bg-slate-100 dark:bg-[#05070C] p-4 sm:p-6 overflow-auto flex items-center justify-center">
               <div
-                className={`transition-all duration-300 h-full overflow-hidden rounded-xl border border-[#1E2E44] shadow-2xl ${
+                className={`transition-all duration-300 h-full overflow-hidden rounded-xl border border-slate-200 dark:border-[#1E2E44] shadow-lg ${
                   previewDevice === 'mobile' ? 'w-[375px]' : 'w-full max-w-[650px]'
                 }`}
               >
                 <iframe
                   title="Welcome Email Preview"
                   srcDoc={previewEmailHtml}
-                  className="w-full h-full border-0 bg-[#070B12]"
+                  className="w-full h-full border-0 bg-white dark:bg-[#070B12]"
                 />
               </div>
             </div>
 
             {/* Footer Actions */}
-            <div className="p-3 border-t border-[#1E2E44] bg-[#0C1320] flex items-center justify-between text-xs text-slate-400">
+            <div className="p-3 border-t border-slate-200 dark:border-[#1E2E44] bg-slate-50 dark:bg-[#0C1320] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
               <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                 <span>Responsive HTML ready for Gmail, Apple Mail, Outlook &amp; Mobile Clients.</span>
               </div>
 
@@ -521,7 +528,7 @@ export default function AdminUsersPage() {
                     });
                     setPreviewEmailHtml(null);
                   }}
-                  className="flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-sm"
+                  className="flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-xs cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Dispatch Welcome Email</span>
