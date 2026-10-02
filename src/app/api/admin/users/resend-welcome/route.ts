@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db/client';
 import { requireUser } from '@/lib/auth/guard';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 import { sendTransactionalEmail } from '@/lib/email/delivery';
-import { hashPassword } from '@/lib/auth/password';
+import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,9 +12,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const targetEmail = String(body.email || 'malcolm@movedigital.africa').toLowerCase().trim();
-    const clientName = body.clientName || 'Bastion Group';
-    const roleTitle = body.roleTitle || 'Platform Administrator';
-    const rawPassword = body.password || `${clientName.replace(/[^a-zA-Z0-9]/g, '')}2026!`;
 
     const db = getDb();
     const userRes = await db.execute({
@@ -24,29 +21,60 @@ export async function POST(req: NextRequest) {
 
     let recipientName = body.name || 'Malcolm Govender';
     let userRole = 'platform_admin';
+    let clientId = body.clientId || null;
+
     if (userRes.rows.length > 0) {
       const u = userRes.rows[0];
       recipientName = String(u.name || recipientName);
       userRole = String(u.role || userRole);
-      // Reset/update password hash
-      const pwdHash = hashPassword(rawPassword);
-      await db.execute({
-        sql: `UPDATE users SET password_hash = ? WHERE id = ?`,
-        args: [pwdHash, u.id]
-      });
+      if (!clientId && u.client_id) {
+        clientId = String(u.client_id);
+      }
     }
+
+    let clientName = body.clientName;
+    if (!clientName && clientId) {
+      const clientRes = await db.execute({
+        sql: `SELECT name FROM clients WHERE id = ? LIMIT 1`,
+        args: [clientId]
+      });
+      if (clientRes.rows.length > 0) {
+        clientName = String(clientRes.rows[0].name);
+      }
+    }
+    clientName = clientName || 'Bastion Group';
+
+    const roleTitles: Record<string, string> = {
+      platform_admin: 'Platform Administrator',
+      content_editor: 'Corporate Content Editor',
+      reviewer: 'Compliance Reviewer',
+      publisher: 'Corporate Publisher',
+      analyst: 'IR & Disclosures Analyst'
+    };
+    const roleTitle = body.roleTitle || roleTitles[userRole] || 'Corporate Workspace Member';
 
     const host = req.headers.get('host') || 'localhost:3010';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const loginUrl = `${protocol}://${host}/admin/login?email=${encodeURIComponent(targetEmail)}`;
+
+    // Generate fresh invite token for direct password creation
+    const inviteToken = crypto.randomBytes(24).toString('hex');
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+
+    if (userRes.rows.length > 0) {
+      await db.execute({
+        sql: `UPDATE users SET invite_token = ?, invite_token_expires_at = ?, must_reset_password = 1 WHERE id = ?`,
+        args: [inviteToken, expiresAt, userRes.rows[0].id]
+      });
+    }
+
+    const inviteUrl = `${protocol}://${host}/admin/invite?token=${inviteToken}`;
 
     const emailHtml = generateWelcomeEmailHtml({
       recipientName,
       recipientEmail: targetEmail,
       roleTitle,
       clientName,
-      loginUrl,
-      temporaryPassword: rawPassword,
+      loginUrl: inviteUrl,
       inviterName: `${gate.user.name || 'Bastion Operations'} (Bastion Group)`
     });
 
@@ -56,13 +84,13 @@ export async function POST(req: NextRequest) {
       html: emailHtml,
       roleTitle,
       clientName,
-      inviteUrl: loginUrl
+      inviteUrl
     });
 
     return NextResponse.json({
       success: delivery.ok,
       message: delivery.status === 'delivered'
-        ? `Welcome credentials successfully dispatched to ${targetEmail} via Resend (Message ID: ${delivery.providerMessageId})`
+        ? `Welcome invitation link successfully dispatched to ${targetEmail} via Resend (Message ID: ${delivery.providerMessageId})`
         : delivery.status === 'simulated_dev'
         ? `Simulated email generated for ${targetEmail}. (Add RESEND_API_KEY in .env.local to deliver live via Resend)`
         : `Email delivery failed: ${delivery.error}`,
@@ -71,8 +99,7 @@ export async function POST(req: NextRequest) {
         email: targetEmail,
         name: recipientName,
         role: userRole,
-        temporaryPassword: rawPassword,
-        loginUrl
+        loginUrl: inviteUrl
       }
     });
   } catch (err: any) {

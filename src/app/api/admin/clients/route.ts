@@ -82,7 +82,6 @@ export async function POST(req: NextRequest) {
       industry = 'financial_services',
       logoUrl,
       primaryDomain,
-      tagline,
       contactInfo,
       billingDetails,
       initialUser,
@@ -152,7 +151,6 @@ export async function POST(req: NextRequest) {
         primaryDomain || null,
         JSON.stringify({
           status: 'pending_creation',
-          tagline: tagline || `Official corporate portal for ${name}.`,
           enabledModules: {},
           navigation: { mainNav: [] }
         }),

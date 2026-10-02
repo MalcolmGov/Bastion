@@ -176,7 +176,6 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
   const [industry, setIndustry] = useState('financial_services');
   const [primaryDomain, setPrimaryDomain] = useState('');
   const [headquarters, setHeadquarters] = useState('Johannesburg, South Africa');
-  const [tagline, setTagline] = useState('');
 
   // Primary Executive Contact
   const [contactName, setContactName] = useState('');
@@ -284,6 +283,13 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to dispatch email via Resend');
+      if (data.delivery) {
+        setProvisionResult((prev: any) => prev ? {
+          ...prev,
+          emailDelivery: data.delivery,
+          user: data.credentials?.loginUrl ? { ...prev.user, inviteUrl: data.credentials.loginUrl } : prev.user
+        } : prev);
+      }
       setResendStatus({
         ok: true,
         message: data.delivery?.status === 'delivered'
@@ -327,7 +333,6 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
           name: clientName.trim(),
           industry,
           primaryDomain: primaryDomain.trim() || undefined,
-          tagline: tagline.trim() || undefined,
           contactInfo: {
             name: contactName.trim(),
             email: contactEmail.trim(),
@@ -545,20 +550,6 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                     />
                   </div>
                 </div>
-              </div>
-
-              {/* Tagline */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Corporate Tagline / Mission Statement
-                </label>
-                <input
-                  type="text"
-                  value={tagline}
-                  onChange={(e) => setTagline(e.target.value)}
-                  placeholder="e.g. Africa is our home, we drive her growth."
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
               </div>
 
               {/* Primary Contact Row */}
