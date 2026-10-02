@@ -97,8 +97,12 @@ test('draft saving retains the public baseline until explicit publication', asyn
   let live = (await getPublishedComposition(h.db, 'site-a', 'home')).rows[0];
   assert.equal(live.sections_json, '[]');
   assert.equal(live.version, 1);
+  await assert.rejects(
+    saveComposition(author, input({ expectedVersion: 2, status: 'published' })),
+    (error) => error.status === 403,
+  );
   await saveComposition(
-    author,
+    { ...author, role: 'publisher' },
     input({ expectedVersion: 2, status: 'published' }),
   );
   live = (await getPublishedComposition(h.db, 'site-a', 'home')).rows[0];
