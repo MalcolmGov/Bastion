@@ -333,6 +333,9 @@ export const COMPONENT_REGISTRY: Record<string, RegisteredComponent> = {
       { id: 'compact_studio', name: 'Compact Studio Footer', description: 'Clean single-row links with subtle copyright' }
     ],
     fields: {
+      brandName: { type: 'text', label: 'Brand Name' },
+      privacyHref: { type: 'text', label: 'Privacy Page Link' },
+      termsHref: { type: 'text', label: 'Terms Page Link' },
       copyright: { type: 'text', label: 'Copyright Notice', required: true },
       officeAddress: { type: 'text', label: 'Office Address' },
       contactEmail: { type: 'text', label: 'Contact Email' },
