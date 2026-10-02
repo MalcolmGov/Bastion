@@ -65,6 +65,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import { isAgencyUser } from '@/lib/auth/roles';
+import type { WebsiteProposal } from '@/lib/studio/editor/websiteProposal';
 import { EditorAssistant } from '@/components/studio/editor/EditorAssistant';
 import { EditorContentFields } from '@/components/studio/editor/EditorContentFields';
 import { EditorDialog } from '@/components/studio/editor/EditorDialog';
@@ -278,6 +279,9 @@ function VisualWebsiteEditorContent() {
   const [historyIndex, setHistoryIndex] = useState(-1);
 
   // Save state
+  const [isAssistantApplying, setIsAssistantApplying] = useState(false);
+  const currentSectionsRef = useRef(sections);
+  currentSectionsRef.current = sections;
   const [isSaving, setIsSaving] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploySuccess, setDeploySuccess] = useState(false);
@@ -475,6 +479,7 @@ function VisualWebsiteEditorContent() {
         setPageMeta(comp?.meta || null);
         setPageLayout(comp?.layoutCollection || data.site.designCollectionId || 'contemporary');
         setCurrentVersionNumber(comp?.version || 0);
+        setSelectedSectionId(next.find((section: SectionInstance) => section.visible)?.id || next[0]?.id || null);
         setSections(next);
         setSavedSections(JSON.stringify(next));
         setHistory([next]);
@@ -995,6 +1000,23 @@ function VisualWebsiteEditorContent() {
       setIsDeploying(false);
     }
   };
+  const handleWebsitePlan = async (proposal: WebsiteProposal) => {
+    if (saveInFlight.current || isLoadingPage) throw new Error('Wait for the current save to finish.');
+    const current=proposal.pages.find(page=>page.pageSlug===activePageSlug);
+    if(current && JSON.stringify(sections)!==JSON.stringify(current.baseSections))throw new Error('This page changed after the plan was made. Ask for a fresh plan.');
+    const key=documentKey;saveInFlight.current=true;setIsAssistantApplying(true);
+    try {
+      const response=await fetch('/api/admin/editor/assistant/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({siteId:siteData.id,pages:proposal.pages.map(page=>({pageSlug:page.pageSlug,expectedVersion:page.version,sections:page.sections,changeSummary:proposal.summary}))})});
+      const data=await response.json();if(!response.ok)throw new Error(data.error||'The plan could not be applied.');
+      if(currentKey.current===key && current){
+        const saved=data.pages.find((page:any)=>page.pageSlug===activePageSlug);
+        setCurrentVersionNumber(saved.version);setSavedSections(JSON.stringify(current.sections));setSavedTime(new Date(saved.savedAt).toLocaleTimeString());
+        if(JSON.stringify(currentSectionsRef.current)===JSON.stringify(current.baseSections))updateSections(current.sections);
+        else setEditorError('The plan was saved to drafts. Your newer local edits are still here and remain unsaved.');
+      }
+      return true;
+    }finally{saveInFlight.current=false;setIsAssistantApplying(false);}
+  };
   const handleSaveDraft = () => saveDocument('draft');
   const handleDeployPublish = () => setPublishOpen(true);
 
@@ -1236,7 +1258,7 @@ function VisualWebsiteEditorContent() {
   return (
     <div className="h-dvh flex flex-col bg-slate-50 dark:bg-slate-950">
       <EditorDialog open={publishOpen} title="Publish this page?" onClose={() => setPublishOpen(false)}><p className="mt-3 text-sm leading-relaxed text-slate-500">Your current changes to <strong className="text-slate-900 dark:text-white">{pageTitle}</strong> will become visible on <strong className="text-slate-900 dark:text-white">{siteData?.name}</strong>.</p><p className="mt-2 text-xs text-slate-400">{sections.filter(section => section.visible).length} visible sections · Version {currentVersionNumber + 1}</p><div className="mt-6 flex justify-end gap-3"><button type="button" autoFocus disabled={isDeploying} onClick={() => setPublishOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm">Keep editing</button><button type="button" disabled={isDeploying} onClick={async () => { await saveDocument('published'); setPublishOpen(false); }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">{isDeploying ? 'Publishing…' : 'Publish page'}</button></div></EditorDialog>
-      <EditorToolbar siteName={siteData?.name || 'Choose a website'} siteId={siteData?.id || siteSlug} sites={activeClient?.websites || []} page={activePageSlug} pages={pageSlugs} busy={isSaving || isDeploying || isRollingBack || isAddingToRelease} dirty={hasUnsavedChanges} savedTime={savedTime} loading={isLoadingPage} isNew={currentVersionNumber === 0} advancedTools={isAgencyUser(user)} canEdit={hasPerm('content:edit')} canPublish={hasPerm('content:publish')} viewport={viewport} preview={isPreview} leftOpen={isLeftPanelOpen} rightOpen={isRightPanelOpen} canUndo={historyIndex > 0} canRedo={historyIndex < history.length - 1} onSite={id => switchDocument(id,'home')} onPage={slug => switchDocument(siteSlug,slug)} onSave={() => void handleSaveDraft()} onPublish={handleDeployPublish} onViewport={setViewport} onPreview={() => setIsPreview(value => !value)} onLeft={() => { if (compactEditor) setIsRightPanelOpen(false); setIsLeftPanelOpen(value => !value); }} onRight={() => { if (compactEditor) setIsLeftPanelOpen(false); setIsRightPanelOpen(value => !value); }} onUndo={handleUndo} onRedo={handleRedo} onMore={action => {
+      <EditorToolbar siteName={siteData?.name || 'Choose a website'} siteId={siteData?.id || siteSlug} sites={activeClient?.websites || []} page={activePageSlug} pages={pageSlugs} busy={isSaving || isDeploying || isRollingBack || isAddingToRelease || isAssistantApplying} dirty={hasUnsavedChanges} savedTime={savedTime} loading={isLoadingPage} isNew={currentVersionNumber === 0} advancedTools={isAgencyUser(user)} canEdit={hasPerm('content:edit')} canPublish={hasPerm('content:publish')} viewport={viewport} preview={isPreview} leftOpen={isLeftPanelOpen} rightOpen={isRightPanelOpen} canUndo={historyIndex > 0} canRedo={historyIndex < history.length - 1} onSite={id => switchDocument(id,'home')} onPage={slug => switchDocument(siteSlug,slug)} onSave={() => void handleSaveDraft()} onPublish={handleDeployPublish} onViewport={setViewport} onPreview={() => setIsPreview(value => !value)} onLeft={() => { if (compactEditor) setIsRightPanelOpen(false); setIsLeftPanelOpen(value => !value); }} onRight={() => { if (compactEditor) setIsLeftPanelOpen(false); setIsRightPanelOpen(value => !value); }} onUndo={handleUndo} onRedo={handleRedo} onMore={action => {
         if (action === 'history') void handleOpenVersionModal();
         if (action === 'release') void handleOpenReleaseModal();
         if (action === 'ai' || action === 'keys') { if (compactEditor) setIsLeftPanelOpen(false); setInspectorTab(action); setIsRightPanelOpen(true); setIsPreview(false); }
@@ -1655,7 +1677,7 @@ function VisualWebsiteEditorContent() {
                 <span>Design</span>
               </button>
               <button
-                style={{display: inspectorTab === 'ai' ? undefined : 'none'}}
+
                 id="tab-btn-ai"
                 type="button"
                 onClick={() => setInspectorTab('ai')}
@@ -1684,12 +1706,12 @@ function VisualWebsiteEditorContent() {
               </button>
             </div>
 
-            {inspectorTab === 'content' && (selectedSection ? <EditorContentFields clientId={siteData?.clientId} component={registeredComp || undefined} values={selectedSection.props} onChange={handlePropChange} disabled={!hasPerm('content:edit') || isLoadingPage || isRollingBack} /> : <div className="rounded-xl border border-dashed border-slate-200 p-6 text-sm leading-relaxed text-slate-500 dark:border-slate-700"><p className="font-medium text-slate-700 dark:text-slate-200">Choose a section to start editing</p><p className="mt-2 text-xs">Select it from the list or click directly on the page. Its content will appear here.</p></div>)}
+            {inspectorTab === 'content' && (selectedSection ? <EditorContentFields clientId={siteData?.clientId} component={registeredComp || undefined} values={selectedSection.props} onChange={handlePropChange} disabled={!hasPerm('content:edit') || isLoadingPage || isRollingBack || isAssistantApplying} /> : <div className="rounded-xl border border-dashed border-slate-200 p-6 text-sm leading-relaxed text-slate-500 dark:border-slate-700"><p className="font-medium text-slate-700 dark:text-slate-200">Choose a section to start editing</p><p className="mt-2 text-xs">Select it from the list or click directly on the page. Its content will appear here.</p></div>)}
 
             {/* TAB 2: DESIGN & COLORS */}
             {inspectorTab === 'design' && (
               selectedSection ? (
-                <fieldset disabled={!hasPerm('content:edit') || isRollingBack} className="space-y-5 animate-in fade-in duration-150">
+                <fieldset disabled={!hasPerm('content:edit') || isRollingBack || isAssistantApplying} className="space-y-5 animate-in fade-in duration-150">
                   {registeredComp?.variants && <div><label htmlFor="section-layout" className="mb-2 block text-xs font-medium text-slate-600 dark:text-slate-400">Section layout</label><select id="section-layout" value={selectedSection.variant} onChange={event => handleVariantChange(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm dark:border-slate-700 dark:bg-slate-800">{registeredComp.variants.map(variant => <option key={variant.id} value={variant.id}>{variant.name}</option>)}</select><p className="mt-2 text-xs text-slate-400">Choose a layout that works with your content.</p></div>}
                   {/* Background Mode Toggle */}
                   <div className="space-y-1.5">
@@ -2539,7 +2561,7 @@ function VisualWebsiteEditorContent() {
 
             {/* TAB 3: MULTI-MODEL AI CODING & POLISH CHAT (Kept mounted to preserve conversation history) */}
             <div className={inspectorTab === 'ai' ? 'block animate-in fade-in duration-150' : 'hidden'}>
-              <EditorAssistant active={inspectorTab === 'ai'} key={documentKey} siteId={siteData?.id || siteSlug} pageSlug={activePageSlug} siteName={siteData?.name || 'Your website'} sections={sections} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onApply={handleMultiplePropsChange} brandKit={brandKit} canEdit={hasPerm('content:edit') && !isLoadingPage && !isRollingBack} onSettings={isAgencyUser(user) ? () => setInspectorTab('keys') : undefined} />
+              <EditorAssistant active={inspectorTab === 'ai'} key={siteSlug} siteId={siteData?.id || siteSlug} pageSlug={activePageSlug} siteName={siteData?.name || 'Your website'} sections={sections} selectedId={selectedSectionId} onSelect={setSelectedSectionId} version={currentVersionNumber} onApplyWebsite={handleWebsitePlan} brandKit={brandKit} canEdit={hasPerm('content:edit') && !isLoadingPage && !isRollingBack && !isAssistantApplying} onSettings={isAgencyUser(user) ? () => setInspectorTab('keys') : undefined} />
             </div>
 
             {/* TAB 4: API KEYS CREDENTIAL MANAGEMENT (Kept mounted) */}

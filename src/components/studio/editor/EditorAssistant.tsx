@@ -8,9 +8,9 @@ import {
 } from '@/components/studio/ApiKeysTab';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import type { SectionInstance } from '@/lib/studio/types';
-import { validateAiProposal } from '@/lib/studio/editor/aiProposal';
+import type { WebsiteProposal } from '@/lib/studio/editor/websiteProposal';
 
-type Proposal = NonNullable<ReturnType<typeof validateAiProposal>>;
+type Proposal = WebsiteProposal;
 type Message = {
   id: string;
   role: 'user' | 'assistant';
@@ -35,7 +35,8 @@ export function EditorAssistant({
   sections,
   selectedId,
   onSelect,
-  onApply,
+  onApplyWebsite,
+  version,
   brandKit,
   canEdit,
   onSettings,
@@ -47,16 +48,14 @@ export function EditorAssistant({
   sections: SectionInstance[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onApply: (
-    props: Record<string, any>,
-    styles: Record<string, any>,
-    id: string,
-  ) => void;
+  version: number;
+  onApplyWebsite: (proposal: WebsiteProposal) => Promise<boolean>;
   brandKit: any;
   canEdit: boolean;
   onSettings?: () => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [scope, setScope] = useState<'website' | 'page' | 'section'>('website');
   const [prompt, setPrompt] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,9 +100,21 @@ export function EditorAssistant({
     end.current?.scrollIntoView({ block: 'nearest' });
   }, [messages, busy]);
   async function send() {
-    if (!prompt.trim() || !section || !provider || busy || !canEdit) return;
+    if (!prompt.trim() || busy || !canEdit) return;
+    if (!provider) {
+      setError(
+        'No AI provider is connected to this preview. Your Bastion team can connect the existing key in AI settings or configure the server provider. Browser-saved keys belong to the address where they were saved.',
+      );
+      return;
+    }
+    if (scope === 'section' && !section) {
+      setError(
+        'Choose a section for focused editing, or switch the scope to Entire website.',
+      );
+      return;
+    }
     const text = prompt.trim();
-    const base = JSON.stringify(section);
+    const base = JSON.stringify(sections);
     const controller = new AbortController();
     request.current = controller;
     const timer = setTimeout(() => controller.abort(), 90000);
@@ -121,13 +132,16 @@ export function EditorAssistant({
         signal: controller.signal,
         body: JSON.stringify({
           assistantMode: true,
+          websiteMode: true,
+          scope,
+          expectedVersion: version,
           provider,
           modelId: models[provider],
           userApiKey: getStoredApiKeys()[provider] || undefined,
           prompt: text,
           section,
-          allSections: [section],
-          targetSectionId: section.id,
+          allSections: sections,
+          targetSectionId: scope === 'section' ? section?.id : undefined,
           pageContext: { siteId, pageSlug, siteName },
           brandKit,
           history: messages
@@ -140,7 +154,7 @@ export function EditorAssistant({
         throw new Error(
           data.error || 'The assistant could not complete this request.',
         );
-      const proposal = validateAiProposal(data.replyText, section);
+      const proposal = data.parsedChanges as WebsiteProposal | null;
       const prose = data.replyText.replace(/```json[\s\S]*?```/gi, '').trim();
       setMessages((items) => [
         ...items,
@@ -164,24 +178,37 @@ export function EditorAssistant({
       request.current = null;
     }
   }
-  function apply(message: Message) {
-    if (!message.proposal || !canEdit) return;
-    const target = sections.find(
-      (section) => section.id === message.proposal?.targetSectionId,
+  async function apply(message: Message) {
+    if (!message.proposal || !canEdit || busy) return;
+    const current = message.proposal.pages.find(
+      (page) => page.pageSlug === pageSlug,
     );
-    if (!target || JSON.stringify(target) !== message.base) {
+    if (
+      current &&
+      JSON.stringify(sections) !== JSON.stringify(current.baseSections)
+    ) {
       setError(
-        'This section changed after the suggestion was made. Ask the assistant again so it uses your latest edits.',
+        'This page changed after the plan was made. Ask the assistant again so it uses your latest edits.',
       );
       return;
     }
-    onApply(message.proposal.props, message.proposal.styles, target.id);
-    setMessages((items) =>
-      items.map((item) =>
-        item.id === message.id ? { ...item, applied: true } : item,
-      ),
-    );
+    setBusy(true);
     setError(null);
+    try {
+      if (await onApplyWebsite(message.proposal))
+        setMessages((items) =>
+          items.map((item) =>
+            item.id === message.id ? { ...item, applied: true } : item,
+          ),
+        );
+    } catch (error: any) {
+      setError(
+        error.message ||
+          'The plan could not be applied. Your website has not changed.',
+      );
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <div className="flex min-h-[640px] flex-col text-slate-900 dark:text-slate-100">
@@ -198,31 +225,46 @@ export function EditorAssistant({
           </div>
         </div>
         <p className="mt-3 text-xs leading-relaxed text-slate-500">
-          Describe the update you want. I’ll suggest changes to this section for
-          you to review and apply.
+          Ask for anything you want to enhance, fix, or polish. I’ll find the
+          relevant pages and propose a website update for you to review.
         </p>
       </div>
       <label className="mt-4 text-xs font-medium text-slate-500">
-        Working on
+        Scope
         <select
-          aria-label="Assistant section"
-          value={selectedId || ''}
+          aria-label="Assistant scope"
+          value={scope}
           disabled={busy}
-          onChange={(event) => onSelect(event.target.value)}
+          onChange={(event) => setScope(event.target.value as typeof scope)}
           className="mt-2 w-full rounded-lg border border-slate-200 bg-white p-2.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
         >
-          <option value="" disabled>
-            Choose a section
+          <option value="website">
+            Entire website · choose targets automatically
           </option>
-          {sections.map((section, index) => (
-            <option key={section.id} value={section.id}>
-              {index + 1}.{' '}
-              {COMPONENT_REGISTRY[section.componentId]?.name ||
-                section.componentId}
-            </option>
-          ))}
+          <option value="page">Current page</option>
+          <option value="section" disabled={!section}>
+            Selected section
+          </option>
         </select>
       </label>
+      {scope === 'section' && (
+        <label className="mt-3 text-xs text-slate-500">
+          Section
+          <select
+            aria-label="Assistant section"
+            value={selectedId || ''}
+            onChange={(event) => onSelect(event.target.value)}
+            className="mt-2 w-full rounded-lg border border-slate-200 p-2 dark:bg-slate-900"
+          >
+            {sections.map((section) => (
+              <option key={section.id} value={section.id}>
+                {COMPONENT_REGISTRY[section.componentId]?.name ||
+                  section.componentId}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div
         role="log"
         aria-label="Website assistant conversation"
@@ -231,11 +273,11 @@ export function EditorAssistant({
       >
         {!messages.length && (
           <div className="space-y-2">
-            <p className="text-xs text-slate-400">Try a focused request</p>
+            <p className="text-xs text-slate-400">Start with an idea</p>
             {[
-              'Make the heading shorter and clearer',
-              'Rewrite this description in our brand voice',
-              'Change the main button text to “Contact our team”',
+              'Create a consistent dark theme across the website',
+              'Review the website and suggest improvements',
+              'Make the navigation and calls to action clearer',
             ].map((example) => (
               <button
                 type="button"
@@ -266,37 +308,109 @@ export function EditorAssistant({
                 <p className="text-xs font-semibold">
                   {message.proposal.summary}
                 </p>
-                <ul className="mt-2 space-y-2 text-xs text-slate-500">
-                  {Object.entries({
-                    ...message.proposal.props,
-                    ...message.proposal.styles,
-                  }).map(([key, value]) => (
-                    <li key={key}>
-                      <span className="font-medium capitalize">
-                        {key.replace(/([A-Z])/g, ' $1')}:{' '}
-                      </span>
-                      <span className="whitespace-pre-wrap break-words">
-                        {typeof value === 'object'
-                          ? JSON.stringify(value)
-                          : String(value)}
-                      </span>
+                <ul className="mt-2 space-y-3 text-xs text-slate-500">
+                  {message.proposal.pages.map((page) => (
+                    <li key={page.pageSlug}>
+                      <strong className="block text-slate-700 dark:text-slate-200">
+                        {page.title} · {page.pageSlug}
+                      </strong>
+                      <ul className="mt-1 list-disc space-y-1 pl-4">
+                        {page.changes.map((change, index) => (
+                          <li key={index}>{change}</li>
+                        ))}
+                      </ul>
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-indigo-600">
+                          Review exact changes
+                        </summary>
+                        <div className="mt-2 space-y-2">
+                          {page.sections
+                            .filter(
+                              (section) =>
+                                JSON.stringify(section) !==
+                                JSON.stringify(
+                                  page.baseSections.find(
+                                    (base) => base.id === section.id,
+                                  ),
+                                ),
+                            )
+                            .map((section) => (
+                              <div
+                                key={section.id}
+                                className="rounded-lg bg-slate-50 p-2 dark:bg-slate-800"
+                              >
+                                <p className="font-semibold">
+                                  {COMPONENT_REGISTRY[section.componentId]
+                                    ?.name || section.componentId}
+                                </p>
+                                {Object.entries({
+                                  ...section.props,
+                                  ...section.styles,
+                                })
+                                  .filter(
+                                    ([key, value]) =>
+                                      JSON.stringify(value) !==
+                                      JSON.stringify(
+                                        (
+                                          {
+                                            ...page.baseSections.find(
+                                              (base) => base.id === section.id,
+                                            )?.props,
+                                            ...page.baseSections.find(
+                                              (base) => base.id === section.id,
+                                            )?.styles,
+                                          } as any
+                                        )[key],
+                                      ),
+                                  )
+                                  .map(([key, value]) => (
+                                    <p key={key} className="mt-1 break-words">
+                                      <span className="font-medium">
+                                        {key}:{' '}
+                                      </span>
+                                      {typeof value === 'object'
+                                        ? JSON.stringify(value)
+                                        : String(value)}
+                                    </p>
+                                  ))}
+                                {section.variant !==
+                                  page.baseSections.find(
+                                    (base) => base.id === section.id,
+                                  )?.variant && (
+                                  <p>Layout: {section.variant}</p>
+                                )}
+                                {section.visible !==
+                                  page.baseSections.find(
+                                    (base) => base.id === section.id,
+                                  )?.visible && (
+                                  <p>
+                                    {section.visible
+                                      ? 'Show section'
+                                      : 'Hide section'}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      </details>
                     </li>
                   ))}
                 </ul>
                 <button
                   type="button"
                   disabled={message.applied || !canEdit || busy}
-                  onClick={() => apply(message)}
+                  onClick={() => void apply(message)}
                   className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-xs font-medium text-white disabled:opacity-50"
                 >
                   <Check className="h-3.5 w-3.5" />
                   {message.applied
-                    ? 'Applied to draft'
-                    : 'Apply suggested changes'}
+                    ? 'Saved to drafts'
+                    : `Apply plan to ${message.proposal.pages.length} ${message.proposal.pages.length === 1 ? 'page' : 'pages'}`}
                 </button>
                 {message.applied && (
                   <p className="mt-2 text-[11px] text-slate-400">
-                    Use Undo to revert. Save your draft when ready.
+                    Saved as drafts. The live website stays unchanged until you
+                    publish. Use Version history to restore earlier content.
                   </p>
                 )}
               </div>
@@ -305,7 +419,7 @@ export function EditorAssistant({
         ))}
         {busy && (
           <p role="status" className="animate-pulse text-xs text-indigo-600">
-            Preparing a careful suggestion…
+            Working on your website…
           </p>
         )}
         <div ref={end} />
@@ -366,9 +480,7 @@ export function EditorAssistant({
           </button>
           <button
             type="submit"
-            disabled={
-              !prompt.trim() || !section || !configured || !canEdit || busy
-            }
+            disabled={!prompt.trim() || !canEdit || busy}
             className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
           >
             <Send className="h-3.5 w-3.5" />

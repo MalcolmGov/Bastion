@@ -138,7 +138,7 @@ export function EditorToolbar({
               className={`${button} flex items-center gap-2 border border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-300`}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Ask AI
+              AI assistant
             </button>
           )}
           <span role="status" className="mr-2 text-xs text-slate-500">
@@ -266,7 +266,7 @@ export function EditorToolbar({
           <button
             type="button"
             aria-label="Undo"
-            disabled={!canUndo || loading}
+            disabled={!canUndo || loading || busy}
             onClick={onUndo}
             className="rounded-lg p-2 text-slate-500 disabled:opacity-30"
           >
@@ -275,7 +275,7 @@ export function EditorToolbar({
           <button
             type="button"
             aria-label="Redo"
-            disabled={!canRedo || loading}
+            disabled={!canRedo || loading || busy}
             onClick={onRedo}
             className="rounded-lg p-2 text-slate-500 disabled:opacity-30"
           >

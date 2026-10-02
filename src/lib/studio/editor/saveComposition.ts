@@ -2,6 +2,7 @@ import { ensureDbReady } from '@/lib/db/client';
 import { clientOwns } from '@/lib/auth/guard';
 import { hasPermission, type StudioUser } from '@/lib/auth/auth';
 import crypto from 'node:crypto';
+import type { Transaction, Row } from '@libsql/client';
 
 export class EditorSaveError extends Error {
   constructor(
@@ -27,6 +28,7 @@ export interface CompositionSave {
 export async function saveComposition(
   user: StudioUser,
   input: CompositionSave,
+  batch?: { transaction: Transaction; site: Row },
 ) {
   if (
     !input ||
@@ -77,15 +79,17 @@ export async function saveComposition(
   if (json.length > 2_000_000)
     throw new EditorSaveError('Page content is too large to save.', 413);
   const db = await ensureDbReady();
-  const site = (
-    await db.execute({
-      sql: 'SELECT * FROM websites WHERE id = ? OR slug = ? LIMIT 1',
-      args: [input.siteId, input.siteId],
-    })
-  ).rows[0];
+  const site =
+    batch?.site ||
+    (
+      await db.execute({
+        sql: 'SELECT * FROM websites WHERE id = ? OR slug = ? LIMIT 1',
+        args: [input.siteId, input.siteId],
+      })
+    ).rows[0];
   if (!site || !clientOwns(user, String(site.client_id)))
     throw new EditorSaveError('Website not found.', 404);
-  const tx = await db.transaction('write');
+  const tx = batch?.transaction || (await db.transaction('write'));
   const now = new Date().toISOString();
   let result;
   try {
@@ -180,7 +184,7 @@ export async function saveComposition(
       sql: `INSERT INTO audit_log (id,actor_id,actor_name,action,collection,record_id,result,created_at) VALUES (?,?,?,'page_composition_save','page_compositions',?,'success',?)`,
       args: [`audit_${crypto.randomUUID()}`, user.id, user.name, id, now],
     });
-    await tx.commit();
+    if (!batch) await tx.commit();
     result = {
       success: true,
       compositionId: id,
@@ -193,10 +197,67 @@ export async function saveComposition(
       meta: meta ? JSON.parse(String(meta)) : null,
     };
   } catch (error) {
-    await tx.rollback();
+    if (!batch) await tx.rollback();
     throw error;
   } finally {
-    tx.close();
+    if (!batch) tx.close();
   }
   return result;
+}
+
+export async function saveWebsiteDrafts(
+  user: StudioUser,
+  siteId: string,
+  pages: Omit<CompositionSave, 'siteId'>[],
+) {
+  if (
+    typeof siteId !== 'string' ||
+    !siteId ||
+    !Array.isArray(pages) ||
+    !pages.length ||
+    pages.length > 30 ||
+    new Set(pages.map((page) => page.pageSlug)).size !== pages.length
+  )
+    throw new EditorSaveError('Choose up to 30 distinct existing pages.', 400);
+  const db = await ensureDbReady();
+  const site = (
+    await db.execute({
+      sql: 'SELECT * FROM websites WHERE id = ? OR slug = ? LIMIT 1',
+      args: [siteId, siteId],
+    })
+  ).rows[0];
+  if (!site || !clientOwns(user, String(site.client_id)))
+    throw new EditorSaveError('Website not found.', 404);
+  const transaction = await db.transaction('write');
+  try {
+    const results = [];
+    for (const page of pages) {
+      const existing = (
+        await transaction.execute({
+          sql: 'SELECT id FROM page_compositions WHERE site_id = ? AND page_slug = ?',
+          args: [site.id, page.pageSlug],
+        })
+      ).rows[0];
+      if (!existing)
+        throw new EditorSaveError(
+          'The assistant can only update existing pages.',
+          404,
+        );
+      results.push({
+        ...(await saveComposition(
+          user,
+          { ...page, siteId: String(site.id), status: 'draft' },
+          { transaction, site },
+        )),
+        pageSlug: page.pageSlug,
+      });
+    }
+    await transaction.commit();
+    return results;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  } finally {
+    transaction.close();
+  }
 }

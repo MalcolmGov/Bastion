@@ -302,3 +302,138 @@ test('draft saving preserves a baseline published by a release using an existing
     'Updated heading',
   );
 });
+
+test('website plans choose multiple pages without a selected section and validate their scope', async (t) => {
+  const { h } = await setup(t);
+  const { validateWebsiteProposal } = h.load(
+    'lib/studio/editor/websiteProposal.ts',
+  );
+  const pages = [
+    { pageSlug: 'home', title: 'Home', version: 1, sections },
+    {
+      pageSlug: 'about',
+      title: 'About',
+      version: 2,
+      sections: [{ ...sections[0], id: 'about-hero' }],
+    },
+  ];
+  const plan = validateWebsiteProposal(
+    '```json\n{"summary":"Dark theme","theme":"dark"}\n```',
+    pages,
+  );
+  assert.equal(plan.pages.length, 2);
+  assert.equal(plan.pages[1].sections[0].styles.backgroundColor, '#0F172A');
+  assert.equal(pages[0].sections[0].styles.backgroundColor, undefined);
+  assert.throws(() =>
+    validateWebsiteProposal(
+      '{"changes":[{"pageSlug":"foreign","targetSectionId":"hero","props":{"title":"Bad"}}]}',
+      pages,
+    ),
+  );
+  assert.throws(() =>
+    validateWebsiteProposal(
+      '{"changes":[{"pageSlug":"home","targetSectionId":"unknown","props":{"title":"Bad"}}]}',
+      pages,
+    ),
+  );
+  assert.throws(() =>
+    validateWebsiteProposal(
+      '{"orders":[{"pageSlug":"home","sectionIds":[]}]}',
+      pages,
+    ),
+  );
+  const sectionPlan = validateWebsiteProposal(
+    '{"theme":"dark"}',
+    [
+      {
+        ...pages[0],
+        sections: [sections[0], { ...sections[0], id: 'second' }],
+      },
+    ],
+    { pageSlug: 'home', id: 'hero' },
+  );
+  assert.equal(sectionPlan.pages[0].sections.length, 2);
+  assert.equal(
+    sectionPlan.pages[0].sections[1].styles.backgroundColor,
+    undefined,
+  );
+});
+test('website draft plans apply atomically and roll back all pages on a conflict', async (t) => {
+  const { h } = await setup(t);
+  const { saveWebsiteDrafts } = h.load('lib/studio/editor/saveComposition.ts');
+  await h.db.execute(
+    "INSERT INTO page_compositions VALUES('page-about','site-a','about','About','editorial','[]',NULL,1,'published','2026-10-01','2026-10-01')",
+  );
+  const pages = [
+    { pageSlug: 'home', expectedVersion: 1, sections },
+    { pageSlug: 'about', expectedVersion: 9, sections },
+  ];
+  await assert.rejects(
+    saveWebsiteDrafts(author, 'site-a', pages),
+    (error) => error.status === 409,
+  );
+  assert.equal(
+    (
+      await h.db.execute(
+        "SELECT version FROM page_compositions WHERE id='page-a'",
+      )
+    ).rows[0].version,
+    1,
+  );
+  assert.equal(
+    (await h.db.execute('SELECT COUNT(*) AS count FROM page_versions')).rows[0]
+      .count,
+    0,
+  );
+  pages[1].expectedVersion = 1;
+  const result = await saveWebsiteDrafts(author, 'site-a', pages);
+  assert.equal(result.length, 2);
+  assert.equal(result[1].version, 2);
+  await assert.rejects(
+    saveWebsiteDrafts(author, 'site-b', pages),
+    (error) => error.status === 404,
+  );
+});
+test('website assistant reads authorized website context without selecting a page or section', async (t) => {
+  const { h } = await setup(t);
+  h.user(author);
+  const route = h.route('api/admin/editor/ai-polish');
+  const originalFetch = global.fetch;
+  t.after(() => (global.fetch = originalFetch));
+  await h.db.execute({
+    sql: "UPDATE page_compositions SET sections_json=? WHERE id='page-a'",
+    args: [JSON.stringify(sections)],
+  });
+  global.fetch = async (url, options) => {
+    const payload = JSON.parse(options.body);
+    assert.match(payload.messages[0].content, /Pages and sections/);
+    assert.match(payload.messages[0].content, /home/);
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: '```json\n{"summary":"Dark theme","theme":"dark"}\n```',
+            },
+          },
+        ],
+      }),
+      { status: 200 },
+    );
+  };
+  const response = await route.POST(
+    h.request('/api/admin/editor/ai-polish', {
+      assistantMode: true,
+      websiteMode: true,
+      provider: 'openai',
+      modelId: 'gpt-4o',
+      userApiKey: 'fixture-key',
+      prompt: 'Create a dark theme',
+      pageContext: { siteId: 'site-a' },
+    }),
+  );
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.parsedChanges.pages[0].pageSlug, 'home');
+  assert.equal(data.parsedChanges.pages[0].sections[0].styles.theme, 'dark');
+});
