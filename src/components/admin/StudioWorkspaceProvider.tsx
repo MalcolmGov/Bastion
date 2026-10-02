@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAdminAuth } from './AdminAuthProvider';
 import { isAgencyUser } from '@/lib/auth/roles';
 
@@ -45,7 +45,7 @@ const StudioWorkspaceContext = createContext<StudioWorkspaceContextType>({
   setActiveSiteId: () => {},
   refreshClients: async () => {},
   isLoading: true,
-  portalViewMode: 'client',
+  portalViewMode: 'agency',
   setPortalViewMode: () => {}
 });
 
@@ -55,8 +55,9 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   const [clients, setClients] = useState<WorkspaceClient[]>([]);
   const [activeClientId, setActiveClientIdState] = useState<string>('client_goldfields');
   const [activeSiteId, setActiveSiteIdState] = useState<string>('site_goldfields_flagship');
-  const [portalViewMode, setPortalViewModeState] = useState<'client' | 'agency'>('client');
+  const [portalViewMode, setPortalViewModeState] = useState<'client' | 'agency'>('agency');
   const [isLoading, setIsLoading] = useState(true);
+  const prevUserIdRef = useRef<string | null>(null);
 
   const fetchClients = async () => {
     try {
@@ -114,18 +115,36 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('move_studio_portal_mode') as 'client' | 'agency' | null;
-      if (savedMode === 'agency' || savedMode === 'client') {
-        setPortalViewModeState(savedMode);
-      }
-    }
     fetchClients();
   }, []);
 
   useEffect(() => {
-    if (user && !agency) {
+    if (!user) return;
+
+    const userSwitched = prevUserIdRef.current !== user.id;
+    prevUserIdRef.current = user.id;
+
+    if (agency) {
+      // Bastion Agency User: ALWAYS default to agency operations mode on login or user switch
+      if (userSwitched) {
+        setPortalViewModeState('agency');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('move_studio_portal_mode', 'agency');
+        }
+      } else {
+        const savedMode = typeof window !== 'undefined' ? (localStorage.getItem('move_studio_portal_mode') as 'client' | 'agency' | null) : null;
+        if (savedMode === 'client' || savedMode === 'agency') {
+          setPortalViewModeState(savedMode);
+        } else {
+          setPortalViewModeState('agency');
+        }
+      }
+    } else {
+      // Corporate client user: ALWAYS locked to client mode and their assigned client workspace
       setPortalViewModeState('client');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('move_studio_portal_mode', 'client');
+      }
       if (user.client_id) {
         setActiveClientIdState(user.client_id);
         const userClient = clients.find(c => c.id === user.client_id);
