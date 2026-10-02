@@ -36,10 +36,10 @@ jobs:
         run: npm ci
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Lint
-        run: npx eslint src
+        run: npm run lint:ci
 
       - name: Run Gates 1 & 2 Automated Security Verification Suite
         run: npx tsx scripts/verify-production-gates.ts

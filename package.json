@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:ci": "eslint src",
+    "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {

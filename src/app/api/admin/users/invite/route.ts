@@ -99,7 +99,8 @@ export async function POST(req: NextRequest) {
     const configuredBase = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, '');
     const host = req.headers.get('host') || 'localhost:3010';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const inviteUrl = `${configuredBase || `${protocol}://${host}`}/admin/invite?token=${inviteToken}`;
+    const baseUrl = configuredBase || `${protocol}://${host}`;
+    const inviteUrl = `${baseUrl}/admin/invite?token=${inviteToken}`;
 
     const roleTitles: Record<string, string> = {
       platform_admin: 'Platform Administrator',

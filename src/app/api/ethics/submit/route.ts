@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createWhistleblowerReport, WhistleblowerCategory, WhistleblowerSeverity } from '@/lib/ethics/ethicsService';
 
-import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { rateLimitResponse } from '@/lib/security/rateLimiter';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown').split(',')[0].trim();
-    const limited = checkRateLimit(`ethics-submit:${ip}`, 5, 3600000);
-    if (!limited.allowed) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } }
-      );
-    }
+    const limited = rateLimitResponse(req, 'ethics-submit', 5, 3600000);
+    if (limited) return limited;
     const body = await req.json();
     const {
       clientId,
