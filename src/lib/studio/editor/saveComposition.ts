@@ -105,7 +105,13 @@ export async function saveComposition(
         'Someone has updated this page. Your edits are still here. Reload the latest version before saving again.',
         409,
       );
-    const version = currentVersion + 1;
+    // Imports or older seed routines may have reset the current version counter.
+    // Preserve every history entry and allocate above both counters within the write transaction.
+    const history = (await tx.execute({
+      sql: 'SELECT MAX(version) AS latest_version FROM page_versions WHERE site_id = ? AND page_slug = ?',
+      args: [site.id, input.pageSlug],
+    })).rows[0];
+    const version = Math.max(currentVersion, Number(history?.latest_version || 0)) + 1;
     const id = existing ? String(existing.id) : `comp_${crypto.randomUUID()}`;
     const title =
       input.title ??
