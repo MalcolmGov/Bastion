@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { WorkspaceActionCenter } from '@/components/admin/WorkspaceActionCenter';
 import { useRouter } from 'next/navigation';
 import {
   Sparkles,
@@ -156,6 +157,7 @@ export default function MoveStudioOverviewPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
+      <WorkspaceActionCenter />
       {/* Signature Hero Card with Embedded Search & Voice Composer */}
       {dashboardPrefs.sections.heroComposer && (
         <div className="relative group">

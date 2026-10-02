@@ -235,7 +235,7 @@ function VisualWebsiteEditorContent() {
   const [canvasTheme, setCanvasTheme] = useState<'auto' | 'light' | 'dark'>('auto');
 
   // Active page
-  const [activePageSlug, setActivePageSlug] = useState('home');
+  const [activePageSlug, setActivePageSlug] = useState(searchParams.get('pageSlug') || 'home');
 
   // Loaded site, brand kit, and compositions
   const [siteData, setSiteData] = useState<any>(null);

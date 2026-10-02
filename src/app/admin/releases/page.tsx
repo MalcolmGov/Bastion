@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import React, { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
@@ -684,6 +686,7 @@ export default function AdminReleasesPage() {
 
               {/* Release Metadata */}
               <div className="p-5 space-y-4 border-b border-slate-100 dark:border-slate-800/80 text-xs">
+                <Link href={`/admin/releases/${encodeURIComponent(selectedRelease.id)}/preview`} className="block rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-blue-700">Open preview room</Link>
                 {selectedRelease.description && (
                   <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
                     {selectedRelease.description}
