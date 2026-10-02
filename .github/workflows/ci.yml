@@ -46,6 +46,9 @@ jobs:
       - name: Run Tenant Authorization Regression Tests
         run: npm run test:security
 
+      - name: Run Visual Editor Regression Tests
+        run: npm run test:editor
+
       - name: Run Workspace and Release Preview Regression Tests
         run: npm run test:workspace
 

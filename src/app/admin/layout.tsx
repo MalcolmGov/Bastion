@@ -27,7 +27,11 @@ export default function AdminRootLayout({
   const isLoginPage = pathname === '/admin/login';
 
   // Embedded previews authenticate on the server and render without studio chrome.
-  if (/^\/admin\/releases\/[^/]+\/preview\/[^/]+$/.test(pathname)) return <>{children}</>;
+  if (pathname === '/admin/editor/preview' || /^\/admin\/releases\/[^/]+\/preview\/[^/]+$/.test(pathname)) return <>{children}</>;
+
+  if (pathname === '/admin/editor') {
+    return <ThemeProvider><AdminAuthProvider><StudioWorkspaceProvider><DashboardCustomizerProvider><div className="h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">{children}</div></DashboardCustomizerProvider></StudioWorkspaceProvider></AdminAuthProvider></ThemeProvider>;
+  }
 
   if (isLoginPage) {
     return (

@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { draftMode } from 'next/headers';
+import { getPublishedComposition } from '@/lib/studio/editor/publishedComposition';
 import { getDb } from '@/lib/db/client';
 import type { Website, BrandKit, PageComposition } from '@/lib/studio/types';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
@@ -84,12 +85,12 @@ export default async function DynamicSitePage({ params }: PageProps) {
   }
 
   // 3. Fetch Page Composition for 'home'
-  const compRes = await db.execute({
-    sql: isDraftPreview
-      ? `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = 'home' ORDER BY CASE WHEN status = 'published' THEN 1 ELSE 0 END, version DESC LIMIT 1`
-      : `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = 'home' AND status = 'published' ORDER BY version DESC LIMIT 1`,
-    args: [siteRow.id]
-  });
+  const compRes = isDraftPreview
+    ? await db.execute({
+        sql: `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = ? ORDER BY version DESC LIMIT 1`,
+        args: [siteRow.id, 'home'],
+      })
+    : await getPublishedComposition(db, String(siteRow.id), 'home');
 
   if (compRes.rows.length === 0) {
     return (

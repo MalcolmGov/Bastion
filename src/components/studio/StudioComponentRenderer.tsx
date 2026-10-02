@@ -39,6 +39,7 @@ interface RendererProps {
   section: SectionInstance;
   collection: DesignCollectionId;
   isEditor?: boolean;
+  minimalEditorControls?: boolean;
   onSelectSection?: (sectionId: string) => void;
   onSelectField?: (sectionId: string, fieldPath: string) => void;
   onMoveUp?: (sectionId: string) => void;
@@ -56,6 +57,7 @@ export function StudioComponentRenderer({
   section,
   collection,
   isEditor = false,
+  minimalEditorControls = false,
   onSelectSection,
   onSelectField,
   onMoveUp,
@@ -163,12 +165,12 @@ export function StudioComponentRenderer({
         onClick={handleElementClick}
         className={`relative transition duration-200 group/block ${
           isSelected
-            ? 'ring-2 ring-sky-500 shadow-[0_0_30px_rgba(14,165,233,0.3)] z-10'
+            ? 'ring-2 ring-blue-500 ring-inset z-10'
             : 'hover:ring-1 hover:ring-sky-400/80 cursor-pointer'
         } ${!section.visible ? 'opacity-40 grayscale' : ''}`}
       >
         {/* Floating Executive Quick Action Toolbar on Active Block */}
-        {isSelected && (
+        {isSelected && !minimalEditorControls && (
           <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-auto">
             {/* Left Block Pill */}
             <div className="flex items-center space-x-2 bg-slate-900/90 text-white px-3 py-1.5 rounded-xl border border-sky-500/50 shadow-xl backdrop-blur-md text-[11px] font-bold">

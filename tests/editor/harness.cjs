@@ -1,0 +1,21 @@
+const { createHarness: createWorkspaceHarness } = require('../workspace/harness.cjs');
+
+async function createHarness() {
+  const harness = await createWorkspaceHarness();
+  try {
+    // Editor tests need draft history and audit columns in addition to the shared tenant fixtures.
+    await harness.db.executeMultiple(`
+      ALTER TABLE page_versions ADD COLUMN created_by TEXT;
+      ALTER TABLE page_versions ADD COLUMN created_by_name TEXT;
+      ALTER TABLE page_versions ADD COLUMN change_summary TEXT;
+      ALTER TABLE page_versions ADD COLUMN created_at TEXT;
+      CREATE TABLE audit_log(id TEXT PRIMARY KEY,actor_id TEXT,actor_name TEXT,action TEXT,collection TEXT,record_id TEXT,result TEXT,created_at TEXT);
+    `);
+    return harness;
+  } catch (error) {
+    harness.close();
+    throw error;
+  }
+}
+
+module.exports = { createHarness };

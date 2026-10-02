@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { draftMode } from 'next/headers';
+import { getPublishedComposition } from '@/lib/studio/editor/publishedComposition';
 import { getDb } from '@/lib/db/client';
 import type { BrandKit } from '@/lib/studio/types';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
@@ -29,10 +30,7 @@ export async function generateMetadata({ params, searchParams }: SubPageProps): 
   const site = siteRes.rows[0];
   const siteName = (site.name as string) || 'Client Website';
 
-  const compRes = await db.execute({
-    sql: `SELECT title FROM page_compositions WHERE site_id = ? AND page_slug = ? LIMIT 1`,
-    args: [site.id, pageSlug]
-  });
+  const compRes = await getPublishedComposition(db, String(site.id), pageSlug);
 
   const pageTitle = compRes.rows.length > 0 ? String(compRes.rows[0].title) : pageSlug.toUpperCase();
 
@@ -52,7 +50,7 @@ export default async function DynamicSiteSubPage({ params, searchParams }: SubPa
   const { siteSlug, pageSlug } = await params;
   const sParams = await searchParams;
   const draft = await draftMode();
-  const isDraftPreview = draft.isEnabled || sParams.preview === 'true';
+  const isDraftPreview = draft.isEnabled;
 
   const db = getDb();
 
@@ -86,12 +84,9 @@ export default async function DynamicSiteSubPage({ params, searchParams }: SubPa
   }
 
   // 3. Fetch Page Composition for pageSlug
-  const compRes = await db.execute({
-    sql: isDraftPreview
-      ? `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = ? ORDER BY CASE WHEN status = 'published' THEN 1 ELSE 0 END, version DESC LIMIT 1`
-      : `SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = ? AND status = 'published' ORDER BY version DESC LIMIT 1`,
-    args: [siteRow.id, pageSlug]
-  });
+  const compRes = isDraftPreview
+    ? await db.execute({ sql: 'SELECT * FROM page_compositions WHERE site_id = ? AND page_slug = ? ORDER BY version DESC LIMIT 1', args: [siteRow.id,pageSlug] })
+    : await getPublishedComposition(db, String(siteRow.id), pageSlug);
 
   if (compRes.rows.length === 0) {
     notFound();
