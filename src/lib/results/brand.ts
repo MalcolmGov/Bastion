@@ -82,6 +82,17 @@ function cleanFontName(value: string): string {
   return value.replace(/['"]/g, '').replace(/\s*!important\s*/i, '').trim();
 }
 
+function tidySiteName(value: string): string {
+  return value
+    .replace(/\s*[:|\-–—]\s*home\s*$/i, '')
+    .replace(/^home\s*[:|\-–—]\s*/i, '')
+    .trim();
+}
+
+function isDecorativeAsset(value: string): boolean {
+  return /spinner|loader|loading|busy|placeholder|spacer|pixel|1x1|blank|tracking/i.test(value);
+}
+
 function googleFamilies(value: string): string[] {
   const names: string[] = [];
   const decoded = decodeURIComponent(value);
@@ -109,23 +120,40 @@ function readFont(css: string, extras: string[] = []): { headingFont: string; bo
   return { headingFont, bodyFont };
 }
 
+function logoFromIcon($: cheerio.CheerioAPI, pageUrl: string): string | null {
+  const icon = $('.header__logo [data-icon], [class*="logo" i] [data-icon]').first();
+  const name = icon.attr('data-icon')?.trim();
+  const path = icon.attr('data-path')?.trim();
+  if (!name || !path || isDecorativeAsset(`${name} ${path}`)) return null;
+  const folder = path.endsWith('/') ? path : `${path}/`;
+  return absoluteUrl(`${folder}${name}.svg`, pageUrl);
+}
+
 export function parseBrandHtml(html: string, pageUrl: string, stylesheet = ''): ResultsBrand {
   const $ = cheerio.load(html);
-  const titleParts = $('title').first().text().split(/[|\-–—]/).map((part) => part.trim()).filter(Boolean);
-  const siteName =
-    $('meta[property="og:site_name"]').attr('content')?.trim()
-    || $('meta[name="application-name"]').attr('content')?.trim()
-    || titleParts.find((part) => !/^home$/i.test(part))
-    || titleParts[0]
-    || 'Client';
+  const titleParts = $('title').first().text().split(/[|\-–—]/).map((part) => tidySiteName(part)).filter((part) => part && !/^home$/i.test(part));
+  const named = [
+    $('meta[property="og:site_name"]').attr('content') || '',
+    $('meta[name="application-name"]').attr('content') || '',
+  ].map(tidySiteName).find((part) => part && !/^home$/i.test(part));
+  const siteName = named || titleParts[0] || 'Client';
 
+  const logoImage = $('img').toArray().map((node) => {
+    const src = $(node).attr('src') || '';
+    const hint = `${src} ${$(node).attr('class') || ''} ${$(node).attr('alt') || ''} ${$(node).attr('id') || ''}`;
+    return { src, hint };
+  }).find((image) => /logo/i.test(image.hint) && !isDecorativeAsset(image.hint));
+  const touchIcon = $('link[rel="apple-touch-icon"]').toArray()
+    .map((node) => ({ href: $(node).attr('href') || '', size: Number.parseInt(($(node).attr('sizes') || '0').split('x')[0] || '0', 10) || 0 }))
+    .sort((left, right) => right.size - left.size)[0]?.href;
   const logoCandidates = [
-    $('img.custom-logo, header img, img[alt*="logo" i], img[class*="logo" i]').first().attr('src'),
-    $('meta[property="og:image"]').attr('content'),
-    $('link[rel="apple-touch-icon"]').attr('href'),
-    $('link[rel="icon"]').attr('href'),
+    logoFromIcon($, pageUrl),
+    absoluteUrl(logoImage?.src, pageUrl),
+    absoluteUrl(touchIcon, pageUrl),
+    absoluteUrl($('link[rel="icon"][type="image/svg+xml"], link[rel="icon"]').first().attr('href'), pageUrl),
+    absoluteUrl($('meta[property="og:image"]').attr('content'), pageUrl),
   ];
-  const logoUrl = logoCandidates.map((value) => absoluteUrl(value, pageUrl)).find(Boolean) || null;
+  const logoUrl = logoCandidates.find((value) => value && !isDecorativeAsset(value)) || null;
 
   const styleText = $('style').toArray().map((node) => $(node).text()).join('\n');
   const inline = $('[style]').toArray().map((node) => $(node).attr('style') || '').join('\n');
@@ -151,7 +179,7 @@ function blockedPage(html: string): boolean {
   return html.length < 2500 || /incapsula|cf-browser-verification|Just a moment/i.test(html);
 }
 
-async function readWithCurl(rawUrl: string): Promise<{ finalUrl: string; html: string }> {
+async function readWithCurl(rawUrl: string, maxBytes = 1_500_000): Promise<{ finalUrl: string; html: string }> {
   let current = normalizeUrl(rawUrl);
   for (let hop = 0; hop < 4; hop += 1) {
     const check = validateSafeUrl(current);
@@ -159,11 +187,12 @@ async function readWithCurl(rawUrl: string): Promise<{ finalUrl: string; html: s
     const { stdout } = await curl('curl', [
       '-sS',
       '--max-time', '12',
+      '--max-filesize', String(maxBytes),
       '-A', 'Mozilla/5.0 (compatible; BastionResultsBot/1.0)',
       '-H', 'Accept: text/html',
       '-w', '\n%{http_code} %{redirect_url}',
       current,
-    ], { maxBuffer: 2_000_000, encoding: 'utf8' });
+    ], { maxBuffer: maxBytes + 64_000, encoding: 'utf8' });
     const marker = stdout.lastIndexOf('\n');
     const body = marker >= 0 ? stdout.slice(0, marker) : stdout;
     const statusLine = marker >= 0 ? stdout.slice(marker + 1).trim() : '';
@@ -286,7 +315,7 @@ async function readLinkedCss(html: string, pageUrl: string): Promise<string> {
   const sheets: string[] = [];
   for (const href of hrefs) {
     try {
-      const file = await readWithCurl(href);
+      const file = await readWithCurl(href, 400_000);
       if (/font-family|@font-face|fonts\.googleapis/i.test(file.html)) sheets.push(file.html.slice(0, 200_000));
     } catch {
       continue;

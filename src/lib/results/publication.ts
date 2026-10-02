@@ -509,10 +509,81 @@ function textGrid(lines: Line[], used: Set<number>): FoundTable[] {
   return found;
 }
 
+function isCoverPage(lines: Line[]): boolean {
+  if (!lines.some((line) => line.fontSize >= 28)) return false;
+  const sentences = lines.filter((line) => line.fontSize < 18 && words(line.text) >= 8);
+  return sentences.length === 0 && lines.length <= 8;
+}
+
+function isSlidePage(lines: Line[]): boolean {
+  return lines.length > 8
+    && lines.some((line) => line.fontSize >= 24)
+    && lines.some((line) => words(line.text) >= 8);
+}
+
+function slideBlocks(lines: Line[]): PublicationBlock[] {
+  const ordered = [...lines].sort((a, b) => b.y - a.y);
+  const blocks: PublicationBlock[] = [];
+  const metrics: PublicationMetric[] = [];
+  let paragraph = '';
+  const flush = () => {
+    const text = clean(paragraph);
+    paragraph = '';
+    if (words(text) >= 6) blocks.push({ kind: 'paragraph', text });
+  };
+  for (let index = 0; index < ordered.length; index += 1) {
+    const line = ordered[index];
+    const bigNumber = line.fontSize >= 20 && line.text.length <= 32 && line.financials.length >= 1 && words(line.text) <= 6;
+    if (bigNumber) {
+      flush();
+      let caption = '';
+      for (let look = 1; look <= 2 && index + look < ordered.length; look += 1) {
+        const candidate = ordered[index + look];
+        if (candidate.fontSize >= 18 || candidate.financials.length > 0) continue;
+        if (words(candidate.text) <= 8 && candidate.text.length < 64) {
+          caption = candidate.text;
+          index += look;
+          break;
+        }
+      }
+      metrics.push({ group: 'Results', label: clean(caption || line.text), value: line.text, comparison: '' });
+      continue;
+    }
+    const title = line.fontSize >= 16
+      && line.financials.length === 0
+      && words(line.text) <= 10
+      && line.text.length < 72
+      && !/[.!?]$/.test(line.text);
+    if (title) {
+      flush();
+      blocks.push({ kind: 'heading', level: line.fontSize >= 22 ? 2 : 3, text: line.text });
+      continue;
+    }
+    const kicker = line.financials.length === 0
+      && words(line.text) <= 8
+      && line.text.length < 56
+      && line.text === line.text.toUpperCase()
+      && /[A-Z]{3}/.test(line.text);
+    if (kicker) {
+      flush();
+      blocks.push({ kind: 'heading', level: 3, text: line.text });
+      continue;
+    }
+    if (line.financials.length >= 2 || words(line.text) >= 6 || /[.!?]$/.test(line.text)) {
+      paragraph = paragraph ? `${paragraph} ${line.text}` : line.text;
+      if (/[.!?]$/.test(line.text)) flush();
+    }
+  }
+  flush();
+  if (metrics.length) blocks.splice(Math.min(1, blocks.length), 0, { kind: 'metrics', metrics });
+  return blocks;
+}
+
 function layoutPage(lines: Line[], shades: PdfShade[]): PublicationBlock[] {
   const body = lines.filter((line) => !isFurniture(line));
   if (!body.length) return [];
-  if (body.some((line) => line.fontSize >= 28)) return coverBlocks(body);
+  if (isCoverPage(body)) return coverBlocks(body);
+  if (isSlidePage(body)) return slideBlocks(body);
   if (isMetricPage(body)) return metricBlocks(body);
   const numeric = extractNumericTables(body, shades);
   const used = new Set<number>();

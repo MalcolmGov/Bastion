@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import * as cheerio from 'cheerio';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { applyFigureEdit } from '../src/lib/results/applyFigureEdit';
+import { parseBrandHtml } from '../src/lib/results/brand';
 import { convertPdfBytes, convertSampleBooklet } from '../src/lib/results/convert';
 import { isFinancialNumber } from '../src/lib/results/numbers';
 import { renderResultsHtml } from '../src/lib/results/renderHtml';
@@ -168,8 +169,51 @@ function testFigureEdit() {
   assert.equal(applyFigureEdit(document, 'stmt_income', 'missing', 0, null), false);
 }
 
+function testBrandLogo() {
+  const html = `<!doctype html><html><head>
+    <title>Standard Bank Group: Home | Standard Bank</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/static_file/assets/favicons/apple-icon-180x180.png">
+  </head><body>
+    <header><img class="search__results-busy" src="/static_file/assets/img/spinner.gif">
+      <a class="header__logo" href="/sbg/standard-bank-group">
+        <i data-icon="header-full" data-path="/file_source/assets/icons"></i>
+      </a>
+    </header>
+  </body></html>`;
+  const brand = parseBrandHtml(html, 'https://www.standardbank.com/sbg/standard-bank-group');
+  assert.equal(brand.siteName, 'Standard Bank Group');
+  assert.equal(brand.logoUrl, 'https://www.standardbank.com/file_source/assets/icons/header-full.svg');
+}
+
+async function slideDeckPdf(): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const cover = pdf.addPage([842, 595]);
+  cover.drawText('UNLOCKING', { x: 48, y: 360, size: 48, font: bold });
+  cover.drawText('SEPTEMBER 2026', { x: 48, y: 80, size: 12, font });
+  const slide = pdf.addPage([842, 595]);
+  slide.drawText('Standard Bank Group', { x: 48, y: 520, size: 28, font: bold });
+  slide.drawText('1H26 FINANCIAL PERFORMANCE', { x: 48, y: 470, size: 14, font: bold });
+  slide.drawText('Scale, diversification and connectivity provide a differentiated gateway to growth.', { x: 48, y: 430, size: 12, font });
+  slide.drawText('19.8%', { x: 48, y: 360, size: 32, font: bold });
+  slide.drawText('return on equity', { x: 48, y: 330, size: 12, font });
+  return pdf.save();
+}
+
 async function main() {
+  testBrandLogo();
   testFigureEdit();
+  const slides = await convertPdfBytes(await slideDeckPdf(), 'standard-bank-overview.pdf');
+  assert.equal(slides.issuer, 'Standard Bank Group');
+  assert.equal(slides.periodLabel, 'September 2026');
+  const joined = (slides.publication || []).map((block) => `${block.text || ''} ${(block.metrics || []).map((metric) => `${metric.value} ${metric.label}`).join(' ')}`).join(' ');
+  assert.match(joined, /1H26 FINANCIAL PERFORMANCE/);
+  assert.match(joined, /differentiated gateway to growth/);
+  assert.match(joined, /19\.8%/);
+  assert.match(joined, /return on equity/);
+  assert.equal(/19\.8% return on equity Scale/.test(joined), false);
+  assert.ok((slides.publication || []).some((block) => block.kind === 'paragraph' && /gateway to growth/.test(block.text || '')));
   assert.equal(isFinancialNumber('(1,104)'), true);
   assert.equal(isFinancialNumber('(4%)'), true);
   assert.equal(isFinancialNumber('1,486'), true);
