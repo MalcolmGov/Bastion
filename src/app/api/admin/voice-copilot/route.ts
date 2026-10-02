@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
         speechText: nav.speechText,
         action: {
           type: 'navigate',
-          navigationUrl: nav.navigationUrl
+          navigationUrl: nav.navigationUrl,
+          label: nav.label || matchedKnowledge?.actionLabel || 'Open Section'
         },
         suggestedNextSteps: matchedKnowledge?.suggestedNextSteps || defaultSteps
       });

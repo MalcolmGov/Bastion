@@ -7,6 +7,7 @@ export interface CopilotActionResponse {
   speechText: string;
   data?: any;
   navigationUrl?: string;
+  label?: string;
   error?: string;
 }
 
@@ -292,58 +293,75 @@ export function navigateAction(destination: string): CopilotActionResponse {
   const destLower = destination.toLowerCase().trim();
   let url = '/admin';
   let speechText = 'Navigating to the requested console.';
+  let label = 'Open Executive Overview';
 
   if (destLower.includes('editor') || destLower.includes('visual') || destLower.includes('edit page') || destLower.includes('wysiwyg')) {
     url = '/admin/editor';
     speechText = 'Opening the Visual Live Page Editor.';
+    label = 'Open Visual Editor';
   } else if (destLower.includes('page') || destLower.includes('sitemap') || destLower.includes('site tree')) {
     url = '/admin/pages';
     speechText = 'Opening Pages and Site Architecture.';
+    label = 'Open Pages';
   } else if (destLower.includes('user') || destLower.includes('team') || destLower.includes('invite') || destLower.includes('role') || destLower.includes('permission')) {
     url = '/admin/users';
     speechText = 'Opening Team and Access Control.';
+    label = 'Manage Team & Access';
   } else if (destLower.includes('task') || destLower.includes('queue') || destLower.includes('approval') || destLower.includes('review') || destLower.includes('sign off')) {
     url = '/admin/tasks';
     speechText = 'Opening Reviews and Publishing Queue.';
+    label = 'View Publishing Queue';
   } else if (destLower.includes('dam') || destLower.includes('asset') || destLower.includes('media') || destLower.includes('image') || destLower.includes('document') || destLower.includes('file')) {
     url = '/admin/media';
     speechText = 'Opening Media and Downloads Library.';
+    label = 'Browse Media Assets';
   } else if (destLower.includes('learn') || destLower.includes('guide') || destLower.includes('hub') || destLower.includes('help') || destLower.includes('tutorial')) {
     url = '/admin/learn';
     speechText = 'Opening the Platform Learning Hub.';
+    label = 'Open Platform Learning Hub';
   } else if (destLower.includes('governance') || destLower.includes('audit') || destLower.includes('king iv')) {
     url = '/admin/governance';
     speechText = 'Opening King IV Governance and Audit Trail.';
+    label = 'View Governance Audit';
   } else if (destLower.includes('ethic') || destLower.includes('whistleblow')) {
     url = '/admin/ethics';
     speechText = 'Opening Ethics and Compliance Hotline.';
+    label = 'Open Ethics Hub';
   } else if (destLower.includes('tender') || destLower.includes('rfp') || destLower.includes('procurement')) {
     url = '/admin/tenders';
     speechText = 'Opening Suppliers and Tenders.';
+    label = 'Manage Tenders';
   } else if (destLower.includes('release') || destLower.includes('publish') || destLower.includes('bundle') || destLower.includes('news')) {
     url = '/admin/releases';
     speechText = 'Opening Content Releases and Publishing Manager.';
+    label = 'View Content Releases';
   } else if (destLower.includes('sre') || destLower.includes('incident') || destLower.includes('monitor') || destLower.includes('health')) {
     url = '/admin/incidents';
     speechText = 'Opening the SRE Autonomous Operations Dashboard.';
+    label = 'Open SRE Dashboard';
   } else if (destLower.includes('bill') || destLower.includes('invoice') || destLower.includes('quote') || destLower.includes('revenue')) {
     url = '/admin/billing';
     speechText = 'Opening Commercial Billing and Invoicing Hub.';
+    label = 'Open Billing Console';
   } else if (destLower.includes('status') || destLower.includes('uptime') || destLower.includes('sla')) {
     url = '/status';
     speechText = 'Opening the Public SLA Status Page.';
+    label = 'Open Public Status Page';
   } else if (destLower.includes('propert') || destLower.includes('site') || destLower.includes('tenant')) {
     url = '/admin/properties';
     speechText = 'Opening Multi-Tenant Client Properties.';
+    label = 'Open Client Properties';
   } else {
     url = '/admin';
     speechText = 'Returning to the Executive Overview.';
+    label = 'Open Executive Overview';
   }
 
   return {
     success: true,
     action: 'navigate',
     speechText,
-    navigationUrl: url
+    navigationUrl: url,
+    label
   };
 }

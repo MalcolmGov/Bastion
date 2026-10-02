@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Sparkles,
@@ -16,6 +17,7 @@ import {
   CreditCard,
   ExternalLink,
   ChevronRight,
+  ArrowRight,
   Radio,
   FileText,
   AlertTriangle,
@@ -425,8 +427,9 @@ export function ZaraVoiceCopilot() {
       // Execute platform navigation action if returned
       if (data.action?.type === 'navigate' && data.action.navigationUrl) {
         setTimeout(() => {
+          setIsOpen(false);
           router.push(data.action.navigationUrl);
-        }, 1200);
+        }, 1400);
       }
 
       // Voice playback
@@ -766,14 +769,16 @@ export function ZaraVoiceCopilot() {
                       {m.action.navigationUrl && (
                         <div className="flex items-center justify-between gap-2 mt-1">
                           <span className="text-[11px] text-slate-500 font-medium">Quick link:</span>
-                          <button
-                            type="button"
-                            onClick={() => router.push(m.action!.navigationUrl!)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                          <Link
+                            href={m.action.navigationUrl}
+                            onClick={() => {
+                              setIsOpen(false);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer active:scale-95 group"
                           >
                             <span>{m.action.label || 'Open Section'}</span>
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </button>
+                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                          </Link>
                         </div>
                       )}
                     </div>
