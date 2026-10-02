@@ -32,6 +32,8 @@ interface FooterProps {
     contactEmail?: string;
     contactPhone?: string;
     socialLinks?: SocialLinkItem[];
+    privacyHref?: string;
+    termsHref?: string;
     columns?: FooterColumn[];
   };
   styles?: SectionStyles;
@@ -296,10 +298,10 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
           </div>
 
           <div className="flex items-center space-x-6">
-            <a href="/privacy" className="hover:text-white transition opacity-75 hover:opacity-100">
+            <a href={props.privacyHref || "/privacy"} className="hover:text-white transition opacity-75 hover:opacity-100">
               Privacy Notice
             </a>
-            <a href="/terms" className="hover:text-white transition opacity-75 hover:opacity-100">
+            <a href={props.termsHref || "/terms"} className="hover:text-white transition opacity-75 hover:opacity-100">
               Terms
             </a>
             <button
