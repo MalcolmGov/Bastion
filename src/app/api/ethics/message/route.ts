@@ -4,10 +4,13 @@ import {
   addWhistleblowerMessage,
 } from '@/lib/ethics/ethicsService';
 
+import { rateLimitResponse } from '@/lib/security/rateLimiter';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitResponse(req, 'ethics-message', 10, 900000);
+    if (limited) return limited;
     const body = await req.json();
     const { trackingCode, accessKey, message } = body;
 

@@ -4,6 +4,8 @@
  * to protect against credential stuffing, brute-force attacks, and API flooding.
  */
 
+import { NextResponse } from 'next/server';
+
 export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
@@ -100,3 +102,22 @@ export function clearRateLimit(key: string): void {
 }
 
 export const resetRateLimit = clearRateLimit;
+
+/**
+ * Per-IP limit for public endpoints. Returns a 429 response when the caller is over the limit,
+ * otherwise null. The IP is only used as an in-memory key and is never persisted.
+ */
+export function rateLimitResponse(
+  req: { headers: { get: (name: string) => string | null } },
+  name: string,
+  limit: number,
+  windowMs: number
+): NextResponse | null {
+  const ip = (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown').split(',')[0].trim();
+  const result = checkRateLimit(`${name}:${ip}`, limit, windowMs);
+  if (result.allowed) return null;
+  return NextResponse.json(
+    { error: 'Too many requests. Please try again later.' },
+    { status: 429, headers: { 'Retry-After': String(result.retryAfterSec) } }
+  );
+}

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createWhistleblowerReport, WhistleblowerCategory, WhistleblowerSeverity } from '@/lib/ethics/ethicsService';
 
+import { rateLimitResponse } from '@/lib/security/rateLimiter';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitResponse(req, 'ethics-submit', 5, 3600000);
+    if (limited) return limited;
     const body = await req.json();
     const {
       clientId,
@@ -23,6 +26,10 @@ export async function POST(req: NextRequest) {
         { error: 'Mandatory fields missing: category, subject, and details are required.' },
         { status: 400 }
       );
+    }
+
+    if (String(details).length > 20000) {
+      return NextResponse.json({ error: 'Details must be 20,000 characters or fewer.' }, { status: 413 });
     }
 
     // Default to client_goldfields if not specified by public portal
