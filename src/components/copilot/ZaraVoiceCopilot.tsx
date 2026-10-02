@@ -28,7 +28,8 @@ import {
   Edit3,
   Users,
   FolderOpen,
-  RotateCcw
+  RotateCcw,
+  CalendarCheck
 } from 'lucide-react';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
@@ -611,6 +612,8 @@ export function ZaraVoiceCopilot() {
       case 'folder': return <FolderOpen className="w-3 h-3 text-blue-500 shrink-0" />;
       case 'book': return <BookOpen className="w-3 h-3 text-teal-500 shrink-0" />;
       case 'shield': return <ShieldCheck className="w-3 h-3 text-emerald-500 shrink-0" />;
+      case 'file': return <FileText className="w-3 h-3 text-sky-500 shrink-0" />;
+      case 'calendar': return <CalendarCheck className="w-3 h-3 text-amber-500 shrink-0" />;
       default: return <Sparkles className="w-3 h-3 text-slate-400 shrink-0" />;
     }
   }

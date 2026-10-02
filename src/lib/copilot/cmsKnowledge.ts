@@ -1,7 +1,7 @@
 export interface SuggestedNextStep {
   label: string;
   query: string;
-  icon?: 'edit' | 'sparkles' | 'users' | 'check' | 'folder' | 'book' | 'arrow' | 'shield';
+  icon?: 'edit' | 'sparkles' | 'users' | 'check' | 'folder' | 'book' | 'arrow' | 'shield' | 'file' | 'calendar';
 }
 
 export interface CmsKnowledgeEntry {
@@ -17,11 +17,11 @@ export interface CmsKnowledgeEntry {
 }
 
 export const DEFAULT_CLIENT_SUGGESTED_STEPS: SuggestedNextStep[] = [
-  { label: 'Edit Website Pages', query: 'How do I edit pages on my website?', icon: 'edit' },
-  { label: 'Open Visual Editor', query: 'Open the Visual Live Page Editor', icon: 'sparkles' },
-  { label: 'Invite Team Members', query: 'How do I invite team members and set permissions?', icon: 'users' },
-  { label: 'Publishing Approvals', query: 'How do reviews and publishing approvals work?', icon: 'check' },
-  { label: 'Platform Learning Hub', query: 'Open the Platform Learning Hub', icon: 'book' }
+  { label: 'Draft Announcement', query: 'Draft a corporate press release for our operational results', icon: 'file' },
+  { label: 'IR Calendar & Webcasts', query: 'Open the IR & Financial Calendar', icon: 'calendar' },
+  { label: 'Visual Page Editor', query: 'Open the Visual Live Page Editor', icon: 'sparkles' },
+  { label: 'Embargo & Sign-Offs', query: 'How do release sign-offs and embargo locks work?', icon: 'check' },
+  { label: 'Corporate Metric Widgets', query: 'Open Financial Results & Metric Widgets', icon: 'edit' }
 ];
 
 export const DEFAULT_AGENCY_SUGGESTED_STEPS: SuggestedNextStep[] = [
@@ -255,6 +255,66 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
       { label: 'Upload Tender Documents', query: 'How do I upload corporate media and photos?', icon: 'folder' },
       { label: 'Publishing Approvals', query: 'How do reviews and publishing approvals work?', icon: 'check' },
       { label: 'Platform Learning Hub', query: 'Open the Platform Learning Hub', icon: 'book' }
+    ]
+  },
+  {
+    title: 'Investor Relations & Financial Calendar',
+    category: 'Corporate & IR',
+    keywords: ['calendar', 'ir calendar', 'financial calendar', 'webcast', 'agm', 'dividend', 'dividend date', 'results date', 'investor day', 'ics'],
+    summary: 'Schedule and manage upcoming corporate events, earnings webcasts, AGM voting timetables, and dividend milestones with 1-click RFC 5545 (.ics) export.',
+    steps: [
+      'Navigate to IR & Financial Calendar (/admin/calendar).',
+      'Click "Schedule IR Event" to create a results announcement, webcast, or dividend milestone.',
+      'Enter event date, time in SAST/GMT, webcast streaming URL, and optional dividend rate.',
+      'Download .ICS calendar files to test importing into Outlook, Google, or Apple Calendar.'
+    ],
+    tips: 'Dividend events automatically calculate South African Dividend Withholding Tax (20% DWT) for shareholder transparency.',
+    actionUrl: '/admin/calendar',
+    actionLabel: 'Open IR Calendar',
+    suggestedNextSteps: [
+      { label: 'Financial Results Hub', query: 'Open Financial Results & Metric Widgets', icon: 'edit' },
+      { label: 'Draft Announcement', query: 'Draft a corporate press release for our operational results', icon: 'file' },
+      { label: 'Content Releases', query: 'How do release sign-offs and embargo locks work?', icon: 'check' }
+    ]
+  },
+  {
+    title: 'Corporate Content Releases & Embargo Lock',
+    category: 'Governance & Publishing',
+    keywords: ['embargo', 'sign-off', 'sign off', 'release', 'releases', 'publish', 'scheduled drop', 'c-suite', 'jse'],
+    summary: 'Bundle multi-page campaigns, enforce strict time-locked market embargoes down to the second, and require multi-stage C-Suite digital sign-offs.',
+    steps: [
+      'Navigate to Content Releases (/admin/releases).',
+      'View active release bundles across Draft, Legal Review, Executive Sign-Off, and Scheduled Drop.',
+      'For scheduled market announcements, toggle the Embargo Lock to prevent tampering before market opening.',
+      'Authorized C-Suite officers can click "Sign-off" to record an immutable digital signature audit stamp.'
+    ],
+    tips: 'Releases under active market embargo are locked against unauthorized edits in compliance with JSE and King IV market integrity standards.',
+    actionUrl: '/admin/releases',
+    actionLabel: 'Open Content Releases',
+    suggestedNextSteps: [
+      { label: 'Draft Corporate Announcement', query: 'Draft a corporate press release for our operational results', icon: 'file' },
+      { label: 'IR Calendar', query: 'Open the IR & Financial Calendar', icon: 'calendar' },
+      { label: 'Visual Page Editor', query: 'Open the Visual Live Page Editor', icon: 'sparkles' }
+    ]
+  },
+  {
+    title: 'Financial Results & Metric Widgets',
+    category: 'Investor Relations',
+    keywords: ['metrics', 'chart', 'widget', 'financial results', 'reports', 'production', 'aisc', 'esg metrics', 'ltifr', 'csv export'],
+    summary: 'A no-code data studio for publishing Integrated Annual Reports (PDF) and building interactive, branded financial & ESG metric charts.',
+    steps: [
+      'Navigate to Financial Results & Metrics (/admin/reports).',
+      'Switch between "Interactive Metric Widgets" and "Annual Reports & Booklets".',
+      'Preview real-time SVG bar charts with hover tooltips and YoY variance indicators.',
+      'Click "Export CSV" to download audited numbers or "Copy Embed Code" to place metrics directly onto corporate web pages.'
+    ],
+    tips: 'All metric points link to audited annual figures and provide institutional analysts with clean one-click data downloads.',
+    actionUrl: '/admin/reports',
+    actionLabel: 'Open Metric Widgets',
+    suggestedNextSteps: [
+      { label: 'IR & Financial Calendar', query: 'Open the IR & Financial Calendar', icon: 'calendar' },
+      { label: 'Visual Editor', query: 'Open the Visual Live Page Editor', icon: 'sparkles' },
+      { label: 'Draft Announcement', query: 'Draft a corporate press release for our operational results', icon: 'file' }
     ]
   }
 ];

@@ -145,6 +145,64 @@ export async function POST(req: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────
+    // 2B. INTENT: CORPORATE ANNOUNCEMENT & SENS DRAFTER
+    // ─────────────────────────────────────────────────────────
+    if (
+      lower.includes('draft') ||
+      lower.includes('press release') ||
+      lower.includes('announcement') ||
+      lower.includes('statement') ||
+      lower.includes('sens') ||
+      lower.includes('disclosure')
+    ) {
+      const topic = trimmed
+        .replace(/draft\s*(a|an)?\s*(corporate|sens|press)?\s*(release|announcement|statement)?\s*(for|about|on)?/i, '')
+        .trim();
+      
+      const cleanTopic = topic.length > 4 ? topic : 'Quarterly Operational & Financial Results';
+      const releaseTitle = `${clientName.toUpperCase()} RELEASES MARKET UPDATE: ${cleanTopic.toUpperCase()}`;
+      
+      const formattedDraft = `### **${clientName} Corporate Announcement & Media Release**
+**HEADLINE:** ${releaseTitle}
+
+**JSE / LSE Symbol:** GFI &bull; **ISIN:** ZAE000018123 &bull; **Date:** ${new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}
+
+---
+
+**JOHANNESBURG &mdash;** ${clientName} today releases a formal corporate update regarding **${cleanTopic}**, reflecting solid operational execution, disciplined capital allocation, and progress against strategic milestones.
+
+#### **Key Operational & Strategic Highlights:**
+- **Performance Execution:** Delivery across Tier-1 assets remains strong, supported by high plant availability and consistent production volumes.
+- **Cost Discipline:** Group All-in Sustaining Costs (AISC) remain tightly managed in line with top-quartile global benchmarks.
+- **ESG & Decarbonization:** Renewable energy microgrids and water stewardship initiatives continued advancing toward 2030 targets.
+- **Shareholder Value:** Operational cash flows continue to support disciplined growth investments and sustained dividend returns.
+
+#### **Executive Leadership Commentary:**
+> *"Our unwavering focus on safe production, cost efficiency, and sustainable capital stewardship continues to deliver enduring shared value for our shareholders, host communities, and partners."*  
+> &mdash; **Executive Leadership Team, ${clientName}**
+
+---
+**Regulatory & Forward-Looking Disclaimer:**
+*Certain statements in this disclosure may constitute forward-looking statements under South African and international securities laws. Such statements involve known and unknown risks, uncertainties, and other factors that could cause actual results to differ materially.*
+`;
+
+      return NextResponse.json({
+        reply: formattedDraft,
+        speechText: `I have prepared a draft corporate announcement for ${clientName}. It includes headline structuring, key operational bullet points, an executive quote, and King IV regulatory disclaimers. You can copy this or bundle it directly into Content Releases.`,
+        action: {
+          type: 'navigate',
+          navigationUrl: '/admin/releases',
+          label: 'Bundle Into Content Release'
+        },
+        suggestedNextSteps: [
+          { label: 'Bundle in Releases', query: 'Open Content Releases to bundle this draft', icon: 'check' },
+          { label: 'IR Calendar', query: 'Open the IR & Financial Calendar', icon: 'calendar' },
+          { label: 'Edit in Visual Editor', query: 'Open the Visual Live Page Editor', icon: 'edit' }
+        ]
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────
     // 3. INTENT: CMS KNOWLEDGE LOOKUP
     // ─────────────────────────────────────────────────────────
     const matchedKnowledge = findCmsKnowledge(trimmed);

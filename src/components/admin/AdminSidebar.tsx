@@ -38,6 +38,7 @@ import {
   FolderOpen,
   PanelLeftClose,
   PanelLeftOpen,
+  Calendar,
   CalendarCheck,
   ShieldAlert,
   ShieldCheck,
@@ -341,6 +342,7 @@ export function AdminSidebar() {
                       {renderItem('/admin/news', 'News & Articles', Newspaper, pathname.startsWith('/admin/news'))}
                     </>
                   )}
+                  {renderItem('/admin/calendar', 'IR & Financial Calendar', Calendar, pathname.startsWith('/admin/calendar'))}
                   {renderItem('/admin/learn', 'Platform Learning Hub', BookOpen, pathname.startsWith('/admin/learn'))}
                 </div>
               </div>

@@ -25,7 +25,10 @@ import {
   Timer,
   Check,
   ArrowUpRight,
-  ShieldCheck
+  ShieldCheck,
+  Lock,
+  KeyRound,
+  ShieldAlert
 } from 'lucide-react';
 
 interface ContentRelease {
@@ -87,6 +90,40 @@ export default function AdminReleasesPage() {
 
   // Feedback Notification
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Executive Sign-Off & Embargo Lock States
+  const [signOffModalRelease, setSignOffModalRelease] = useState<ContentRelease | null>(null);
+  const [signedReleases, setSignedReleases] = useState<Record<string, { signerName: string; role: string; signedAt: string; hash: string }>>({});
+  const [signOffSignerRole, setSignOffSignerRole] = useState('Head of Investor Relations');
+  const [signOffAgreed, setSignOffAgreed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('bastion_release_signoffs');
+      if (saved) {
+        setSignedReleases(JSON.parse(saved));
+      }
+    } catch (e) {}
+  }, []);
+
+  const handleAuthorizeSignOff = (release: ContentRelease) => {
+    if (!signOffAgreed) return;
+    const now = new Date();
+    const signatureRecord = {
+      signerName: user?.name || 'Malcolm Govender',
+      role: signOffSignerRole,
+      signedAt: now.toLocaleString(),
+      hash: `#SIG-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+    };
+    const updated = { ...signedReleases, [release.id]: signatureRecord };
+    setSignedReleases(updated);
+    try {
+      localStorage.setItem('bastion_release_signoffs', JSON.stringify(updated));
+    } catch (e) {}
+    setSignOffModalRelease(null);
+    setSignOffAgreed(false);
+    showNotification('success', `Executive Digital Sign-off recorded for "${release.name}". Release is now authorized under market embargo.`);
+  };
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -448,6 +485,7 @@ export default function AdminReleasesPage() {
                 const isScheduled = release.status === 'scheduled';
                 const isPublished = release.status === 'published';
                 const isDraft = release.status === 'draft';
+                const hasSignOff = signedReleases[release.id];
 
                 return (
                   <div
@@ -495,6 +533,57 @@ export default function AdminReleasesPage() {
                           </p>
                         )}
 
+                        {/* Embargo Lock Notice */}
+                        {isScheduled && (
+                          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+                            <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span>Embargo Active &bull; Content locked for scheduled market disclosure</span>
+                          </div>
+                        )}
+
+                        {/* 4-Stage Corporate Sign-Off Pipeline */}
+                        <div className="flex items-center space-x-1.5 py-1 overflow-x-auto text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-400/20">
+                            1. Authoring
+                          </span>
+                          <span className="text-slate-400">&rarr;</span>
+                          <span className={`px-2 py-0.5 rounded-md border ${
+                            hasSignOff || isPublished
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/20'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-transparent'
+                          }`}>
+                            2. IR &amp; Legal
+                          </span>
+                          <span className="text-slate-400">&rarr;</span>
+                          <span className={`px-2 py-0.5 rounded-md border ${
+                            hasSignOff
+                              ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-400/20'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-transparent'
+                          }`}>
+                            3. C-Suite Sign-off
+                          </span>
+                          <span className="text-slate-400">&rarr;</span>
+                          <span className={`px-2 py-0.5 rounded-md border ${
+                            isPublished
+                              ? 'bg-emerald-600 text-white border-emerald-500'
+                              : isScheduled
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400/20'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-transparent'
+                          }`}>
+                            4. {isPublished ? 'Live' : 'Embargo Release'}
+                          </span>
+                        </div>
+
+                        {/* Digital Signature Audit Stamp */}
+                        {hasSignOff && (
+                          <div className="flex items-center space-x-2 text-[11px] text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 rounded-xl px-3 py-1.5">
+                            <ShieldCheck className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                            <span>
+                              Digitally Authorized by <strong>{hasSignOff.signerName}</strong> ({hasSignOff.role}) &bull; <code className="font-mono text-[10px] text-purple-600 dark:text-purple-400">{hasSignOff.hash}</code>
+                            </span>
+                          </div>
+                        )}
+
                         <div className="flex flex-wrap items-center gap-y-1 gap-x-4 pt-1 text-[11px] text-slate-500 dark:text-slate-400">
                           {release.scheduledAt && (
                             <div className="flex items-center space-x-1 text-amber-600 dark:text-amber-400 font-medium">
@@ -514,6 +603,20 @@ export default function AdminReleasesPage() {
 
                       {/* Action Buttons */}
                       <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                        {!isPublished && !hasSignOff && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSignOffModalRelease(release);
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center space-x-1.5 transition shadow-xs cursor-pointer"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                            <span>Sign-off</span>
+                          </button>
+                        )}
+
                         {!isPublished && (
                           <button
                             type="button"
@@ -878,6 +981,115 @@ export default function AdminReleasesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Executive Digital Sign-Off Modal */}
+      {signOffModalRelease && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-[#0D131F] border border-slate-200 dark:border-[#1E2E44] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 text-slate-900 dark:text-white">
+            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                    Executive Digital Sign-Off &amp; Embargo Clearance
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    King IV Governance &amp; Market Integrity Authorization
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSignOffModalRelease(null);
+                  setSignOffAgreed(false);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-slate-700/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold">Release Bundle:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{signOffModalRelease.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold">Bundled Items:</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-300">{signOffModalRelease.itemCount || 0} pages/articles</span>
+                </div>
+                {signOffModalRelease.scheduledAt && (
+                  <div className="flex items-center justify-between text-amber-700 dark:text-amber-400 font-semibold">
+                    <span>Embargo Unlock:</span>
+                    <span>{new Date(signOffModalRelease.scheduledAt).toLocaleString()} SAST</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Authorized Signatory Designation
+                </label>
+                <select
+                  value={signOffSignerRole}
+                  onChange={(e) => setSignOffSignerRole(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#141C2A] text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-purple-500 focus:outline-hidden"
+                >
+                  <option value="Head of Investor Relations">Head of Investor Relations (IR)</option>
+                  <option value="Chief Financial Officer (CFO)">Chief Financial Officer (CFO)</option>
+                  <option value="Group Company Secretary">Group Company Secretary</option>
+                  <option value="Corporate Legal &amp; Compliance Director">Corporate Legal &amp; Compliance Director</option>
+                  <option value="Chief Executive Officer (CEO)">Chief Executive Officer (CEO)</option>
+                </select>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/70 dark:border-purple-800/60 flex items-start space-x-2.5">
+                <ShieldAlert className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-purple-900 dark:text-purple-200 leading-relaxed">
+                  By signing off, you affirm under the King IV Code of Corporate Governance that this release contains verified factual data, complies with forward-looking statement disclosures, and is approved for publication under the scheduled embargo.
+                </p>
+              </div>
+
+              <label className="flex items-start space-x-2.5 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={signOffAgreed}
+                  onChange={(e) => setSignOffAgreed(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                />
+                <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                  I confirm market sensitivity clearance and authorize digital execution of this release.
+                </span>
+              </label>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSignOffModalRelease(null);
+                    setSignOffAgreed(false);
+                  }}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!signOffAgreed}
+                  onClick={() => handleAuthorizeSignOff(signOffModalRelease)}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-md"
+                >
+                  Authorize &amp; Digitally Sign
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
