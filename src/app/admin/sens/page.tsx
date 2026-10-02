@@ -33,11 +33,16 @@ import {
   Layers,
   Zap,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
+import { isAgencyUser } from '@/lib/auth/roles';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import type { SensAnnouncement, SensType, FinancialCalendarEvent, CalendarEventType, InvestorReport, ReportType } from '@/lib/ir/types';
 import { SENS_TYPE_LABELS, SENS_TYPE_COLORS, EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, REPORT_TYPE_LABELS, calculateDividendTax } from '@/lib/ir/types';
 
 export default function SensAndIrHubPage() {
+  const { user } = useAdminAuth();
+  const isAgency = isAgencyUser(user);
   const { activeClient, activeSite, clients, setActiveClientId } = useStudioWorkspace();
 
   const [activeTab, setActiveTab] = useState<'sens' | 'calendar' | 'reports'>('sens');
@@ -335,6 +340,32 @@ export default function SensAndIrHubPage() {
   const dividendCalc = useMemo(() => {
     return calculateDividendTax(selectedDividendCents, calculatorShares, 0.2);
   }, [selectedDividendCents, calculatorShares]);
+
+  if (!isAgency) {
+    return (
+      <div className="max-w-2xl mx-auto py-24 px-4 text-center space-y-5 animate-in fade-in duration-200">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center shadow-xs">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
+            Bastion Internal Facility Restricted
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+            JSE SENS and stock exchange regulatory syndication is managed exclusively by Bastion platform operators. Corporate client content is published via Pages, News, and Content Releases.
+          </p>
+        </div>
+        <div className="pt-2">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+          >
+            <span>Return to Executive Overview</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
