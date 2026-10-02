@@ -7,19 +7,34 @@ import {
   createQuickInvoiceAction,
   navigateAction
 } from '@/lib/copilot/actions';
+import {
+  findCmsKnowledge,
+  buildCmsKnowledgePrompt,
+  CMS_KNOWLEDGE_BASE
+} from '@/lib/copilot/cmsKnowledge';
 
 export async function POST(req: NextRequest) {
   try {
     const gate = await requireUser();
     if (!gate.ok) return gate.response;
     const body = await req.json();
-    const { message = '', history = [], clientContext = 'Move Digital & Gold Fields' } = body;
+    const {
+      message = '',
+      history = [],
+      clientContext = 'Payguard',
+      portalViewMode = 'client',
+      userName = 'Malcolm',
+      userRole = 'admin'
+    } = body;
 
+    const clientName = clientContext || 'Payguard';
+    const isClient = portalViewMode === 'client';
     const trimmed = (message || '').trim();
+
     if (!trimmed) {
       return NextResponse.json({
-        reply: "I'm listening, Malcolm. What would you like to check or execute across the platform?",
-        speechText: "I am listening Malcolm. What would you like to inspect across the platform?"
+        reply: `Hello ${userName}! I'm Ask AI, your platform assistant for ${clientName}. How can I assist you with your pages, visual editor, or team today?`,
+        speechText: `Hello ${userName}. I am Ask AI, your assistant for ${clientName}. What would you like guidance on?`
       });
     }
 
@@ -33,13 +48,12 @@ export async function POST(req: NextRequest) {
       lower.startsWith('open') ||
       lower.startsWith('take me to') ||
       lower.startsWith('navigate to') ||
-      lower.includes('show me the status page') ||
-      lower.includes('show status') ||
-      lower.includes('show me billing')
+      lower.startsWith('show me') ||
+      lower.includes('take me')
     ) {
       const nav = navigateAction(lower);
       return NextResponse.json({
-        reply: `${nav.speechText} Redirecting you to ${nav.navigationUrl}...`,
+        reply: `${nav.speechText} Opening ${nav.navigationUrl} for you.`,
         speechText: nav.speechText,
         action: {
           type: 'navigate',
@@ -49,116 +63,89 @@ export async function POST(req: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────
-    // 2. INTENT: SRE PLATFORM HEALTH & SLA PROBE
+    // 2. INTENT: AGENCY-ONLY OPS (SRE / INCIDENTS / BILLING)
     // ─────────────────────────────────────────────────────────
-    if (
-      lower.includes('health') ||
-      lower.includes('uptime') ||
-      lower.includes('latency') ||
-      lower.includes('probe') ||
-      lower.includes('how is movedigital') ||
-      lower.includes('how is move digital') ||
-      lower.includes('system status') ||
-      lower.includes('sla')
-    ) {
-      const health = await getSreHealthAction();
-      return NextResponse.json({
-        reply: health.speechText,
-        speechText: health.speechText,
-        action: {
-          type: 'sre_health',
-          data: health.data
-        }
-      });
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // 3. INTENT: INCIDENTS & AST REPAIR PRs
-    // ─────────────────────────────────────────────────────────
-    if (
-      lower.includes('incident') ||
-      lower.includes('pr') ||
-      lower.includes('pull request') ||
-      lower.includes('fix') ||
-      lower.includes('error') ||
-      lower.includes('bug') ||
-      lower.includes('anomaly')
-    ) {
-      const inc = await getIncidentsAction();
-      return NextResponse.json({
-        reply: inc.speechText,
-        speechText: inc.speechText,
-        action: {
-          type: 'list_incidents',
-          data: inc.data
-        }
-      });
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // 4. INTENT: BILLING, INVOICING, MRR
-    // ─────────────────────────────────────────────────────────
-    if (
-      lower.includes('bill') ||
-      lower.includes('invoice') ||
-      lower.includes('revenue') ||
-      lower.includes('mrr') ||
-      lower.includes('quote') ||
-      lower.includes('financial') ||
-      lower.includes('overdue')
-    ) {
-      // Check if user wants to CREATE an invoice
-      if (lower.includes('create') || lower.includes('draft') || lower.includes('generate') || lower.includes('send invoice')) {
-        const clientMatch = lower.includes('gold') ? 'Gold Fields' : 'Move Digital';
-        const numMatch = lower.match(/\b\d+([,.]\d+)?\b/);
-        const amount = numMatch ? parseInt(numMatch[0].replace(/,/g, ''), 10) : 28500;
-
-        const inv = await createQuickInvoiceAction({
-          clientName: clientMatch,
-          amount,
-          description: `Enterprise SRE & Automated Remediation Retainer — ${clientMatch}`
-        });
-
+    // Only execute if operator is in agency mode
+    if (!isClient) {
+      if (
+        lower.includes('sre') ||
+        lower.includes('health') ||
+        lower.includes('latency') ||
+        lower.includes('uptime') ||
+        lower.includes('probe')
+      ) {
+        const health = await getSreHealthAction();
         return NextResponse.json({
-          reply: inv.speechText,
-          speechText: inv.speechText,
+          reply: health.speechText,
+          speechText: health.speechText,
           action: {
-            type: 'create_invoice',
-            navigationUrl: inv.navigationUrl,
-            data: inv.data
+            type: 'sre_health',
+            data: health.data
           }
         });
       }
 
-      // Default: billing summary
-      const bill = await getBillingSummaryAction();
-      return NextResponse.json({
-        reply: bill.speechText,
-        speechText: bill.speechText,
-        action: {
-          type: 'billing_summary',
-          data: bill.data
+      if (lower.includes('incident') || lower.includes('ast repair') || lower.includes('pull request')) {
+        const inc = await getIncidentsAction();
+        return NextResponse.json({
+          reply: inc.speechText,
+          speechText: inc.speechText,
+          action: {
+            type: 'list_incidents',
+            data: inc.data
+          }
+        });
+      }
+
+      if (lower.includes('invoice') || lower.includes('billing') || lower.includes('mrr') || lower.includes('revenue')) {
+        if (lower.includes('create') || lower.includes('draft') || lower.includes('generate')) {
+          const inv = await createQuickInvoiceAction({
+            clientName: clientName,
+            amount: 28500,
+            description: `Enterprise Platform Retainer — ${clientName}`
+          });
+          return NextResponse.json({
+            reply: inv.speechText,
+            speechText: inv.speechText,
+            action: {
+              type: 'create_invoice',
+              navigationUrl: inv.navigationUrl,
+              data: inv.data
+            }
+          });
         }
-      });
+        const bill = await getBillingSummaryAction();
+        return NextResponse.json({
+          reply: bill.speechText,
+          speechText: bill.speechText,
+          action: {
+            type: 'billing_summary',
+            data: bill.data
+          }
+        });
+      }
     }
 
     // ─────────────────────────────────────────────────────────
-    // 5. INTENT: GENERAL PLATFORM & INTELLIGENCE Q&A
+    // 3. INTENT: CMS KNOWLEDGE LOOKUP
     // ─────────────────────────────────────────────────────────
-    // Check if Anthropic API key is available for conversational response
+    const matchedKnowledge = findCmsKnowledge(trimmed);
+
+    // ─────────────────────────────────────────────────────────
+    // 4. INTELLIGENT AI (CLAUDE ANTHROPIC)
+    // ─────────────────────────────────────────────────────────
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     if (anthropicKey) {
       try {
-        const prompt = `You are Zara, the autonomous platform copilot for Bastion Studio (operating for Malcolm Govender).
-You manage multi-tenant enterprise platforms, automated SRE self-healing, AST syntax verification, 90-day SLA monitoring, and commercial invoicing.
-Context:
-- Platform: Bastion Studio & Move Digital
-- Active Properties: movedigital.africa (Vercel production edge), goldfields.com
-- User: Malcolm Govender
-- Capabilities: Voice-driven SRE triage, automated PR deployment, rollback guardrails, tax invoicing.
+        const systemPrompt = buildCmsKnowledgePrompt(clientName, userName);
 
-User said: "${trimmed}"
-Give a concise, sharp, professional executive reply in 1 to 2 sentences (under 40 words) that sounds natural when spoken aloud. Do not use asterisks or markdown formatting.`;
+        const conversationMessages = [
+          ...history.slice(-4).map((h: any) => ({
+            role: h.role === 'assistant' ? 'assistant' : 'user',
+            content: String(h.content || '')
+          })),
+          { role: 'user', content: trimmed }
+        ];
 
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
@@ -169,18 +156,24 @@ Give a concise, sharp, professional executive reply in 1 to 2 sentences (under 4
           },
           body: JSON.stringify({
             model: 'claude-3-5-haiku-20241022',
-            max_tokens: 150,
-            messages: [{ role: 'user', content: prompt }]
+            system: systemPrompt,
+            max_tokens: 300,
+            messages: conversationMessages
           })
         });
 
         if (res.ok) {
           const data = await res.json();
-          const aiText = data.content?.[0]?.text?.replace(/[*_#]/g, '') || '';
+          const aiText = data.content?.[0]?.text?.replace(/[*#]/g, '') || '';
           if (aiText) {
             return NextResponse.json({
               reply: aiText,
-              speechText: aiText
+              speechText: aiText.split('\n')[0].replace(/[-•]/g, '').trim(),
+              action: matchedKnowledge ? {
+                type: 'navigate',
+                navigationUrl: matchedKnowledge.actionUrl,
+                label: matchedKnowledge.actionLabel
+              } : undefined
             });
           }
         }
@@ -189,25 +182,40 @@ Give a concise, sharp, professional executive reply in 1 to 2 sentences (under 4
       }
     }
 
-    // Deterministic intelligence fallback
-    let responseText = "I'm standing by to assist with platform operations, SRE health telemetry, commercial invoicing, or content publishing across your multi-tenant properties.";
-    if (lower.includes('who are you') || lower.includes('what can you do')) {
-      responseText = "I am Zara, your autonomous Bastion Studio copilot. I monitor edge health across Move Digital and Gold Fields, dispatch SRE patches, track billing pipeline, and manage content releases.";
-    } else if (lower.includes('bastion') || lower.includes('platform')) {
-      responseText = "Bastion Studio is your centralized multi-tenant operating system, powering client digital properties with sub-second edge latency and self-healing autonomous SRE.";
+    // ─────────────────────────────────────────────────────────
+    // 5. DETERMINISTIC CMS KNOWLEDGE FALLBACK
+    // ─────────────────────────────────────────────────────────
+    if (matchedKnowledge) {
+      const reply = `${matchedKnowledge.summary}\n\nKey Steps:\n${matchedKnowledge.steps.map((s, idx) => `${idx + 1}. ${s}`).join('\n')}\n\nTip: ${matchedKnowledge.tips}`;
+      return NextResponse.json({
+        reply,
+        speechText: `${matchedKnowledge.summary} I have provided the exact steps below.`,
+        action: {
+          type: 'navigate',
+          navigationUrl: matchedKnowledge.actionUrl,
+          label: matchedKnowledge.actionLabel
+        }
+      });
     }
 
+    // Default polite assistant reply
+    const defaultReply = `I am Ask AI, your dedicated assistant for ${clientName}. I can guide you through editing pages in the Visual Live Editor, managing your navigation architecture, uploading media, inviting team members, or reviewing publication drafts. What would you like to do?`;
     return NextResponse.json({
-      reply: responseText,
-      speechText: responseText
+      reply: defaultReply,
+      speechText: `I am Ask AI for ${clientName}. How can I assist you with your website or team?`,
+      action: {
+        type: 'navigate',
+        navigationUrl: '/admin/learn',
+        label: 'Open Platform Learning Hub'
+      }
     });
 
   } catch (error: any) {
     console.error('Voice Copilot API error:', error);
     return NextResponse.json({
       error: error.message,
-      reply: "An internal platform error occurred while executing the copilot command.",
-      speechText: "An internal error occurred while executing the command."
+      reply: "An unexpected error occurred while processing your request. Please try again or check the Platform Learning Hub.",
+      speechText: "An unexpected error occurred. Please try again."
     }, { status: 500 });
   }
 }

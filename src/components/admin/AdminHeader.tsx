@@ -392,7 +392,7 @@ export function AdminHeader() {
 
         {/* ─── ZONE 3: INTELLIGENCE & UTILITY DOCK (RIGHT) ─── */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-          {/* Luminous Bastion AI Copilot Button */}
+          {/* Luminous Ask AI Button */}
           <button
             type="button"
             onClick={() => {
@@ -403,11 +403,10 @@ export function AdminHeader() {
               boxShadow: `0 4px 16px ${primaryColor}35`
             }}
             className="h-9 px-3.5 sm:px-4 rounded-full text-xs font-bold flex items-center gap-2 transition-all duration-200 text-white border border-white/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer group shadow-sm relative overflow-hidden"
-            title="Open Bastion AI Copilot Assistant"
+            title="Ask AI Assistant"
           >
             <Sparkles className="w-3.5 h-3.5 fill-current animate-pulse text-white" />
-            <span className="hidden sm:inline tracking-wide font-extrabold">Bastion Copilot</span>
-            <span className="sm:hidden font-extrabold">Copilot</span>
+            <span className="tracking-wide font-extrabold">Ask AI</span>
           </button>
 
           {/* Integrated Glass Utility Dock */}
