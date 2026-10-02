@@ -20,7 +20,7 @@ import { ApiKeysTab, getStoredApiKeys, type StoredApiKeys } from '@/components/s
 const MODEL_OPTIONS = [
   { id: 'claude-opus-5-5', provider: 'anthropic' as const, name: 'Claude Opus 5.5', tag: 'Highest capability coding', badge: 'Anthropic' },
   { id: 'claude-sonnet-5-5', provider: 'anthropic' as const, name: 'Claude Sonnet 5.5', tag: 'Fast design and code', badge: 'Anthropic' },
-  { id: 'claude-3-7-sonnet-20250219', provider: 'anthropic' as const, name: 'Claude 3.7 Sonnet', tag: 'Hybrid reasoning', badge: 'Anthropic' },
+  { id: 'claude-sonnet-5', provider: 'anthropic' as const, name: 'Claude Sonnet 5', tag: 'Upgraded frontier intelligence', badge: 'Anthropic' },
   { id: 'claude-3-5-sonnet-20241022', provider: 'anthropic' as const, name: 'Claude 3.5 Sonnet', tag: 'UI and HTML polish', badge: 'Anthropic' },
   { id: 'gpt-6-astra', provider: 'openai' as const, name: 'GPT-6 Astra', tag: 'Flagship engineering', badge: 'OpenAI' },
   { id: 'gpt-6-sol', provider: 'openai' as const, name: 'GPT-6 Sol', tag: 'Multi-step coding', badge: 'OpenAI' },

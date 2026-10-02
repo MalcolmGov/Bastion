@@ -140,10 +140,10 @@ const MODEL_OPTIONS = [
     color: 'text-purple-400 border-purple-500/30 bg-purple-500/10'
   },
   {
-    id: 'claude-3-7-sonnet-20250219',
+    id: 'claude-sonnet-5',
     provider: 'anthropic' as const,
-    name: 'Claude 3.7 Sonnet',
-    tag: 'Hybrid Reasoning & Coding',
+    name: 'Claude Sonnet 5',
+    tag: 'Upgraded Frontier Intelligence (Replaced 3.7)',
     badge: 'Anthropic',
     color: 'text-purple-400 border-purple-500/30 bg-purple-500/10'
   },

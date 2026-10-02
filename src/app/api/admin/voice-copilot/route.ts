@@ -168,7 +168,7 @@ Give a concise, sharp, professional executive reply in 1 to 2 sentences (under 4
             'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
+            model: 'claude-3-5-haiku-20241022',
             max_tokens: 150,
             messages: [{ role: 'user', content: prompt }]
           })

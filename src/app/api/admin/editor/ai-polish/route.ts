@@ -20,7 +20,17 @@ interface PolishRequestBody {
 // Maps futuristic or custom model IDs to valid upstream provider model endpoints
 function mapModelId(provider: string, modelId: string): string {
   if (provider === 'anthropic') {
-    return modelId || 'claude-3-7-sonnet-20250219';
+    if (
+      !modelId ||
+      modelId === 'claude-3-7-sonnet-20250219' ||
+      modelId === 'claude-3-7-sonnet' ||
+      modelId === 'claude-sonnet-5-5' ||
+      modelId === 'claude-opus-5-5' ||
+      modelId === 'claude-fable-5-1'
+    ) {
+      return 'claude-sonnet-5';
+    }
+    return modelId;
   }
   if (provider === 'openai') {
     if (modelId === 'gpt-6-astra') return 'o3-mini';
@@ -407,21 +417,26 @@ Target Block [${targetSection?.componentId || 'page'}]: Please polish, style, an
         });
       }
 
-      // Candidate model list:
+      // Candidate model list (resolves active model and excludes retired models):
+      const activeModel = mapModelId('anthropic', modelId);
       const candidateModels: string[] = [];
       if (availableModelIds.length > 0) {
-        if (availableModelIds.includes(modelId)) candidateModels.push(modelId);
-        candidateModels.push(...availableModelIds);
+        if (availableModelIds.includes(activeModel)) candidateModels.push(activeModel);
+        candidateModels.push(
+          ...availableModelIds.filter(
+            (m) =>
+              !m.includes('claude-3-7') &&
+              !m.includes('claude-3-sonnet') &&
+              !m.includes('claude-3-opus')
+          )
+        );
       }
 
       candidateModels.push(
-        modelId,
-        'claude-3-7-sonnet-20250219',
+        activeModel,
+        'claude-sonnet-5',
         'claude-3-5-sonnet-20241022',
-        'claude-3-5-haiku-20241022',
-        'claude-3-haiku-20240307',
-        'claude-3-opus-20240229',
-        'claude-3-sonnet-20240229'
+        'claude-3-5-haiku-20241022'
       );
 
       const uniqueModels = candidateModels.filter((m, i, arr) => m && arr.indexOf(m) === i);

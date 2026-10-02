@@ -148,7 +148,7 @@ export default function AdminApiKeysPage() {
             </div>
             <h4 className="text-sm font-semibold text-white">Claude Opus 5.5 &amp; Sonnet 5.5</h4>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Exceptional for deep Next.js architectural refactors, responsive Tailwind CSS layouts, and full-page aesthetic polish. Includes Fable 5.1 &amp; Claude 3.7 Sonnet.
+              Exceptional for deep Next.js architectural refactors, responsive Tailwind CSS layouts, and full-page aesthetic polish. Includes Claude Sonnet 5 &amp; Frontier series.
             </p>
             <div className="pt-2 border-t border-purple-500/10 text-[11px] text-purple-300/80 font-mono flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />

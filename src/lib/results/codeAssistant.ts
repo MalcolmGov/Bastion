@@ -249,6 +249,16 @@ async function completeWithProvider(input: {
 }): Promise<string> {
   const history = input.history.slice(-6);
   if (input.provider === 'anthropic') {
+    let targetModel = input.modelId || 'claude-sonnet-5';
+    if (
+      targetModel === 'claude-3-7-sonnet-20250219' ||
+      targetModel === 'claude-3-7-sonnet' ||
+      targetModel === 'claude-sonnet-5-5' ||
+      targetModel === 'claude-opus-5-5'
+    ) {
+      targetModel = 'claude-sonnet-5';
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -257,7 +267,7 @@ async function completeWithProvider(input: {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: input.modelId || 'claude-3-5-sonnet-20241022',
+        model: targetModel,
         max_tokens: 8192,
         system: input.systemPrompt,
         messages: [
