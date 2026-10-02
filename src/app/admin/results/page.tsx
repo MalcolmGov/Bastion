@@ -38,12 +38,14 @@ export default function ResultsStudioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: websiteUrl }),
+        signal: AbortSignal.timeout(25_000),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Could not read that website');
       setBrand(body.brand);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not read that website');
+      const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+      setError(timedOut ? 'That website took too long to read. Try again, or continue without it.' : (err instanceof Error ? err.message : 'Could not read that website'));
     } finally {
       setBusy(null);
     }

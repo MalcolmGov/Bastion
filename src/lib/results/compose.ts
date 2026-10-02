@@ -25,8 +25,18 @@ function issuerFrom(glyphs: PdfGlyph[]): string {
   const caps = names.find((glyph) => glyph.text === glyph.text.toUpperCase());
   if (caps) return caps.text.trim();
   if (names[0]) return names[0].text.trim();
+  const organisation = glyphs
+    .filter((glyph) => glyph.page <= 3
+      && glyph.text.length >= 6
+      && glyph.text.length <= 48
+      && glyph.text.split(/\s+/).length <= 6
+      && /\b(group|limited|plc|ltd)\b/i.test(glyph.text)
+      && !/[.!?]$/.test(glyph.text)
+      && !/statement|results|performance|opportunity|operates/i.test(glyph.text))
+    .sort((left, right) => right.height - left.height)[0];
+  if (organisation) return organisation.text.trim();
   const lines = linesOf(glyphs.filter((glyph) => glyph.page === 1));
-  return lines.find((line) => line.length > 3 && !/^(19|20)\d{2}$/.test(line)) || 'Corporate results';
+  return lines.find((line) => line.length > 3 && !/^(19|20)\d{2}$/.test(line) && !/^[A-Za-z]+\s+20\d{2}$/.test(line)) || 'Corporate results';
 }
 
 const MONTHS = new Set(['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']);
@@ -43,6 +53,10 @@ function tidyPeriod(raw: string): string {
 
 function periodFrom(glyphs: PdfGlyph[], fallback: string): string {
   const lines = linesOf(glyphs.filter((glyph) => glyph.page <= 2));
+  const month = lines.find((line) => /^(january|february|march|april|may|june|july|august|september|october|november|december)\s+20\d{2}$/i.test(line));
+  if (month) {
+    return month.toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+  }
   const raw = lines.find((line) => /ended \d{1,2} \w+ 20\d{2}/i.test(line))
     || lines.find((line) => /interim results|financial year/i.test(line))
     || fallback;
@@ -85,10 +99,12 @@ export function composeResultsDocument(
   shades: PdfShade[] = [],
 ): ResultsDocument {
   const reconstructed = reconstructStatements(glyphs);
+  const publication = buildPublication(glyphs, shades);
   const issuer = issuerFrom(glyphs);
   const periodLabel = periodFrom(glyphs, reconstructed.statements.find((statement) => statement.period)?.period || 'Financial results');
   const warnings = [...reconstructed.warnings];
-  if (reconstructed.statements.length === 0) {
+  const hasFigures = publication.some((block) => block.kind === 'table' || block.kind === 'metrics');
+  if (reconstructed.statements.length === 0 && !hasFigures) {
     warnings.push('No financial table with aligned figure columns was found.');
   }
 
@@ -104,6 +120,6 @@ export function composeResultsDocument(
     warnings,
     sourceFilename,
     pageCount,
-    publication: buildPublication(glyphs, shades),
+    publication,
   };
 }

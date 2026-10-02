@@ -350,10 +350,16 @@ export function reconstructStatements(glyphs: PdfGlyph[]): {
       row.cells = kept.map((columnIndex) => row.cells[columnIndex] ?? null);
       if (row.kind === 'section') return;
       row.confidence = confidenceFor(row.cells, keptRoles);
-      if (row.confidence < 1) warnings.push(`“${row.label || 'A total row'}” is missing a figure.`);
     });
 
     const title = polishTitle(clean(titleLines.join(' ')) || 'Financial table', rows);
+    if (title === 'Supporting analysis' || title === 'Financial table') {
+      index = cursor;
+      continue;
+    }
+    rows.forEach((row) => {
+      if (row.kind !== 'section' && row.confidence < 1) warnings.push(`“${row.label || 'A total row'}” is missing a figure.`);
+    });
     const confidence = rows.length ? rows.reduce((sum, row) => sum + row.confidence, 0) / rows.length : 0;
     statements.push({
       id: `stmt_${statements.length}`,
