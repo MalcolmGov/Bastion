@@ -97,7 +97,7 @@ export default function AdminLoginPage() {
             href="/"
             className="text-xs font-medium text-slate-400 hover:text-white transition-colors duration-150 flex items-center space-x-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-800/50 border border-transparent hover:border-slate-700/50"
           >
-            <span>Gold Fields Corporate</span>
+            <span>Corporate Portal</span>
             <ArrowRight className="w-3.5 h-3.5 opacity-70" />
           </Link>
         </div>

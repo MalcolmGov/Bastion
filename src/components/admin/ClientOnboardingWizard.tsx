@@ -1998,6 +1998,38 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                         </div>
                       </div>
 
+                      {provisionResult.user.inviteUrl && (
+                        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-950 border border-purple-200 dark:border-purple-900/50 flex items-center justify-between gap-3 text-xs">
+                          <div className="min-w-0">
+                            <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold uppercase block">
+                              Set Password Activation Link (Sent in Welcome Email)
+                            </span>
+                            <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300 truncate block">
+                              {provisionResult.user.inviteUrl}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(provisionResult.user.inviteUrl, 'inviteUrl')}
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1 cursor-pointer transition"
+                            >
+                              {copiedKey === 'inviteUrl' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                              <span>{copiedKey === 'inviteUrl' ? 'Copied' : 'Copy Link'}</span>
+                            </button>
+                            <a
+                              href={provisionResult.user.inviteUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-[11px] font-bold text-white flex items-center gap-1 cursor-pointer transition"
+                            >
+                              <span>Test Link</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Resend Welcome Email Service Status Card */}
                       <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">

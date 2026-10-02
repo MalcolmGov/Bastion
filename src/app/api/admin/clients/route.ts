@@ -4,6 +4,7 @@ import { WebsiteAssembler } from '@/lib/studio/assembler';
 import { requireAgencyUser, requireUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import { hashPassword } from '@/lib/auth/password';
+import { generateToken } from '@/lib/auth/auth';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 import { sendTransactionalEmail } from '@/lib/email/delivery';
 
@@ -324,6 +325,8 @@ export async function POST(req: NextRequest) {
       const userRole = String(initialUser.role || 'content_editor');
       const rawPassword = initialUser.password || `${name.replace(/[^a-zA-Z0-9]/g, '')}2026!`;
       const passwordHash = hashPassword(rawPassword);
+      const inviteToken = generateToken();
+      const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
       const existingUser = await db.execute({
         sql: `SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1`,
@@ -334,14 +337,14 @@ export async function POST(req: NextRequest) {
       if (existingUser.rows.length > 0) {
         userId = String(existingUser.rows[0].id);
         await db.execute({
-          sql: `UPDATE users SET name = ?, password_hash = ?, role = ?, client_id = ?, region_scope = ? WHERE id = ?`,
-          args: [userName, passwordHash, userRole, clientId, name, userId]
+          sql: `UPDATE users SET name = ?, password_hash = ?, role = ?, client_id = ?, region_scope = ?, invite_token = ?, invite_token_expires_at = ?, must_reset_password = 1 WHERE id = ?`,
+          args: [userName, passwordHash, userRole, clientId, name, inviteToken, expiresAt, userId]
         });
       } else {
         userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         await db.execute({
-          sql: `INSERT INTO users (id, name, email, password_hash, role, region_scope, client_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          sql: `INSERT INTO users (id, name, email, password_hash, role, region_scope, client_id, invite_token, invite_token_expires_at, must_reset_password, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
           args: [
             userId,
             userName,
@@ -350,6 +353,8 @@ export async function POST(req: NextRequest) {
             userRole,
             name, // Scoped to this corporate client
             clientId,
+            inviteToken,
+            expiresAt,
             now
           ]
         });
@@ -366,14 +371,15 @@ export async function POST(req: NextRequest) {
 
       const host = req.headers.get('host') || 'localhost:3010';
       const protocol = host.includes('localhost') ? 'http' : 'https';
-      const loginUrl = `${protocol}://${host}/admin/login?email=${encodeURIComponent(userEmail)}`;
+      const inviteUrl = `${protocol}://${host}/admin/invite?token=${inviteToken}`;
+      const directLoginUrl = `${protocol}://${host}/admin/login?email=${encodeURIComponent(userEmail)}`;
 
       const emailHtml = generateWelcomeEmailHtml({
         recipientName: userName,
         recipientEmail: userEmail,
         roleTitle: roleTitles[userRole] || 'Corporate Workspace Member',
         clientName: name,
-        loginUrl,
+        loginUrl: inviteUrl,
         temporaryPassword: rawPassword,
         inviterName: `${gate.user.name || 'Bastion Agency Operations'} (Bastion Group)`
       });
@@ -384,7 +390,7 @@ export async function POST(req: NextRequest) {
         html: emailHtml,
         roleTitle: roleTitles[userRole] || 'Corporate Workspace Member',
         clientName: name,
-        inviteUrl: loginUrl
+        inviteUrl
       });
 
       createdUser = {
@@ -393,7 +399,9 @@ export async function POST(req: NextRequest) {
         email: userEmail,
         role: userRole,
         temporaryPassword: rawPassword,
-        loginUrl,
+        inviteUrl,
+        inviteToken,
+        loginUrl: directLoginUrl,
         delivery: emailDelivery
       };
     }

@@ -3,6 +3,62 @@ import { getDb } from '@/lib/db/client';
 import { createSession, hashPassword } from '@/lib/auth/auth';
 import crypto from 'crypto';
 
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const token = searchParams.get('token');
+
+    if (!token || typeof token !== 'string') {
+      return NextResponse.json({ valid: false, error: 'Invite token is required' }, { status: 400 });
+    }
+
+    const db = getDb();
+    const userRes = await db.execute({
+      sql: `SELECT id, name, email, role, region_scope, client_id, invite_token_expires_at FROM users WHERE invite_token = ? LIMIT 1`,
+      args: [token.trim()]
+    });
+
+    if (userRes.rows.length === 0) {
+      return NextResponse.json({ valid: false, error: 'Invalid or expired invite token' }, { status: 404 });
+    }
+
+    const row = userRes.rows[0];
+    if (row.invite_token_expires_at) {
+      const expiresAt = new Date(String(row.invite_token_expires_at)).getTime();
+      if (Date.now() > expiresAt) {
+        return NextResponse.json({ valid: false, error: 'This invitation has expired. Please request a new invite link.' }, { status: 410 });
+      }
+    }
+
+    let clientName = String(row.region_scope || 'Bastion Workspace');
+    if (row.client_id) {
+      try {
+        const clientRes = await db.execute({
+          sql: `SELECT name FROM clients WHERE id = ? LIMIT 1`,
+          args: [String(row.client_id)]
+        });
+        if (clientRes.rows.length > 0 && clientRes.rows[0].name) {
+          clientName = String(clientRes.rows[0].name);
+        }
+      } catch (_) {}
+    }
+
+    return NextResponse.json({
+      valid: true,
+      user: {
+        name: String(row.name),
+        email: String(row.email),
+        role: String(row.role),
+        clientName,
+        clientId: row.client_id ? String(row.client_id) : null
+      }
+    });
+  } catch (err: any) {
+    console.error('Validate invite error:', err);
+    return NextResponse.json({ valid: false, error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
