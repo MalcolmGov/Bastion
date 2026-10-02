@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test:security": "node --test tests/security/*.test.cjs",
     "test:editor": "node --test tests/editor/editor.test.cjs",
-    "test:security": "node --test tests/security/*.test.cjs",
+    "test:workspace": "node --test tests/workspace/*.test.cjs",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
