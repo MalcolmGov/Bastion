@@ -136,3 +136,14 @@ export async function assertReleaseAccess(user: StudioUser, releaseId: string): 
   if (String(res.rows[0].client_id) !== user.client_id) return denied(404, 'Release not found');
   return { ok: true, user };
 }
+
+export async function assertWhistleblowerAccess(user: StudioUser, reportId: string): Promise<Guard> {
+  const res = await getDb().execute({
+    sql: 'SELECT client_id FROM whistleblower_reports WHERE id = ? LIMIT 1',
+    args: [reportId]
+  });
+  if (res.rows.length === 0 || !clientOwns(user, String(res.rows[0].client_id || ''))) {
+    return denied(404, 'Report not found');
+  }
+  return { ok: true, user };
+}

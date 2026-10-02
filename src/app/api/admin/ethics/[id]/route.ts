@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guard';
+import { requirePermission, assertWhistleblowerAccess } from '@/lib/auth/guard';
 import { updateWhistleblowerStatus, WhistleblowerStatus } from '@/lib/ethics/ethicsService';
 
 export const dynamic = 'force-dynamic';
@@ -9,16 +9,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const gate = await requireUser();
+    const gate = await requirePermission('ethics:manage');
     if (!gate.ok) return gate.response;
     const user = gate.user;
 
     const { id } = await params;
+    const access = await assertWhistleblowerAccess(user, id);
+    if (!access.ok) return access.response;
     const body = await req.json();
     const { status, resolutionSummary } = body;
 
-    if (!status) {
-      return NextResponse.json({ error: 'Status is required.' }, { status: 400 });
+    if (!['received', 'under_investigation', 'substantiated', 'dismissed', 'resolved'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid report status.' }, { status: 400 });
     }
 
     await updateWhistleblowerStatus(

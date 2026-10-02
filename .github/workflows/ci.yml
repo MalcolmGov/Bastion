@@ -37,6 +37,9 @@ jobs:
       - name: Install Production & Dev Dependencies
         run: npm ci
 
+      - name: Run Tenant Authorization Regression Tests
+        run: npm run test:security
+
       - name: Run Gates 1 & 2 Automated Security Verification Suite
         run: npx tsx scripts/verify-production-gates.ts
 
