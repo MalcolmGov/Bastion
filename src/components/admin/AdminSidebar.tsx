@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAdminAuth } from './AdminAuthProvider';
@@ -33,6 +33,7 @@ import {
   UserPlus,
   Bot,
   ArrowRightLeft,
+  Globe,
   Globe2,
   SlidersHorizontal,
   FolderOpen,
@@ -49,7 +50,9 @@ import {
   ChevronDown,
   ChevronsLeft,
   CheckCircle,
-  Home
+  Home,
+  Plus,
+  X
 } from 'lucide-react';
 
 export function AdminSidebar() {
@@ -60,10 +63,33 @@ export function AdminSidebar() {
     clients,
     activeClient,
     activeSite,
+    clientWebsites,
+    setActiveClientId,
+    setActiveSiteId,
+    createWebsite,
     portalViewMode,
     setPortalViewMode
   } = useStudioWorkspace();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
+  const [showAddWebsiteModal, setShowAddWebsiteModal] = useState(false);
+  const [newWebsiteName, setNewWebsiteName] = useState('');
+  const [newWebsiteDomain, setNewWebsiteDomain] = useState('');
+  const [newWebsiteBlueprint, setNewWebsiteBlueprint] = useState('corporate');
+  const [isCreatingWebsite, setIsCreatingWebsite] = useState(false);
+  const [createWebsiteError, setCreateWebsiteError] = useState('');
+  const workspaceDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close workspace dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (workspaceDropdownRef.current && !workspaceDropdownRef.current.contains(event.target as Node)) {
+        setWorkspaceDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Initialize and persist collapsed state
   useEffect(() => {
@@ -260,23 +286,131 @@ export function AdminSidebar() {
                 </span>
               </div>
 
-              {/* Workspace Switcher Card */}
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-slate-700/80 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer group">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/25 ring-1 ring-white/20">
-                    {activeClient?.name ? activeClient.name.substring(0, 2).toUpperCase() : 'AU'}
-                  </div>
-                  <div className="min-w-0 text-left">
-                    <div className="font-bold text-xs text-white truncate leading-tight group-hover:text-blue-300 transition-colors" title={activeClient?.name || 'Aurum Energy & Resources'}>
-                      {activeClient?.name || 'Aurum Energy & Resources'}
+              {/* Workspace Switcher Card with Multi-Site Dropdown */}
+              <div ref={workspaceDropdownRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceDropdownOpen(!workspaceDropdownOpen)}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-slate-700/80 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer group text-left"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/25 ring-1 ring-white/20">
+                      {activeClient?.name ? activeClient.name.substring(0, 2).toUpperCase() : 'AU'}
                     </div>
-                    <div className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>Corporate CMS</span>
+                    <div className="min-w-0 text-left">
+                      <div className="font-bold text-xs text-white truncate leading-tight group-hover:text-blue-300 transition-colors" title={activeClient?.name || 'Aurum Energy & Resources'}>
+                        {activeClient?.name || 'Aurum Energy & Resources'}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-medium flex items-center gap-1.5 mt-0.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+                        <span className="truncate text-slate-300 font-semibold max-w-[95px]" title={activeSite?.name || 'Flagship Portal'}>
+                          {activeSite?.name || 'Flagship Portal'}
+                        </span>
+                        {clientWebsites.length > 1 && (
+                          <span className="text-[9px] px-1 py-0.2 rounded font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 shrink-0">
+                            {clientWebsites.length}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 group-hover:translate-y-0.5 transition-all shrink-0 ml-1" />
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-transform duration-200 shrink-0 ml-1 ${workspaceDropdownOpen ? 'rotate-180 text-white' : ''}`} />
+                </button>
+
+                {/* Dropdown Popover */}
+                {workspaceDropdownOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-72 bg-[#0F141C] border border-slate-800/90 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 text-slate-200 backdrop-blur-xl">
+                    <div className="flex items-center justify-between px-2 pb-2 border-b border-slate-800/80 mb-2">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <Globe className="w-3 h-3 text-blue-400" />
+                        <span>Corporate Websites ({clientWebsites.length})</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWorkspaceDropdownOpen(false);
+                          setShowAddWebsiteModal(true);
+                        }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 flex items-center gap-1 transition cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Add</span>
+                      </button>
+                    </div>
+
+                    {/* Websites list */}
+                    <div className="space-y-1 max-h-60 overflow-y-auto scrollbar-thin">
+                      {clientWebsites.map((site) => {
+                        const isCurrent = site.id === activeSite?.id;
+                        return (
+                          <button
+                            key={site.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveSiteId(site.id);
+                              setWorkspaceDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition cursor-pointer group ${
+                              isCurrent
+                                ? 'bg-blue-600/20 text-white border border-blue-500/40 shadow-xs'
+                                : 'hover:bg-white/[0.06] text-slate-300 hover:text-white border border-transparent'
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-xs truncate">{site.name}</span>
+                                <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium shrink-0 ${
+                                  site.status === 'published'
+                                    ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
+                                    : 'bg-amber-950/80 text-amber-400 border border-amber-800/50'
+                                }`}>
+                                  {site.status === 'published' ? 'Live' : 'Draft'}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono truncate mt-0.5">
+                                {site.primaryDomain || `${site.slug}.bastion.digital`}
+                              </div>
+                            </div>
+                            {isCurrent && (
+                              <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-xs">
+                                <Check className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Agency Client Switcher Section */}
+                    {isAgencyUser(user) && (
+                      <div className="pt-2 mt-2 border-t border-slate-800/80">
+                        <div className="px-2 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Corporate Clients ({clients.length})
+                        </div>
+                        <div className="space-y-0.5 max-h-36 overflow-y-auto scrollbar-thin">
+                          {clients.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setActiveClientId(c.id);
+                                setWorkspaceDropdownOpen(false);
+                              }}
+                              className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+                                c.id === activeClient?.id
+                                  ? 'bg-purple-600/20 text-purple-300 font-bold'
+                                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                              }`}
+                            >
+                              <span className="truncate">{c.name}</span>
+                              <span className="text-[9px] text-slate-500 font-mono">{c.websites?.length || 1} sites</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -516,6 +650,139 @@ export function AdminSidebar() {
           </div>
         )}
       </div>
+      {/* Add Website Modal */}
+      {showAddWebsiteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#0F141C] border border-slate-800 rounded-2xl shadow-2xl p-6 text-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-blue-500" />
+                <h3 className="text-base font-bold text-white">Add Web Property</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddWebsiteModal(false);
+                  setCreateWebsiteError('');
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-400">
+              Provision a new website under <strong className="text-white">{activeClient?.name}</strong>.
+            </div>
+
+            {createWebsiteError && (
+              <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800/80 text-rose-300 text-xs">
+                {createWebsiteError}
+              </div>
+            )}
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newWebsiteName.trim()) return;
+                setIsCreatingWebsite(true);
+                setCreateWebsiteError('');
+                const res = await createWebsite({
+                  name: newWebsiteName.trim(),
+                  primaryDomain: newWebsiteDomain.trim() || undefined,
+                  blueprintId: newWebsiteBlueprint,
+                  status: 'published'
+                });
+                setIsCreatingWebsite(false);
+                if (res.success) {
+                  setShowAddWebsiteModal(false);
+                  setNewWebsiteName('');
+                  setNewWebsiteDomain('');
+                } else {
+                  setCreateWebsiteError(res.error || 'Failed to create website');
+                }
+              }}
+              className="space-y-3.5"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Website Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Investor Relations Hub"
+                  value={newWebsiteName}
+                  onChange={(e) => {
+                    setNewWebsiteName(e.target.value);
+                    if (!newWebsiteDomain) {
+                      const slug = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                      setNewWebsiteDomain(slug ? `${slug}.${activeClient?.slug || 'aurum'}.bastion.digital` : '');
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Primary Domain / URL
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. investors.aurum.bastion.digital"
+                  value={newWebsiteDomain}
+                  onChange={(e) => setNewWebsiteDomain(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Property Blueprint
+                </label>
+                <select
+                  value={newWebsiteBlueprint}
+                  onChange={(e) => setNewWebsiteBlueprint(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="corporate">Corporate Flagship</option>
+                  <option value="investor_relations">Investor Relations & SENS Hub</option>
+                  <option value="sustainability">Sustainability & 2030 ESG</option>
+                  <option value="careers">Careers & Global Talent</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddWebsiteModal(false);
+                    setCreateWebsiteError('');
+                  }}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingWebsite || !newWebsiteName.trim()}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold transition shadow-md shadow-blue-600/30 flex items-center gap-1.5 cursor-pointer"
+                >
+                  {isCreatingWebsite ? (
+                    <span>Provisioning...</span>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Provision Website</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

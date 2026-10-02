@@ -41,7 +41,9 @@ export function AdminHeader() {
     clients,
     activeClient,
     activeSite,
+    clientWebsites,
     setActiveClientId,
+    setActiveSiteId,
     portalViewMode,
     setPortalViewMode
   } = useStudioWorkspace();
@@ -150,181 +152,188 @@ export function AdminHeader() {
             </span>
           </div>
 
-          {/* Workspace Perspective Switcher & Website Selector (Agency Operations Only) */}
-          {!isClientPortal && (
-            <>
-              {agency && (
-                <div ref={perspectiveDropdownRef} className="relative ml-2">
+          {/* Workspace Perspective Switcher (Agency Operations Only) */}
+          {!isClientPortal && agency && (
+            <div ref={perspectiveDropdownRef} className="relative ml-2">
+              <button
+                type="button"
+                onClick={() => setPerspectiveDropdownOpen(!perspectiveDropdownOpen)}
+                className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-slate-200/70 dark:bg-slate-900/60 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all shadow-2xs group cursor-pointer"
+                title="Click to switch between Agency Workspace and Client CMS"
+              >
+                <span 
+                  style={{ backgroundColor: primaryColor }}
+                  className="w-2 h-2 rounded-full animate-pulse shrink-0" 
+                />
+                <span className="truncate max-w-[130px] sm:max-w-[170px]">
+                  Bastion Studio
+                </span>
+                <ChevronDown 
+                  className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-white transition-transform duration-200 ${
+                    perspectiveDropdownOpen ? 'rotate-180 text-white' : ''
+                  }`} 
+                />
+              </button>
+
+              {perspectiveDropdownOpen && (
+                <div className="absolute left-0 mt-2 w-80 bg-[#0F141C] border border-slate-800/90 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-200 text-slate-200 backdrop-blur-xl">
+                  <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 mb-2 flex items-center justify-between">
+                    <span>Workspace Perspective</span>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: primaryColor }} />
+                  </div>
+                  
+                  {/* Agency Studio Option */}
                   <button
                     type="button"
-                    onClick={() => setPerspectiveDropdownOpen(!perspectiveDropdownOpen)}
-                    className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-slate-200/70 dark:bg-slate-900/60 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all shadow-2xs group cursor-pointer"
-                    title="Click to switch between Agency Workspace and Client CMS"
+                    onClick={() => {
+                      setPortalViewMode('agency');
+                      setPerspectiveDropdownOpen(false);
+                    }}
+                    style={{
+                      backgroundColor: `${primaryColor}18`,
+                      borderColor: `${primaryColor}40`
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-white font-bold border shadow-xs"
                   >
-                    <span 
-                      style={{ backgroundColor: primaryColor }}
-                      className="w-2 h-2 rounded-full animate-pulse shrink-0" 
-                    />
-                    <span className="truncate max-w-[130px] sm:max-w-[170px]">
-                      Bastion Studio
-                    </span>
-                    <ChevronDown 
-                      className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-white transition-transform duration-200 ${
-                        perspectiveDropdownOpen ? 'rotate-180 text-white' : ''
-                      }`} 
-                    />
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
+                      style={{
+                        backgroundColor: `${primaryColor}20`,
+                        borderColor: `${primaryColor}30`,
+                        color: primaryColor
+                      }}
+                    >
+                      <Sliders className="w-4 h-4" />
+                    </div>
+                    <div className="text-left flex-1 min-w-0">
+                      <div className="text-sm font-bold text-white flex items-center justify-between">
+                        <span>Bastion Agency Studio</span>
+                        <Check className="w-4 h-4" style={{ color: primaryColor }} />
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-normal truncate">
+                        Multi-tenant websites, brand systems &amp; publishing
+                      </div>
+                    </div>
                   </button>
 
-                  {perspectiveDropdownOpen && (
-                    <div className="absolute left-0 mt-2 w-80 bg-[#0F141C] border border-slate-800/90 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-200 text-slate-200 backdrop-blur-xl">
-                      <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/80 mb-2 flex items-center justify-between">
-                        <span>Workspace Perspective</span>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: primaryColor }} />
+                  {/* Client CMS Option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPortalViewMode('client');
+                      setPerspectiveDropdownOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer mt-1 text-slate-300 hover:text-white hover:bg-slate-800/70 border border-transparent"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                      <Building className="w-4 h-4" />
+                    </div>
+                    <div className="text-left flex-1 min-w-0">
+                      <div className="text-sm font-bold text-white flex items-center justify-between">
+                        <span>Client CMS Portal</span>
                       </div>
-                      
-                      {/* Agency Studio Option */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPortalViewMode('agency');
-                          setPerspectiveDropdownOpen(false);
-                        }}
-                        style={{
-                          backgroundColor: `${primaryColor}18`,
-                          borderColor: `${primaryColor}40`
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-white font-bold border shadow-xs"
-                      >
-                        <div 
-                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
-                          style={{
-                            backgroundColor: `${primaryColor}20`,
-                            borderColor: `${primaryColor}30`,
-                            color: primaryColor
-                          }}
-                        >
-                          <Sliders className="w-4 h-4" />
-                        </div>
-                        <div className="text-left flex-1 min-w-0">
-                          <div className="text-sm font-bold text-white flex items-center justify-between">
-                            <span>Bastion Agency Studio</span>
-                            <Check className="w-4 h-4" style={{ color: primaryColor }} />
-                          </div>
-                          <div className="text-[11px] text-slate-400 font-normal truncate">
-                            Multi-tenant websites, brand systems &amp; publishing
-                          </div>
-                        </div>
-                      </button>
+                      <div className="text-[11px] text-slate-400 font-normal truncate">
+                        {activeClient?.name || 'Corporate'} &bull; Zero-code content editor
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-                      {/* Client CMS Option */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPortalViewMode('client');
-                          setPerspectiveDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer mt-1 text-slate-300 hover:text-white hover:bg-slate-800/70 border border-transparent"
+          {/* Connected Client Website Selector (Universal across Agency & Client CMS) */}
+          {activeClient && (
+            <div ref={siteDropdownRef} className="relative hidden md:block">
+              <button
+                type="button"
+                onClick={() => setSiteSwitcherOpen(!siteSwitcherOpen)}
+                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-900/60 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all shadow-2xs group cursor-pointer"
+                title="Active Corporate Web Property"
+              >
+                <Globe className="w-3.5 h-3.5 text-blue-500" />
+                <span className="truncate max-w-[130px] font-semibold text-slate-800 dark:text-slate-200">
+                  {activeSite?.name || activeClient.name}
+                </span>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${activeSite?.status === 'published' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                {clientWebsites.length > 1 && (
+                  <span className="text-[9px] px-1 py-0.2 rounded font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                    {clientWebsites.length}
+                  </span>
+                )}
+                <ChevronDown 
+                  className={`w-3 h-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-transform duration-200 ${
+                    siteSwitcherOpen ? 'rotate-180 text-blue-500' : ''
+                  }`} 
+                />
+              </button>
+
+              {siteSwitcherOpen && (
+                <div className="absolute left-0 mt-2 w-80 bg-[#0F141C] border border-slate-800/90 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-200 text-slate-200 backdrop-blur-xl">
+                  <div className="px-2 pb-2 border-b border-slate-800/80 mb-1 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {activeClient.name} Properties
+                    </span>
+                    <span className="text-[10px] text-blue-400 font-bold">{clientWebsites.length} total</span>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto py-1 space-y-1 scrollbar-thin">
+                    {clientWebsites.map((siteItem) => {
+                      const isSelected = siteItem.id === activeSite?.id;
+                      return (
+                        <button
+                          key={siteItem.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveSiteId(siteItem.id);
+                            setSiteSwitcherOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition cursor-pointer group ${
+                            isSelected
+                              ? 'bg-blue-600/20 text-white border border-blue-500/40 shadow-xs'
+                              : 'hover:bg-white/[0.06] text-slate-300 hover:text-white border border-transparent'
+                          }`}
+                        >
+                          <div className="min-w-0 pr-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-xs truncate">{siteItem.name}</span>
+                              <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium shrink-0 ${
+                                siteItem.status === 'published'
+                                  ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/50'
+                                  : 'bg-amber-950/80 text-amber-400 border border-amber-800/50'
+                              }`}>
+                                {siteItem.status === 'published' ? 'Live' : 'Draft'}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono truncate mt-0.5">
+                              {siteItem.primaryDomain || `${siteItem.slug}.bastion.digital`}
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-xs">
+                              <Check className="w-3 h-3 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {agency && (
+                    <div className="border-t border-slate-800/80 pt-1.5 mt-1 px-1">
+                      <Link
+                        href="/admin/clients"
+                        onClick={() => setSiteSwitcherOpen(false)}
+                        className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-semibold text-purple-400 hover:bg-purple-950/30 transition"
                       >
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-                          <Building className="w-4 h-4" />
-                        </div>
-                        <div className="text-left flex-1 min-w-0">
-                          <div className="text-sm font-bold text-white flex items-center justify-between">
-                            <span>Client CMS Portal</span>
-                          </div>
-                          <div className="text-[11px] text-slate-400 font-normal truncate">
-                            {activeClient?.name || 'Corporate'} &bull; Zero-code content editor
-                          </div>
-                        </div>
-                      </button>
+                        <span>Switch Client Portfolio &rarr;</span>
+                        <span className="text-[10px] text-slate-500 font-mono">{clients.length} tenants</span>
+                      </Link>
                     </div>
                   )}
                 </div>
               )}
-
-              {/* Connected Client Website Selector */}
-              <div ref={siteDropdownRef} className="relative hidden md:block">
-                <button
-                  type="button"
-                  onClick={() => setSiteSwitcherOpen(!siteSwitcherOpen)}
-                  className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full text-xs font-medium bg-slate-900/40 hover:bg-slate-800/80 border border-slate-800/60 hover:border-slate-700/80 text-slate-300 hover:text-white transition-all shadow-2xs group cursor-pointer"
-                >
-                  <Globe className="w-3.5 h-3.5" style={{ color: primaryColor }} />
-                  <span className="truncate max-w-[130px] font-semibold text-slate-200">
-                    {activeClient?.name || 'Bastion Group'}
-                  </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Production Site Live" />
-                  <ChevronDown 
-                    className={`w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-transform duration-200 ${
-                      siteSwitcherOpen ? 'rotate-180' : ''
-                    }`} 
-                  />
-                </button>
-
-                {siteSwitcherOpen && (
-                  <div className="absolute left-0 mt-2 w-72 bg-[#0F141C] border border-slate-800/90 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200 text-slate-200 backdrop-blur-xl">
-                    <div className="px-2 pb-2 border-b border-slate-800/80">
-                      <div className="relative">
-                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
-                        <input
-                          type="text"
-                          placeholder="Filter corporate clients..."
-                          value={switcherSearch}
-                          onChange={(e) => setSwitcherSearch(e.target.value)}
-                          className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-900 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="max-h-60 overflow-y-auto py-1 space-y-0.5">
-                      {filteredClients.map((c) => {
-                        const isActive = c.id === activeClient?.id;
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => {
-                              setActiveClientId(c.id);
-                              setSiteSwitcherOpen(false);
-                            }}
-                            style={isActive ? {
-                              backgroundColor: `${primaryColor}18`,
-                              borderColor: `${primaryColor}40`,
-                              color: '#ffffff'
-                            } : undefined}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition cursor-pointer ${
-                              isActive
-                                ? 'font-bold border shadow-xs'
-                                : 'text-slate-300 hover:bg-slate-800/70 hover:text-white border border-transparent'
-                            }`}
-                          >
-                            <div className="truncate pr-2">
-                              <div className="font-semibold text-white truncate">{c.name}</div>
-                              <div className="text-[10px] text-slate-400 capitalize truncate">
-                                {c.websites?.[0]?.name || c.industry.replace('_', ' ')}
-                              </div>
-                            </div>
-                            {isActive && <Check className="w-3.5 h-3.5 shrink-0" style={{ color: primaryColor }} />}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="border-t border-slate-800/80 pt-1.5 px-1">
-                      <Link
-                        href="/admin/create"
-                        onClick={() => setSiteSwitcherOpen(false)}
-                        style={{ color: primaryColor }}
-                        className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:opacity-85 transition"
-                      >
-                        <PlusCircle className="w-3.5 h-3.5" />
-                        <span>Create New Client Website</span>
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
+            </div>
           )}
         </div>
 

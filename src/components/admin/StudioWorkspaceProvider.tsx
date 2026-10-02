@@ -29,9 +29,11 @@ interface StudioWorkspaceContextType {
   clients: WorkspaceClient[];
   activeClient: WorkspaceClient | null;
   activeSite: WorkspaceSite | null;
+  clientWebsites: WorkspaceSite[];
   setActiveClientId: (id: string) => void;
   setActiveSiteId: (id: string) => void;
   refreshClients: () => Promise<void>;
+  createWebsite: (data: { name: string; slug?: string; blueprintId?: string; designCollectionId?: string; primaryDomain?: string; status?: string; tagline?: string }) => Promise<{ success: boolean; website?: any; error?: string }>;
   isLoading: boolean;
   portalViewMode: 'client' | 'agency';
   setPortalViewMode: (mode: 'client' | 'agency') => void;
@@ -41,9 +43,11 @@ const StudioWorkspaceContext = createContext<StudioWorkspaceContextType>({
   clients: [],
   activeClient: null,
   activeSite: null,
+  clientWebsites: [],
   setActiveClientId: () => {},
   setActiveSiteId: () => {},
   refreshClients: async () => {},
+  createWebsite: async () => ({ success: false, error: 'Not initialized' }),
   isLoading: true,
   portalViewMode: 'agency',
   setPortalViewMode: () => {}
@@ -177,6 +181,40 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     setActiveSiteIdState(id);
     if (typeof window !== 'undefined') {
       localStorage.setItem('move_studio_active_site', id);
+      document.cookie = `bastion_active_site_id=${encodeURIComponent(id)}; path=/; max-age=31536000; SameSite=Lax`;
+      window.dispatchEvent(new CustomEvent('studio-active-site-changed', { detail: { siteId: id } }));
+    }
+  };
+
+  const createWebsite = async (data: {
+    name: string;
+    slug?: string;
+    blueprintId?: string;
+    designCollectionId?: string;
+    primaryDomain?: string;
+    status?: string;
+    tagline?: string;
+  }) => {
+    try {
+      const res = await fetch('/api/admin/websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: activeClient?.id,
+          ...data
+        })
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        return { success: false, error: result.error || 'Failed to create website' };
+      }
+      await fetchClients();
+      if (result.website?.id) {
+        setActiveSiteId(result.website.id);
+      }
+      return { success: true, website: result.website };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error' };
     }
   };
 
@@ -189,7 +227,8 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   };
 
   const activeClient = clients.find(c => c.id === activeClientId) || clients[0] || null;
-  const activeSite = activeClient?.websites?.find(w => w.id === activeSiteId) || activeClient?.websites?.[0] || null;
+  const clientWebsites = activeClient?.websites || [];
+  const activeSite = clientWebsites.find(w => w.id === activeSiteId) || clientWebsites[0] || null;
 
   return (
     <StudioWorkspaceContext.Provider
@@ -197,9 +236,11 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
         clients,
         activeClient,
         activeSite,
+        clientWebsites,
         setActiveClientId,
         setActiveSiteId,
         refreshClients: fetchClients,
+        createWebsite,
         isLoading,
         portalViewMode,
         setPortalViewMode

@@ -176,6 +176,34 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
     now
   ]);
 
+  await upsertWebsite(db, [
+    'site_goldfields_investors',
+    'client_goldfields',
+    'Gold Fields Investor Relations',
+    'goldfields-investors',
+    'corporate',
+    'contemporary',
+    'published',
+    'investors.goldfields.com',
+    JSON.stringify({ tagline: 'JSE: GFI | NYSE: GFI — Audited Results, Presentations & Shareholder Calendar' }),
+    now,
+    now
+  ]);
+
+  await upsertWebsite(db, [
+    'site_goldfields_sustainability',
+    'client_goldfields',
+    'Gold Fields 2030 ESG & Sustainability',
+    'goldfields-esg',
+    'corporate',
+    'editorial',
+    'published',
+    'sustainability.goldfields.com',
+    JSON.stringify({ tagline: 'Safety First, Decarbonisation & Tailings Management Standards' }),
+    now,
+    now
+  ]);
+
   // --- CLIENT 2: Apex Advisory Partners (Professional Services Blueprint / Contemporary Collection) ---
   await upsertClient(db, [
     'client_apex_advisory',
@@ -725,6 +753,86 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
       enabledModules: { publicAssistant: true },
       navigation: { mainNav: [{ label: 'Overview', href: '/' }] }
     }),
+    now,
+    now
+  ]);
+
+  // --- CLIENT: Aurum Energy & Resources (Clean Power & Grid-Scale Renewables) ---
+  await upsertClient(db, [
+    'client_aurum_energy',
+    'Aurum Energy & Resources',
+    'aurum-energy',
+    'Energy & Renewables',
+    '/assets/bastion-original-logo-hd.png',
+    JSON.stringify({ name: 'Tariq Al-Mansoor', email: 'contact@aurumenergy.com', phone: '+27 11 884 9200' }),
+    JSON.stringify({
+      legalEntityName: 'Aurum Energy & Resources (Pty) Ltd',
+      registrationNumber: '2020/418290/07',
+      vatNumber: '4890281721',
+      billingAddress: 'Tower 1, Sandton City, 83 Rivonia Road, Sandton, 2196, South Africa',
+      billingContactName: 'Tariq Al-Mansoor',
+      billingEmail: 'accounts@aurumenergy.com',
+      billingPhone: '+27 11 884 9200',
+      currency: 'R',
+      paymentTerms: 'Net 30 Days',
+      poNumberRequired: true
+    }),
+    now,
+    now
+  ]);
+
+  await upsertWebsite(db, [
+    'site_aurum_energy',
+    'client_aurum_energy',
+    'Aurum Energy Flagship Portal',
+    'aurum-energy',
+    'corporate',
+    'editorial',
+    'published',
+    'aurum.bastion.digital',
+    JSON.stringify({ tagline: 'Pioneering Clean Transition & Grid-Scale Renewables' }),
+    now,
+    now
+  ]);
+
+  await upsertWebsite(db, [
+    'site_aurum_investors',
+    'client_aurum_energy',
+    'Aurum Investor Relations Hub',
+    'aurum-investors',
+    'corporate',
+    'contemporary',
+    'published',
+    'investors.aurum.bastion.digital',
+    JSON.stringify({ tagline: 'Institutional Investor Disclosures, SENS Filings & Financial Results' }),
+    now,
+    now
+  ]);
+
+  await upsertWebsite(db, [
+    'site_aurum_sustainability',
+    'client_aurum_energy',
+    'Aurum Sustainability & ESG Hub',
+    'aurum-sustainability',
+    'corporate',
+    'editorial',
+    'published',
+    'esg.aurum.bastion.digital',
+    JSON.stringify({ tagline: '2030 Net-Zero Transition Targets & Scope 1-3 Disclosures' }),
+    now,
+    now
+  ]);
+
+  await upsertWebsite(db, [
+    'site_aurum_careers',
+    'client_aurum_energy',
+    'Aurum Global Careers & Talent',
+    'aurum-careers',
+    'corporate',
+    'contemporary',
+    'draft',
+    'careers.aurum.bastion.digital',
+    JSON.stringify({ tagline: 'Engineering the Future of African Renewable Power' }),
     now,
     now
   ]);

@@ -60,7 +60,7 @@ import {
   User
 } from 'lucide-react';
 import { useAdminAuth } from './AdminAuthProvider';
-import { WorkspaceClient, WorkspaceSite } from './StudioWorkspaceProvider';
+import { WorkspaceClient, WorkspaceSite, useStudioWorkspace } from './StudioWorkspaceProvider';
 import { useDashboardCustomizer } from './DashboardCustomizerProvider';
 import { ClientLearningHub } from './ClientLearningHub';
 
@@ -243,13 +243,19 @@ export function ClientCmsHome({
 }: ClientCmsHomeProps) {
   const { user } = useAdminAuth();
   const { primaryColor, accentColor, openCustomizer, preferences } = useDashboardCustomizer();
+  const { activeSite, clientWebsites, setActiveSiteId } = useStudioWorkspace();
   const [activeTab, setActiveTab] = useState<'overview' | 'learning_hub'>('overview');
 
   // Extract logged-in user's first name for personal executive greeting
   const userFirstName = user?.name ? user.name.trim().split(' ')[0] : 'Malcolm';
 
   const isGoldFields = client?.id === 'client_goldfields';
-  const siteUrl = isGoldFields ? '/' : site ? `/sites/${site.slug}` : '/';
+  const currentSite = activeSite || site || clientWebsites[0];
+  const siteUrl = isGoldFields
+    ? (currentSite?.slug === 'goldfields' ? '/' : `/sites/${currentSite?.slug || 'goldfields'}`)
+    : currentSite?.primaryDomain && !currentSite.primaryDomain.includes('localhost')
+      ? (currentSite.primaryDomain.startsWith('http') ? currentSite.primaryDomain : `https://${currentSite.primaryDomain}`)
+      : currentSite ? `/sites/${currentSite.slug}` : '/';
 
   // Extract REAL counts from database / dashboardData with ZERO false dummy numbers
   const statusCounts: { status: string; count: number }[] = dashboardData?.statusCounts || [];
@@ -561,44 +567,105 @@ export function ClientCmsHome({
       ) : (
         <>
           {/* 1. Header Section */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                Your publishing workspace
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                {client?.name || 'Aurum Energy & Resources'}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Live site online badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-600 dark:text-slate-300 shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Live site online</span>
-                <span className="text-slate-300 dark:text-slate-700">|</span>
-                <span className="text-slate-500">Updated just now</span>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Your publishing workspace
+                </h1>
+                <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium flex-wrap">
+                  <span className="font-bold text-slate-900 dark:text-white">{client?.name || 'Aurum Energy & Resources'}</span>
+                  <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+                  <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-semibold">
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>{currentSite?.name || 'Flagship Portal'}</span>
+                  </span>
+                  {currentSite?.primaryDomain && (
+                    <>
+                      <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+                      <span className="font-mono text-slate-400 text-xs">{currentSite.primaryDomain}</span>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* View live site button */}
-              <Link
-                href={siteUrl}
-                target="_blank"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs transition cursor-pointer"
-              >
-                <span>View live site</span>
-                <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Live site online badge */}
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-600 dark:text-slate-300 shadow-2xs">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {currentSite?.status === 'published' ? 'Live property online' : 'Draft property'}
+                  </span>
+                  <span className="text-slate-300 dark:text-slate-700">|</span>
+                  <span className="text-slate-500">Updated just now</span>
+                </div>
 
-              {/* Create content button */}
-              <Link
-                href="/admin/editor"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Create content</span>
-              </Link>
+                {/* View live site button */}
+                <Link
+                  href={siteUrl}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                >
+                  <span>View live site</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                </Link>
+
+                {/* Create content button */}
+                <Link
+                  href="/admin/editor"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Create content</span>
+                </Link>
+              </div>
             </div>
+
+            {/* Multi-Website Switcher Pill Tabs (when client has multiple web properties) */}
+            {clientWebsites && clientWebsites.length > 1 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 px-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
+                    <Globe className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Web Properties ({clientWebsites.length}):</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {clientWebsites.map((w) => {
+                      const isSelected = currentSite?.id === w.id;
+                      return (
+                        <button
+                          key={w.id}
+                          type="button"
+                          onClick={() => setActiveSiteId(w.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-blue-600/25 ring-1 ring-white/20'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800/70'
+                          }`}
+                        >
+                          <span>{w.name}</span>
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-medium ${
+                            w.status === 'published'
+                              ? isSelected ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
+                              : isSelected ? 'bg-white/20 text-white' : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
+                          }`}>
+                            {w.status === 'published' ? 'Live' : 'Draft'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="hidden lg:flex items-center gap-2 text-xs text-slate-400 font-medium px-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Scoped publishing pipeline active</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2. 4 Metric Cards (Row 1) */}
@@ -1141,6 +1208,109 @@ export function ClientCmsHome({
               </div>
             </div>
           </div>
+
+          {/* 4.5. Multi-Website Portfolio Overview (when client has multiple web properties) */}
+          {clientWebsites && clientWebsites.length > 1 && (
+            <div className="rounded-2xl p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+              <div className="flex items-center justify-between pb-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200/80 dark:border-blue-800/60">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Corporate Web Properties ({clientWebsites.length})
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Isolated multi-site publishing pipelines deployed on Bastion global edge infrastructure
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  href="/admin/clients"
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition"
+                >
+                  <span>Manage All Environments</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {clientWebsites.map((w) => {
+                  const isCurrent = (activeSite?.id || site?.id) === w.id;
+                  const propertyUrl = w.primaryDomain
+                    ? (w.primaryDomain.startsWith('http') ? w.primaryDomain : `https://${w.primaryDomain}`)
+                    : `/sites/${w.slug}`;
+
+                  return (
+                    <div
+                      key={w.id}
+                      className={`p-4 rounded-xl border transition-all duration-200 flex flex-col justify-between ${
+                        isCurrent
+                          ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-500/80 ring-2 ring-blue-500/20 shadow-xs'
+                          : 'bg-slate-50/60 dark:bg-[#131A26] border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-bold text-xs text-slate-900 dark:text-white leading-snug line-clamp-1" title={w.name}>
+                            {w.name}
+                          </span>
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase shrink-0 ${
+                            w.status === 'published'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                          }`}>
+                            {w.status === 'published' ? 'Live' : 'Draft'}
+                          </span>
+                        </div>
+
+                        <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                          {w.primaryDomain || `${w.slug}.bastion.digital`}
+                        </div>
+                      </div>
+
+                      <div className="pt-3 mt-3 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between gap-2">
+                        {isCurrent ? (
+                          <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                            Active Property
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setActiveSiteId(w.id)}
+                            className="text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer"
+                          >
+                            Switch to this &rarr;
+                          </button>
+                        )}
+
+                        <div className="flex items-center gap-1">
+                          <Link
+                            href={`/admin/editor?siteSlug=${w.slug}`}
+                            className="p-1 rounded text-slate-400 hover:text-blue-600 transition"
+                            title="Open Visual Editor"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </Link>
+                          <Link
+                            href={propertyUrl}
+                            target="_blank"
+                            className="p-1 rounded text-slate-400 hover:text-blue-600 transition"
+                            title="Visit Live Site"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* 5. Synced Status Line */}
           <div className="flex items-center justify-end gap-2.5 text-xs text-slate-500 pt-3">
