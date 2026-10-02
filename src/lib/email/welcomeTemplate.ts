@@ -27,7 +27,7 @@ export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
     recipientName = 'Malcolm Govender',
     roleTitle = 'Platform Administrator',
     loginUrl: rawLoginUrl = 'http://localhost:3010/admin/login',
-    temporaryPassword = options.temporaryPassword || `${sanitizedClient}2026!`,
+    temporaryPassword,
     inviterName = 'Bastion Group Platform Operations'
   } = options;
 
@@ -139,10 +139,15 @@ export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
                         <td style="font-size: 12px; color: #64748B; padding: 4px 0;">Assigned Role:</td>
                         <td style="font-size: 13px; font-weight: 600; color: #38BDF8; padding: 4px 0;">${roleTitle}</td>
                       </tr>
+                      ${temporaryPassword ? `
                       <tr>
                         <td style="font-size: 12px; color: #64748B; padding: 4px 0;">Initial Password:</td>
                         <td style="font-size: 12px; font-family: monospace; color: #FCD34D; background-color: #1A180E; padding: 3px 6px; border-radius: 4px; display: inline-block;">${temporaryPassword}</td>
-                      </tr>
+                      </tr>` : `
+                      <tr>
+                        <td style="font-size: 12px; color: #64748B; padding: 4px 0;">Password Setup:</td>
+                        <td style="font-size: 12px; font-weight: 600; color: #38BDF8; padding: 4px 0;">Choose password via secure invite link</td>
+                      </tr>`}
                       <tr>
                         <td style="font-size: 12px; color: #64748B; padding: 4px 0;">Provisioned By:</td>
                         <td style="font-size: 12px; color: #94A3B8; padding: 4px 0;">${inviterName}</td>
@@ -157,7 +162,7 @@ export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
                 <tr>
                   <td align="center">
                     <a href="${loginUrl}" target="_blank" style="display: block; background: linear-gradient(135deg, ${primaryColor} 0%, #0284C7 100%); color: #000000; font-size: 14px; font-weight: 700; text-decoration: none; text-align: center; padding: 15px 32px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);">
-                      Access Corporate CMS Portal &rarr;
+                      ${loginUrl.includes('invite') ? 'Set Corporate Password &amp; Access Portal &rarr;' : 'Access Corporate CMS Portal &rarr;'}
                     </a>
                   </td>
                 </tr>
@@ -173,7 +178,7 @@ export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
                     <div style="width: 22px; height: 22px; border-radius: 50%; background-color: #131E2D; border: 1px solid #23344B; text-align: center; line-height: 22px; font-size: 11px; font-weight: bold; color: ${primaryColor};">1</div>
                   </td>
                   <td style="padding-bottom: 12px; font-size: 13px; color: #94A3B8; line-height: 1.5;">
-                    <strong style="color: #FFFFFF;">Sign In:</strong> Log into <a href="${loginUrl}" style="color: #38BDF8; text-decoration: none;">${loginUrl}</a> using your email and initial password.
+                    <strong style="color: #FFFFFF;">${loginUrl.includes('invite') ? 'Activate Account:' : 'Sign In:'}</strong> ${loginUrl.includes('invite') ? 'Click the button above to set your corporate password and activate your portal access.' : `Log into <a href="${loginUrl}" style="color: #38BDF8; text-decoration: none;">${loginUrl}</a> using your email and password.`}
                   </td>
                 </tr>
                 <tr>

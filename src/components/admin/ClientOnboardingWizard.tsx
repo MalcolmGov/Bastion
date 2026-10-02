@@ -7,8 +7,6 @@ import {
   Sparkles,
   Building,
   Globe,
-  Palette,
-  Layers,
   Users,
   ShieldCheck,
   CheckCircle2,
@@ -17,18 +15,13 @@ import {
   ChevronRight,
   Copy,
   Check,
-  RefreshCw,
   ExternalLink,
-  Edit3,
-  Sliders,
   Lock,
   Mail,
   Zap,
   Phone,
   MapPin,
   FileText,
-  Radio,
-  Eye,
   X,
   Receipt,
   Loader2,
@@ -41,7 +34,7 @@ import {
   AlertCircle,
   CheckSquare,
   Square,
-  Filter
+  Shield
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 
@@ -50,23 +43,48 @@ interface ClientOnboardingWizardProps {
   isModal?: boolean;
 }
 
+export const INDUSTRIES = [
+  { value: 'financial_services', label: 'Financial Services, Banking & Capital Markets' },
+  { value: 'telecommunications', label: 'Telecommunications, 5G & Techco Infrastructure' },
+  { value: 'mining_resources', label: 'Mining, Metals & Natural Resources' },
+  { value: 'clean_energy', label: 'Clean Energy, Power Utilities & Renewables' },
+  { value: 'private_equity', label: 'Private Equity, Venture Capital & Asset Management' },
+  { value: 'healthcare_pharma', label: 'Healthcare, Pharmaceuticals & Life Sciences' },
+  { value: 'professional_services', label: 'Professional Services, Legal, Audit & M&A' },
+  { value: 'real_estate_reits', label: 'Real Estate Development, Commercial Property & REITs' },
+  { value: 'retail_fmcg', label: 'Retail, FMCG & Consumer Brands' },
+  { value: 'logistics_freight', label: 'Logistics, Supply Chain, Maritime & Freight' },
+  { value: 'manufacturing_industrial', label: 'Industrial Manufacturing, Engineering & Heavy Plants' },
+  { value: 'aviation_aerospace', label: 'Aviation, Aerospace & Defense' },
+  { value: 'public_sector_soe', label: 'Public Sector, State-Owned Enterprises (SOE) & Regulators' },
+  { value: 'agriculture_forestry', label: 'Agriculture, Agro-Processing & Forestry' },
+  { value: 'media_broadcasting', label: 'Media, Entertainment, Publishing & Broadcasting' },
+  { value: 'hospitality_tourism', label: 'Hospitality, Leisure, Gaming & Tourism' },
+  { value: 'technology_saas', label: 'Technology, Enterprise Cloud & Software (SaaS)' },
+  { value: 'automotive_mobility', label: 'Automotive, Mobility & Electric Vehicles' },
+  { value: 'chemicals_materials', label: 'Chemicals, Petrochemicals & Specialized Materials' },
+  { value: 'conglomerate_holding', label: 'Diversified Holding Conglomerate & Family Office' },
+  { value: 'corporate', label: 'General Enterprise Corporate' }
+];
+
 export const PACKAGES = [
   {
     id: 'Silver',
     name: 'Silver Package',
-    badge: 'Essential Presence',
+    badge: 'Essential Corporate',
     tagline: 'Standard Corporate Presence & Statutory Disclosures',
     recommended: false,
     accentColor: '#64748B',
-    defaultAmount: '45,000',
-    description: 'Foundation corporate website with executive leadership, regulatory disclosures, and single-editor client CMS.',
+    defaultUpfront: '85,000',
+    defaultRetainer: '25,000',
+    description: 'Foundation corporate website with executive leadership, regulatory disclosures, and multi-user client CMS access.',
     defaultServices: [
       'corporate_flagship',
       'leadership_governance',
       'regulatory_disclosures',
       'contact_directory',
       'ssl_ddos_shield',
-      'cms_single_editor'
+      'cms_unlimited_seats'
     ]
   },
   {
@@ -76,7 +94,8 @@ export const PACKAGES = [
     tagline: 'High-Velocity Investor Relations & Live Regulatory Wires',
     recommended: true,
     accentColor: '#F59E0B',
-    defaultAmount: '85,000',
+    defaultUpfront: '150,000',
+    defaultRetainer: '45,000',
     description: 'Comprehensive IR suite featuring real-time SENS teleprinter, interactive results studio, ESG tracking, and encrypted whistleblower hotline.',
     defaultServices: [
       'corporate_flagship',
@@ -89,7 +108,7 @@ export const PACKAGES = [
       'esg_tracker',
       'whistleblower_hotline',
       'newsroom_media',
-      'cms_multi_editor'
+      'cms_unlimited_seats'
     ]
   },
   {
@@ -99,8 +118,9 @@ export const PACKAGES = [
     tagline: 'Institutional Infrastructure, Procurement RFP Engine & 24/7 Fiduciary SLA',
     recommended: false,
     accentColor: '#8B5CF6',
-    defaultAmount: '180,000',
-    description: 'Sovereign-grade multi-platform architecture with supplier tender portal, automated SARS/CIPC validation, enterprise SSO, and 24/7 fiduciary SLA.',
+    defaultUpfront: '320,000',
+    defaultRetainer: '95,000',
+    description: 'Sovereign-grade architecture with supplier tender portal, automated SARS/CIPC validation, enterprise SSO, and 24/7 fiduciary SLA.',
     defaultServices: [
       'corporate_flagship',
       'leadership_governance',
@@ -112,7 +132,7 @@ export const PACKAGES = [
       'esg_tracker',
       'whistleblower_hotline',
       'newsroom_media',
-      'cms_multi_editor',
+      'cms_unlimited_seats',
       'tender_rfp_portal',
       'sars_cipc_verification',
       'edge_cdn_invalidation',
@@ -139,358 +159,94 @@ export const AVAILABLE_SERVICES = [
   { id: 'edge_cdn_invalidation', name: 'Sub-500ms Autonomous Edge CDN Cache Purge', category: 'Security & Infra', desc: 'Autonomous global edge cache invalidation broadcast on content sign-off.' },
   { id: 'enterprise_sso', name: 'Enterprise Single Sign-On (Okta / Azure AD / SAML)', category: 'Security & Infra', desc: 'Identity federation with centralized RBAC role synchronization.' },
   { id: 'multiregion_l10n', name: 'Multi-Region Routing & Internationalization', category: 'Core Platform', desc: 'Localized regional paths, multi-currency display, and language routing.' },
-  { id: 'cms_single_editor', name: 'Client CMS Editor License (1 Seat)', category: 'CMS Access', desc: 'Single-seat client portal access for real-time page edits and media uploads.' },
-  { id: 'cms_multi_editor', name: 'Client CMS Multi-Seat & Two-Person Approval Matrix', category: 'CMS Access', desc: 'Unlimited client seats with dual-custody review workflows and audit ledger.' },
+  { id: 'cms_unlimited_seats', name: 'Corporate CMS Portal & Unlimited Client Seats', category: 'CMS Access', desc: 'Unlimited team seats with role-based access control (RBAC), drafts, and media asset management.' },
+  { id: 'cms_dual_custody', name: 'Dual-Custody Two-Person Approval Governance Matrix', category: 'CMS Access', desc: 'Enforced multi-stakeholder sign-off and permanent cryptographic audit trail before publication.' },
   { id: 'fiduciary_sla', name: '24/7 Dedicated Account Director & Fiduciary SLA', category: 'Executive SLA', desc: 'Round-the-clock priority incident escalation and dedicated engineering team.' }
-];
-
-const PRESETS = [
-  {
-    name: 'Vodacom Group',
-    industry: 'telecom',
-    industryLabel: 'Telecommunications & 5G',
-    domain: 'vodacom.co.za',
-    primaryColor: '#E60000',
-    secondaryColor: '#0F172A',
-    accentColor: '#E60000',
-    headingFont: 'Plus Jakarta Sans',
-    bodyFont: 'Inter',
-    designCollectionId: 'contemporary',
-    blueprintId: 'corporate',
-    headquarters: 'Midrand, Johannesburg, South Africa',
-    contactName: 'Nombuso Khumalo',
-    contactEmail: 'nombuso.khumalo@vodacom.co.za',
-    contactRole: 'Head of Digital Communications',
-    tagline: 'Further together. Empowering Africa through digital inclusion and enterprise connectivity.',
-    legalEntityName: 'Vodacom Group Limited',
-    registrationNumber: '1993/005461/06',
-    vatNumber: '4010118149',
-    billingAddress: 'Vodacom Corporate Park, 082 Vodacom Boulevard, Midrand, Johannesburg, 1685, South Africa',
-    billingContactName: 'Nombuso Khumalo',
-    billingEmail: 'accounts.payable@vodacom.co.za',
-    billingPhone: '+27 11 546 1000',
-    currency: 'R',
-    paymentTerms: 'Net 30 Days',
-    poNumberRequired: true,
-    packageTier: 'Gold',
-    packageAmount: '125,000'
-  },
-  {
-    name: 'Solaris Clean Energy',
-    industry: 'renewable_energy',
-    industryLabel: 'Clean Energy & Renewables',
-    domain: 'solarisenergy.co.za',
-    primaryColor: '#10B981',
-    secondaryColor: '#064E3B',
-    accentColor: '#059669',
-    headingFont: 'Montserrat',
-    bodyFont: 'Inter',
-    designCollectionId: 'contemporary',
-    blueprintId: 'corporate',
-    headquarters: 'Cape Town, South Africa',
-    contactName: 'Tariq Al-Mansoor',
-    contactEmail: 'tariq@solariscleanenergy.com',
-    contactRole: 'Chief Sustainability Officer',
-    tagline: 'Empowering enterprise decarbonization with commercial solar grids and certified ESG telemetry.',
-    legalEntityName: 'Solaris Clean Energy (Pty) Ltd',
-    registrationNumber: '2021/892014/07',
-    vatNumber: '4910283746',
-    billingAddress: 'Victoria & Alfred Waterfront, Silo District, Cape Town, 8001, South Africa',
-    billingContactName: 'Tariq Al-Mansoor',
-    billingEmail: 'finance@solarisenergy.co.za',
-    billingPhone: '+27 21 408 7600',
-    currency: 'R',
-    paymentTerms: 'Net 14 Days',
-    poNumberRequired: false,
-    packageTier: 'Silver',
-    packageAmount: '65,000'
-  },
-  {
-    name: 'Apex Advisory Partners',
-    industry: 'professional_services',
-    industryLabel: 'Financial Advisory & M&A',
-    domain: 'apexadvisory.com',
-    primaryColor: '#2563EB',
-    secondaryColor: '#0F172A',
-    accentColor: '#0284C7',
-    headingFont: 'Playfair Display',
-    bodyFont: 'Inter',
-    designCollectionId: 'editorial',
-    blueprintId: 'professional_services',
-    headquarters: 'Sandton & London',
-    contactName: 'Alexandra Vance',
-    contactEmail: 'alexandra.vance@apexadvisory.com',
-    contactRole: 'Managing Partner',
-    tagline: 'Discreet institutional advisory, cross-border M&A transactions, and private capital structuring.',
-    legalEntityName: 'Apex Advisory Partners (Pty) Ltd',
-    registrationNumber: '2018/341920/07',
-    vatNumber: '4720194812',
-    billingAddress: 'Katherine & West Building, 114 West Street, Sandton, 2196, South Africa',
-    billingContactName: 'Alexandra Vance',
-    billingEmail: 'invoices@apexadvisory.co.za',
-    billingPhone: '+27 11 884 2100',
-    currency: 'R',
-    paymentTerms: 'Net 14 Days',
-    poNumberRequired: false,
-    packageTier: 'Gold',
-    packageAmount: '95,000'
-  },
-  {
-    name: 'Gold Fields Limited',
-    industry: 'mining_resources',
-    industryLabel: 'Mining & Resources',
-    domain: 'goldfields.com',
-    primaryColor: '#C99700',
-    secondaryColor: '#18181B',
-    accentColor: '#D97706',
-    headingFont: 'Cinzel',
-    bodyFont: 'Inter',
-    designCollectionId: 'editorial',
-    blueprintId: 'corporate',
-    headquarters: '150 Helen Road, Sandton, Johannesburg',
-    contactName: 'Sipho Dlamini',
-    contactEmail: 'communications@goldfields.com',
-    contactRole: 'Head of Investor Relations',
-    tagline: 'Globally diversified gold mining producer committed to sustainable modern stewardship.',
-    legalEntityName: 'Gold Fields Limited',
-    registrationNumber: '1968/004880/06',
-    vatNumber: '4690104820',
-    billingAddress: '150 Helen Road, Sandown, Sandton, Johannesburg, 2196, South Africa',
-    billingContactName: 'Sipho Dlamini',
-    billingEmail: 'accounts.payable@goldfields.com',
-    billingPhone: '+27 11 562 9700',
-    currency: 'R',
-    paymentTerms: 'Net 30 Days',
-    poNumberRequired: true,
-    packageTier: 'Platinum',
-    packageAmount: '250,000'
-  },
-  {
-    name: 'Discovery Health',
-    industry: 'healthcare',
-    industryLabel: 'Healthcare & Life Sciences',
-    domain: 'discovery.co.za',
-    primaryColor: '#D97706',
-    secondaryColor: '#1E293B',
-    accentColor: '#F59E0B',
-    headingFont: 'Plus Jakarta Sans',
-    bodyFont: 'Inter',
-    designCollectionId: 'contemporary',
-    blueprintId: 'corporate',
-    headquarters: '1 Discovery Place, Sandton',
-    contactName: 'Dr. Ryan Noach',
-    contactEmail: 'corporate@discovery.co.za',
-    contactRole: 'Chief Executive Officer',
-    tagline: 'Making people healthier and enhancing and protecting their lives through shared-value insurance.',
-    legalEntityName: 'Discovery Limited',
-    registrationNumber: '1999/007789/06',
-    vatNumber: '4380182910',
-    billingAddress: '1 Discovery Place, Sandhurst, Sandton, 2196, South Africa',
-    billingContactName: 'Dr. Ryan Noach',
-    billingEmail: 'procurement@discovery.co.za',
-    billingPhone: '+27 11 529 2888',
-    currency: 'R',
-    paymentTerms: 'Net 30 Days',
-    poNumberRequired: true,
-    packageTier: 'Platinum',
-    packageAmount: '180,000'
-  },
-  {
-    name: 'Anglo American',
-    industry: 'mining_resources',
-    industryLabel: 'Mining & Natural Resources',
-    domain: 'angloamerican.com',
-    primaryColor: '#0284C7',
-    secondaryColor: '#0F172A',
-    accentColor: '#2563EB',
-    headingFont: 'Plus Jakarta Sans',
-    bodyFont: 'Inter',
-    designCollectionId: 'editorial',
-    blueprintId: 'corporate',
-    headquarters: 'London & Johannesburg',
-    contactName: 'Mark Cutifani',
-    contactEmail: 'stakeholders@angloamerican.com',
-    contactRole: 'Executive Director',
-    tagline: 'Re-imagining mining to improve people’s lives across diamonds, copper, and future-enabling metals.',
-    legalEntityName: 'Anglo American South Africa (Pty) Ltd',
-    registrationNumber: '1917/005309/07',
-    vatNumber: '4120108392',
-    billingAddress: '55 Marshall Street, Marshalltown, Johannesburg, 2001, South Africa',
-    billingContactName: 'Mark Cutifani',
-    billingEmail: 'za.procurement@angloamerican.com',
-    billingPhone: '+27 11 638 9111',
-    currency: 'R',
-    paymentTerms: 'Net 30 Days',
-    poNumberRequired: true,
-    packageTier: 'Platinum',
-    packageAmount: '320,000'
-  }
-];
-
-const FONT_PAIRS = [
-  { id: 'pair-modern', label: 'Plus Jakarta Sans + Inter', heading: 'Plus Jakarta Sans', body: 'Inter', style: 'Modern Corporate' },
-  { id: 'pair-editorial', label: 'Playfair Display + Inter', heading: 'Playfair Display', body: 'Inter', style: 'Prestige & Editorial' },
-  { id: 'pair-institutional', label: 'Cinzel + Plus Jakarta Sans', heading: 'Cinzel', body: 'Plus Jakarta Sans', style: 'Institutional Heritage' },
-  { id: 'pair-clean', label: 'Montserrat + Roboto', heading: 'Montserrat', body: 'Roboto', style: 'High-Tech & Infrastructure' }
 ];
 
 export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboardingWizardProps) {
   const router = useRouter();
-  const { refreshClients, setActiveClientId, setPortalViewMode } = useStudioWorkspace();
+  const { refreshClients, setActiveClientId } = useStudioWorkspace();
 
-  // Wizard Step: 1 to 6
+  // 4 Streamlined Steps for Company & Business Onboarding
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   // STEP 1: Corporate Profile
   const [clientName, setClientName] = useState('');
-  const [industry, setIndustry] = useState('telecom');
+  const [industry, setIndustry] = useState('financial_services');
   const [primaryDomain, setPrimaryDomain] = useState('');
   const [headquarters, setHeadquarters] = useState('Johannesburg, South Africa');
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactRole, setContactRole] = useState('Head of Digital Communications');
-  const [contactPhone, setContactPhone] = useState('+27 11 000 0000');
   const [tagline, setTagline] = useState('');
 
-  // STEP 1: Corporate Tax & Billing Compliance Particulars
+  // Primary Executive Contact
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactRole, setContactRole] = useState('Head of Corporate Affairs');
+  const [contactPhone, setContactPhone] = useState('+27 11 000 0000');
+
+  // Tax & CIPC Compliance Particulars
   const [legalEntityName, setLegalEntityName] = useState('');
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [vatNumber, setVatNumber] = useState('');
   const [billingContactName, setBillingContactName] = useState('');
   const [billingEmail, setBillingEmail] = useState('');
-  const [billingPhone, setBillingPhone] = useState('+27 11 000 0000');
+  const [billingPhone, setBillingPhone] = useState('');
   const [billingAddress, setBillingAddress] = useState('');
   const [currency, setCurrency] = useState('R');
   const [paymentTerms, setPaymentTerms] = useState('Net 30 Days');
-  const [poNumberRequired, setPoNumberRequired] = useState(false);
+  const [poNumberRequired, setPoNumberRequired] = useState(true);
 
-  // STEP 2: Tiered Packages & Commercial Pricing (Silver, Gold, Platinum)
+  // STEP 2: Commercial Agreement (Split Upfront Implementation + Monthly Retainer)
   const [packageTier, setPackageTier] = useState<'Silver' | 'Gold' | 'Platinum'>('Gold');
-  const [selectedServices, setSelectedServices] = useState<string[]>(
-    PACKAGES.find(p => p.id === 'Gold')?.defaultServices || []
-  );
-  const [packageAmount, setPackageAmount] = useState('85,000');
-  const [packageCurrency, setPackageCurrency] = useState('R');
-  const [packageBillingCycle, setPackageBillingCycle] = useState('Monthly Retainer');
-  const [packageNotes, setPackageNotes] = useState('Case-by-case corporate agreement approved by Bastion Executive Team.');
-  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('all');
+  const [upfrontAmount, setUpfrontAmount] = useState('150,000');
+  const [monthlyRetainer, setMonthlyRetainer] = useState('45,000');
+  const [selectedServices, setSelectedServices] = useState<string[]>(PACKAGES[1].defaultServices);
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>('all');
+  const [packageNotes, setPackageNotes] = useState('Enterprise retainer agreement: Includes full cloud hosting, Edge CDN, and continuous SLA support.');
 
-  // STEP 3: Brand DNA & Styles
-  const [logoUrl, setLogoUrl] = useState('/assets/logo-placeholder.svg');
-  const [primaryBrandColor, setPrimaryBrandColor] = useState('#2563EB');
-  const [secondaryBrandColor, setSecondaryBrandColor] = useState('#0F172A');
-  const [accentBrandColor, setAccentBrandColor] = useState('#0284C7');
-  const [headingFont, setHeadingFont] = useState('Plus Jakarta Sans');
-  const [bodyFont, setBodyFont] = useState('Inter');
-  const [designCollectionId, setDesignCollectionId] = useState<'editorial' | 'contemporary' | 'immersive'>('contemporary');
-
-  // STEP 4: Blueprint & Modules
-  const [blueprintId, setBlueprintId] = useState<'corporate' | 'professional_services' | 'hospitality'>('corporate');
-  const [modules, setModules] = useState({
-    executiveLeadership: true,
-    regulatoryDisclosures: true,
-    esgReporting: true,
-    newsroomMedia: true,
-    careersTalent: true,
-    stakeholderInquiries: true,
-    edgeCdnPurge: true
-  });
-  const [starterPages, setStarterPages] = useState({
-    home: true,
-    about: true,
-    operations: true,
-    sustainability: true,
-    investors: true,
-    contact: true
-  });
-
-  // STEP 5: Client User Provisioning
-  const [provisionUser, setProvisionUser] = useState(true);
+  // STEP 3: Client User Access & Invite
+  const [provisionUser, setProvisionUser] = useState<boolean>(true);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userRole, setUserRole] = useState<'content_editor' | 'reviewer' | 'platform_admin'>('content_editor');
-  const [userPassword, setUserPassword] = useState('');
 
-  // STEP 6: Provisioning Execution & Results
+  // Execution & Launchpad State
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [provisioningPhase, setProvisioningPhase] = useState(0);
-  const [provisionError, setProvisionError] = useState<string | null>(null);
   const [provisionResult, setProvisionResult] = useState<any>(null);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
 
-  // Welcome Email Resend State
+  // Clipboard & Resend state
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [resendStatus, setResendStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
-  // Apply quick preset
-  const handleApplyPreset = (preset: typeof PRESETS[0]) => {
-    setClientName(preset.name);
-    setIndustry(preset.industry);
-    setPrimaryDomain(preset.domain);
-    setPrimaryBrandColor(preset.primaryColor);
-    setSecondaryBrandColor(preset.secondaryColor);
-    setAccentBrandColor(preset.accentColor);
-    setHeadingFont(preset.headingFont);
-    setBodyFont(preset.bodyFont);
-    setDesignCollectionId(preset.designCollectionId as any);
-    setBlueprintId(preset.blueprintId as any);
-    setHeadquarters(preset.headquarters);
-    setContactName(preset.contactName);
-    setContactEmail(preset.contactEmail);
-    setContactRole(preset.contactRole);
-    setTagline(preset.tagline);
-
-    // Tax Compliance & Billing
-    setLegalEntityName(preset.legalEntityName || preset.name);
-    setRegistrationNumber(preset.registrationNumber || '');
-    setVatNumber(preset.vatNumber || '');
-    setBillingAddress(preset.billingAddress || preset.headquarters || '');
-    setBillingContactName(preset.billingContactName || preset.contactName || '');
-    setBillingEmail(preset.billingEmail || preset.contactEmail || '');
-    setBillingPhone(preset.billingPhone || '+27 11 000 0000');
-    setCurrency(preset.currency || 'R');
-    setPaymentTerms(preset.paymentTerms || 'Net 30 Days');
-    setPoNumberRequired(preset.poNumberRequired || false);
-
-    // Package Tier & Commercial Pricing
-    const tier = (preset.packageTier as any) || 'Gold';
-    setPackageTier(tier);
-    const matchedPkg = PACKAGES.find(p => p.id === tier);
-    if (matchedPkg) {
-      setSelectedServices([...matchedPkg.defaultServices]);
-      setPackageAmount(preset.packageAmount || matchedPkg.defaultAmount);
-    }
-
-    // Prefill user credentials
-    setUserName(preset.contactName);
-    setUserEmail(preset.contactEmail);
-    const cleanPwd = `${preset.name.replace(/[^a-zA-Z0-9]/g, '')}2026!`;
-    setUserPassword(cleanPwd);
-  };
-
   const handleNameChange = (val: string) => {
     setClientName(val);
-    if (!legalEntityName) setLegalEntityName(val);
-    if (!userName) setUserName(`${val} Lead Editor`);
-    if (!userEmail && primaryDomain) setUserEmail(`communications@${primaryDomain}`);
-    setUserPassword(`${val.replace(/[^a-zA-Z0-9]/g, '')}2026!`);
+    if (!legalEntityName || legalEntityName === clientName) {
+      setLegalEntityName(val ? `${val} (Pty) Ltd` : '');
+    }
+    if (!userName) {
+      setUserName(val ? `${val} Administrator` : '');
+    }
   };
 
-  const handlePackageTierSelect = (tier: 'Silver' | 'Gold' | 'Platinum') => {
-    setPackageTier(tier);
-    const pkg = PACKAGES.find(p => p.id === tier);
+  const handlePackageTierSelect = (tierId: 'Silver' | 'Gold' | 'Platinum') => {
+    setPackageTier(tierId);
+    const pkg = PACKAGES.find(p => p.id === tierId);
     if (pkg) {
-      setSelectedServices([...pkg.defaultServices]);
-      setPackageAmount(pkg.defaultAmount);
+      setUpfrontAmount(pkg.defaultUpfront);
+      setMonthlyRetainer(pkg.defaultRetainer);
+      setSelectedServices(pkg.defaultServices);
     }
   };
 
   const handleToggleService = (serviceId: string) => {
-    setSelectedServices(prev =>
-      prev.includes(serviceId)
-        ? prev.filter(s => s !== serviceId)
-        : [...prev, serviceId]
-    );
+    if (selectedServices.includes(serviceId)) {
+      setSelectedServices(selectedServices.filter(id => id !== serviceId));
+    } else {
+      setSelectedServices([...selectedServices, serviceId]);
+    }
   };
 
   const handleSelectAllServices = () => {
@@ -499,40 +255,40 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
 
   const handleResetToTierDefaults = () => {
     const pkg = PACKAGES.find(p => p.id === packageTier);
-    if (pkg) setSelectedServices([...pkg.defaultServices]);
+    if (pkg) {
+      setSelectedServices(pkg.defaultServices);
+      setUpfrontAmount(pkg.defaultUpfront);
+      setMonthlyRetainer(pkg.defaultRetainer);
+    }
   };
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2500);
+    setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // Immediate Resend Welcome Email Trigger
+  // Re-trigger transactional email dispatch
   const handleResendWelcomeEmail = async () => {
-    const targetEmail = userEmail.trim() || provisionResult?.user?.email || 'malcolm@movedigital.africa';
+    if (!provisionResult?.client?.id || !provisionResult?.user?.email) return;
     setIsResendingEmail(true);
     setResendStatus(null);
-
     try {
       const res = await fetch('/api/admin/users/resend-welcome', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: targetEmail,
-          clientName: clientName || provisionResult?.client?.name || 'Bastion Group',
-          roleTitle: userRole === 'platform_admin' ? 'Platform Administrator' : 'Corporate Content Editor',
-          password: userPassword || `${clientName.replace(/[^a-zA-Z0-9]/g, '')}2026!`,
-          name: userName || contactName
+          email: provisionResult.user.email,
+          clientId: provisionResult.client.id
         })
       });
-
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to dispatch email');
-
+      if (!res.ok) throw new Error(data.error || 'Failed to dispatch email via Resend');
       setResendStatus({
-        ok: data.success,
-        message: data.message
+        ok: true,
+        message: data.delivery?.status === 'delivered'
+          ? `Dispatched successfully to ${provisionResult.user.email} (Resend ID: ${data.delivery.providerMessageId})`
+          : `Dispatched in simulated dev mode to ${provisionResult.user.email}`
       });
     } catch (err: any) {
       setResendStatus({
@@ -544,7 +300,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
     }
   };
 
-  // Execute End-to-End Client Provisioning
+  // Execute End-to-End Corporate Client Provisioning
   const handleExecuteProvisioning = async () => {
     setIsProvisioning(true);
     setProvisionError(null);
@@ -552,20 +308,16 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
 
     try {
       // Phase 1: Database Tenant & Schema
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, 350));
       setProvisioningPhase(2);
 
-      // Phase 2: Page Compositions Assembly
-      await new Promise(r => setTimeout(r, 400));
+      // Phase 2: Commercial Agreement & Retainer Lock
+      await new Promise(r => setTimeout(r, 350));
       setProvisioningPhase(3);
 
-      // Phase 3: Brand DNA & Tokens
-      await new Promise(r => setTimeout(r, 400));
+      // Phase 3: Client User & Token Provisioning
+      await new Promise(r => setTimeout(r, 350));
       setProvisioningPhase(4);
-
-      // Phase 4: Edge CDN & Commercial SLA
-      await new Promise(r => setTimeout(r, 400));
-      setProvisioningPhase(5);
 
       // Call API
       const res = await fetch('/api/admin/clients', {
@@ -575,20 +327,13 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
           name: clientName.trim(),
           industry,
           primaryDomain: primaryDomain.trim() || undefined,
-          blueprintId,
-          designCollectionId,
-          primaryBrandColor,
-          secondaryBrandColor,
-          accentBrandColor,
-          headingFont,
-          bodyFont,
           tagline: tagline.trim() || undefined,
           contactInfo: {
-            name: contactName,
-            email: contactEmail,
-            role: contactRole,
-            phone: contactPhone,
-            address: headquarters
+            name: contactName.trim(),
+            email: contactEmail.trim(),
+            role: contactRole.trim(),
+            phone: contactPhone.trim(),
+            address: headquarters.trim()
           },
           billingDetails: {
             legalEntityName: legalEntityName.trim() || clientName.trim(),
@@ -604,25 +349,20 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
           },
           packageTier,
           packageServices: selectedServices,
-          packageAmount: packageAmount.trim(),
-          packageCurrency,
-          packageBillingCycle,
+          upfrontAmount: upfrontAmount.trim(),
+          monthlyRetainer: monthlyRetainer.trim(),
+          currency,
           packageNotes: packageNotes.trim(),
-          enabledModules: modules,
           initialUser: provisionUser && userEmail.trim() ? {
             name: userName.trim() || `${clientName} Administrator`,
             email: userEmail.trim(),
-            role: userRole,
-            password: userPassword.trim()
+            role: userRole
           } : undefined
         })
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to complete client provisioning');
-
-      setProvisioningPhase(6);
-      await new Promise(r => setTimeout(r, 400));
+      if (!res.ok) throw new Error(data.error || 'Failed to complete client onboarding');
 
       await refreshClients();
       if (data.client?.id) {
@@ -631,19 +371,17 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
       setProvisionResult(data);
     } catch (err: any) {
       console.error('Onboarding execution error:', err);
-      setProvisionError(err.message || 'Provisioning failed');
+      setProvisionError(err.message || 'Onboarding failed');
     } finally {
       setIsProvisioning(false);
     }
   };
 
   const steps = [
-    { num: 1, title: 'Corporate Profile', subtitle: 'Identity & Domain' },
-    { num: 2, title: 'Commercial Package', subtitle: 'Tier & Custom Pricing' },
-    { num: 3, title: 'Brand DNA', subtitle: 'Theme & Typography' },
-    { num: 4, title: 'Architecture', subtitle: 'Blueprint & Modules' },
-    { num: 5, title: 'Client Access', subtitle: 'User & CMS Role' },
-    { num: 6, title: 'Launch', subtitle: 'Deploy & Credentials' },
+    { num: 1, title: 'Corporate Profile', subtitle: 'Identity, Domain & CIPC' },
+    { num: 2, title: 'Commercial Agreement', subtitle: 'Upfront Setup & Monthly Retainer' },
+    { num: 3, title: 'Authorized Access', subtitle: 'User Invitation & Role' },
+    { num: 4, title: 'Review & Onboard', subtitle: 'Confirm & Provision Workspace' },
   ];
 
   const filteredServices = AVAILABLE_SERVICES.filter(s => {
@@ -665,15 +403,15 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
         <div className="p-6 border-b border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/40">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-purple-500/20 shrink-0">
-              <Sparkles className="w-5 h-5" />
+              <Building className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400">
-                  Bastion Multi-Tenant Provisioning
+                  Bastion Multi-Tenant Registry
                 </span>
                 <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-                <span className="text-[11px] font-bold text-slate-500">Tiered Packages &amp; Resend</span>
+                <span className="text-[11px] font-bold text-slate-500">Corporate Client Onboarding</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white font-display">
                 Onboard Corporate Client
@@ -695,12 +433,12 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
           </div>
         </div>
 
-        {/* Step Indicator Tracker (6 Steps) */}
+        {/* Step Indicator Tracker (4 Steps) */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 bg-white/70 dark:bg-[#0F141C]/80 overflow-x-auto">
-          <div className="grid grid-cols-6 gap-2 sm:gap-3 min-w-[580px]">
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 min-w-[500px]">
             {steps.map((s) => {
               const isActive = currentStep === s.num;
-              const isPassed = currentStep > s.num || (provisionResult && s.num === 6);
+              const isPassed = currentStep > s.num || (provisionResult && s.num === 4);
               return (
                 <div
                   key={s.num}
@@ -720,7 +458,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                     >
                       {isPassed ? <Check className="w-3.5 h-3.5" /> : s.num}
                     </span>
-                    <span className="text-xs font-bold text-slate-900 dark:text-white truncate hidden md:inline">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                       {s.title}
                     </span>
                   </div>
@@ -740,48 +478,11 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
         {/* Wizard Main Content Body */}
         <div className="p-6 sm:p-8 space-y-6">
 
-          {/* STEP 1: Corporate Profile & Presets */}
+          {/* STEP 1: Corporate Profile & Tax Compliance (Presets Removed) */}
           {currentStep === 1 && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Presets Header */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Quick 1-Click Enterprise Presets
-                  </h3>
-                  <span className="text-[11px] font-medium text-slate-400">
-                    Auto-fills profile, compliance &amp; package tier
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {PRESETS.map((preset) => (
-                    <button
-                      key={preset.name}
-                      type="button"
-                      onClick={() => handleApplyPreset(preset)}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 group hover:border-purple-300 dark:hover:border-purple-700 ${
-                        clientName === preset.name
-                          ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-400 dark:border-purple-600 ring-2 ring-purple-500/20'
-                          : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                          {preset.name}
-                        </span>
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: preset.primaryColor }} />
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
-                        <span className="truncate">{preset.industryLabel}</span>
-                        <span className="font-semibold text-purple-600 dark:text-purple-400">{preset.packageTier}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Organization Profile Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Corporate Client Name <span className="text-purple-600">*</span>
@@ -791,7 +492,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                     required
                     value={clientName}
                     onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="e.g. Vodacom Group, Anglo American"
+                    placeholder="e.g. Standard Bank Group, Vodacom Group"
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold"
                   />
                 </div>
@@ -805,13 +506,11 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                     onChange={(e) => setIndustry(e.target.value)}
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold"
                   >
-                    <option value="telecom">Telecommunications &amp; Techco</option>
-                    <option value="mining_resources">Mining &amp; Natural Resources</option>
-                    <option value="renewable_energy">Clean Energy &amp; Renewables</option>
-                    <option value="professional_services">Financial Advisory &amp; M&amp;A</option>
-                    <option value="wealth_management">Private Wealth &amp; Family Office</option>
-                    <option value="healthcare">Healthcare &amp; Life Sciences</option>
-                    <option value="corporate">General Enterprise Corporate</option>
+                    {INDUSTRIES.map((ind) => (
+                      <option key={ind.value} value={ind.value}>
+                        {ind.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -825,7 +524,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       type="text"
                       value={primaryDomain}
                       onChange={(e) => setPrimaryDomain(e.target.value)}
-                      placeholder="e.g. vodacom.co.za"
+                      placeholder="e.g. standardbank.com"
                       className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-xs"
                     />
                   </div>
@@ -841,11 +540,25 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       type="text"
                       value={headquarters}
                       onChange={(e) => setHeadquarters(e.target.value)}
-                      placeholder="e.g. Sandton, Johannesburg, South Africa"
+                      placeholder="e.g. Rosebank, Johannesburg, South Africa"
                       className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Tagline */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Corporate Tagline / Mission Statement
+                </label>
+                <input
+                  type="text"
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  placeholder="e.g. Africa is our home, we drive her growth."
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
               </div>
 
               {/* Primary Contact Row */}
@@ -854,26 +567,33 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                   <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   <span>Primary Corporate Contact (Executive Sponsor)</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <input
                     type="text"
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
-                    placeholder="Contact Name (e.g. Nombuso Khumalo)"
+                    placeholder="Contact Name"
                     className="px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                   <input
                     type="email"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder="Work Email (e.g. nombuso@vodacom.co.za)"
+                    placeholder="Corporate Work Email"
                     className="px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                   <input
                     type="text"
                     value={contactRole}
                     onChange={(e) => setContactRole(e.target.value)}
-                    placeholder="Title / Role (e.g. Head of IR)"
+                    placeholder="Title / Role"
+                    className="px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                  <input
+                    type="text"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="Direct Telephone"
                     className="px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
@@ -907,7 +627,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       type="text"
                       value={legalEntityName}
                       onChange={(e) => setLegalEntityName(e.target.value)}
-                      placeholder="e.g. Vodacom Group Limited"
+                      placeholder="e.g. Standard Bank of South Africa Limited"
                       className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500 font-semibold"
                     />
                   </div>
@@ -920,7 +640,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       type="text"
                       value={registrationNumber}
                       onChange={(e) => setRegistrationNumber(e.target.value)}
-                      placeholder="e.g. 1993/005461/06"
+                      placeholder="e.g. 1962/000738/06"
                       className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono"
                     />
                   </div>
@@ -933,7 +653,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       type="text"
                       value={vatNumber}
                       onChange={(e) => setVatNumber(e.target.value)}
-                      placeholder="e.g. 4010118149"
+                      placeholder="e.g. 4100105461"
                       className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono"
                     />
                   </div>
@@ -948,7 +668,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       type="text"
                       value={billingContactName}
                       onChange={(e) => setBillingContactName(e.target.value)}
-                      placeholder="e.g. Accounts Department"
+                      placeholder="e.g. Accounts Payable Department"
                       className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                     />
                   </div>
@@ -961,7 +681,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       type="email"
                       value={billingEmail}
                       onChange={(e) => setBillingEmail(e.target.value)}
-                      placeholder="e.g. accounts.payable@vodacom.co.za"
+                      placeholder="e.g. accounts.payable@corporate.co.za"
                       className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                     />
                   </div>
@@ -974,7 +694,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       type="text"
                       value={billingPhone}
                       onChange={(e) => setBillingPhone(e.target.value)}
-                      placeholder="+27 11 546 1000"
+                      placeholder="+27 11 636 9111"
                       className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                     />
                   </div>
@@ -988,7 +708,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                     type="text"
                     value={billingAddress}
                     onChange={(e) => setBillingAddress(e.target.value)}
-                    placeholder="e.g. Vodacom Corporate Park, 082 Vodacom Boulevard, Midrand, Johannesburg, 1685, South Africa"
+                    placeholder="e.g. 5 Simmonds Street, Selby, Johannesburg, 2001, South Africa"
                     className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
@@ -1039,24 +759,10 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                   </div>
                 </div>
               </div>
-
-              {/* Tagline */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Corporate Tagline / Mission Statement
-                </label>
-                <input
-                  type="text"
-                  value={tagline}
-                  onChange={(e) => setTagline(e.target.value)}
-                  placeholder="e.g. Further together. Empowering tomorrow through digital connectivity."
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
             </div>
           )}
 
-          {/* STEP 2: Commercial Package & Manual Pricing (Silver, Gold, Platinum) */}
+          {/* STEP 2: Commercial Agreement (Split Upfront Fee + Monthly Retainer) */}
           {currentStep === 2 && (
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* Top Explanatory Banner */}
@@ -1064,10 +770,10 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                 <Tag className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <div className="text-xs">
                   <span className="font-bold text-slate-900 dark:text-white block">
-                    Tailored Corporate Packages &amp; Custom Commercial Agreement
+                    Dual-Structure Commercial Agreement (Upfront Implementation + Monthly Retainer)
                   </span>
                   <p className="text-slate-600 dark:text-slate-400 mt-0.5">
-                    Select a core package tier (Silver, Gold, or Platinum), customize the included service deliverables, and manually enter the agreed commercial price for this client.
+                    Define the upfront implementation fee for system setup and the ongoing monthly retainer for cloud hosting, Edge CDN, and continuous SLA support. Unlimited client seats are included across all tiers.
                   </p>
                 </div>
               </div>
@@ -1096,7 +802,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                           </span>
                         )}
 
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               {pkg.id === 'Silver' && <Award className="w-5 h-5 text-slate-400" />}
@@ -1124,13 +830,15 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                           </p>
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-                          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                            {pkg.defaultServices.length} Core Services
-                          </span>
-                          <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
-                            Guide: ~R{pkg.defaultAmount}/mo
-                          </span>
+                        <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-800 space-y-1">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <span className="text-[11px] text-slate-500">Upfront Setup:</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">~R{pkg.defaultUpfront}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <span className="text-[11px] text-slate-500">Monthly Retainer:</span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400">~R{pkg.defaultRetainer}/mo</span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1138,17 +846,17 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                 </div>
               </div>
 
-              {/* Manual Pricing & Billing Agreement Row */}
+              {/* Split Pricing Entry: Upfront Fee vs Monthly Retainer */}
               <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200/70 dark:border-slate-800">
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <div>
                       <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
-                        2. Case-by-Case Commercial Pricing (Manual Entry)
+                        2. Agreed Commercial Pricing (Split Structure)
                       </span>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Enter the agreed commercial price for {clientName || 'this client'}
+                        Enter the agreed upfront implementation fee and monthly support/hosting retainer for {clientName || 'this corporate client'}
                       </span>
                     </div>
                   </div>
@@ -1163,11 +871,8 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       Billing Currency <span className="text-purple-600">*</span>
                     </label>
                     <select
-                      value={packageCurrency}
-                      onChange={(e) => {
-                        setPackageCurrency(e.target.value);
-                        setCurrency(e.target.value);
-                      }}
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
                       className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold"
                     >
                       <option value="R">ZAR (R) - South Africa</option>
@@ -1179,37 +884,42 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Agreed Commercial Amount <span className="text-purple-600">*</span>
+                      Upfront Implementation &amp; Setup Fee <span className="text-purple-600">*</span>
                     </label>
                     <div className="relative">
                       <span className="absolute left-3.5 top-2.5 text-sm font-bold text-slate-400 font-mono">
-                        {packageCurrency}
+                        {currency}
                       </span>
                       <input
                         type="text"
                         required
-                        value={packageAmount}
-                        onChange={(e) => setPackageAmount(e.target.value)}
-                        placeholder="e.g. 85,000"
+                        value={upfrontAmount}
+                        onChange={(e) => setUpfrontAmount(e.target.value)}
+                        placeholder="e.g. 150,000"
                         className="w-full pl-9 pr-3.5 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono font-bold"
                       />
                     </div>
+                    <span className="text-[10px] text-slate-500 block">Once-off setup, discovery &amp; deployment</span>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Billing Cycle / Cadence
+                      Monthly Retainer (Hosting &amp; SLA) <span className="text-purple-600">*</span>
                     </label>
-                    <select
-                      value={packageBillingCycle}
-                      onChange={(e) => setPackageBillingCycle(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold"
-                    >
-                      <option value="Monthly Retainer">Monthly Retainer</option>
-                      <option value="Annual Contract (Billed Annually)">Annual Contract (Billed Annually)</option>
-                      <option value="Project Milestones (Once-off Implementation)">Project Milestones (Once-off Implementation)</option>
-                      <option value="Quarterly Advance">Quarterly Advance</option>
-                    </select>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-2.5 text-sm font-bold text-slate-400 font-mono">
+                        {currency}
+                      </span>
+                      <input
+                        type="text"
+                        required
+                        value={monthlyRetainer}
+                        onChange={(e) => setMonthlyRetainer(e.target.value)}
+                        placeholder="e.g. 45,000"
+                        className="w-full pl-9 pr-3.5 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono font-bold text-emerald-600 dark:text-emerald-400"
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-500 block">Billed monthly: Edge CDN, 24/7 SLA &amp; support</span>
                   </div>
                 </div>
 
@@ -1227,7 +937,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                 </div>
               </div>
 
-              {/* Service Deliverables Dropdown / Multi-Select */}
+              {/* Service Deliverables Checklist (No Seat Limitations) */}
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
@@ -1235,7 +945,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       3. Choose Included Services &amp; Deliverables ({selectedServices.length} Selected)
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Customize individual service modules for this proposal or contract.
+                      All packages include unlimited team seats and corporate multi-user access.
                     </p>
                   </div>
 
@@ -1284,7 +994,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                 </div>
 
                 {/* Services Grid Checklist */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[360px] overflow-y-auto p-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[340px] overflow-y-auto p-1">
                   {filteredServices.map((svc) => {
                     const isChecked = selectedServices.includes(svc.id);
                     return (
@@ -1327,319 +1037,28 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Summary: <span className="text-purple-600 dark:text-purple-400">{packageTier} Tier</span> &bull; {packageCurrency}{packageAmount || '0'} ({packageBillingCycle})
+                      Commercial Summary: <span className="text-purple-600 dark:text-purple-400">{packageTier} Tier</span> &bull; Upfront: {currency}{upfrontAmount || '0'} + Retainer: {currency}{monthlyRetainer || '0'}/mo
                     </span>
                   </div>
                   <span className="text-xs font-bold font-mono text-purple-600 dark:text-purple-400">
-                    {selectedServices.length} Services Selected
+                    {selectedServices.length} Services Selected (Unlimited Seats)
                   </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* STEP 3: Brand DNA & Styles */}
+          {/* STEP 3: Authorized Client Access (Direct Password Setup via Email Link) */}
           {currentStep === 3 && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Brand Logo Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
-                <div className="sm:col-span-8 space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Corporate Logo (Vector SVG or Transparent PNG)
-                  </label>
-                  <input
-                    type="text"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                    placeholder="/assets/logo.svg or https://example.com/logo.svg"
-                    className="w-full px-3.5 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500 font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400">
-                    Approved logo will be automatically optimized and deployed across header, footer, and favicon.
-                  </span>
-                </div>
-
-                <div className="sm:col-span-4 flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-                  <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Logo Preview</div>
-                  <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-base shadow-xs"
-                    style={{ backgroundColor: primaryBrandColor }}
-                  >
-                    {clientName ? clientName.substring(0, 2).toUpperCase() : 'CO'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Color System */}
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-                  Brand Color Palette
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Primary Color */}
-                  <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Primary Brand</span>
-                      <span className="w-5 h-5 rounded-md border border-black/10" style={{ backgroundColor: primaryBrandColor }} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={primaryBrandColor}
-                        onChange={(e) => setPrimaryBrandColor(e.target.value)}
-                        className="w-8 h-8 rounded-lg border-0 cursor-pointer p-0 bg-transparent"
-                      />
-                      <input
-                        type="text"
-                        value={primaryBrandColor}
-                        onChange={(e) => setPrimaryBrandColor(e.target.value)}
-                        className="w-full px-2 py-1 text-xs font-mono rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 uppercase font-bold"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Secondary Tone */}
-                  <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Secondary / Slate</span>
-                      <span className="w-5 h-5 rounded-md border border-black/10" style={{ backgroundColor: secondaryBrandColor }} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={secondaryBrandColor}
-                        onChange={(e) => setSecondaryBrandColor(e.target.value)}
-                        className="w-8 h-8 rounded-lg border-0 cursor-pointer p-0 bg-transparent"
-                      />
-                      <input
-                        type="text"
-                        value={secondaryBrandColor}
-                        onChange={(e) => setSecondaryBrandColor(e.target.value)}
-                        className="w-full px-2 py-1 text-xs font-mono rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 uppercase font-bold"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Accent Highlight */}
-                  <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Accent CTA</span>
-                      <span className="w-5 h-5 rounded-md border border-black/10" style={{ backgroundColor: accentBrandColor }} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={accentBrandColor}
-                        onChange={(e) => setAccentBrandColor(e.target.value)}
-                        className="w-8 h-8 rounded-lg border-0 cursor-pointer p-0 bg-transparent"
-                      />
-                      <input
-                        type="text"
-                        value={accentBrandColor}
-                        onChange={(e) => setAccentBrandColor(e.target.value)}
-                        className="w-full px-2 py-1 text-xs font-mono rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 uppercase font-bold"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Typography System */}
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-                  Curated Corporate Font Pairings
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {FONT_PAIRS.map((pair) => (
-                    <button
-                      key={pair.id}
-                      type="button"
-                      onClick={() => {
-                        setHeadingFont(pair.heading);
-                        setBodyFont(pair.body);
-                      }}
-                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
-                        headingFont === pair.heading
-                          ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500 ring-2 ring-purple-500/20'
-                          : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-                          {pair.style}
-                        </span>
-                        {headingFont === pair.heading && <Check className="w-4 h-4 text-purple-600" />}
-                      </div>
-                      <div className="text-sm font-bold text-slate-900 dark:text-white">
-                        {pair.label}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        The quick brown fox jumps over the lazy dog.
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Design Collection Mood */}
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-                  Design Collection Aesthetic
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {[
-                    { id: 'editorial', title: 'Editorial & Prestige', desc: 'Dignified institutional pacing, serif accents, and premium white papers.' },
-                    { id: 'contemporary', title: 'Contemporary High-Tech', desc: 'Precision geometry, sharp hairline grids, high-contrast badges.' },
-                    { id: 'immersive', title: 'Immersive & Dynamic', desc: 'Generous photography, cinematic cards, subtle elevation glows.' }
-                  ].map((col) => (
-                    <button
-                      key={col.id}
-                      type="button"
-                      onClick={() => setDesignCollectionId(col.id as any)}
-                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
-                        designCollectionId === col.id
-                          ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500 ring-2 ring-purple-500/20'
-                          : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="text-sm font-bold text-slate-900 dark:text-white mb-1">
-                        {col.title}
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                        {col.desc}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4: Corporate Blueprint & Modules */}
-          {currentStep === 4 && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Blueprint Archetype */}
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-                  Website Blueprint Architecture
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[
-                    { id: 'corporate', title: 'Enterprise Corporate Flagship', desc: 'Complete corporate presence with leadership, governance, investor disclosures, and ESG reporting.' },
-                    { id: 'professional_services', title: 'Professional & Advisory Practice', desc: 'Practice areas, cross-border transaction track record, client case studies, and partner bios.' },
-                  ].map((bp) => (
-                    <button
-                      key={bp.id}
-                      type="button"
-                      onClick={() => setBlueprintId(bp.id as any)}
-                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
-                        blueprintId === bp.id
-                          ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500 ring-2 ring-purple-500/20'
-                          : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-bold text-slate-900 dark:text-white">{bp.title}</span>
-                        {blueprintId === bp.id && <Check className="w-4 h-4 text-purple-600" />}
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                        {bp.desc}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Enterprise Feature Modules */}
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-                  Enabled Feature Modules
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[
-                    { key: 'executiveLeadership', label: 'Executive Leadership & Governance', desc: 'Board member bios, committee charters, and fiduciary oversight.' },
-                    { key: 'regulatoryDisclosures', label: 'Real-Time SENS & Market Wire', desc: 'Instant regulatory announcements and financial statement sync.' },
-                    { key: 'esgReporting', label: 'ESG & Sustainability Tracker', desc: 'Net Zero 2030 targets, carbon audits, and community investments.' },
-                    { key: 'newsroomMedia', label: 'Corporate Newsroom & Media Assets', desc: 'High-res image downloads, press kits, and executive quotes.' },
-                    { key: 'careersTalent', label: 'Careers & Talent Portal', desc: 'Job openings, employer brand storytelling, and application forms.' },
-                    { key: 'edgeCdnPurge', label: 'Autonomous Edge CDN & Invalidation', desc: 'Sub-500ms purge broadcast upon any live content sign-off.' },
-                  ].map((mod) => {
-                    const isChecked = (modules as any)[mod.key];
-                    return (
-                      <label
-                        key={mod.key}
-                        className={`p-3.5 rounded-2xl border flex items-start gap-3 cursor-pointer transition-all ${
-                          isChecked
-                            ? 'bg-purple-50/50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-800'
-                            : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 opacity-60'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => setModules({ ...modules, [mod.key]: e.target.checked })}
-                          className="mt-1 rounded text-purple-600 focus:ring-purple-500 h-4 w-4"
-                        />
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 dark:text-white">{mod.label}</div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">{mod.desc}</div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Starter Pages Selection */}
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-                  Initial Starter Page Compositions
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {[
-                    { key: 'home', label: 'Homepage' },
-                    { key: 'about', label: 'About & Governance' },
-                    { key: 'operations', label: 'Operations & Solutions' },
-                    { key: 'sustainability', label: 'Sustainability (ESG)' },
-                    { key: 'investors', label: 'Investor Relations' },
-                    { key: 'contact', label: 'Contact & Offices' },
-                  ].map((pageItem) => {
-                    const isChecked = (starterPages as any)[pageItem.key];
-                    return (
-                      <label
-                        key={pageItem.key}
-                        className={`p-3 rounded-xl border flex items-center justify-between text-xs font-bold cursor-pointer transition-all ${
-                          isChecked
-                            ? 'bg-white dark:bg-slate-900 border-purple-400 text-slate-900 dark:text-white shadow-2xs'
-                            : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-400'
-                        }`}
-                      >
-                        <span>{pageItem.label}</span>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => setStarterPages({ ...starterPages, [pageItem.key]: e.target.checked })}
-                          className="rounded text-purple-600 focus:ring-purple-500"
-                        />
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5: Client User Provisioning & White-Label Access */}
-          {currentStep === 5 && (
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* Enable Provisioning Toggle */}
               <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 flex items-center justify-between gap-4">
                 <div>
                   <div className="text-sm font-bold text-purple-950 dark:text-purple-200">
-                    Provision Client CMS Workspace Access
+                    Provision Corporate Client User Access
                   </div>
                   <p className="text-xs text-purple-700 dark:text-purple-400 font-medium">
-                    Automatically create a client user account and deliver login credentials directly via Resend transactional email.
+                    Automatically create a client user account and deliver a secure password creation link directly via Resend email.
                   </p>
                 </div>
                 <input
@@ -1674,7 +1093,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                         type="email"
                         value={userEmail}
                         onChange={(e) => setUserEmail(e.target.value)}
-                        placeholder="e.g. nombuso.khumalo@vodacom.co.za"
+                        placeholder="e.g. malcolmgov24@gmail.com"
                         className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold"
                       />
                     </div>
@@ -1690,31 +1109,22 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                         onChange={(e) => setUserRole(e.target.value as any)}
                         className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold"
                       >
-                        <option value="content_editor">Client Content Editor (No-Code updates, media uploads)</option>
-                        <option value="reviewer">Compliance Reviewer (Review &amp; approve changes)</option>
-                        <option value="platform_admin">Client Administrator (Full portal &amp; user management)</option>
+                        <option value="content_editor">Corporate Content Editor (Draft releases, update content, media assets)</option>
+                        <option value="reviewer">Compliance Reviewer (Review statutory disclosures &amp; approve changes)</option>
+                        <option value="platform_admin">Corporate Administrator (Full client portal &amp; team management)</option>
                       </select>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Temporary Access Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={userPassword}
-                          onChange={(e) => setUserPassword(e.target.value)}
-                          className="w-full px-3.5 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono font-bold"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setUserPassword(`${clientName.replace(/[^a-zA-Z0-9]/g, '')}${Math.floor(1000 + Math.random() * 9000)}!`)}
-                          className="absolute right-2 top-2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                          title="Generate new password"
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                        </button>
+                    {/* Clean Security Info Box (No Temp Password) */}
+                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-start gap-2.5">
+                      <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                          Direct Password Creation Link
+                        </span>
+                        <p className="text-slate-500 mt-0.5 leading-relaxed">
+                          No temporary passwords needed. A secure 48-hour invitation link will be dispatched to this email. The user sets their own password upon first click.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1722,10 +1132,10 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                   {/* Commercial Agreement Summary */}
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-600 dark:text-slate-400">
-                      Assigned Tier: <strong className="text-purple-600 dark:text-purple-400">{packageTier}</strong> ({selectedServices.length} Services)
+                      Commercial Package: <strong className="text-purple-600 dark:text-purple-400">{packageTier}</strong> ({selectedServices.length} Services)
                     </span>
                     <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {packageCurrency}{packageAmount} / {packageBillingCycle}
+                      {currency}{upfrontAmount} Setup + {currency}{monthlyRetainer}/mo Retainer
                     </span>
                   </div>
 
@@ -1737,14 +1147,14 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                         <span>Welcome Credentials Notification Preview (Resend REST API)</span>
                       </span>
                       <span className="text-[10px] uppercase font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-200">
-                        Dispatches on Launch
+                        Dispatches on Onboard
                       </span>
                     </div>
                     <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 font-mono text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
                       <div><strong className="text-slate-900 dark:text-white">To:</strong> {userEmail || 'client@corporate.co.za'}</div>
-                      <div><strong className="text-slate-900 dark:text-white">Subject:</strong> Welcome to {clientName || 'Corporate'} Content Studio — Bastion Group</div>
+                      <div><strong className="text-slate-900 dark:text-white">Subject:</strong> Welcome to {clientName || 'Corporate'} CMS Portal — Bastion Group</div>
                       <div className="pt-2 text-slate-500">
-                        &quot;Your corporate website is deployed on Bastion Edge infrastructure. Log in at <strong>https://zaraai.digital/admin/login</strong> with temporary password: <strong>{userPassword}</strong> to publish real-time content updates.&quot;
+                        &quot;Your enterprise CMS access for <strong>{clientName || 'your company'}</strong> is provisioned. Click the secure invitation link below to set your password and access your dedicated corporate workspace.&quot;
                       </div>
                     </div>
                   </div>
@@ -1753,83 +1163,137 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
             </div>
           )}
 
-          {/* STEP 6: Automated Edge Provisioning Execution & Results */}
-          {currentStep === 6 && (
+          {/* STEP 4: Review & Onboard (Dedicated for Company & Business Onboarding) */}
+          {currentStep === 4 && (
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* If Still Provisioning or Not Started */}
               {!provisionResult && (
-                <div className="p-8 text-center space-y-6">
-                  <div className="w-16 h-16 rounded-3xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 mx-auto flex items-center justify-center border border-purple-200 dark:border-purple-800 shadow-md">
-                    {isProvisioning ? (
-                      <Loader2 className="w-8 h-8 animate-spin" />
-                    ) : (
-                      <Zap className="w-8 h-8 text-purple-600" />
-                    )}
-                  </div>
-
-                  <div className="space-y-1 max-w-md mx-auto">
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white">
-                      {isProvisioning ? 'Orchestrating Corporate Edge Deployment...' : `Ready to Provision ${clientName || 'Corporate Client'}`}
+                <div className="space-y-6">
+                  <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-blue-500/10 border border-purple-500/20 space-y-1">
+                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                      Final Review &bull; Corporate Onboarding
+                    </span>
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                      Confirm Corporate Client Onboarding for {clientName || 'New Client'}
                     </h2>
                     <p className="text-xs text-slate-500">
-                      Bastion will generate multi-tenant database partitions, assign the {packageTier} commercial package ({selectedServices.length} services), assemble pages, and dispatch welcome credentials via Resend.
+                      Website creation and brand extraction is a separate standalone process that you can launch immediately after onboarding.
                     </p>
                   </div>
 
-                  {/* Provisioning Phase Steps */}
-                  <div className="max-w-md mx-auto space-y-2.5 text-left">
-                    {[
-                      { step: 1, label: 'Provisioning Client Tenant in SQLite Scope' },
-                      { step: 2, label: `Assigning ${packageTier} Package (${packageCurrency}${packageAmount})` },
-                      { step: 3, label: 'Assembling Starter Page Compositions via WebsiteAssembler' },
-                      { step: 4, label: 'Compiling Brand DNA Tokens & Typography Manifest' },
-                      { step: 5, label: 'Setting up Global Edge CDN Invalidation Route' },
-                      { step: 6, label: 'Creating Client User Account & Dispatching Resend Email' },
-                    ].map((phaseItem) => (
-                      <div
-                        key={phaseItem.step}
-                        className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-all ${
-                          provisioningPhase > phaseItem.step
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-800 dark:text-emerald-300 font-bold'
-                            : provisioningPhase === phaseItem.step
-                            ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-400 text-purple-800 dark:text-purple-300 font-bold animate-pulse'
-                            : 'bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-400'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          {provisioningPhase > phaseItem.step ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          ) : provisioningPhase === phaseItem.step ? (
-                            <Loader2 className="w-4 h-4 text-purple-600 animate-spin shrink-0" />
-                          ) : (
-                            <span className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px]">
-                              {phaseItem.step}
-                            </span>
-                          )}
-                          <span>{phaseItem.label}</span>
-                        </div>
-                        <span className="text-[10px] uppercase font-mono">
-                          {provisioningPhase > phaseItem.step ? 'DONE' : provisioningPhase === phaseItem.step ? 'ACTIVE' : 'QUEUED'}
-                        </span>
+                  {/* Summary Review Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Card 1: Corporate Profile */}
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                        <Building className="w-4 h-4 text-purple-600" />
+                        <span>Corporate Entity</span>
                       </div>
-                    ))}
+                      <div className="space-y-1 text-slate-600 dark:text-slate-400 pt-1">
+                        <div><strong>Name:</strong> {clientName || 'N/A'}</div>
+                        <div><strong>Industry:</strong> {INDUSTRIES.find(i => i.value === industry)?.label || industry}</div>
+                        <div><strong>Domain:</strong> {primaryDomain || 'Not assigned yet'}</div>
+                        <div><strong>Legal Entity:</strong> {legalEntityName || clientName}</div>
+                        {registrationNumber && <div><strong>CIPC Reg:</strong> {registrationNumber}</div>}
+                        {vatNumber && <div><strong>SARS VAT:</strong> {vatNumber}</div>}
+                      </div>
+                    </div>
+
+                    {/* Card 2: Commercial Agreement */}
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                        <Tag className="w-4 h-4 text-emerald-600" />
+                        <span>Commercial Agreement</span>
+                      </div>
+                      <div className="space-y-1 text-slate-600 dark:text-slate-400 pt-1">
+                        <div><strong>Tier:</strong> {packageTier} Package</div>
+                        <div><strong>Upfront Setup:</strong> <span className="font-mono font-bold text-slate-900 dark:text-white">{currency}{upfrontAmount}</span></div>
+                        <div><strong>Monthly Retainer:</strong> <span className="font-mono font-bold text-emerald-600">{currency}{monthlyRetainer}/mo</span></div>
+                        <div><strong>Payment Terms:</strong> {paymentTerms}</div>
+                        <div><strong>Seats:</strong> Unlimited Client Seats</div>
+                        <div><strong>Services:</strong> {selectedServices.length} Selected</div>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Authorized Access */}
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                      <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                        <Users className="w-4 h-4 text-blue-600" />
+                        <span>Authorized User Access</span>
+                      </div>
+                      <div className="space-y-1 text-slate-600 dark:text-slate-400 pt-1">
+                        {provisionUser && userEmail ? (
+                          <>
+                            <div><strong>User Name:</strong> {userName || `${clientName} Administrator`}</div>
+                            <div><strong>Work Email:</strong> {userEmail}</div>
+                            <div><strong>Role:</strong> {userRole}</div>
+                            <div className="text-emerald-600 font-semibold pt-1">
+                              ✓ Secure invite email dispatched via Resend
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-slate-400 italic">No user provisioned at this time.</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
+                  {/* Provisioning Phase Steps when executing */}
+                  {isProvisioning && (
+                    <div className="max-w-md mx-auto space-y-2 text-left pt-2">
+                      {[
+                        { step: 1, label: 'Creating Corporate Tenant Registry in Database' },
+                        { step: 2, label: `Locking ${packageTier} Commercials (${currency}${upfrontAmount} + ${currency}${monthlyRetainer}/mo)` },
+                        { step: 3, label: 'Setting up DAM Asset Partition & Shell Workspace' },
+                        { step: 4, label: 'Generating Secure Invite Token & Dispatching Resend Email' },
+                      ].map((phaseItem) => (
+                        <div
+                          key={phaseItem.step}
+                          className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                            provisioningPhase > phaseItem.step
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-800 dark:text-emerald-300 font-bold'
+                              : provisioningPhase === phaseItem.step
+                              ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-400 text-purple-800 dark:text-purple-300 font-bold animate-pulse'
+                              : 'bg-slate-50 dark:bg-slate-900 border-slate-200 text-slate-400'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            {provisioningPhase > phaseItem.step ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            ) : provisioningPhase === phaseItem.step ? (
+                              <Loader2 className="w-4 h-4 text-purple-600 animate-spin shrink-0" />
+                            ) : (
+                              <span className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px]">
+                                {phaseItem.step}
+                              </span>
+                            )}
+                            <span>{phaseItem.label}</span>
+                          </div>
+                          <span className="text-[10px] uppercase font-mono">
+                            {provisioningPhase > phaseItem.step ? 'DONE' : provisioningPhase === phaseItem.step ? 'ACTIVE' : 'QUEUED'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {provisionError && (
-                    <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold max-w-md mx-auto">
+                    <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold">
                       {provisionError}
                     </div>
                   )}
 
                   {!isProvisioning && (
-                    <button
-                      type="button"
-                      onClick={handleExecuteProvisioning}
-                      className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-sm tracking-wider uppercase transition shadow-xl shadow-purple-500/30 cursor-pointer inline-flex items-center gap-2 active:scale-[0.98]"
-                    >
-                      <Sparkles className="w-4 h-4 text-white" />
-                      <span>Execute Full Onboarding &amp; Deploy Website</span>
-                    </button>
+                    <div className="pt-2 text-center">
+                      <button
+                        type="button"
+                        onClick={handleExecuteProvisioning}
+                        className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-sm tracking-wider uppercase transition shadow-xl shadow-purple-500/30 cursor-pointer inline-flex items-center gap-2 active:scale-[0.98]"
+                      >
+                        <Sparkles className="w-4 h-4 text-white" />
+                        <span>Onboard Corporate Client</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -1845,10 +1309,10 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       </div>
                       <div>
                         <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                          Client Onboarding &amp; Deployment Complete!
+                          Corporate Client Onboarded Successfully!
                         </div>
                         <h2 className="text-xl font-black text-slate-900 dark:text-white">
-                          {provisionResult.client?.name} is Live on Bastion CMS
+                          {provisionResult.client?.name} Registered on Bastion Platform
                         </h2>
                       </div>
                     </div>
@@ -1858,7 +1322,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                         {packageTier} Package
                       </span>
                       <span className="text-xs font-bold font-mono px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                        100% PRODUCTION READY
+                        TENANT READY
                       </span>
                     </div>
                   </div>
@@ -1869,118 +1333,31 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                       <Tag className="w-4 h-4 text-purple-600" />
                       <div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white">
-                          Commercial Agreement: {packageTier} Tier
+                          Locked Agreement: {packageTier} Package ({selectedServices.length} Included Deliverables)
                         </span>
                         <span className="text-[11px] text-slate-500 block">
-                          {selectedServices.length} Selected Services &bull; {packageNotes}
+                          Upfront Implementation: {currency}{upfrontAmount} &bull; Retainer: {currency}{monthlyRetainer}/mo &bull; Terms: {paymentTerms}
                         </span>
                       </div>
                     </div>
                     <div className="text-right">
                       <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                        {packageCurrency}{packageAmount}
+                        {currency}{monthlyRetainer}/mo
                       </span>
                       <span className="text-[10px] text-slate-400 block font-semibold">
-                        {packageBillingCycle}
+                        Ongoing Hosting &amp; SLA
                       </span>
                     </div>
                   </div>
 
-                  {/* 3 Launchpad Action Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Action 1: View Live Site */}
-                    <Link
-                      href={`/sites/${provisionResult.website?.slug}`}
-                      target="_blank"
-                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-purple-400 transition-all shadow-xs hover:shadow-md flex flex-col justify-between gap-4 group"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
-                          <Globe className="w-5 h-5" />
-                        </div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          View Live Corporate Website
-                        </h4>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Browse the deployed website with brand typography and assembled starter pages.
-                        </p>
-                      </div>
-                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                        <span>Open Live Preview</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </span>
-                    </Link>
-
-                    {/* Action 2: Visual Page Editor */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveClientId(provisionResult.client?.id);
-                        router.push('/admin/editor');
-                      }}
-                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-purple-400 transition-all shadow-xs hover:shadow-md flex flex-col justify-between gap-4 group text-left cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-3">
-                          <Edit3 className="w-5 h-5" />
-                        </div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Launch Visual Page Editor
-                        </h4>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Customize typography, box model spacing, hero text, and live visual sections.
-                        </p>
-                      </div>
-                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                        <span>Launch Canvas Editor</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
-                    </button>
-
-                    {/* Action 3: Switch to Client CMS Mode */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveClientId(provisionResult.client?.id);
-                        setPortalViewMode('client');
-                        router.push('/admin');
-                      }}
-                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-400 transition-all shadow-xs hover:shadow-md flex flex-col justify-between gap-4 group text-left cursor-pointer"
-                    >
-                      <div>
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
-                          <Radio className="w-5 h-5" />
-                        </div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Enter Client CMS Mode
-                        </h4>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Experience the exact distraction-free CMS interface provided to this client.
-                        </p>
-                      </div>
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <span>Open Client Portal</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
-                    </button>
-                  </div>
-
-                  {/* Client Access Credentials Pack */}
+                  {/* Client Access Invitation Pack */}
                   {provisionResult.user && (
                     <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                           <Lock className="w-4 h-4 text-purple-600" />
-                          <span>Client User Credentials Pack</span>
+                          <span>Authorized User Access &amp; Password Setup</span>
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(`Login URL: ${provisionResult.user.loginUrl || 'https://zaraai.digital/admin/login'}\nEmail: ${provisionResult.user.email}\nPassword: ${provisionResult.user.temporaryPassword}\nClient: ${provisionResult.client.name}`, 'credentials')}
-                          className="px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                        >
-                          {copiedKey === 'credentials' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                          <span>{copiedKey === 'credentials' ? 'Copied!' : 'Copy Credentials'}</span>
-                        </button>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1993,16 +1370,17 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                           <span className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate">{provisionResult.user.email}</span>
                         </div>
                         <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-xs">
-                          <span className="text-[10px] text-slate-400 block font-bold uppercase">Temporary Password</span>
-                          <span className="font-mono font-bold text-purple-600 dark:text-purple-400">{provisionResult.user.temporaryPassword}</span>
+                          <span className="text-[10px] text-slate-400 block font-bold uppercase">Account Activation</span>
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">Password set by user via invite</span>
                         </div>
                       </div>
 
+                      {/* Direct Invite Setup URL */}
                       {provisionResult.user.inviteUrl && (
                         <div className="p-3.5 rounded-xl bg-white dark:bg-slate-950 border border-purple-200 dark:border-purple-900/50 flex items-center justify-between gap-3 text-xs">
                           <div className="min-w-0">
                             <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold uppercase block">
-                              Set Password Activation Link (Sent in Welcome Email)
+                              Secure One-Click Password Creation Link
                             </span>
                             <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300 truncate block">
                               {provisionResult.user.inviteUrl}
@@ -2023,7 +1401,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                               rel="noreferrer"
                               className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-[11px] font-bold text-white flex items-center gap-1 cursor-pointer transition"
                             >
-                              <span>Test Link</span>
+                              <span>Test Setup Link</span>
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           </div>
@@ -2094,6 +1472,82 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
                     </div>
                   )}
 
+                  {/* 3 Next-Step Action Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Action 1: Website Creation & Brand Extraction (Standalone Process) */}
+                    <Link
+                      href={`/admin/create?clientId=${provisionResult.client?.id}${primaryDomain ? `&domain=${encodeURIComponent(primaryDomain)}` : ''}`}
+                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800/80 hover:border-purple-400 transition-all shadow-xs hover:shadow-md flex flex-col justify-between gap-4 group ring-2 ring-purple-500/10"
+                    >
+                      <div>
+                        <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-3">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Launch Website Builder &amp; AI Extractor
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Extract Brand DNA from domain, select blueprints, and design page compositions.
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                        <span>Launch Website Studio</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </span>
+                    </Link>
+
+                    {/* Action 2: Enter Client CMS Mode */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveClientId(provisionResult.client?.id);
+                        router.push('/admin');
+                      }}
+                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-400 transition-all shadow-xs hover:shadow-md flex flex-col justify-between gap-4 group text-left cursor-pointer"
+                    >
+                      <div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+                          <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Enter Client CMS Workspace
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Access the isolated client content management portal and DAM library.
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <span>Open Client Portal</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </span>
+                    </button>
+
+                    {/* Action 3: View Corporate Clients Directory */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        router.push('/admin/clients');
+                      }}
+                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-400 transition-all shadow-xs hover:shadow-md flex flex-col justify-between gap-4 group text-left cursor-pointer"
+                    >
+                      <div>
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+                          <Building className="w-5 h-5" />
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Manage Corporate Clients
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Review commercial agreements, edit corporate profiles, and manage tenants.
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                        <span>Open Clients Directory</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </span>
+                    </button>
+                  </div>
+
                   {/* Reset or Close Button */}
                   <div className="flex items-center justify-end gap-3 pt-2">
                     <button
@@ -2142,7 +1596,7 @@ export function ClientOnboardingWizard({ onClose, isModal = false }: ClientOnboa
               <div />
             )}
 
-            {currentStep < 6 ? (
+            {currentStep < 4 ? (
               <button
                 type="button"
                 onClick={() => {
