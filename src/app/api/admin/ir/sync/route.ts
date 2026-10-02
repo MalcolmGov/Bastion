@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncSensWireToDatabase } from '@/lib/ir/liveFeeds';
+import { requireUser, clientOwns } from '@/lib/auth/guard';
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
     const body = await req.json();
     const { clientId, siteId, ticker } = body;
 
     if (!clientId) {
       return NextResponse.json({ error: 'clientId is required' }, { status: 400 });
+    }
+    if (!clientOwns(gate.user, clientId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Determine default ticker based on client if not explicitly provided

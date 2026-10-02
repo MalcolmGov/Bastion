@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { submitTenderBid } from '@/lib/tenders/tenderService';
+import { rateLimitResponse } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = rateLimitResponse(req, 'tender-submit', 10, 3600000);
+    if (limited) return limited;
     const body = await req.json();
     const {
       tenderId,

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLatestGovernanceAudit } from '@/lib/governance/governanceEngine';
 import { ensureDbReady } from '@/lib/db/client';
+import { requireUser, clientOwns } from '@/lib/auth/guard';
 
 export async function GET(req: NextRequest) {
   try {
+    const gate = await requireUser();
+    if (!gate.ok) return gate.response;
     const { searchParams } = new URL(req.url);
-    const clientId = searchParams.get('clientId') || 'client_goldfields';
+    const clientId = searchParams.get('clientId') || gate.user.client_id || 'client_goldfields';
+    if (!clientOwns(gate.user, clientId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const db = await ensureDbReady();
     const clientRes = await db.execute({
