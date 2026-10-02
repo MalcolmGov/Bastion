@@ -11,10 +11,14 @@ const IV_LENGTH = 12; // Standard recommended IV length for AES-GCM
 const PREFIX = 'enc$gcm$';
 
 function getDerivedKey(): Buffer {
-  const secret =
-    process.env.ENCRYPTION_KEY?.trim() ||
-    process.env.API_SECRET_TOKEN?.trim() ||
-    'bastion_enterprise_vault_fallback_key_2026';
+  const secret = process.env.ENCRYPTION_KEY?.trim() || process.env.API_SECRET_TOKEN?.trim();
+  if (!secret) {
+    // Never fall back to a key that is published in source control for production data.
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ENCRYPTION_KEY (or API_SECRET_TOKEN) must be set to encrypt or decrypt stored secrets.');
+    }
+    return crypto.scryptSync('bastion_dev_only_vault_key', 'bastion_vault_salt_v1', 32);
+  }
   return crypto.scryptSync(secret, 'bastion_vault_salt_v1', 32);
 }
 

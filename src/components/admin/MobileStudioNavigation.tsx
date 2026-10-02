@@ -42,6 +42,9 @@ export function MobileStudioNavigation() {
         aria-label="Studio navigation"
         onCancel={() => setOpen(false)}
         onClose={() => setOpen(false)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setOpen(false);
+        }}
         onClick={(event) => {
           if (event.target === event.currentTarget) setOpen(false);
         }}

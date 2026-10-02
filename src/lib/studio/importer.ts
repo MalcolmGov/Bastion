@@ -65,11 +65,20 @@ export function validateSafeUrl(rawUrl: string): { isValid: boolean; error?: str
       return { isValid: false, error: 'Only HTTP and HTTPS protocols are permitted.' };
     }
 
-    const host = url.hostname.toLowerCase();
+    // URL.hostname keeps the brackets on IPv6 literals ('[::1]'), so strip them before comparing.
+    const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+
+    // IPv6 loopback, unspecified, unique-local (fc00::/7), link-local (fe80::/10) and IPv4-mapped addresses
+    if (host.includes(':')) {
+      if (host === '::' || host === '::1' || /^f[cd][0-9a-f]{2}:/.test(host) || /^fe[89ab][0-9a-f]:/.test(host) || host.startsWith('::ffff:')) {
+        return { isValid: false, error: 'Access to loopback, private, or link-local IPv6 addresses is blocked.' };
+      }
+    }
 
     // Loopback & local hosts
     if (
       host === 'localhost' ||
+      host.endsWith('.localhost') ||
       host === '127.0.0.1' ||
       host === '::1' ||
       host.endsWith('.local') ||
@@ -90,6 +99,10 @@ export function validateSafeUrl(rawUrl: string): { isValid: boolean; error?: str
       const octet1 = parseInt(ipMatch[1], 10);
       const octet2 = parseInt(ipMatch[2], 10);
 
+      // 0.0.0.0/8 and 127.0.0.0/8 (loopback)
+      if (octet1 === 0 || octet1 === 127) return { isValid: false, error: 'Access to loopback or unspecified addresses is blocked.' };
+      // 100.64.0.0/10 carrier-grade NAT
+      if (octet1 === 100 && octet2 >= 64 && octet2 <= 127) return { isValid: false, error: 'Access to shared address space (100.64.0.0/10) is blocked.' };
       // 10.0.0.0/8
       if (octet1 === 10) return { isValid: false, error: 'Access to private RFC1918 (10.x.x.x) network is blocked.' };
       // 172.16.0.0/12
