@@ -309,7 +309,7 @@ function VisualWebsiteEditorContent() {
   const [aiNotice, setAiNotice] = useState<string | null>(null);
 
   // Inspector Active Tab: 'content' | 'design' | 'ai' | 'keys'
-  const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai' | 'keys'>('content');
+  const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai' | 'keys'>(() => searchParams.get('panel') === 'ai' ? 'ai' : 'content');
   const [isLocaleMenuOpen, setIsLocaleMenuOpen] = useState(false);
 
   // Dynamic Zones Builder Left Panel Mode: 'dynamic_zones' | 'outline' | 'brand_vault'

@@ -95,21 +95,25 @@ export default function MoveStudioOverviewPage() {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    setData(null);
+    setIsLoading(true);
     async function loadDashboard() {
       try {
         const query = activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '';
-        const res = await fetch(`/api/admin/dashboard${query}`);
+        const res = await fetch(`/api/admin/dashboard${query}`, { signal: controller.signal, cache: 'no-store' });
         if (res.ok) {
           const json = await res.json();
-          setData(json);
+          if (!controller.signal.aborted) setData(json);
         }
       } catch (err) {
-        console.error('Failed to load dashboard:', err);
+        if (!controller.signal.aborted) console.error('Failed to load dashboard:', err);
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     }
     loadDashboard();
+    return () => controller.abort();
   }, [activeClient?.id]);
 
   // If in Client CMS Mode, render the calm, distraction-free Client CMS Workspace
