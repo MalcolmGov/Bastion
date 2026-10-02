@@ -1,3 +1,9 @@
+export interface SuggestedNextStep {
+  label: string;
+  query: string;
+  icon?: 'edit' | 'sparkles' | 'users' | 'check' | 'folder' | 'book' | 'arrow' | 'shield';
+}
+
 export interface CmsKnowledgeEntry {
   title: string;
   category: string;
@@ -7,7 +13,23 @@ export interface CmsKnowledgeEntry {
   tips: string;
   actionUrl: string;
   actionLabel: string;
+  suggestedNextSteps: SuggestedNextStep[];
 }
+
+export const DEFAULT_CLIENT_SUGGESTED_STEPS: SuggestedNextStep[] = [
+  { label: 'Edit Website Pages', query: 'How do I edit pages on my website?', icon: 'edit' },
+  { label: 'Open Visual Editor', query: 'Open the Visual Live Page Editor', icon: 'sparkles' },
+  { label: 'Invite Team Members', query: 'How do I invite team members and set permissions?', icon: 'users' },
+  { label: 'Publishing Approvals', query: 'How do reviews and publishing approvals work?', icon: 'check' },
+  { label: 'Platform Learning Hub', query: 'Open the Platform Learning Hub', icon: 'book' }
+];
+
+export const DEFAULT_AGENCY_SUGGESTED_STEPS: SuggestedNextStep[] = [
+  { label: 'Visual Live Editor', query: 'Open the Visual Live Page Editor', icon: 'sparkles' },
+  { label: 'Invite Team', query: 'How do I invite team members?', icon: 'users' },
+  { label: 'SRE System Health', query: 'Check platform health and SLA uptime', icon: 'shield' },
+  { label: 'Active Incidents', query: 'Are there any active incidents or open PR fixes?', icon: 'check' }
+];
 
 export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
   {
@@ -24,7 +46,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'Drafts are isolated in private sandbox mode and will never affect the live production website until formally approved in the review queue.',
     actionUrl: '/admin/editor',
-    actionLabel: 'Open Visual Editor'
+    actionLabel: 'Open Visual Editor',
+    suggestedNextSteps: [
+      { label: 'Submit for Review', query: 'How do reviews and publishing approvals work?', icon: 'check' },
+      { label: 'Explore Site Pages', query: 'Take me to pages and site architecture', icon: 'edit' },
+      { label: 'Upload Media Assets', query: 'How do I upload corporate media and photos?', icon: 'folder' }
+    ]
   },
   {
     title: 'Pages & Site Architecture',
@@ -40,7 +67,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'Every page features automatic OpenGraph card generation for executive sharing on LinkedIn and Twitter.',
     actionUrl: '/admin/pages',
-    actionLabel: 'Explore Pages'
+    actionLabel: 'Explore Pages',
+    suggestedNextSteps: [
+      { label: 'Launch Visual Editor', query: 'Open the Visual Live Page Editor', icon: 'sparkles' },
+      { label: 'Review Draft Changes', query: 'How do reviews and publishing approvals work?', icon: 'check' },
+      { label: 'Organize Menus', query: 'How do I configure header and footer menus?', icon: 'edit' }
+    ]
   },
   {
     title: 'Reviews & Four-Eyes Approvals',
@@ -56,7 +88,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'All sign-offs record the reviewer identity, timestamp, and audit hash to comply with King IV standards.',
     actionUrl: '/admin/tasks',
-    actionLabel: 'View Publishing Queue'
+    actionLabel: 'View Publishing Queue',
+    suggestedNextSteps: [
+      { label: 'Team Roles & Permissions', query: 'How do I invite team members and set permissions?', icon: 'users' },
+      { label: 'King IV Governance Audit', query: 'Tell me about King IV governance and audit logs', icon: 'shield' },
+      { label: 'Scheduled Drops', query: 'How do scheduled releases and drops work?', icon: 'sparkles' }
+    ]
   },
   {
     title: 'Digital Asset Management (DAM) & Media Library',
@@ -71,7 +108,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'Documents like annual reports or policies receive permanent, version-safe download URLs.',
     actionUrl: '/admin/media',
-    actionLabel: 'Browse Media Assets'
+    actionLabel: 'Browse Media Assets',
+    suggestedNextSteps: [
+      { label: 'Add Image to Page', query: 'Open the Visual Live Page Editor', icon: 'sparkles' },
+      { label: 'Publish Press Release', query: 'How do I publish a news release?', icon: 'edit' },
+      { label: 'Invite Content Editor', query: 'How do I invite team members and set permissions?', icon: 'users' }
+    ]
   },
   {
     title: 'Team & Access Control',
@@ -87,7 +129,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'Users can reset their passwords or request a fresh sign-in link directly from the login page anytime.',
     actionUrl: '/admin/users',
-    actionLabel: 'Manage Team Members'
+    actionLabel: 'Manage Team Members',
+    suggestedNextSteps: [
+      { label: 'Four-Eyes Approvals', query: 'How do reviews and publishing approvals work?', icon: 'check' },
+      { label: 'Audit Trail Logs', query: 'Tell me about King IV governance and audit logs', icon: 'shield' },
+      { label: 'Platform Learning Hub', query: 'Open the Platform Learning Hub', icon: 'book' }
+    ]
   },
   {
     title: 'News & Press Releases',
@@ -103,7 +150,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'Press releases are formatted with print-friendly layouts and structured schema markup for Google News.',
     actionUrl: '/admin/releases',
-    actionLabel: 'View Press Releases'
+    actionLabel: 'View Press Releases',
+    suggestedNextSteps: [
+      { label: 'Scheduled Time-Lock', query: 'How do scheduled releases and drops work?', icon: 'sparkles' },
+      { label: 'Upload Media Pack', query: 'How do I upload corporate media and photos?', icon: 'folder' },
+      { label: 'Review Queue', query: 'How do reviews and publishing approvals work?', icon: 'check' }
+    ]
   },
   {
     title: 'Scheduled Releases & Time-Locked Drops',
@@ -119,7 +171,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'Ideal for market-sensitive announcements requiring strict embargo enforcement.',
     actionUrl: '/admin/releases',
-    actionLabel: 'Manage Content Releases'
+    actionLabel: 'Manage Content Releases',
+    suggestedNextSteps: [
+      { label: 'Check Approvals Queue', query: 'How do reviews and publishing approvals work?', icon: 'check' },
+      { label: 'Open Visual Editor', query: 'Open the Visual Live Page Editor', icon: 'sparkles' },
+      { label: 'Governance Audit Log', query: 'Tell me about King IV governance and audit logs', icon: 'shield' }
+    ]
   },
   {
     title: 'King IV Governance & Audit Trail',
@@ -134,7 +191,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'All log entries are append-only to satisfy King IV statutory accountability requirements.',
     actionUrl: '/admin/governance',
-    actionLabel: 'View Governance Audit'
+    actionLabel: 'View Governance Audit',
+    suggestedNextSteps: [
+      { label: 'Ethics Hotline', query: 'Tell me about the ethics and whistleblowing hotline', icon: 'shield' },
+      { label: 'Team Access Control', query: 'How do I invite team members and set permissions?', icon: 'users' },
+      { label: 'Platform Learning Hub', query: 'Open the Platform Learning Hub', icon: 'book' }
+    ]
   },
   {
     title: 'Platform Learning Hub',
@@ -149,7 +211,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'You can revisit the Learning Hub at any time directly from the left navigation sidebar.',
     actionUrl: '/admin/learn',
-    actionLabel: 'Open Learning Hub'
+    actionLabel: 'Open Learning Hub',
+    suggestedNextSteps: [
+      { label: 'Visual Editor Tutorial', query: 'How do I edit pages on my website?', icon: 'edit' },
+      { label: 'Invite Colleagues', query: 'How do I invite team members and set permissions?', icon: 'users' },
+      { label: 'Media Vault Guide', query: 'How do I upload corporate media and photos?', icon: 'folder' }
+    ]
   },
   {
     title: 'Ethics & Whistleblowing Hotline',
@@ -163,7 +230,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'Fully aligned with Protected Disclosures and King IV Principle 1 governance standards.',
     actionUrl: '/admin/ethics',
-    actionLabel: 'Open Ethics Hub'
+    actionLabel: 'Open Ethics Hub',
+    suggestedNextSteps: [
+      { label: 'King IV Governance Audit', query: 'Tell me about King IV governance and audit logs', icon: 'shield' },
+      { label: 'Team Permissions', query: 'How do I invite team members and set permissions?', icon: 'users' },
+      { label: 'Learning Hub Modules', query: 'Open the Platform Learning Hub', icon: 'book' }
+    ]
   },
   {
     title: 'Tenders & Procurement RFPs',
@@ -178,7 +250,12 @@ export const CMS_KNOWLEDGE_BASE: CmsKnowledgeEntry[] = [
     ],
     tips: 'Closing countdown timers automatically lock tenders when submission windows expire.',
     actionUrl: '/admin/tenders',
-    actionLabel: 'Manage Tenders'
+    actionLabel: 'Manage Tenders',
+    suggestedNextSteps: [
+      { label: 'Upload Tender Documents', query: 'How do I upload corporate media and photos?', icon: 'folder' },
+      { label: 'Publishing Approvals', query: 'How do reviews and publishing approvals work?', icon: 'check' },
+      { label: 'Platform Learning Hub', query: 'Open the Platform Learning Hub', icon: 'book' }
+    ]
   }
 ];
 
@@ -186,7 +263,6 @@ export function findCmsKnowledge(query: string): CmsKnowledgeEntry | null {
   const q = query.toLowerCase().trim();
   if (!q) return null;
 
-  // Exact or keyword match
   for (const item of CMS_KNOWLEDGE_BASE) {
     for (const kw of item.keywords) {
       if (q.includes(kw)) {

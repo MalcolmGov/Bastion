@@ -10,7 +10,9 @@ import {
 import {
   findCmsKnowledge,
   buildCmsKnowledgePrompt,
-  CMS_KNOWLEDGE_BASE
+  CMS_KNOWLEDGE_BASE,
+  DEFAULT_CLIENT_SUGGESTED_STEPS,
+  DEFAULT_AGENCY_SUGGESTED_STEPS
 } from '@/lib/copilot/cmsKnowledge';
 
 export async function POST(req: NextRequest) {
@@ -29,12 +31,14 @@ export async function POST(req: NextRequest) {
 
     const clientName = clientContext || 'Payguard';
     const isClient = portalViewMode === 'client';
+    const defaultSteps = isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS;
     const trimmed = (message || '').trim();
 
     if (!trimmed) {
       return NextResponse.json({
         reply: `Hello ${userName}! I'm Ask AI, your platform assistant for ${clientName}. How can I assist you with your pages, visual editor, or team today?`,
-        speechText: `Hello ${userName}. I am Ask AI, your assistant for ${clientName}. What would you like guidance on?`
+        speechText: `Hello ${userName}. I am Ask AI, your assistant for ${clientName}. What would you like guidance on?`,
+        suggestedNextSteps: defaultSteps
       });
     }
 
@@ -52,20 +56,21 @@ export async function POST(req: NextRequest) {
       lower.includes('take me')
     ) {
       const nav = navigateAction(lower);
+      const matchedKnowledge = findCmsKnowledge(lower);
       return NextResponse.json({
         reply: `${nav.speechText} Opening ${nav.navigationUrl} for you.`,
         speechText: nav.speechText,
         action: {
           type: 'navigate',
           navigationUrl: nav.navigationUrl
-        }
+        },
+        suggestedNextSteps: matchedKnowledge?.suggestedNextSteps || defaultSteps
       });
     }
 
     // ─────────────────────────────────────────────────────────
     // 2. INTENT: AGENCY-ONLY OPS (SRE / INCIDENTS / BILLING)
     // ─────────────────────────────────────────────────────────
-    // Only execute if operator is in agency mode
     if (!isClient) {
       if (
         lower.includes('sre') ||
@@ -81,7 +86,12 @@ export async function POST(req: NextRequest) {
           action: {
             type: 'sre_health',
             data: health.data
-          }
+          },
+          suggestedNextSteps: [
+            { label: 'Incident Logs', query: 'Are there any active incidents or open PR fixes?', icon: 'check' },
+            { label: 'Public Status Page', query: 'Open the public status page', icon: 'sparkles' },
+            { label: 'Visual Editor', query: 'Open the Visual Live Page Editor', icon: 'edit' }
+          ]
         });
       }
 
@@ -93,7 +103,12 @@ export async function POST(req: NextRequest) {
           action: {
             type: 'list_incidents',
             data: inc.data
-          }
+          },
+          suggestedNextSteps: [
+            { label: 'SRE Health Probe', query: 'Check platform health and SLA uptime', icon: 'shield' },
+            { label: 'Commercial Billing', query: 'What is our total invoiced revenue and billing?', icon: 'check' },
+            { label: 'Visual Editor', query: 'Open the Visual Live Page Editor', icon: 'sparkles' }
+          ]
         });
       }
 
@@ -111,7 +126,8 @@ export async function POST(req: NextRequest) {
               type: 'create_invoice',
               navigationUrl: inv.navigationUrl,
               data: inv.data
-            }
+            },
+            suggestedNextSteps: defaultSteps
           });
         }
         const bill = await getBillingSummaryAction();
@@ -121,7 +137,8 @@ export async function POST(req: NextRequest) {
           action: {
             type: 'billing_summary',
             data: bill.data
-          }
+          },
+          suggestedNextSteps: defaultSteps
         });
       }
     }
@@ -173,7 +190,8 @@ export async function POST(req: NextRequest) {
                 type: 'navigate',
                 navigationUrl: matchedKnowledge.actionUrl,
                 label: matchedKnowledge.actionLabel
-              } : undefined
+              } : undefined,
+              suggestedNextSteps: matchedKnowledge?.suggestedNextSteps || defaultSteps
             });
           }
         }
@@ -194,7 +212,8 @@ export async function POST(req: NextRequest) {
           type: 'navigate',
           navigationUrl: matchedKnowledge.actionUrl,
           label: matchedKnowledge.actionLabel
-        }
+        },
+        suggestedNextSteps: matchedKnowledge.suggestedNextSteps || defaultSteps
       });
     }
 
@@ -207,7 +226,8 @@ export async function POST(req: NextRequest) {
         type: 'navigate',
         navigationUrl: '/admin/learn',
         label: 'Open Platform Learning Hub'
-      }
+      },
+      suggestedNextSteps: defaultSteps
     });
 
   } catch (error: any) {

@@ -162,3 +162,23 @@ input, button, select, textarea {
   animation: border-spin 10s linear infinite;
 }
 
+/* Sleek Modern Scrollbars */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #E2E8F0 transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #CBD5E1;
+}
+

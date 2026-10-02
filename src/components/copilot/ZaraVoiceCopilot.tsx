@@ -25,11 +25,17 @@ import {
   BookOpen,
   Edit3,
   Users,
-  FolderOpen
+  FolderOpen,
+  RotateCcw
 } from 'lucide-react';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { useDashboardCustomizer } from '@/components/admin/DashboardCustomizerProvider';
+import {
+  SuggestedNextStep,
+  DEFAULT_CLIENT_SUGGESTED_STEPS,
+  DEFAULT_AGENCY_SUGGESTED_STEPS
+} from '@/lib/copilot/cmsKnowledge';
 
 interface CopilotMessage {
   id: string;
@@ -75,7 +81,11 @@ export function ZaraVoiceCopilot() {
     }
   ]);
 
-  // Keep welcome message context updated if client changes
+  const [suggestedSteps, setSuggestedSteps] = useState<SuggestedNextStep[]>(
+    isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS
+  );
+
+  // Keep welcome message & suggested steps updated if client changes
   useEffect(() => {
     setMessages(prev => {
       if (prev.length === 1 && prev[0].id === 'welcome') {
@@ -92,6 +102,7 @@ export function ZaraVoiceCopilot() {
       }
       return prev;
     });
+    setSuggestedSteps(isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS);
   }, [clientName, userFirstName, isClient]);
 
   // Audio & Speech References
@@ -361,7 +372,6 @@ export function ZaraVoiceCopilot() {
     const text = (contentToSend || textInput).trim();
     if (!text || isProcessing) return;
 
-    // Clear inputs and interim transcript
     setTextInput('');
     setInterimTranscript('');
     interruptSpeaking('New query submitted');
@@ -407,6 +417,11 @@ export function ZaraVoiceCopilot() {
       setMessages(prev => [...prev, assistantMsg]);
       setIsProcessing(false);
 
+      // Update guided next steps pills based on response
+      if (data.suggestedNextSteps && Array.isArray(data.suggestedNextSteps) && data.suggestedNextSteps.length > 0) {
+        setSuggestedSteps(data.suggestedNextSteps);
+      }
+
       // Execute platform navigation action if returned
       if (data.action?.type === 'navigate' && data.action.navigationUrl) {
         setTimeout(() => {
@@ -441,7 +456,27 @@ export function ZaraVoiceCopilot() {
   }, [textInput, isProcessing, interruptSpeaking, clientName, portalViewMode, user, messages, isVoiceActive, playSpeechQueue, router]);
 
   // ─────────────────────────────────────────────────────────
-  // 4. SPEECH RECOGNITION (Snappy VAD & Duplex Echo Guard)
+  // 4. CLEAR CHAT CONVERSATION
+  // ─────────────────────────────────────────────────────────
+  const handleClearChat = useCallback(() => {
+    interruptSpeaking('Chat cleared by user');
+    setTextInput('');
+    setInterimTranscript('');
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: isClient
+          ? `Hello ${userFirstName}! I'm Ask AI, your platform assistant for ${clientName}. I'm here to guide you through editing pages, using the Visual Live Editor, uploading media, inviting team members, or reviewing publication drafts. How can I help you today?`
+          : `Hello ${userFirstName}! Ask AI is active. I can guide you through managing client properties, visual editing, releases, team governance, or platform operations.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setSuggestedSteps(isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS);
+  }, [interruptSpeaking, isClient, userFirstName, clientName]);
+
+  // ─────────────────────────────────────────────────────────
+  // 5. SPEECH RECOGNITION (Snappy VAD & Duplex Echo Guard)
   // ─────────────────────────────────────────────────────────
   const startListening = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -563,6 +598,20 @@ export function ZaraVoiceCopilot() {
     }
   }, [isOpen, isVoiceActive, stopListening, teardownHardwareVad, interruptSpeaking, initHardwareVad, startListening]);
 
+  // Helper icon renderer for pills
+  function renderStepIcon(icon?: string) {
+    switch (icon) {
+      case 'edit': return <Edit3 className="w-3 h-3 text-amber-500 shrink-0" />;
+      case 'sparkles': return <Sparkles className="w-3 h-3 text-purple-500 shrink-0" />;
+      case 'users': return <Users className="w-3 h-3 text-indigo-500 shrink-0" />;
+      case 'check': return <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />;
+      case 'folder': return <FolderOpen className="w-3 h-3 text-blue-500 shrink-0" />;
+      case 'book': return <BookOpen className="w-3 h-3 text-teal-500 shrink-0" />;
+      case 'shield': return <ShieldCheck className="w-3 h-3 text-emerald-500 shrink-0" />;
+      default: return <Sparkles className="w-3 h-3 text-slate-400 shrink-0" />;
+    }
+  }
+
   return (
     <>
       {/* ───────────────────────────────────────────────────────── */}
@@ -596,25 +645,25 @@ export function ZaraVoiceCopilot() {
       {isOpen && (
         <div className="fixed bottom-24 right-6 z-50 w-[440px] max-w-[calc(100vw-2rem)] h-[620px] bg-white border border-slate-200/90 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.18)] ring-1 ring-slate-900/5 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
           
-          {/* Header (Clean & White) */}
-          <div className="px-5 py-3.5 border-b border-slate-100 bg-white flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-xs relative">
-                <Sparkles className="w-5 h-5 text-amber-300" />
+          {/* Header (Clean, White with Clear Chat Action) */}
+          <div className="px-4 py-3 border-b border-slate-100 bg-white flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-xs relative shrink-0">
+                <Sparkles className="w-4 h-4 text-amber-300" />
                 {isSpeaking && (
                   <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-purple-500 ring-2 ring-white animate-pulse" />
                 )}
               </div>
-              <div>
-                <div className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+              <div className="min-w-0">
+                <div className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5 truncate">
                   <span>Ask AI</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-700 border border-slate-200/70">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-700 border border-slate-200/70 truncate">
                     {clientName} Assistant
                   </span>
                 </div>
-                <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 font-medium">
+                <div className="text-[11px] text-slate-500 flex items-center gap-1.5 font-medium">
                   <span
-                    className={`w-2 h-2 rounded-full ${
+                    className={`w-1.5 h-1.5 rounded-full ${
                       voiceStatus === 'speaking'
                         ? 'bg-purple-500 animate-pulse'
                         : voiceStatus === 'listening'
@@ -624,9 +673,9 @@ export function ZaraVoiceCopilot() {
                         : 'bg-emerald-500'
                     }`}
                   />
-                  <span>
+                  <span className="truncate">
                     {voiceStatus === 'speaking'
-                      ? 'AI Speaking… (Duplex Active)'
+                      ? 'AI Speaking…'
                       : voiceStatus === 'listening'
                       ? 'Listening with Echo Guard…'
                       : voiceStatus === 'processing'
@@ -640,7 +689,19 @@ export function ZaraVoiceCopilot() {
             </div>
 
             {/* Header Controls */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Clear Chat Button */}
+              <button
+                type="button"
+                onClick={handleClearChat}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer group"
+                title="Clear conversation and reset"
+                aria-label="Clear chat"
+              >
+                <RotateCcw className="w-3 h-3 text-slate-400 group-hover:rotate-180 transition-transform duration-300" />
+                <span>Clear</span>
+              </button>
+
               {/* Voice Mode Toggle Switch */}
               <button
                 type="button"
@@ -683,8 +744,8 @@ export function ZaraVoiceCopilot() {
             </div>
           )}
 
-          {/* Messages Scroll Area (Crisp, High-Readability Light Background) */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs bg-[#FBFBFC]">
+          {/* Messages Scroll Area (Crisp, High-Readability Light Background with Custom Scrollbar) */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3.5 text-xs bg-[#FBFBFC] custom-scrollbar">
             {messages.map((m) => (
               <div
                 key={m.id}
@@ -745,96 +806,31 @@ export function ZaraVoiceCopilot() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Guidance Chips (Context-Aware for Client vs Agency) */}
-          <div className="px-3.5 py-2 bg-white border-t border-slate-100 overflow-x-auto flex gap-1.5 scrollbar-none text-[11px]">
-            {isClient ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('How do I edit pages on my website?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Edit3 className="w-3 h-3 text-amber-600" />
-                  <span>Edit Pages</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('Open the Visual Live Page Editor')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Sparkles className="w-3 h-3 text-purple-600" />
-                  <span>Visual Editor</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('How do I invite team members and set permissions?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Users className="w-3 h-3 text-indigo-600" />
-                  <span>Invite Team</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('How do reviews and publishing approvals work?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  <span>Approvals Queue</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('How do I upload corporate media, logos and PDF reports?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <FolderOpen className="w-3 h-3 text-blue-600" />
-                  <span>Media Vault</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('Open the Platform Learning Hub')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <BookOpen className="w-3 h-3 text-teal-600" />
-                  <span>Learning Hub</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('Open the Visual Live Page Editor')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Edit3 className="w-3 h-3 text-amber-600" />
-                  <span>Visual Editor</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('How do I invite team members?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Users className="w-3 h-3 text-indigo-600" />
-                  <span>Invite Team</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('Check platform health and SLA uptime')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                  <span>SRE Health</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage('Are there any active incidents or open PR fixes?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 whitespace-nowrap transition border border-slate-200/80 font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Activity className="w-3 h-3 text-purple-600" />
-                  <span>Incidents</span>
-                </button>
-              </>
-            )}
-          </div>
+          {/* Guided Next Steps (Wrapped Stacked Pills, No Horizontal Scrollbar) */}
+          {suggestedSteps.length > 0 && (
+            <div className="px-4 py-2.5 bg-slate-50/90 border-t border-slate-100/90">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  Recommended Next Steps
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">Click to ask</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 max-h-[76px] overflow-y-auto custom-scrollbar">
+                {suggestedSteps.map((step, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSendMessage(step.query)}
+                    className="px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 hover:border-slate-300 text-slate-700 hover:text-slate-900 border border-slate-200/90 shadow-2xs text-[11px] font-medium flex items-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 text-left"
+                  >
+                    {renderStepIcon(step.icon)}
+                    <span className="truncate max-w-[200px]">{step.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Input Bar (Clean White) */}
           <form
