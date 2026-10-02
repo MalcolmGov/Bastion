@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "tsx scripts/seed.ts",
-    "test:workspace": "node --test tests/workspace/*.test.cjs"
+    "test:workspace": "node --test tests/workspace/*.test.cjs",
+    "test:security": "node --test tests/security/*.test.cjs"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

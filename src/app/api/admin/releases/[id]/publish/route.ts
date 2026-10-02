@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { publishRelease } from '@/lib/releases/service';
+import { ReleaseValidationError, publishRelease } from '@/lib/releases/service';
 import { hasPermission } from '@/lib/auth/auth';
 import { assertReleaseAccess, requireUser } from '@/lib/auth/guard';
 
@@ -20,6 +20,6 @@ export async function POST(
     return NextResponse.json(result);
   } catch (err: any) {
     console.error(`[API /api/admin/releases/${(await params).id}/publish] Error:`, err);
-    return NextResponse.json({ error: err.message || 'Failed to publish release' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Failed to publish release' }, { status: err instanceof ReleaseValidationError ? 400 : 500 });
   }
 }

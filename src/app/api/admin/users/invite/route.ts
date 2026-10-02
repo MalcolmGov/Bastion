@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import { requireUser } from '@/lib/auth/guard';
+import { requireAgencyUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
-import { generateToken, hashPassword } from '@/lib/auth/auth';
+import { generateToken, hashPassword, ROLE_PERMISSIONS } from '@/lib/auth/auth';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 import { sendTransactionalEmail } from '@/lib/email/delivery';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
-    const gate = await requireUser();
+    const gate = await requireAgencyUser();
     if (!gate.ok) return gate.response;
     const currentUser = gate.user;
 
@@ -22,21 +22,16 @@ export async function POST(req: NextRequest) {
       clientScope = 'All'
     } = body;
 
-    let clientId = body.clientId;
+    const clientId = body.clientId;
 
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required.' }, { status: 400 });
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
-
-    // Client users can only invite into their own client workspace
-    if (!isAgencyUser(currentUser)) {
-      clientId = currentUser.client_id;
-      if (role === 'platform_admin') {
-        return NextResponse.json({ error: 'Client users cannot invite platform admins.' }, { status: 403 });
-      }
+    if (typeof role !== 'string' || !Object.prototype.hasOwnProperty.call(ROLE_PERMISSIONS, role)) {
+      return NextResponse.json({ error: 'Invalid user role.' }, { status: 400 });
     }
+    const cleanEmail = String(email).trim().toLowerCase();
 
     if (role === 'platform_admin' && clientId) {
       return NextResponse.json({ error: 'Platform admins are agency accounts and cannot be bound to one client.' }, { status: 400 });
@@ -55,13 +50,17 @@ export async function POST(req: NextRequest) {
     const placeholderHash = hashPassword(crypto.randomBytes(32).toString('hex'));
 
     const existing = await db.execute({
-      sql: `SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1`,
+      sql: `SELECT id, client_id FROM users WHERE LOWER(email) = ? LIMIT 1`,
       args: [cleanEmail]
     });
 
     let userId = '';
 
     if (existing.rows.length > 0) {
+      const targetClientId = role === 'platform_admin' ? null : clientId;
+      if ((existing.rows[0].client_id || null) !== targetClientId) {
+        return NextResponse.json({ error: 'Existing account belongs to a different workspace.' }, { status: 409 });
+      }
       userId = String(existing.rows[0].id);
       await db.execute({
         sql: `UPDATE users SET name = ?, role = ?, client_id = ?, invite_token = ?, invite_token_expires_at = ?, must_reset_password = 1 WHERE id = ?`,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { verifyApiToken } from '@/lib/auth/apiToken';
+import { apiTenantFilter } from '@/lib/auth/apiAccess';
 
 export async function GET(
   req: NextRequest,
@@ -19,18 +20,24 @@ export async function GET(
     const effectiveClientId = auth.isAgencyAdmin
       ? (searchParams.get('clientId') || 'client_goldfields')
       : auth.clientId;
-    const siteId = auth.siteId || searchParams.get('siteId') || 'site_goldfields_flagship';
+    const siteId = auth.siteId || searchParams.get('siteId') || (auth.isAgencyAdmin ? 'site_goldfields_flagship' : null);
     const slug = searchParams.get('slug');
     const search = searchParams.get('search') || '';
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     const db = getDb();
+    const recordFilter = apiTenantFilter(auth, 'record', 'r');
 
     // SPECIAL CASE: 'pages' collection maps to page_compositions
     if (collection === 'pages') {
-      let pageSql = `SELECT * FROM page_compositions WHERE (site_id = ? OR client_id = ?)`;
-      const pageArgs: any[] = [siteId, effectiveClientId];
+      const filter = apiTenantFilter(auth.isAgencyAdmin ? { ...auth, isAgencyAdmin: false, clientId: effectiveClientId } : auth, 'page');
+      let pageSql = `SELECT * FROM page_compositions WHERE 1 = 1${filter.sql}`;
+      const pageArgs: any[] = [...filter.args];
+      if (siteId) {
+        pageSql += ' AND site_id = ?';
+        pageArgs.push(siteId);
+      }
 
       if (slug) {
         pageSql += ` AND page_slug = ?`;
@@ -76,9 +83,9 @@ export async function GET(
           ELSE r.current_published_revision_id = rev.id
         END
       )
-      WHERE r.collection = ? AND (r.client_id = ? OR (r.client_id IS NULL AND ? = 'client_goldfields'))
+      WHERE r.collection = ? AND (r.client_id = ? OR (r.client_id IS NULL AND ? = 'client_goldfields'))${recordFilter.sql}
     `;
-    const args: any[] = [isPreview ? 'true' : 'false', collection, effectiveClientId, effectiveClientId];
+    const args: any[] = [isPreview ? 'true' : 'false', collection, effectiveClientId, effectiveClientId, ...recordFilter.args];
 
     if (!isPreview) {
       sql += ` AND r.status = 'published'`;
