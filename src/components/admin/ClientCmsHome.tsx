@@ -6,10 +6,16 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid
+  CartesianGrid,
+  ReferenceLine
 } from 'recharts';
 import {
   ShieldCheck,
@@ -44,7 +50,9 @@ import {
   Download,
   BarChart3,
   Server,
-  ArrowUpRight
+  ArrowUpRight,
+  Radio,
+  RefreshCw
 } from 'lucide-react';
 import { useAdminAuth } from './AdminAuthProvider';
 import { WorkspaceClient, WorkspaceSite } from './StudioWorkspaceProvider';
@@ -251,11 +259,43 @@ export function ClientCmsHome({
 
   // Web Telemetry & Analytics state
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '14d' | '30d'>('7d');
+  const [analyticsFocusTab, setAnalyticsFocusTab] = useState<'all' | 'vitals' | 'documents' | 'traffic'>('all');
   const [isChartMounted, setIsChartMounted] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [purgeSuccess, setPurgeSuccess] = useState(false);
 
   useEffect(() => {
     setIsChartMounted(true);
   }, []);
+
+  const handlePurgeCache = () => {
+    setIsPurging(true);
+    setPurgeSuccess(false);
+    setTimeout(() => {
+      setIsPurging(false);
+      setPurgeSuccess(true);
+      setTimeout(() => setPurgeSuccess(false), 4000);
+    }, 900);
+  };
+
+  const vitalsTimeline = useMemo(() => [
+    { time: '00:00', ttfb: 44 },
+    { time: '03:00', ttfb: 42 },
+    { time: '06:00', ttfb: 39 },
+    { time: '09:00', ttfb: 45 },
+    { time: '12:00', ttfb: 46 },
+    { time: '15:00', ttfb: 41 },
+    { time: '18:00', ttfb: 38 },
+    { time: '21:00', ttfb: 40 },
+    { time: '23:59', ttfb: 42 },
+  ], []);
+
+  const edgeNodes = [
+    { city: 'Johannesburg', code: 'JNB-1', latency: '18ms', status: 'Optimal' },
+    { city: 'Frankfurt', code: 'FRA-1', latency: '42ms', status: 'Optimal' },
+    { city: 'London', code: 'LHR-1', latency: '46ms', status: 'Optimal' },
+    { city: 'New York', code: 'EWR-1', latency: '98ms', status: 'Optimal' },
+  ];
 
   const clientTrafficDatasets = useMemo(() => {
     return {
@@ -346,6 +386,23 @@ export function ClientCmsHome({
       { title: 'Executive Presentation & Institutional Factsheet', count: 1620, size: '5.6 MB', tag: 'Investor Deck' }
     ];
   }, [client, isGoldFields]);
+
+  const documentDonutData = useMemo(() => {
+    const palette = [primaryColor, accentColor, '#10B981', '#F59E0B', '#3B82F6', '#EC4899'];
+    const total = topDownloads.reduce((acc, d) => acc + d.count, 0);
+    return topDownloads.map((doc, idx) => ({
+      name: doc.title,
+      value: doc.count,
+      tag: doc.tag,
+      size: doc.size,
+      percentage: Math.max(1, Math.round((doc.count / Math.max(1, total)) * 100)),
+      color: palette[idx % palette.length]
+    }));
+  }, [topDownloads, primaryColor, accentColor]);
+
+  const totalDownloadsCount = useMemo(() => {
+    return documentDonutData.reduce((acc, d) => acc + d.value, 0);
+  }, [documentDonutData]);
 
   const webVitals = [
     { label: 'Time to First Byte', value: '42ms', status: 'Optimal', sub: 'Global Edge Cache Hit 99.8%' },
@@ -740,55 +797,98 @@ export function ClientCmsHome({
           )}
 
           {/* EXECUTIVE WEB TELEMETRY & REPORTING DASHBOARD */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-6">
-            {/* Header + Time Range Switcher */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span 
-                    style={{
-                      backgroundColor: `${primaryColor}15`,
-                      color: primaryColor,
-                      borderColor: `${primaryColor}30`
-                    }}
-                    className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1.5"
-                  >
-                    <BarChart3 className="w-3 h-3" />
-                    Executive Web Analytics &amp; Reporting
+          <section className="space-y-6">
+            {/* Station Header & Interactive Mode Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs backdrop-blur-xl">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Live Edge Telemetry Active
                   </span>
-                  <span className="text-xs text-slate-400">&bull; Live Edge Telemetry</span>
+                  <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Global Edge CDN &bull; {client?.name} Web &amp; Regulatory Repository
+                  </span>
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-1.5">
-                  Web Performance &amp; Investor Document Intelligence
+                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
+                  Corporate Web Intelligence &amp; Investor Document Analytics
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl leading-relaxed">
-                  Real-time telemetry measuring corporate audience engagement, regulatory filings downloads, and global edge delivery across primary institutional investor hubs.
-                </p>
               </div>
 
-              {/* Time Range Selector */}
-              <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800 self-start lg:self-auto shrink-0">
-                {(['24h', '7d', '14d', '30d'] as const).map((r) => (
+              {/* Filters: Focus Tab and Time Window */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* View Modes */}
+                <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-bold">
                   <button
-                    key={r}
                     type="button"
-                    onClick={() => setTimeRange(r)}
-                    style={timeRange === r ? { backgroundColor: primaryColor, color: '#FFFFFF' } : {}}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      timeRange === r 
-                        ? 'shadow-xs text-white' 
+                    onClick={() => setAnalyticsFocusTab('all')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      analyticsFocusTab === 'all'
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    {r === '24h' ? '24 Hours' : r === '7d' ? '7 Days' : r === '14d' ? '14 Days' : '30 Days'}
+                    Overview
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsFocusTab('vitals')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      analyticsFocusTab === 'vitals'
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Web Vitals
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsFocusTab('documents')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      analyticsFocusTab === 'documents'
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    IR Downloads
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsFocusTab('traffic')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                      analyticsFocusTab === 'traffic'
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Traffic Velocity
+                  </button>
+                </div>
+
+                {/* Time Range Selector */}
+                <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-bold">
+                  {(['24h', '7d', '14d', '30d'] as const).map((range) => (
+                    <button
+                      key={range}
+                      type="button"
+                      onClick={() => setTimeRange(range)}
+                      className={`px-2 py-1 rounded-lg uppercase tracking-wider text-[11px] transition-all cursor-pointer ${
+                        timeRange === range
+                          ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {range}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* 4 Telemetry Quick-Metric Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800">
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
                   <span>Web Pageviews</span>
                   <span className="flex items-center text-emerald-600 font-bold text-[11px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
@@ -803,7 +903,7 @@ export function ClientCmsHome({
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800">
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
                   <span>Institutional Inquiries</span>
                   <span className="flex items-center text-emerald-600 font-bold text-[11px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
@@ -818,7 +918,7 @@ export function ClientCmsHome({
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800">
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
                   <span>Filing Downloads</span>
                   <span className="flex items-center text-emerald-600 font-bold text-[11px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
@@ -833,7 +933,7 @@ export function ClientCmsHome({
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800">
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs">
                 <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
                   <span>Edge Delivery TTFB</span>
                   <span className="flex items-center text-emerald-600 font-bold text-[11px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
@@ -849,189 +949,435 @@ export function ClientCmsHome({
               </div>
             </div>
 
-            {/* Main Interactive Recharts Area Chart */}
-            <div className="p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Audience Traffic &amp; Institutional Engagement Velocity
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    Comparing total pageviews against institutional investor interactions ({activeDataset.label})
-                  </p>
-                </div>
-                <div className="flex items-center gap-4 text-xs font-semibold">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: primaryColor }} />
-                    <span className="text-slate-600 dark:text-slate-300">Pageviews</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: accentColor }} />
-                    <span className="text-slate-600 dark:text-slate-300">Inquiries / Actions</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-64 w-full">
-                {isChartMounted && (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={activeDataset.data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="corpColorViews" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={primaryColor} stopOpacity={0.4} />
-                          <stop offset="95%" stopColor={primaryColor} stopOpacity={0.0} />
-                        </linearGradient>
-                        <linearGradient id="corpColorInquiries" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={accentColor} stopOpacity={0.3} />
-                          <stop offset="95%" stopColor={accentColor} stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#88888820" vertical={false} />
-                      <XAxis 
-                        dataKey="time" 
-                        stroke="#88888870" 
-                        fontSize={11} 
-                        tickLine={false} 
-                        axisLine={false} 
-                      />
-                      <YAxis 
-                        stroke="#88888870" 
-                        fontSize={11} 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#0F172A', 
-                          borderColor: '#1E293B', 
-                          borderRadius: '12px',
-                          color: '#fff',
-                          fontSize: '12px',
-                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)'
-                        }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="pageviews" 
-                        name="Pageviews"
-                        stroke={primaryColor} 
-                        strokeWidth={2.5} 
-                        fillOpacity={1} 
-                        fill="url(#corpColorViews)" 
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="inquiries" 
-                        name="Inquiries / Actions"
-                        stroke={accentColor} 
-                        strokeWidth={2} 
-                        fillOpacity={1} 
-                        fill="url(#corpColorInquiries)" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </div>
-
-            {/* Dual Reports & Telemetry Cards */}
+            {/* 4 Rich Visual Chart Cards Grid (Exact Bastion Executive Quality) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* Document Download Reporting */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-[#0D121B] border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-3.5">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center space-x-2">
-                    <Download className="w-4 h-4 text-emerald-500" />
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                      Most Downloaded Regulatory &amp; IR Reports
-                    </h3>
-                  </div>
-                  <Link 
-                    href="/admin/reports" 
-                    className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-0.5"
-                  >
-                    <span>View Repository</span>
-                    <ChevronRight className="w-3 h-3" />
-                  </Link>
-                </div>
+              
+              {/* CHART 1: Website Vitals & Edge Latency (AreaChart with <50ms Target) */}
+              {(analyticsFocusTab === 'all' || analyticsFocusTab === 'vitals') && (
+                <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1"
+                    style={{ background: `linear-gradient(90deg, #2563EB 0%, #0284C7 100%)` }}
+                  />
 
-                <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                  {topDownloads.map((doc, idx) => (
-                    <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                            {doc.tag}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono">{doc.size}</span>
+                  <div>
+                    {/* Card Header */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shrink-0">
+                          <Activity className="w-5 h-5" />
                         </div>
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5">
-                          {doc.title}
-                        </p>
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
+                            <span>Website Vitals &amp; Edge Latency</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              100% Passed
+                            </span>
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                            Autonomous edge delivery across global investor corridors for {client?.name}
+                          </p>
+                        </div>
                       </div>
+
                       <div className="text-right shrink-0">
-                        <div className="text-xs font-bold text-slate-900 dark:text-white">
-                          {doc.count.toLocaleString()}
+                        <div className="text-2xl font-bold tracking-tight text-blue-600 dark:text-sky-400 tabular-nums">
+                          42ms
                         </div>
-                        <div className="text-[10px] text-slate-500 font-medium">downloads</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Avg Edge TTFB
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Core Web Vitals & Global Infrastructure */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-[#0D121B] border border-slate-200/90 dark:border-slate-800 shadow-2xs space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center space-x-2">
-                    <Server className="w-4 h-4 text-sky-500" />
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                      Core Web Vitals &amp; Edge Delivery SLA
-                    </h3>
-                  </div>
-                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    100% Google Pass
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {webVitals.map((v, idx) => (
-                    <div key={idx} className="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/80">
-                      <div className="text-[10px] text-slate-500 font-semibold">{v.label}</div>
-                      <div className="text-lg font-bold text-slate-900 dark:text-white font-mono mt-0.5 flex items-center justify-between">
-                        <span>{v.value}</span>
-                        <span className="text-[10px] font-sans font-bold text-emerald-600 dark:text-emerald-400">
-                          {v.status}
-                        </span>
+                    {/* Vitals Key Metrics Ribbon */}
+                    <div className="grid grid-cols-4 gap-2 mb-4 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 text-center">
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">0.72s</div>
+                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">LCP (Fast)</div>
                       </div>
-                      <div className="text-[10px] text-slate-500 mt-1 truncate">{v.sub}</div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">54ms</div>
+                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">INP (Instant)</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">0.01</div>
+                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">CLS (Stable)</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">99.8%</div>
+                        <div className="text-[10px] text-blue-600 dark:text-sky-400 font-semibold">Cache Hit</div>
+                      </div>
                     </div>
-                  ))}
-                </div>
 
-                {/* Audience Geographic Distribution */}
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2">
-                    <span>Institutional Audience Corridors</span>
-                    <span className="text-slate-400 font-normal">Primary IR Traffic</span>
+                    {/* Recharts Area Chart */}
+                    <div className="h-56 w-full pt-1">
+                      {isChartMounted ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={vitalsTimeline} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="clientLatencyGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#2563EB" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#2563EB" stopOpacity={0.0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94A3B8" opacity={0.15} />
+                            <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} />
+                            <YAxis domain={[20, 60]} tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} unit="ms" />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: '#0F172A',
+                                borderColor: '#334155',
+                                borderRadius: '0.75rem',
+                                color: '#FFFFFF',
+                                fontSize: '12px',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)'
+                              }}
+                              formatter={(val: any) => [`${val}ms`, 'Edge TTFB']}
+                            />
+                            <ReferenceLine y={50} stroke="#10B981" strokeDasharray="3 3" label={{ value: 'Target <50ms', position: 'top', fill: '#10B981', fontSize: 10 }} />
+                            <Area
+                              type="monotone"
+                              dataKey="ttfb"
+                              stroke="#2563EB"
+                              strokeWidth={2.5}
+                              fillOpacity={1}
+                              fill="url(#clientLatencyGradient)"
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/40 rounded-xl animate-pulse">
+                          <span className="text-xs text-slate-400">Loading Vitals Chart...</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    {audienceRegions.map((reg, idx) => (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-slate-600 dark:text-slate-400 truncate max-w-[240px]">{reg.region}</span>
-                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{reg.pct}%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${reg.color}`} style={{ width: `${reg.pct}%` }} />
-                        </div>
-                      </div>
+
+                  {/* Edge PoP Latencies Pill Bar */}
+                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-medium text-slate-500">
+                    <span className="font-bold text-slate-700 dark:text-slate-300 shrink-0">Global Edge PoPs:</span>
+                    {edgeNodes.map((node) => (
+                      <span key={node.code} className="inline-flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{node.code}</span>
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{node.latency}</span>
+                      </span>
                     ))}
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* CHART 2: Investor Document & Regulatory Filings Intelligence (DONUT CHART) */}
+              {(analyticsFocusTab === 'all' || analyticsFocusTab === 'documents') && (
+                <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1"
+                    style={{ background: `linear-gradient(90deg, #E60000 0%, #C99700 50%, ${primaryColor} 100%)` }}
+                  />
+
+                  <div>
+                    {/* Card Header */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0">
+                          <Layers className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
+                            <span>Regulatory &amp; IR Filings Intelligence</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                              {totalDownloadsCount.toLocaleString()} Total Downloads
+                            </span>
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                            Statutory disclosure, annual results &amp; investor report distribution
+                          </p>
+                        </div>
+                      </div>
+
+                      <Link
+                        href="/admin/reports"
+                        className="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 shrink-0"
+                      >
+                        <span>View Repository</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+
+                    {/* Donut Chart + Document Legend */}
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                      {/* Donut Visual */}
+                      <div className="sm:col-span-5 h-52 flex items-center justify-center relative">
+                        {isChartMounted ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={documentDonutData}
+                                innerRadius={55}
+                                outerRadius={78}
+                                paddingAngle={3}
+                                dataKey="value"
+                              >
+                                {documentDonutData.map((entry, index) => (
+                                  <Cell key={`doc-cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={{
+                                  backgroundColor: '#0F172A',
+                                  borderColor: '#334155',
+                                  borderRadius: '0.75rem',
+                                  color: '#FFFFFF',
+                                  fontSize: '12px'
+                                }}
+                                formatter={(val: any, name: any, item: any) => [
+                                  `${Number(val).toLocaleString()} downloads (${item.payload.percentage}%)`,
+                                  item.payload.name
+                                ]}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/40 rounded-xl animate-pulse">
+                            <span className="text-xs text-slate-400">Loading Document Chart...</span>
+                          </div>
+                        )}
+
+                        {/* Centered KPI inside Donut */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums font-display">
+                            {totalDownloadsCount >= 1000 ? `${(totalDownloadsCount / 1000).toFixed(1)}k` : totalDownloadsCount}
+                          </span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Downloads</span>
+                        </div>
+                      </div>
+
+                      {/* Document Legend List */}
+                      <div className="sm:col-span-7 space-y-2">
+                        {documentDonutData.map((docItem) => (
+                          <div key={docItem.name} className="flex items-center justify-between text-xs py-0.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: docItem.color }} />
+                              <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                                {docItem.name}
+                              </span>
+                              {docItem.tag && (
+                                <span className="hidden sm:inline-block text-[9px] px-1.5 py-0.2 rounded font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0">
+                                  {docItem.tag}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0 font-sans tabular-nums pl-2">
+                              <span className="font-bold text-slate-900 dark:text-white">{docItem.value.toLocaleString()}</span>
+                              <span className="text-[11px] text-slate-400 font-medium">({docItem.percentage}%)</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Compliance Verification Footer */}
+                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-medium">
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      100% Audit Conformance &bull; King IV &amp; SENS Integrated
+                    </span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                      Zero Broken Links
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* CHART 3: Audience Traffic Velocity & Inbound Inquiries (DUAL BAR CHART) */}
+              {(analyticsFocusTab === 'all' || analyticsFocusTab === 'traffic') && (
+                <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1"
+                    style={{ background: `linear-gradient(90deg, #10B981 0%, #065F46 100%)` }}
+                  />
+
+                  <div>
+                    {/* Card Header */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">
+                          <TrendingUp className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
+                            <span>Audience Traffic &amp; Institutional Inquiries</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              +24.1% WoW
+                            </span>
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                            Direct visitor pageviews vs. institutional stakeholder interactions ({activeDataset.label})
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums font-display">
+                          {activeDataset.metric}
+                        </div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          {activeDataset.label}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Recharts Bar Chart */}
+                    <div className="h-56 w-full pt-1">
+                      {isChartMounted ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={activeDataset.data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94A3B8" opacity={0.15} />
+                            <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} />
+                            <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: '#0F172A',
+                                borderColor: '#334155',
+                                borderRadius: '0.75rem',
+                                color: '#FFFFFF',
+                                fontSize: '12px'
+                              }}
+                            />
+                            <Bar dataKey="pageviews" name="Audience Pageviews" fill={primaryColor} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="inquiries" name="Institutional Inquiries" fill="#10B981" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/40 rounded-xl animate-pulse">
+                          <span className="text-xs text-slate-400">Loading Traffic Chart...</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Velocity Stat Row */}
+                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-medium">
+                    <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-bold">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                      {activeDataset.inquiries} Inbound Contacts &amp; Mandates Logged
+                    </span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      Avg Session: 3m 42s
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* CHART 4: Real-Time Edge Invalidation & Fleet Health (INTERACTIVE CONTROL & GEO) */}
+              {(analyticsFocusTab === 'all' || analyticsFocusTab === 'vitals') && (
+                <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+                  <div 
+                    className="absolute top-0 left-0 right-0 h-1"
+                    style={{ background: `linear-gradient(90deg, #8B5CF6 0%, #6366F1 100%)` }}
+                  />
+
+                  <div>
+                    {/* Card Header */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 shrink-0">
+                          <Radio className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
+                            <span>Edge Invalidation &amp; Delivery SLA</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              &lt;500ms Edge Invalidation
+                            </span>
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                            Instant cache synchronization across 280+ edge POPs upon publishing updates
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handlePurgeCache}
+                        disabled={isPurging}
+                        className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer shrink-0"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isPurging ? 'animate-spin' : ''}`} />
+                        <span>{isPurging ? 'Purging CDN...' : 'Purge Edge Cache'}</span>
+                      </button>
+                    </div>
+
+                    {/* Purge Notification */}
+                    {purgeSuccess && (
+                      <div className="mb-3 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-2 animate-in fade-in">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Edge cache successfully purged across all global points of presence!</span>
+                      </div>
+                    )}
+
+                    {/* Edge Nodes & TLS Status */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80">
+                        <div className="text-[10px] text-slate-500 font-semibold">TLS Encryption</div>
+                        <div className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>TLS 1.3 Strict</span>
+                        </div>
+                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                          Let&apos;s Encrypt &bull; 78 Days Remaining
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80">
+                        <div className="text-[10px] text-slate-500 font-semibold">HTTP Protocol</div>
+                        <div className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5 text-amber-500" />
+                          <span>HTTP/3 (QUIC)</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-semibold mt-1">
+                          Zero-RTT Connection Resumption
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Audience Geographic Distribution */}
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2">
+                        <span>Institutional Audience Corridors</span>
+                        <span className="text-slate-400 font-normal">Primary IR Traffic</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {audienceRegions.map((reg, idx) => (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="text-slate-600 dark:text-slate-400 truncate max-w-[240px]">{reg.region}</span>
+                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{reg.pct}%</span>
+                            </div>
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full ${reg.color}`} style={{ width: `${reg.pct}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Security Footer */}
+                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-medium">
+                    <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      DDoS Mitigation &amp; Edge WAF Active
+                    </span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                      0 Threats Blocked
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          </section>
 
           {/* LIVE WEBSITE PREVIEW & VISUAL EDITOR LAUNCHPAD */}
           <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0D121B] border border-slate-200/90 dark:border-slate-800 shadow-md space-y-5">
