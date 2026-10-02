@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles, Send, Check, ArrowRight, RotateCcw } from 'lucide-react';
 import {
+  ApiKeysTab,
   getStoredApiKeys,
   type StoredApiKeys,
 } from '@/components/studio/ApiKeysTab';
+import { EditorDialog } from './EditorDialog';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import type { SectionInstance } from '@/lib/studio/types';
 import type { WebsiteProposal } from '@/lib/studio/editor/websiteProposal';
@@ -60,6 +62,8 @@ export function EditorAssistant({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [provider, setProvider] = useState<keyof StoredApiKeys | null>(null);
+  const [connectionOpen, setConnectionOpen] = useState(false);
+  const [connectionVersion, setConnectionVersion] = useState(0);
   const [configured, setConfigured] = useState(false);
   const [configurationLoaded, setConfigurationLoaded] = useState(false);
   const request = useRef<AbortController | null>(null);
@@ -72,6 +76,7 @@ export function EditorAssistant({
       (name) => !!keys[name as keyof StoredApiKeys]?.trim(),
     ) as keyof StoredApiKeys | undefined;
     const controller = new AbortController();
+    setError(null);
     if (stored) {
       setProvider(stored);
       setConfigured(true);
@@ -94,7 +99,7 @@ export function EditorAssistant({
         }
       });
     return () => controller.abort();
-  }, [active]);
+  }, [active, connectionVersion]);
   useEffect(() => () => request.current?.abort(), []);
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'nearest' });
@@ -103,7 +108,7 @@ export function EditorAssistant({
     if (!prompt.trim() || busy || !canEdit) return;
     if (!provider) {
       setError(
-        'No AI provider is connected to this preview. Your Bastion team can connect the existing key in AI settings or configure the server provider. Browser-saved keys belong to the address where they were saved.',
+        'Connect your AI provider using Connect AI below, then resend your request. Your website has not changed.',
       );
       return;
     }
@@ -212,6 +217,38 @@ export function EditorAssistant({
   }
   return (
     <div className="flex min-h-[640px] flex-col text-slate-900 dark:text-slate-100">
+      <EditorDialog
+        open={connectionOpen}
+        title="Connect your AI assistant"
+        onClose={() => {
+          setConnectionOpen(false);
+          setConnectionVersion((value) => value + 1);
+        }}
+      >
+        <p className="mb-4 mt-2 text-xs leading-relaxed text-slate-500">
+          Use the provider key already configured in Bastion. This reconnects
+          this browser address. Your Bastion team can configure a server
+          connection for all client editors.
+        </p>
+        <div className="max-h-[65vh] overflow-y-auto rounded-xl bg-slate-950 p-4 text-white">
+          <ApiKeysTab
+            onSaved={() => {
+              setConnectionOpen(false);
+              setConnectionVersion((value) => value + 1);
+            }}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setConnectionOpen(false);
+            setConnectionVersion((value) => value + 1);
+          }}
+          className="mt-4 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        >
+          Close connection settings
+        </button>
+      </EditorDialog>
       <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-4 dark:border-indigo-900 dark:from-indigo-950 dark:via-slate-900 dark:to-slate-900">
         <div className="flex items-center gap-2">
           <span className="rounded-lg bg-indigo-600 p-2 text-white">
@@ -432,16 +469,36 @@ export function EditorAssistant({
           {error}
         </p>
       )}
-      {configurationLoaded && !configured && (
+      {configurationLoaded && (
         <div className="mb-3 rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 dark:bg-slate-800">
-          The AI service needs to be configured by your Bastion team.
+          <div className="flex items-center justify-between gap-3">
+            <span>
+              {configured
+                ? 'AI provider connected'
+                : 'Connect AI to start chatting'}
+            </span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setConnectionOpen(true)}
+              className="shrink-0 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-medium text-white"
+            >
+              {configured ? 'AI connection' : 'Connect AI'}
+            </button>
+          </div>
+          {!configured && (
+            <p className="mt-2">
+              Reuse your existing provider key. This preview has a separate
+              browser connection.
+            </p>
+          )}
           {onSettings && (
             <button
               type="button"
               onClick={onSettings}
-              className="mt-2 block font-medium text-indigo-600"
+              className="mt-2 text-xs text-indigo-600"
             >
-              Open AI settings
+              Advanced AI settings
             </button>
           )}
         </div>
