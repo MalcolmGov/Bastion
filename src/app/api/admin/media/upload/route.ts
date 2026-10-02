@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const customAlt = (formData.get('alt_text') as string) || '';
+    const customFolder = (formData.get('folder_id') as string) || 'corporate';
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -117,8 +118,8 @@ export async function POST(req: NextRequest) {
     const altText = customAlt || `Corporate asset: ${cleanFilename}`;
 
     await db.execute({
-      sql: `INSERT INTO media_assets (id, filename, url, mime_type, size_bytes, alt_text, caption, client_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO media_assets (id, filename, url, mime_type, size_bytes, alt_text, caption, client_id, folder_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         assetId,
         cleanFilename,
@@ -128,6 +129,7 @@ export async function POST(req: NextRequest) {
         altText,
         'Uploaded via Bastion Studio',
         clientId,
+        customFolder,
         now
       ]
     });
