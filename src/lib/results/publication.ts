@@ -521,61 +521,93 @@ function isSlidePage(lines: Line[]): boolean {
     && lines.some((line) => words(line.text) >= 8);
 }
 
+function columnsOf(line: Line): Phrase[][] {
+  const groups: Phrase[][] = [];
+  for (const phrase of line.phrases) {
+    const group = groups[groups.length - 1];
+    const previous = group?.[group.length - 1];
+    if (previous && phrase.x - previous.right > 22) groups.push([phrase]);
+    else if (group) group.push(phrase);
+    else groups.push([phrase]);
+  }
+  return groups;
+}
+
+function phraseText(group: Phrase[]): string {
+  return clean(group.map((phrase) => phrase.text).join(' '));
+}
+
 function slideBlocks(lines: Line[]): PublicationBlock[] {
   const ordered = [...lines].sort((a, b) => b.y - a.y);
   const blocks: PublicationBlock[] = [];
   const metrics: PublicationMetric[] = [];
-  let paragraph = '';
-  const flush = () => {
-    const text = clean(paragraph);
-    paragraph = '';
-    if (words(text) >= 6) blocks.push({ kind: 'paragraph', text });
+  const paragraphs: string[] = [];
+  let titled = false;
+  const flushParagraphs = () => {
+    for (const text of paragraphs) {
+      if (words(text) >= 6) blocks.push({ kind: 'paragraph', text: clean(text) });
+    }
+    paragraphs.length = 0;
   };
   for (let index = 0; index < ordered.length; index += 1) {
     const line = ordered[index];
-    const bigNumber = line.fontSize >= 20 && line.text.length <= 32 && line.financials.length >= 1 && words(line.text) <= 6;
-    if (bigNumber) {
-      flush();
-      let caption = '';
-      for (let look = 1; look <= 2 && index + look < ordered.length; look += 1) {
-        const candidate = ordered[index + look];
-        if (candidate.fontSize >= 18 || candidate.financials.length > 0) continue;
-        if (words(candidate.text) <= 8 && candidate.text.length < 64) {
-          caption = candidate.text;
-          index += look;
-          break;
-        }
-      }
-      metrics.push({ group: 'Results', label: clean(caption || line.text), value: line.text, comparison: '' });
-      continue;
-    }
-    const title = line.fontSize >= 16
-      && line.financials.length === 0
-      && words(line.text) <= 10
-      && line.text.length < 72
-      && !/[.!?]$/.test(line.text);
-    if (title) {
-      flush();
-      blocks.push({ kind: 'heading', level: line.fontSize >= 22 ? 2 : 3, text: line.text });
+    const text = clean(line.text);
+    if (!text || /^\d{1,2}$/.test(text)) continue;
+    const columns = columnsOf(line);
+    const figures = columns.filter((group) => line.fontSize >= 18 && group.some((phrase) => (
+      phrase.text.length <= 12 && (phrase.financial || /[~%]|\d/.test(phrase.text))
+    )));
+    if (figures.length && words(text) <= 14) {
+      flushParagraphs();
+      let captionAt = index + 1;
+      while (captionAt < ordered.length && /^\d{1,2}$/.test(clean(ordered[captionAt].text))) captionAt += 1;
+      const captionLine = ordered[captionAt];
+      const captions = captionLine && captionLine.fontSize < 22 && captionLine.financials.length === 0 && !/[.!?]$/.test(captionLine.text)
+        ? columnsOf(captionLine)
+        : [];
+      if (captions.length) index = captionAt;
+      figures.forEach((group, figureIndex) => {
+        const value = phraseText(group);
+        if (!value || words(value) > 4) return;
+        const anchor = group[0].x;
+        const paired = captions.length === figures.length ? captions[figureIndex] : undefined;
+        const nearest = captions
+          .map((item) => ({ item, distance: Math.abs(item[0].x - anchor) }))
+          .sort((left, right) => left.distance - right.distance)[0];
+        const captionGroup = paired || (nearest && nearest.distance < 90 ? nearest.item : undefined);
+        const caption = captionGroup ? phraseText(captionGroup) : '';
+        const label = caption && caption !== value && words(caption) <= 8 ? caption : '';
+        metrics.push({ group: '', label, value, comparison: '' });
+      });
       continue;
     }
     const kicker = line.financials.length === 0
-      && words(line.text) <= 8
-      && line.text.length < 56
-      && line.text === line.text.toUpperCase()
-      && /[A-Z]{3}/.test(line.text);
+      && words(text) <= 8
+      && text.length < 56
+      && text === text.toUpperCase()
+      && /[A-Z]{3}/.test(text);
     if (kicker) {
-      flush();
-      blocks.push({ kind: 'heading', level: 3, text: line.text });
+      flushParagraphs();
+      blocks.push({ kind: 'heading', level: 3, text });
       continue;
     }
-    if (line.financials.length >= 2 || words(line.text) >= 6 || /[.!?]$/.test(line.text)) {
-      paragraph = paragraph ? `${paragraph} ${line.text}` : line.text;
-      if (/[.!?]$/.test(line.text)) flush();
+    if (!titled && line.fontSize >= 18 && line.financials.length === 0 && words(text) <= 12 && text.length < 72 && !/[.!?]$/.test(text) && !/\d/.test(text)) {
+      flushParagraphs();
+      titled = true;
+      blocks.push({ kind: 'heading', level: 2, text });
+      continue;
     }
+    const pieces = columns
+      .map(phraseText)
+      .filter((piece) => words(piece) >= 5 || /[.!?]$/.test(piece));
+    if (pieces.length > 1) paragraphs.push(...pieces);
+    else if (words(text) >= 6 || /[.!?]$/.test(text)) paragraphs.push(text);
   }
-  flush();
-  if (metrics.length) blocks.splice(Math.min(1, blocks.length), 0, { kind: 'metrics', metrics });
+  flushParagraphs();
+  if (metrics.length) {
+    const heading = blocks.findIndex((block) => block.kind === 'heading');
+    blocks.splice(Math.max(heading, 0) + (heading >= 0 ? 1 : 0), 0, { kind: 'metrics', metrics });
+  }
   return blocks;
 }
 

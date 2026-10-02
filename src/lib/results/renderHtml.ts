@@ -8,6 +8,12 @@ function esc(value: string | null | undefined): string {
     .replace(/"/g, '&quot;');
 }
 
+function webFont(name: string | undefined, fallback: string): string {
+  const first = (name || '').split(',')[0] || '';
+  if (/benton/i.test(first)) return fontStack('Source Sans 3', fallback);
+  return fontStack(name, fallback);
+}
+
 function fontStack(name: string | undefined, fallback: string): string {
   const parts = (name || '')
     .split(',')
@@ -107,12 +113,12 @@ function publicationHtml(blocks: PublicationBlock[]): string {
     } else if (block.kind === 'metrics') {
       const groups = new Map<string, typeof block.metrics>();
       for (const metric of block.metrics || []) {
-        const key = metric.group || 'Results';
+        const key = metric.group || '';
         groups.set(key, [...(groups.get(key) || []), metric]);
       }
       const cards = [...groups.entries()].map(([group, metrics]) => `
         <section class="metric-group">
-          <h3>${esc(group)}</h3>
+          ${group ? `<h3>${esc(group)}</h3>` : ''}
           <div class="metrics">${(metrics || []).map((metric) => `
             <article class="metric">
               <p>${esc(metric.label)}</p>
@@ -153,8 +159,8 @@ export function renderResultsHtml(document: ResultsDocument): string {
   const masthead = neutralPrimary ? '#ffffff' : (luminance(primary) > 0.45 ? ink : primary);
   const mastheadInk = luminance(masthead) > 0.45 ? ink : '#f7f4ee';
   const rule = contrast(accent, masthead) >= 3 ? accent : mastheadInk;
-  const heading = fontStack(brand?.headingFont, 'Georgia, "Iowan Old Style", Palatino, serif');
-  const body = fontStack(brand?.bodyFont, '"Segoe UI", Helvetica, Arial, sans-serif');
+  const heading = webFont(brand?.headingFont, 'Georgia, "Iowan Old Style", Palatino, serif');
+  const body = webFont(brand?.bodyFont, '"Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif');
   const name = brandName(document);
   const logo = brand?.logoUrl
     ? `<img class="logo" src="${esc(brand.logoUrl)}" alt="${esc(name || document.issuer)}" referrerpolicy="no-referrer" />`
@@ -229,7 +235,7 @@ export function renderResultsHtml(document: ResultsDocument): string {
     header.masthead { background: var(--masthead); color: var(--masthead-ink); padding: 36px 7vw 56px; border-bottom: 4px solid var(--rule); }
     .brand-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; min-height: 36px; }
     .lockup { display: flex; align-items: center; gap: 14px; }
-    .logo { height: 64px; width: auto; max-width: 220px; object-fit: contain; }
+    .logo { height: 44px; width: auto; max-width: 240px; object-fit: contain; background: #fff; padding: 8px 12px; border-radius: 8px; }
     .wordmark { font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; }
     .unit { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.75; }
     .kicker { margin: 36px 0 0; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--rule); }
@@ -272,6 +278,7 @@ export function renderResultsHtml(document: ResultsDocument): string {
     tr.total td.current, tr.total th.current { background: #dcdede; }
     h3 { margin: 28px 0 8px; font-family: var(--heading-font); font-size: 20px; font-weight: 500; }
     .footnote { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    #results-layout .metric-group .metrics { margin-top: 16px; }
     .metric-group { margin-top: 8px; }
     #results-layout .metric-group h3 { margin: 22px 0 0; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; text-align: center; }
     #results-layout .contents-list { margin: 8px auto 24px; padding-left: 1.25em; list-style-position: outside; text-align: left; line-height: 1.7; width: max-content; max-width: 36rem; }
