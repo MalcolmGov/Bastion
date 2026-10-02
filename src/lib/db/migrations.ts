@@ -512,6 +512,94 @@ export const migrations: Migration[] = [
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_gov_results_audit ON governance_check_results(audit_id, category);`);
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_gov_results_client ON governance_check_results(client_id);`);
     }
+  },
+  {
+    version: 12,
+    name: '012_whistleblower_and_tenders',
+    up: async (db: Client) => {
+      // 1. Encrypted Whistleblower Reports (Zero IP Address retention)
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS whistleblower_reports (
+          id TEXT PRIMARY KEY,
+          client_id TEXT NOT NULL REFERENCES clients(id),
+          tracking_code TEXT UNIQUE NOT NULL,
+          access_key_hash TEXT NOT NULL,
+          category TEXT NOT NULL,
+          severity TEXT NOT NULL DEFAULT 'medium',
+          jurisdiction TEXT NOT NULL DEFAULT 'ZA',
+          subject TEXT NOT NULL,
+          encrypted_details TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'received',
+          assigned_investigator_id TEXT REFERENCES users(id),
+          resolution_summary TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_wb_reports_client ON whistleblower_reports(client_id, created_at DESC);`);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_wb_reports_tracking ON whistleblower_reports(tracking_code);`);
+
+      // 2. Whistleblower Confidential Chat Messages
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS whistleblower_messages (
+          id TEXT PRIMARY KEY,
+          report_id TEXT NOT NULL REFERENCES whistleblower_reports(id) ON DELETE CASCADE,
+          sender_type TEXT NOT NULL,
+          sender_id TEXT,
+          encrypted_message TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_wb_messages_report ON whistleblower_messages(report_id, created_at ASC);`);
+
+      // 3. Corporate Supplier Tenders / RFPs
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS tenders (
+          id TEXT PRIMARY KEY,
+          client_id TEXT NOT NULL REFERENCES clients(id),
+          tender_number TEXT UNIQUE NOT NULL,
+          title TEXT NOT NULL,
+          category TEXT NOT NULL,
+          description TEXT NOT NULL,
+          estimated_value TEXT,
+          closing_date TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'active',
+          min_bbbee_level INTEGER DEFAULT 4,
+          cidb_grading TEXT,
+          host_community_mandate INTEGER DEFAULT 1,
+          scope_document_url TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_tenders_client ON tenders(client_id, status, closing_date);`);
+
+      // 4. Supplier Tender Bid Submissions
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS tender_submissions (
+          id TEXT PRIMARY KEY,
+          tender_id TEXT NOT NULL REFERENCES tenders(id) ON DELETE CASCADE,
+          client_id TEXT NOT NULL REFERENCES clients(id),
+          reference_code TEXT UNIQUE NOT NULL,
+          vendor_name TEXT NOT NULL,
+          cipc_registration_number TEXT NOT NULL,
+          sars_tax_pin TEXT NOT NULL,
+          bbbee_level INTEGER NOT NULL,
+          host_community_registered INTEGER NOT NULL DEFAULT 0,
+          contact_name TEXT NOT NULL,
+          contact_email TEXT NOT NULL,
+          contact_phone TEXT NOT NULL,
+          bid_amount REAL,
+          currency TEXT NOT NULL DEFAULT 'ZAR',
+          status TEXT NOT NULL DEFAULT 'submitted',
+          compliance_notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_tender_subs_tender ON tender_submissions(tender_id, created_at DESC);`);
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_tender_subs_client ON tender_submissions(client_id);`);
+    }
   }
 ];
 

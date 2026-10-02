@@ -29,7 +29,7 @@ export async function sendTransactionalEmail(options: SendEmailOptions): Promise
   const deliveryId = `eml_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   const now = new Date().toISOString();
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const fromAddress = options.from || process.env.EMAIL_FROM || 'Bastion Move Studio <notifications@bastiongroup.co.za>';
+  let fromAddress = options.from || process.env.EMAIL_FROM || 'Bastion Move Studio <notifications@bastiongroup.co.za>';
 
   let status: 'delivered' | 'simulated_dev' | 'failed' = 'simulated_dev';
   let providerMessageId: string | undefined = undefined;
@@ -38,7 +38,7 @@ export async function sendTransactionalEmail(options: SendEmailOptions): Promise
 
   if (apiKey) {
     try {
-      const res = await fetch('https://api.resend.com/emails', {
+      let res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -52,17 +52,46 @@ export async function sendTransactionalEmail(options: SendEmailOptions): Promise
         }),
       });
 
-      const data = await res.json();
+      let data = await res.json();
+
+      // If failed due to unverified domain or 403, and not already using onboarding@resend.dev, attempt auto-fallback
+      if (!res.ok && (data.message?.toLowerCase().includes('domain') || data.message?.toLowerCase().includes('verify') || res.status === 403)) {
+        if (!fromAddress.includes('onboarding@resend.dev')) {
+          console.warn(`[Email Delivery] Sender domain unverified (${fromAddress}). Retrying with verified Resend fallback sender onboarding@resend.dev...`);
+          const fallbackFrom = 'Bastion Move Studio <onboarding@resend.dev>';
+          res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: fallbackFrom,
+              to: [options.to],
+              subject: options.subject,
+              html: options.html,
+            }),
+          });
+          data = await res.json();
+          if (res.ok) {
+            fromAddress = fallbackFrom;
+          }
+        }
+      }
+
       if (res.ok) {
         status = 'delivered';
         providerMessageId = data.id || `res_${Date.now()}`;
+        console.log(`[Email Delivery - Resend] Successfully delivered to ${options.to} (ID: ${providerMessageId}) via ${fromAddress}`);
       } else {
         status = 'failed';
-        errorMessage = data.message || `Resend HTTP error ${res.status}`;
+        errorMessage = data.message || `Resend HTTP error ${res.status}: ${JSON.stringify(data)}`;
+        console.error(`[Email Delivery - Resend Error]`, errorMessage);
       }
     } catch (err: any) {
       status = 'failed';
       errorMessage = err.message || 'Network failure dispatching email';
+      console.error(`[Email Delivery - Network Error]`, err);
     }
   } else {
     const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;

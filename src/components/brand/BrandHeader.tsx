@@ -8,13 +8,13 @@ import { MegaMenu } from './MegaMenu';
 import { MobileNav } from './MobileNav';
 
 interface BrandHeaderProps {
-  onOpenAssistant: (prompt?: string) => void;
-  onOpenSearch: () => void;
+  onOpenAssistant?: (prompt?: string) => void;
+  onOpenSearch?: () => void;
 }
 
 export const BrandHeader: React.FC<BrandHeaderProps> = ({
-  onOpenAssistant,
-  onOpenSearch,
+  onOpenAssistant = () => {},
+  onOpenSearch = () => {},
 }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);

@@ -4,6 +4,8 @@ import { WebsiteAssembler } from '@/lib/studio/assembler';
 import { requireAgencyUser, requireUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import { hashPassword } from '@/lib/auth/password';
+import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
+import { sendTransactionalEmail } from '@/lib/email/delivery';
 
 export async function GET() {
   try {
@@ -90,7 +92,13 @@ export async function POST(req: NextRequest) {
       contactInfo,
       billingDetails,
       enabledModules,
-      initialUser
+      initialUser,
+      packageTier,
+      packageServices,
+      packageAmount,
+      packageCurrency,
+      packageBillingCycle,
+      packageNotes
     } = body;
 
     if (!name) {
@@ -104,6 +112,19 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString();
 
     const db = getDb();
+
+    // Consolidate package details into billingDetails
+    const finalBillingDetails = {
+      ...(billingDetails || {}),
+      package: {
+        tier: packageTier || billingDetails?.package?.tier || 'Gold',
+        amount: packageAmount || billingDetails?.package?.amount || '85,000',
+        currency: packageCurrency || billingDetails?.package?.currency || 'R',
+        billingCycle: packageBillingCycle || billingDetails?.package?.billingCycle || 'Monthly Retainer',
+        services: packageServices || billingDetails?.package?.services || [],
+        notes: packageNotes || billingDetails?.package?.notes || ''
+      }
+    };
 
     // Use WebsiteAssembler to assemble client, website, brand kit, and initial page compositions
     const assembleResult = await WebsiteAssembler.assembleAndSave({
@@ -164,7 +185,7 @@ export async function POST(req: NextRequest) {
           industry,
           logoUrl || null,
           contactInfo ? JSON.stringify(contactInfo) : null,
-          billingDetails ? JSON.stringify(billingDetails) : null,
+          JSON.stringify(finalBillingDetails),
           now,
           clientId
         ]
@@ -176,7 +197,7 @@ export async function POST(req: NextRequest) {
         args: [
           industry,
           logoUrl || null,
-          contactInfo ? JSON.stringify({ ...contactInfo, billingDetails }) : null,
+          contactInfo ? JSON.stringify({ ...contactInfo, billingDetails: finalBillingDetails }) : null,
           now,
           clientId
         ]
@@ -216,35 +237,86 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Provision initial client user if requested
+    // Provision initial client user if requested and deliver welcome credentials via Resend
     let createdUser: any = null;
+    let emailDelivery: any = null;
     if (initialUser && initialUser.email) {
       const userEmail = String(initialUser.email).toLowerCase().trim();
       const userName = String(initialUser.name || `${name} Administrator`).trim();
       const userRole = String(initialUser.role || 'content_editor');
       const rawPassword = initialUser.password || `${name.replace(/[^a-zA-Z0-9]/g, '')}2026!`;
       const passwordHash = hashPassword(rawPassword);
-      const userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-      await db.execute({
-        sql: `INSERT OR REPLACE INTO users (id, name, email, password_hash, role, region_scope, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [
-          userId,
-          userName,
-          userEmail,
-          passwordHash,
-          userRole,
-          name, // Scoped to this corporate client
-          now
-        ]
+      const existingUser = await db.execute({
+        sql: `SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1`,
+        args: [userEmail]
+      });
+
+      let userId = '';
+      if (existingUser.rows.length > 0) {
+        userId = String(existingUser.rows[0].id);
+        await db.execute({
+          sql: `UPDATE users SET name = ?, password_hash = ?, role = ?, client_id = ?, region_scope = ? WHERE id = ?`,
+          args: [userName, passwordHash, userRole, clientId, name, userId]
+        });
+      } else {
+        userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        await db.execute({
+          sql: `INSERT INTO users (id, name, email, password_hash, role, region_scope, client_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [
+            userId,
+            userName,
+            userEmail,
+            passwordHash,
+            userRole,
+            name, // Scoped to this corporate client
+            clientId,
+            now
+          ]
+        });
+      }
+
+      // Generate executive HTML email template and dispatch via Resend
+      const roleTitles: Record<string, string> = {
+        platform_admin: 'Platform Administrator',
+        content_editor: 'Corporate Content Editor',
+        reviewer: 'Compliance Reviewer',
+        publisher: 'Corporate Publisher',
+        analyst: 'IR & Disclosures Analyst'
+      };
+
+      const host = req.headers.get('host') || 'localhost:3010';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const loginUrl = `${protocol}://${host}/admin/login?email=${encodeURIComponent(userEmail)}`;
+
+      const emailHtml = generateWelcomeEmailHtml({
+        recipientName: userName,
+        recipientEmail: userEmail,
+        roleTitle: roleTitles[userRole] || 'Corporate Workspace Member',
+        clientName: name,
+        loginUrl,
+        temporaryPassword: rawPassword,
+        inviterName: `${gate.user.name || 'Bastion Agency Operations'} (Bastion Group)`
+      });
+
+      emailDelivery = await sendTransactionalEmail({
+        to: userEmail,
+        subject: `Welcome to ${name} Corporate CMS Portal — Bastion Group`,
+        html: emailHtml,
+        roleTitle: roleTitles[userRole] || 'Corporate Workspace Member',
+        clientName: name,
+        inviteUrl: loginUrl
       });
 
       createdUser = {
         id: userId,
         name: userName,
         email: userEmail,
-        role: userRole
+        role: userRole,
+        temporaryPassword: rawPassword,
+        loginUrl,
+        delivery: emailDelivery
       };
     }
 
@@ -257,7 +329,7 @@ export async function POST(req: NextRequest) {
         industry,
         logoUrl,
         primaryDomain,
-        billingDetails
+        billingDetails: finalBillingDetails
       },
       website: {
         id: assembleResult.websiteId,
@@ -266,6 +338,7 @@ export async function POST(req: NextRequest) {
         previewUrl: assembleResult.previewUrl
       },
       user: createdUser,
+      emailDelivery,
       compositionsCount: assembleResult.compositions.length
     });
   } catch (err: any) {

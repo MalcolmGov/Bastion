@@ -16,19 +16,12 @@ export interface WelcomeEmailOptions {
 }
 
 export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
-  // Enforce Bastion Group identity and cleanse any Moove Digital references
-  let rawClient = options.clientName || 'Bastion Group';
-  let rawEmail = options.recipientEmail || 'malcolm@bastiongroup.co.za';
-
-  if (rawClient.toLowerCase().includes('moove')) {
-    rawClient = 'Bastion Group';
-  }
-  if (rawEmail.toLowerCase().includes('movedigital')) {
-    rawEmail = rawEmail.replace(/movedigital\.africa/gi, 'bastiongroup.co.za');
+  let clientName = options.clientName || 'Bastion Group';
+  if (clientName.toLowerCase().includes('moove')) {
+    clientName = 'Bastion Group';
   }
 
-  const clientName = rawClient;
-  const recipientEmail = rawEmail;
+  const recipientEmail = options.recipientEmail?.trim() || 'malcolm@movedigital.africa';
   const sanitizedClient = clientName.replace(/[^a-zA-Z0-9]/g, '') || 'Bastion';
   const {
     recipientName = 'Malcolm Govender',
@@ -234,9 +227,6 @@ export function generateWelcomeEmailHtml(options: WelcomeEmailOptions): string {
 </body>
 </html>`;
 
-  // Absolute safety guarantee: filter out any remaining Moove Digital references
-  return html
-    .replace(/Moove Digital/gi, 'Bastion Group')
-    .replace(/malcolm@movedigital\.africa/gi, 'malcolm@bastiongroup.co.za')
-    .replace(/movedigital\.africa/gi, 'bastiongroup.co.za');
+  // Guarantee agency branding
+  return html.replace(/Moove Digital/gi, 'Bastion Group');
 }

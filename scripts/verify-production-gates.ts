@@ -28,6 +28,23 @@ import { createSensAnnouncement, listSensAnnouncements, deleteSensAnnouncement }
 import { createCalendarEvent, listCalendarEvents, generateIcsContent, calculateDividendTax, deleteCalendarEvent } from '../src/lib/ir/calendarService';
 import { runGovernanceAudit, getLatestGovernanceAudit, getGovernanceAuditHistory } from '../src/lib/governance/governanceEngine';
 import { computeLineDiff, computeWordDiff, computeRecordDiff, generateContentHash } from '../src/lib/diff/diffEngine';
+import {
+  createWhistleblowerReport,
+  getWhistleblowerCaseByTrackingCode,
+  addWhistleblowerMessage,
+  listWhistleblowerReports,
+  updateWhistleblowerStatus,
+} from '../src/lib/ethics/ethicsService';
+import {
+  validateCipcRegistration,
+  validateSarsTaxPin,
+  validateBbbeeLevel,
+  listActiveTenders,
+  createTender,
+  submitTenderBid,
+  listTenderSubmissions,
+  updateTenderSubmissionStatus,
+} from '../src/lib/tenders/tenderService';
 import crypto from 'crypto';
 
 interface TestResult {
@@ -981,6 +998,165 @@ async function runAll() {
 
     const vodacomDocs = await listResultsDocuments('client_vodacom_group');
     assert(!vodacomDocs.some((d) => d.slug === 'gold-fields-interim-h1-2026'), 'Vodacom tenant must NOT receive Gold Fields results documents');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 22: ENCRYPTED WHISTLEBLOWER HOTLINE & SUPPLIER TENDER PORTAL
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n⚖️  SUITE 22: Encrypted Whistleblower Hotline & Corporate Supplier Tender Portal');
+
+  await test('Whistleblower Zero-IP Retention', 'Guarantees zero IP retention, strips headers, and generates secure access credentials', async () => {
+    const report = await createWhistleblowerReport({
+      clientId: 'client_goldfields',
+      category: 'bribery_corruption',
+      severity: 'high',
+      jurisdiction: 'ZA',
+      subject: 'Procurement kickback solicitation during pump supplier tender',
+      details: 'A senior buyer demanded a 5% facilitation fee to short-list our bid.',
+      incidentDate: '2026-09-25',
+      involvedParties: 'Procurement Dept Buyer #4',
+    });
+
+    assert(report.trackingCode.startsWith('ETH-2026-'), 'Tracking code must follow ETH-2026-XXXX format');
+    assert(report.accessKey.startsWith('ak_'), 'Access key must start with ak_');
+    assert(report.accessKey.length >= 20, 'Access key must have at least 20 chars of entropy');
+
+    // Inspect database row directly: confirm NO IP address column exists or is written
+    const row = await db.execute({
+      sql: `SELECT * FROM whistleblower_reports WHERE id = ?`,
+      args: [report.reportId]
+    });
+    assert(row.rows.length === 1, 'Report must be persisted in database');
+    const cols = Object.keys(row.rows[0]);
+    assert(!cols.includes('ip_address') && !cols.includes('client_ip') && !cols.includes('ip'), 'Whistleblower table must NOT have any IP address columns');
+  });
+
+  await test('Whistleblower AES-256-GCM Encryption', 'Confidential narrative is encrypted at rest and only decrypted with valid tracking credentials', async () => {
+    const testSecret = 'Confidential evidence of tailings pump failure concealed from regulatory inspectors';
+    const report = await createWhistleblowerReport({
+      clientId: 'client_goldfields',
+      category: 'environmental',
+      severity: 'critical',
+      subject: 'Concealed Tailings Failure Evidence',
+      details: testSecret,
+    });
+
+    // 1. Verify encrypted at rest in raw DB
+    const raw = await db.execute({
+      sql: `SELECT encrypted_details FROM whistleblower_reports WHERE id = ?`,
+      args: [report.reportId]
+    });
+    const cipherText = String(raw.rows[0].encrypted_details);
+    assert(cipherText.startsWith('enc$gcm$'), 'Payload must be encrypted with AES-256-GCM prefix');
+    assert(!cipherText.includes(testSecret), 'Raw DB record must not contain plaintext narrative');
+
+    // 2. Fetch using correct tracking code and access key
+    const decryptedCase = await getWhistleblowerCaseByTrackingCode(report.trackingCode, report.accessKey);
+    assert(!!decryptedCase, 'Case must be retrieved by valid tracking credentials');
+    assert(decryptedCase!.report.details === testSecret, 'Decrypted narrative must match original secret');
+
+    // 3. Reject invalid access key
+    const invalidCase = await getWhistleblowerCaseByTrackingCode(report.trackingCode, 'ak_wrong_key_123456');
+    assert(invalidCase === null, 'Must reject invalid access key by returning null');
+  });
+
+  await test('Whistleblower Bidirectional Dialogue', 'Encrypted dialogue preserves conversation between whistleblower and investigator', async () => {
+    const report = await createWhistleblowerReport({
+      clientId: 'client_goldfields',
+      category: 'health_safety',
+      severity: 'medium',
+      subject: 'Inadequate PPE on shift 3',
+      details: 'Respirators provided lack particulate filters for silica dust.',
+    });
+
+    // Whistleblower sends follow-up
+    await addWhistleblowerMessage({
+      reportId: report.reportId,
+      senderType: 'whistleblower',
+      messageText: 'I also noticed filter cartridges are expired by 6 months.',
+    });
+
+    // Investigator replies
+    await addWhistleblowerMessage({
+      reportId: report.reportId,
+      senderType: 'investigator',
+      senderId: 'usr_reviewer',
+      messageText: 'We have logged inspection ticket SAF-2026-081. Replacement 3M filters deployed today.',
+    });
+
+    const thread = await getWhistleblowerCaseByTrackingCode(report.trackingCode, report.accessKey);
+    assert(thread!.messages.length === 2, 'Must have 2 messages in dialogue thread');
+    assert(thread!.messages[0].senderType === 'whistleblower', 'First message must be from whistleblower');
+    assert(thread!.messages[0].message.includes('expired by 6 months'), 'First message decrypted correctly');
+    assert(thread!.messages[1].senderType === 'investigator', 'Second message must be from investigator');
+    assert(thread!.messages[1].message.includes('SAF-2026-081'), 'Second message decrypted correctly');
+  });
+
+  await test('Tender Statutory Validation', 'Validates South African CIPC registration, SARS TCS PIN, and B-BBEE levels', async () => {
+    // 1. CIPC checks
+    assert(validateCipcRegistration('2018/142981/07').valid, '2018/142981/07 must be valid CIPC');
+    assert(validateCipcRegistration('1999/012345/06').valid, '1999/012345/06 must be valid CIPC');
+    assert(!validateCipcRegistration('1899/012345/06').valid, 'Pre-1900 year must be invalid');
+    assert(!validateCipcRegistration('2018-142981-07').valid, 'Hyphens instead of slashes must be invalid');
+    assert(!validateCipcRegistration('invalid').valid, 'Random string must be invalid');
+
+    // 2. SARS PIN checks
+    assert(validateSarsTaxPin('998877661').valid, '9-digit alphanumeric PIN must be valid');
+    assert(validateSarsTaxPin('ABC123XYZ0').valid, '10-character alphanumeric PIN must be valid');
+    assert(!validateSarsTaxPin('12345').valid, 'Short PIN must be invalid');
+    assert(!validateSarsTaxPin('PIN!@#$%^').valid, 'Special chars must be invalid');
+
+    // 3. B-BBEE levels
+    assert(validateBbbeeLevel(1).valid, 'Level 1 must be valid');
+    assert(validateBbbeeLevel(8).valid, 'Level 8 must be valid');
+    assert(!validateBbbeeLevel(0).valid, 'Level 0 must be invalid');
+    assert(!validateBbbeeLevel(9).valid, 'Level 9 must be invalid');
+    assert(!validateBbbeeLevel(1.5).valid, 'Non-integer level must be invalid');
+  });
+
+  await test('Tender Submission & Multi-Tenant Isolation', 'Stores verified vendor proposals and strictly isolates across client tenants', async () => {
+    // 1. Create a Gold Fields tender
+    const gfTender = await createTender({
+      clientId: 'client_goldfields',
+      tenderNumber: `GF-${Date.now()}-TEST`,
+      title: 'Geotechnical Borehole Drilling & Core Logging',
+      category: 'Mining Operations & Underground',
+      description: 'Diamond core drilling for underground ore reserve delineation.',
+      estimatedValue: 'R 18,500,000',
+      closingDate: '2026-12-31T23:59:59Z',
+      minBbbeeLevel: 4,
+    });
+
+    // 2. Submit a valid bid
+    const bid = await submitTenderBid({
+      tenderId: gfTender.id,
+      clientId: 'client_goldfields',
+      vendorName: 'Mamelodi Core Drilling (Pty) Ltd',
+      cipcRegistrationNumber: '2020/654321/07',
+      sarsTaxPin: 'SARS889900',
+      bbbeeLevel: 1,
+      hostCommunityRegistered: true,
+      contactName: 'Kagiso Molefe',
+      contactEmail: 'kmolefe@mamelodicore.co.za',
+      contactPhone: '+27 12 800 1234',
+      bidAmount: 17800000,
+    });
+
+    assert(bid.referenceCode.startsWith('BID-2026-'), 'Bid reference code must start with BID-2026-');
+    assert(bid.status === 'submitted', 'Initial bid status must be submitted');
+
+    // 3. Update evaluation status
+    await updateTenderSubmissionStatus(bid.id, 'compliant', 'CIPC verified, B-BBEE Level 1 verified.');
+
+    // 4. Multi-tenant checks
+    const gfSubmissions = await listTenderSubmissions(gfTender.id, 'client_goldfields');
+    assert(gfSubmissions.some((s) => s.id === bid.id), 'Gold Fields tenant must see its own submission');
+
+    const vodacomSubmissions = await listTenderSubmissions(gfTender.id, 'client_vodacom_group');
+    assert(!vodacomSubmissions.some((s) => s.id === bid.id), 'Vodacom tenant must NOT see Gold Fields tender bid');
+
+    const vodacomTenders = await listActiveTenders('client_vodacom_group');
+    assert(!vodacomTenders.some((t) => t.id === gfTender.id), 'Vodacom tenant must NOT see Gold Fields tender');
   });
 
   // ─────────────────────────────────────────────────────────────

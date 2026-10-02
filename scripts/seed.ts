@@ -4,6 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { hashPassword } from '../src/lib/auth/password';
 import { seedGoldFieldsResults } from './seed-results-document';
+import { encryptSecret } from '../src/lib/crypto/encryption';
 
 function hashContent(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -393,6 +394,169 @@ async function main() {
 
   // 15. Seed Gold Fields H1 2026 Interactive Results Document
   await seedGoldFieldsResults();
+
+  // 16. Seed Corporate Tenders & RFPs (Phase 5)
+  const tenders = [
+    {
+      id: 'tdr_seed_001',
+      client_id: 'client_goldfields',
+      tender_number: 'GF-2026-RFP-088',
+      title: 'South Deep Solar PV Microgrid Phase II (40MW Expansion)',
+      category: 'Renewable Energy & Power',
+      description: 'Turnkey EPC contractor services for 40MW DC ground-mounted solar expansion and 20MW/80MWh battery energy storage system (BESS) integration at South Deep mine, Gauteng.',
+      estimated_value: 'R 480,000,000',
+      closing_date: '2026-11-30T17:00:00Z',
+      status: 'active',
+      min_bbbee_level: 4,
+      cidb_grading: '9EP / 9GB',
+      host_community_mandate: 1,
+      created_at: '2026-09-01T08:00:00Z',
+      updated_at: '2026-09-01T08:00:00Z',
+    },
+    {
+      id: 'tdr_seed_002',
+      client_id: 'client_goldfields',
+      tender_number: 'GF-2026-RFP-089',
+      title: 'Tarkwa Tailings Storage Facility (TSF) Automated Piezometer & Geotechnical Sensor Network',
+      category: 'Environmental & Tailings',
+      description: 'Supply, installation, and cloud telemetry integration of vibrating wire piezometers, inclinometers, and robotic total stations adhering to Global Industry Standard on Tailings Management (GISTM).',
+      estimated_value: 'R 32,500,000',
+      closing_date: '2026-10-31T17:00:00Z',
+      status: 'active',
+      min_bbbee_level: 3,
+      cidb_grading: '7CE',
+      host_community_mandate: 0,
+      created_at: '2026-09-10T08:00:00Z',
+      updated_at: '2026-09-10T08:00:00Z',
+    },
+    {
+      id: 'tdr_seed_003',
+      client_id: 'client_goldfields',
+      tender_number: 'GF-2026-RFP-090',
+      title: 'Deep Underground Haulage Fleet Telemetry & Proximity Detection System (PDS Level 9)',
+      category: 'Mining Operations & Underground',
+      description: 'Retrofit of underground load-haul-dump (LHD) loaders and 50t haul trucks with fail-safe ISO 21815-compliant machine intervention collision prevention systems.',
+      estimated_value: 'R 65,000,000',
+      closing_date: '2026-11-15T17:00:00Z',
+      status: 'active',
+      min_bbbee_level: 4,
+      cidb_grading: null,
+      host_community_mandate: 1,
+      created_at: '2026-09-15T08:00:00Z',
+      updated_at: '2026-09-15T08:00:00Z',
+    },
+  ];
+
+  for (const t of tenders) {
+    await db.execute({
+      sql: `INSERT OR REPLACE INTO tenders (
+              id, client_id, tender_number, title, category, description,
+              estimated_value, closing_date, status, min_bbbee_level, cidb_grading,
+              host_community_mandate, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        t.id, t.client_id, t.tender_number, t.title, t.category, t.description,
+        t.estimated_value, t.closing_date, t.status, t.min_bbbee_level, t.cidb_grading,
+        t.host_community_mandate, t.created_at, t.updated_at
+      ]
+    });
+  }
+  console.log(`✓ Seeded ${tenders.length} corporate supplier tenders.`);
+
+  // Seed sample tender submission
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO tender_submissions (
+            id, tender_id, client_id, reference_code, vendor_name,
+            cipc_registration_number, sars_tax_pin, bbbee_level,
+            host_community_registered, contact_name, contact_email, contact_phone,
+            bid_amount, currency, status, compliance_notes, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      'sub_seed_001',
+      'tdr_seed_001',
+      'client_goldfields',
+      'BID-2026-WR891',
+      'West Rand Engineering Services (Pty) Ltd',
+      '2018/142981/07',
+      '998877661',
+      2,
+      1,
+      'Sipho Ndlovu',
+      'sndlovu@wrengineering.co.za',
+      '+27 11 950 1200',
+      465000000,
+      'ZAR',
+      'compliant',
+      'Verified: CIPC valid format, SARS TCS PIN verified, B-BBEE Level 2 compliant, Host community registered.',
+      '2026-09-20T10:30:00Z',
+      '2026-09-20T10:30:00Z'
+    ]
+  });
+  console.log('✓ Seeded 1 verified supplier tender bid submission.');
+
+  // 17. Seed Whistleblower Report (Phase 5: AES-256-GCM Encrypted at rest, Zero-IP)
+  const saltHash = crypto.createHash('sha256').update('bastion_ethics_salt_ak_demo1234567890').digest('hex');
+  const narrative = JSON.stringify({
+    details: 'Observed non-compliant diesel spillage near West Shaft ventilation shaft 2 without secondary containment bunding. Maintenance logbook entries appeared backdated.',
+    incidentDate: '2026-09-18',
+    involvedParties: 'Shift B maintenance crew',
+    evidenceLinks: []
+  });
+  const encryptedPayload = encryptSecret(narrative);
+
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO whistleblower_reports (
+            id, client_id, tracking_code, access_key_hash, category, severity,
+            jurisdiction, subject, encrypted_details, status, resolution_summary,
+            created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      'wb_seed_001',
+      'client_goldfields',
+      'ETH-2026-9F4B2',
+      saltHash,
+      'environmental',
+      'high',
+      'ZA',
+      'Unbunded Diesel Spillage & Backdated Maintenance Log at West Shaft',
+      encryptedPayload,
+      'under_investigation',
+      'Environmental Health & Safety officer dispatched for ground inspection.',
+      '2026-09-19T14:20:00Z',
+      '2026-09-20T09:00:00Z'
+    ]
+  });
+
+  const encryptedMsg1 = encryptSecret('Thank you for this disclosure. A senior environmental engineer has been dispatched to West Shaft to inspect secondary containment.');
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO whistleblower_messages (
+            id, report_id, sender_type, sender_id, encrypted_message, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [
+      'msg_seed_001',
+      'wb_seed_001',
+      'investigator',
+      'usr_reviewer',
+      encryptedMsg1,
+      '2026-09-19T16:00:00Z'
+    ]
+  });
+
+  const encryptedMsg2 = encryptSecret('Understood. Additional photographic evidence of the drainage sump has been retained if required.');
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO whistleblower_messages (
+            id, report_id, sender_type, sender_id, encrypted_message, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [
+      'msg_seed_002',
+      'wb_seed_001',
+      'whistleblower',
+      null,
+      encryptedMsg2,
+      '2026-09-19T18:15:00Z'
+    ]
+  });
+  console.log('✓ Seeded 1 encrypted whistleblower case with 2 dialogue messages (zero-IP).');
 
   console.log('--- Gold Fields Studio Database Successfully Provisioned & Seeded ---');
 }

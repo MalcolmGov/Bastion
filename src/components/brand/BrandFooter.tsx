@@ -42,16 +42,16 @@ export const BrandFooter: React.FC = () => {
 
             {/* Whistleblowing Highlight */}
             <div className="pt-3">
-              <a
-                href="https://secure.ethicspoint.eu/domain/media/en/gui/114521/index.html"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/ethics"
                 className="inline-flex items-center gap-2 px-3 py-2 rounded bg-navy-surface hover:bg-navy border border-mist/20 text-xs font-medium text-gold-light hover:text-white transition-colors"
               >
                 <ShieldAlert className="w-4 h-4 text-gold" />
                 <span>Speak Up Anonymous Whistleblowing</span>
-                <ExternalLink className="w-3 h-3 ml-1" />
-              </a>
+                <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/40 ml-1">
+                  Encrypted
+                </span>
+              </Link>
             </div>
 
             {/* Official Social Media Channels — In Their Original Brand Colors */}
@@ -225,6 +225,17 @@ export const BrandFooter: React.FC = () => {
               <li>
                 <Link href="/suppliers" className="hover:text-gold transition-colors">
                   Supplier Prequalification
+                </Link>
+              </li>
+              <li>
+                <Link href="/suppliers/tenders" className="hover:text-gold transition-colors flex items-center justify-between">
+                  <span>Corporate Tender Board</span>
+                  <span className="text-[9px] uppercase font-bold text-gold bg-gold/10 px-1 rounded">RFP</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/ethics" className="hover:text-gold transition-colors">
+                  Anonymous Ethics Hotline
                 </Link>
               </li>
               <li>
