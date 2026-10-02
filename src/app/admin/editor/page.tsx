@@ -266,6 +266,8 @@ function VisualWebsiteEditorContent() {
 
   // Save state
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploySuccess, setDeploySuccess] = useState(false);
   const [savedTime, setSavedTime] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -921,6 +923,41 @@ function VisualWebsiteEditorContent() {
     }
   };
 
+  const handleDeployPublish = async () => {
+    setIsDeploying(true);
+    setDeploySuccess(false);
+    try {
+      const res = await fetch('/api/admin/editor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siteId: siteData?.id || siteSlug,
+          pageSlug: activePageSlug,
+          sections,
+          title: `${siteData?.name || 'Site'} — ${activePageSlug.toUpperCase()}`,
+          status: 'published'
+        })
+      });
+      if (res.ok) {
+        const saveRes = await res.json();
+        if (saveRes.version) {
+          setCurrentVersionNumber(Number(saveRes.version));
+        }
+        setSavedTime(new Date().toLocaleTimeString());
+        setHasUnsavedChanges(false);
+        setDeploySuccess(true);
+        setTimeout(() => setDeploySuccess(false), 4000);
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to deploy updates');
+      }
+    } catch (err) {
+      console.warn('Deploy error:', err);
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
   // Open Content Release Bundling Modal
   const handleOpenReleaseModal = async () => {
     setIsReleaseModalOpen(true);
@@ -1364,11 +1401,22 @@ function VisualWebsiteEditorContent() {
           <button
             type="button"
             onClick={handleSaveDraft}
-            disabled={isSaving}
+            disabled={isSaving || isDeploying}
             className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5 cursor-pointer"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSaving ? 'Saving...' : 'Save Draft'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDeployPublish}
+            disabled={isDeploying || isSaving}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5 cursor-pointer"
+            title="Deploy and publish live website updates with zero code"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>{isDeploying ? 'Deploying...' : deploySuccess ? 'Deployed Live!' : 'Deploy Updates'}</span>
           </button>
 
           <button
