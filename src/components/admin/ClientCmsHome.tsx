@@ -426,7 +426,7 @@ export function ClientCmsHome({
   const showRecentFeed = preferences.sections?.clientRecentFeed !== false;
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
+    <div className="space-y-12 max-w-7xl mx-auto pb-20 animate-in fade-in duration-200">
       
       {/* 1. Executive Identity Banner */}
       <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs relative overflow-hidden transition-colors">
@@ -544,88 +544,90 @@ export function ClientCmsHome({
         <ClientLearningHub isEmbedded={true} />
       ) : (
         <>
-          {/* 2. REAL Corporate KPI Metric Cards (No Dummy Numbers) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-            {/* KPI 1: Published Pages */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
-              <div 
-                style={{
-                  backgroundColor: `${primaryColor}15`,
-                  color: primaryColor,
-                  borderColor: `${primaryColor}30`
-                }}
-                className="w-10 h-10 rounded-xl border flex items-center justify-center shrink-0"
-              >
-                <FileText className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
-                  {publishedPagesCount} {publishedPagesCount === 1 ? 'Page' : 'Pages'}
+          {/* 2. Corporate Operational Status Overview (Airy, Decluttered Executive Bar) */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-800/80">
+              {/* KPI 1: Published Pages */}
+              <div className="pt-2 sm:pt-0 sm:px-4 first:pl-0 flex items-center gap-3.5">
+                <div 
+                  style={{
+                    backgroundColor: `${primaryColor}14`,
+                    color: primaryColor,
+                    borderColor: `${primaryColor}28`
+                  }}
+                  className="w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs"
+                >
+                  <FileText className="w-5 h-5" />
                 </div>
-                <div className="text-xs text-slate-500 font-semibold">
-                  {publishedPagesCount === 0 ? 'Ready for Setup' : 'Active Public Sections'}
+                <div>
+                  <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
+                    {publishedPagesCount} {publishedPagesCount === 1 ? 'Page' : 'Pages'}
+                  </div>
+                  <div className="text-xs text-slate-500 font-medium">
+                    {publishedPagesCount === 0 ? 'Ready for Setup' : 'Active Public Sections'}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* KPI 2: Active Draft Revisions */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
-              <div 
-                style={{
-                  backgroundColor: `${accentColor}15`,
-                  color: accentColor,
-                  borderColor: `${accentColor}30`
-                }}
-                className="w-10 h-10 rounded-xl border flex items-center justify-center shrink-0"
-              >
-                <Edit3 className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
-                  {draftRevisionsCount} {draftRevisionsCount === 1 ? 'Draft' : 'Drafts'}
+              {/* KPI 2: Active Draft Revisions */}
+              <div className="pt-2 sm:pt-0 sm:px-4 flex items-center gap-3.5">
+                <div 
+                  style={{
+                    backgroundColor: `${accentColor}14`,
+                    color: accentColor,
+                    borderColor: `${accentColor}28`
+                  }}
+                  className="w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs"
+                >
+                  <Edit3 className="w-5 h-5" />
                 </div>
-                <div className="text-xs text-slate-500 font-semibold">In-Flight Revisions</div>
+                <div>
+                  <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
+                    {draftRevisionsCount} {draftRevisionsCount === 1 ? 'Draft' : 'Drafts'}
+                  </div>
+                  <div className="text-xs text-slate-500 font-medium">In-Flight Revisions</div>
+                </div>
               </div>
-            </div>
 
-            {/* KPI 3: Media & Document Assets */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
-              <div 
-                style={{
-                  backgroundColor: `${primaryColor}15`,
-                  color: primaryColor,
-                  borderColor: `${primaryColor}30`
-                }}
-                className="w-10 h-10 rounded-xl border flex items-center justify-center shrink-0"
-              >
-                <FolderOpen className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
-                  {mediaCount} {mediaCount === 1 ? 'Asset' : 'Assets'}
+              {/* KPI 3: Media & Document Assets */}
+              <div className="pt-2 sm:pt-0 sm:px-4 flex items-center gap-3.5">
+                <div 
+                  style={{
+                    backgroundColor: `${primaryColor}14`,
+                    color: primaryColor,
+                    borderColor: `${primaryColor}28`
+                  }}
+                  className="w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs"
+                >
+                  <FolderOpen className="w-5 h-5" />
                 </div>
-                <div className="text-xs text-slate-500 font-semibold">Media &amp; PDFs in Vault</div>
+                <div>
+                  <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
+                    {mediaCount} {mediaCount === 1 ? 'Asset' : 'Assets'}
+                  </div>
+                  <div className="text-xs text-slate-500 font-medium">Media &amp; PDFs in Vault</div>
+                </div>
               </div>
-            </div>
 
-            {/* KPI 4: Compliance Sign-Off Queue */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
-              <div 
-                style={{
-                  backgroundColor: pendingApprovalsCount > 0 ? '#F59E0B15' : '#10B98115',
-                  color: pendingApprovalsCount > 0 ? '#F59E0B' : '#10B981',
-                  borderColor: pendingApprovalsCount > 0 ? '#F59E0B30' : '#10B98130'
-                }}
-                className="w-10 h-10 rounded-xl border flex items-center justify-center shrink-0"
-              >
-                {pendingApprovalsCount > 0 ? <Send className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-              </div>
-              <div>
-                <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
-                  {pendingApprovalsCount > 0 ? `${pendingApprovalsCount} Pending` : 'All Synced'}
+              {/* KPI 4: Compliance Sign-Off Queue */}
+              <div className="pt-2 sm:pt-0 sm:px-4 last:pr-0 flex items-center gap-3.5">
+                <div 
+                  style={{
+                    backgroundColor: pendingApprovalsCount > 0 ? '#F59E0B15' : '#10B98115',
+                    color: pendingApprovalsCount > 0 ? '#F59E0B' : '#10B981',
+                    borderColor: pendingApprovalsCount > 0 ? '#F59E0B30' : '#10B98130'
+                  }}
+                  className="w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs"
+                >
+                  {pendingApprovalsCount > 0 ? <Send className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
                 </div>
-                <div className="text-xs text-slate-500 font-semibold">
-                  {pendingApprovalsCount > 0 ? 'Awaiting Sign-Off' : 'Zero Pending Approvals'}
+                <div>
+                  <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
+                    {pendingApprovalsCount > 0 ? `${pendingApprovalsCount} Pending` : 'All Synced'}
+                  </div>
+                  <div className="text-xs text-slate-500 font-medium">
+                    {pendingApprovalsCount > 0 ? 'Awaiting Sign-Off' : 'Zero Pending Approvals'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -797,33 +799,33 @@ export function ClientCmsHome({
           )}
 
           {/* EXECUTIVE WEB TELEMETRY & REPORTING DASHBOARD */}
-          <section className="space-y-6">
-            {/* Station Header & Interactive Mode Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs backdrop-blur-xl">
-              <div className="space-y-0.5">
+          <section className="space-y-8">
+            {/* Station Header & Interactive Mode Bar (Airy & Decluttered) */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                     Live Edge Telemetry Active
                   </span>
                   <span className="text-slate-300 dark:text-slate-700">&bull;</span>
                   <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Global Edge CDN &bull; {client?.name} Web &amp; Regulatory Repository
+                    Global Edge CDN &bull; {client?.name} Intelligence
                   </span>
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
                   Corporate Web Intelligence &amp; Investor Document Analytics
                 </h2>
               </div>
 
               {/* Filters: Focus Tab and Time Window */}
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* View Modes */}
-                <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-bold">
+                <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs font-bold shadow-2xs">
                   <button
                     type="button"
                     onClick={() => setAnalyticsFocusTab('all')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                       analyticsFocusTab === 'all'
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -834,7 +836,7 @@ export function ClientCmsHome({
                   <button
                     type="button"
                     onClick={() => setAnalyticsFocusTab('vitals')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                       analyticsFocusTab === 'vitals'
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -845,7 +847,7 @@ export function ClientCmsHome({
                   <button
                     type="button"
                     onClick={() => setAnalyticsFocusTab('documents')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                       analyticsFocusTab === 'documents'
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -856,7 +858,7 @@ export function ClientCmsHome({
                   <button
                     type="button"
                     onClick={() => setAnalyticsFocusTab('traffic')}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                       analyticsFocusTab === 'traffic'
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -867,13 +869,13 @@ export function ClientCmsHome({
                 </div>
 
                 {/* Time Range Selector */}
-                <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-bold">
+                <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs font-bold shadow-2xs">
                   {(['24h', '7d', '14d', '30d'] as const).map((range) => (
                     <button
                       key={range}
                       type="button"
                       onClick={() => setTimeRange(range)}
-                      className={`px-2 py-1 rounded-lg uppercase tracking-wider text-[11px] transition-all cursor-pointer ${
+                      className={`px-2.5 py-1.5 rounded-lg uppercase tracking-wider text-[11px] transition-all cursor-pointer ${
                         timeRange === range
                           ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                           : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -886,71 +888,8 @@ export function ClientCmsHome({
               </div>
             </div>
 
-            {/* 4 Telemetry Quick-Metric Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-              <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                  <span>Web Pageviews</span>
-                  <span className="flex items-center text-emerald-600 font-bold text-[11px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    <TrendingUp className="w-3 h-3 mr-0.5" /> +14.2%
-                  </span>
-                </div>
-                <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display mt-2">
-                  {activeDataset.metric}
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1 truncate">
-                  Across verified global sessions
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                  <span>Institutional Inquiries</span>
-                  <span className="flex items-center text-emerald-600 font-bold text-[11px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    <TrendingUp className="w-3 h-3 mr-0.5" /> +8.6%
-                  </span>
-                </div>
-                <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display mt-2">
-                  {activeDataset.inquiries}
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1 truncate">
-                  Investor relations &amp; PR contact touchpoints
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                  <span>Filing Downloads</span>
-                  <span className="flex items-center text-emerald-600 font-bold text-[11px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    <TrendingUp className="w-3 h-3 mr-0.5" /> +19.4%
-                  </span>
-                </div>
-                <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display mt-2">
-                  {activeDataset.downloads}
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1 truncate">
-                  Integrated reports, fact sheets &amp; results
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs">
-                <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                  <span>Edge Delivery TTFB</span>
-                  <span className="flex items-center text-emerald-600 font-bold text-[11px] bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    Global SLA
-                  </span>
-                </div>
-                <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-display mt-2">
-                  42ms
-                </div>
-                <div className="text-[11px] text-slate-500 mt-1 truncate">
-                  99.8% Cloudflare / Vercel cache hit ratio
-                </div>
-              </div>
-            </div>
-
-            {/* 4 Rich Visual Chart Cards Grid (Exact Bastion Executive Quality) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* 4 Rich Visual Chart Cards Grid (Spacious, Airy Layout) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               
               {/* CHART 1: Website Vitals & Edge Latency (AreaChart with <50ms Target) */}
               {(analyticsFocusTab === 'all' || analyticsFocusTab === 'vitals') && (
