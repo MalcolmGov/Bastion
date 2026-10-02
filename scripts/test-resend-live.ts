@@ -32,13 +32,13 @@ async function main() {
 
   console.log('Result payload:', JSON.stringify(result, null, 2));
 
-  if (!result.success) {
+  if (!result.ok) {
     console.error(`❌ Test email delivery failed: ${result.error}`);
     process.exit(1);
   }
 
   console.log(`✅ Success! Email delivered to ${recipient}.`);
-  console.log(`Provider Message ID: ${result.messageId}`);
+  console.log(`Provider Message ID: ${result.providerMessageId}`);
 }
 
 main().catch(err => {
