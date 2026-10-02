@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import * as cheerio from 'cheerio';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { applyFigureEdit } from '../src/lib/results/applyFigureEdit';
 import { convertPdfBytes, convertSampleBooklet } from '../src/lib/results/convert';
 import { isFinancialNumber } from '../src/lib/results/numbers';
-import type { ResultsStatement } from '../src/lib/results/types';
+import { renderResultsHtml } from '../src/lib/results/renderHtml';
+import type { ResultsDocument, ResultsStatement } from '../src/lib/results/types';
 
 async function fragmentedPdf(): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
@@ -55,7 +58,118 @@ function cell(documentTitle: string, label: string, values: string[]) {
   return { documentTitle, label, values };
 }
 
+function testFigureEdit() {
+  const document: ResultsDocument = {
+    issuer: 'Example',
+    title: 'Year ended 31 December 2025',
+    periodLabel: 'Year ended 31 December 2025',
+    unit: 'R’000',
+    narrative: [],
+    highlights: [],
+    notes: [],
+    warnings: [],
+    sourceFilename: 'example.pdf',
+    pageCount: 1,
+    statements: [
+      {
+        id: 'stmt_income',
+        title: 'Summarised consolidated statement of profit or loss',
+        period: '',
+        stubLabel: '',
+        columns: [
+          { id: 'note', label: 'Notes', role: 'note' },
+          { id: 'current', label: '2025', role: 'figure' },
+          { id: 'prior', label: '2024', role: 'figure' },
+        ],
+        rows: [
+          { id: 'revenue', label: 'Revenue', kind: 'data', cells: ['5', '5 834 877', '8 443 462'], confidence: 1 },
+          { id: 'cost', label: 'Cost of sales', kind: 'data', cells: [null, '(4 000)', '(5 000)'], confidence: 1 },
+        ],
+        confidence: 1,
+      },
+      {
+        id: 'stmt_short',
+        title: 'Cash generated',
+        period: '',
+        stubLabel: '',
+        columns: [
+          { id: 'current', label: '2025', role: 'figure' },
+          { id: 'prior', label: '2024', role: 'figure' },
+        ],
+        rows: [
+          { id: 'generated', label: 'Cash generated from operations', kind: 'data', cells: ['679 466', '2 034 712'], confidence: 1 },
+        ],
+        confidence: 1,
+      },
+    ],
+    publication: [
+      { kind: 'heading', level: 2, text: 'Summarised consolidated statement of profit or loss' },
+      {
+        kind: 'table',
+        table: {
+          columns: ['Notes', '2025', '2024'],
+          current: [false, true, false],
+          footnotes: [],
+          rows: [
+            { kind: 'data', label: 'Revenue', cells: ['5', '5 834 877', '8 443 462'] },
+            { kind: 'data', label: 'Cost of sales', cells: [null, '(4 000)', '(5 000)'] },
+          ],
+        },
+      },
+      { kind: 'heading', level: 2, text: 'Revenue destination — ferrochrome' },
+      {
+        kind: 'table',
+        table: {
+          columns: ['2025', '2024'],
+          current: [true, false],
+          footnotes: [],
+          rows: [
+            { kind: 'data', label: 'Revenue', cells: ['119 182', '212 617'] },
+          ],
+        },
+      },
+      { kind: 'heading', level: 2, text: 'Cash generated from operations' },
+      {
+        kind: 'table',
+        table: {
+          columns: ['2025', '2024'],
+          current: [true, false],
+          footnotes: [],
+          rows: [
+            { kind: 'data', label: 'Cash generated from operations', cells: ['679 466', '2 034 712'] },
+          ],
+        },
+      },
+    ],
+  };
+
+  const revenue = document.statements[0].rows[0];
+  const previous = revenue.cells[1];
+  revenue.cells[1] = '5 000 000';
+  assert.equal(applyFigureEdit(document, 'stmt_income', 'revenue', 1, previous), true);
+  const incomeTable = document.publication?.[1].table;
+  const destination = document.publication?.[3].table;
+  assert.deepEqual(incomeTable?.rows[0].cells, ['5', '5 000 000', '8 443 462']);
+  assert.deepEqual(incomeTable?.rows[1].cells, [null, '(4 000)', '(5 000)']);
+  assert.deepEqual(incomeTable?.current, [false, true, false]);
+  assert.deepEqual(destination?.rows[0].cells, ['119 182', '212 617']);
+
+  const generated = document.statements[1].rows[0];
+  const prior = generated.cells[0];
+  generated.cells[0] = '700 000';
+  assert.equal(applyFigureEdit(document, 'stmt_short', 'generated', 0, prior), true);
+  assert.deepEqual(document.publication?.[5].table?.rows[0].cells, ['700 000', '2 034 712']);
+
+  const html = renderResultsHtml(document);
+  const $ = cheerio.load(html);
+  const rendered = $('th').filter((_, node) => $(node).text() === 'Revenue').first().parent().find('td').toArray().map((node) => $(node).text());
+  assert.deepEqual(rendered, ['5', '5 000 000', '8 443 462']);
+  assert.equal($('td.current').first().text(), '5 000 000');
+  assert.equal(applyFigureEdit(document, 'stmt_income', 'missing', 0, null), false);
+}
+
 async function main() {
+  testFigureEdit();
   assert.equal(isFinancialNumber('(1,104)'), true);
   assert.equal(isFinancialNumber('(4%)'), true);
   assert.equal(isFinancialNumber('1,486'), true);
@@ -137,6 +251,19 @@ async function main() {
     const cashTable = publication.find((block) => block.table?.rows.some((row) => /Cash generated from operations/.test(row.label)));
     const generatedRow = cashTable?.table?.rows.find((row) => /Cash generated from operations/.test(row.label));
     assert.deepEqual(generatedRow?.cells.filter((cell) => cell && !/^\d{1,2}$/.test(cell)), ['679 466', '2 034 712']);
+    assert.ok(equipment && position);
+    const equipmentIndex = equipment.cells.findIndex((cell) => cell === '1 147 920');
+    const equipmentPrevious = equipment.cells[equipmentIndex];
+    equipment.cells[equipmentIndex] = '2 222 222';
+    assert.equal(applyFigureEdit(merafe, position.id, equipment.id, equipmentIndex, equipmentPrevious), true);
+    assert.deepEqual(equipmentRow?.cells, [null, '2 222 222', '1 124 913']);
+    assert.deepEqual(positionTable?.table?.current, [false, true, false]);
+    const corrected = cheerio.load(renderResultsHtml(merafe));
+    const correctedCells = corrected('th').filter((_, node) => corrected(node).text() === 'Property, plant and equipment').first().parent().find('td');
+    assert.equal(correctedCells.eq(1).text(), '2 222 222');
+    assert.equal(correctedCells.eq(1).hasClass('current'), true);
+    assert.equal(correctedCells.eq(2).text(), '1 124 913');
+    assert.equal(correctedCells.eq(2).hasClass('current'), false);
     console.log('merafe conversion ok', {
       statements: merafe.statements.map((statement) => statement.title),
       warnings: merafe.warnings.length,
