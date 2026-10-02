@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { requireUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
-import { generateToken, hashPassword } from '@/lib/auth/auth';
+import { generateToken, hashPassword, ROLE_PERMISSIONS } from '@/lib/auth/auth';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 import { sendTransactionalEmail } from '@/lib/email/delivery';
 import crypto from 'crypto';
+
+const ASSIGNABLE_ROLES = new Set(Object.keys(ROLE_PERMISSIONS));
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,6 +28,10 @@ export async function POST(req: NextRequest) {
 
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required.' }, { status: 400 });
+    }
+
+    if (!ASSIGNABLE_ROLES.has(String(role))) {
+      return NextResponse.json({ error: 'Unknown role.' }, { status: 400 });
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
@@ -62,6 +68,18 @@ export async function POST(req: NextRequest) {
     let userId = '';
 
     if (existing.rows.length > 0) {
+      // A client user may only re-invite members of their own workspace; otherwise they could
+      // reassign (or take over via the returned invite token) accounts that belong to other tenants or the agency.
+      if (!isAgencyUser(currentUser)) {
+        const ownerRes = await db.execute({
+          sql: `SELECT client_id FROM users WHERE id = ? LIMIT 1`,
+          args: [String(existing.rows[0].id)]
+        });
+        const ownerClient = ownerRes.rows[0]?.client_id ? String(ownerRes.rows[0].client_id) : null;
+        if (ownerClient !== currentUser.client_id) {
+          return NextResponse.json({ error: 'That email already belongs to another workspace.' }, { status: 409 });
+        }
+      }
       userId = String(existing.rows[0].id);
       await db.execute({
         sql: `UPDATE users SET name = ?, role = ?, client_id = ?, invite_token = ?, invite_token_expires_at = ?, must_reset_password = 1 WHERE id = ?`,
@@ -76,9 +94,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Prefer the configured public URL: the Host header is attacker-controlled and would let a
+    // forged request mint invite links (carrying a live token) that point at another domain.
+    const configuredBase = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, '');
     const host = req.headers.get('host') || 'localhost:3010';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const inviteUrl = `${protocol}://${host}/admin/invite?token=${inviteToken}`;
+    const inviteUrl = `${configuredBase || `${protocol}://${host}`}/admin/invite?token=${inviteToken}`;
 
     const roleTitles: Record<string, string> = {
       platform_admin: 'Platform Administrator',

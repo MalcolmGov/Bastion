@@ -35,6 +35,12 @@ jobs:
       - name: Install Production & Dev Dependencies
         run: npm ci
 
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint src
+
       - name: Run Gates 1 & 2 Automated Security Verification Suite
         run: npx tsx scripts/verify-production-gates.ts
 

@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { submitTenderBid } from '@/lib/tenders/tenderService';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown').split(',')[0].trim();
+    const limited = checkRateLimit(`tender-submit:${ip}`, 10, 3600000);
+    if (!limited.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } }
+      );
+    }
     const body = await req.json();
     const {
       tenderId,
