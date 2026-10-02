@@ -45,7 +45,11 @@ import {
   Key,
   Briefcase,
   Scale,
-  BookOpen
+  BookOpen,
+  ChevronDown,
+  ChevronsLeft,
+  CheckCircle,
+  Home
 } from 'lucide-react';
 
 export function AdminSidebar() {
@@ -127,15 +131,10 @@ export function AdminSidebar() {
       : '/';
 
   const getNavItemProps = (isActive: boolean) => ({
-    style: isActive ? {
-      background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-      borderColor: primaryColor,
-      boxShadow: `0 4px 14px ${primaryColor}35`
-    } : undefined,
-    className: `flex items-center justify-between px-3 py-2 rounded-xl text-xs tracking-[-0.01em] transition relative cursor-pointer ${
+    className: `flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all relative cursor-pointer ${
       isActive
-        ? 'text-white border shadow-md font-semibold'
-        : 'text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white border border-transparent'
+        ? 'bg-[#2563EB] text-white shadow-xs font-semibold'
+        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
     }`
   });
 
@@ -153,20 +152,15 @@ export function AdminSidebar() {
       const iconButton = (
         <div
           title={`${label}${badge ? ` [${badge}]` : ''}`}
-          className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition relative cursor-pointer group ${
+          className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center transition-all relative cursor-pointer group ${
             isActive
-              ? 'text-white border shadow-md font-bold'
-              : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white border border-transparent'
+              ? 'bg-[#2563EB] text-white shadow-xs font-bold'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
-          style={isActive ? {
-            background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-            borderColor: primaryColor,
-            boxShadow: `0 4px 14px ${primaryColor}35`
-          } : undefined}
         >
           <Icon className="w-4 h-4 shrink-0" />
           {badge && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-white dark:ring-[#0A0D14]" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-400 ring-2 ring-[#0B1420]" />
           )}
         </div>
       );
@@ -190,7 +184,7 @@ export function AdminSidebar() {
           <span className="truncate">{label}</span>
         </div>
         {badge && (
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${badgeClass || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${badgeClass || 'bg-slate-800 text-slate-300'}`}>
             {badge}
           </span>
         )}
@@ -211,7 +205,7 @@ export function AdminSidebar() {
   const resultsSection = (
     <div>
       {!isCollapsed && (
-        <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+        <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
           Results
         </div>
       )}
@@ -230,11 +224,11 @@ export function AdminSidebar() {
     <aside
       className={`${
         isCollapsed ? 'w-16' : 'w-64'
-      } bg-white dark:bg-[#0A0D14] border-r border-slate-200/90 dark:border-slate-800/80 flex flex-col justify-between h-screen sticky top-0 shrink-0 z-20 overflow-x-hidden transition-all duration-300 ease-in-out`}
+      } bg-[#0B1420] text-slate-300 border-r border-slate-800/80 flex flex-col justify-between h-screen sticky top-0 shrink-0 z-20 overflow-x-hidden transition-all duration-300 ease-in-out`}
     >
       <div className="flex-1 flex flex-col min-h-0">
         {/* Brand Header */}
-        <div className={`p-3.5 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center ${isCollapsed ? 'justify-center flex-col gap-2.5' : 'justify-between'}`}>
+        <div className={`p-3.5 border-b border-slate-800/80 ${isCollapsed ? 'flex flex-col items-center gap-2.5' : 'space-y-3'}`}>
           {isCollapsed ? (
             <>
               <Link href="/admin" title="Bastion Platform" className="shrink-0">
@@ -244,74 +238,38 @@ export function AdminSidebar() {
                 type="button"
                 onClick={toggleCollapse}
                 title="Expand Sidebar (⌘B)"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition cursor-pointer"
               >
                 <PanelLeftOpen className="w-4 h-4" />
               </button>
             </>
           ) : (
             <>
-              <Link href="/admin" className="flex items-center space-x-2.5 min-w-0">
-                {isClientPortal ? (
-                  <>
-                    <div 
-                      style={{
-                        backgroundColor: `${primaryColor}15`,
-                        color: primaryColor,
-                        borderColor: `${primaryColor}35`
-                      }}
-                      className="w-9 h-9 rounded-xl border flex items-center justify-center font-bold text-xs shrink-0 shadow-xs"
-                    >
-                      {activeClient?.name ? activeClient.name.substring(0, 2).toUpperCase() : 'CC'}
-                    </div>
-                    <div className="truncate">
-                      <div className="font-bold text-sm tracking-tight text-slate-900 dark:text-white leading-tight flex items-center space-x-1.5 truncate">
-                        <span className="truncate">{activeClient?.name || 'Client Workspace'}</span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                        Corporate CMS &bull; Bastion
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-2 min-w-0">
-                    <BastionLogo 
-                      size="sm"
-                      showCmsBadge={false} 
-                      showGroupBadge={false}
-                      className="text-slate-900 dark:text-white"
-                    />
-                    <span 
-                      style={{
-                        backgroundColor: `${primaryColor}15`,
-                        color: primaryColor,
-                        borderColor: `${primaryColor}30`
-                      }}
-                      className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase border shrink-0"
-                    >
-                      AGENCY
-                    </span>
+              {/* Wordmark Header */}
+              <div className="flex items-center justify-start pb-0.5">
+                <Link href="/admin" className="inline-flex">
+                  <div className="border border-slate-700/90 rounded-md px-2.5 py-1 inline-flex items-center bg-slate-900/40">
+                    <span className="font-serif font-bold text-sm tracking-tight text-white">Bastion</span>
                   </div>
-                )}
-              </Link>
-
-              <div className="flex items-center space-x-1 shrink-0">
-                <Link
-                  href={siteUrl}
-                  target="_blank"
-                  title="Open Live Website"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                >
-                  <ExternalLink className="w-4 h-4" />
                 </Link>
-                <button
-                  type="button"
-                  onClick={toggleCollapse}
-                  title="Collapse Sidebar (⌘B)"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                >
-                  <PanelLeftClose className="w-4 h-4" />
-                </button>
+              </div>
+
+              {/* Workspace Switcher Card */}
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800/90 shadow-2xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                    {activeClient?.name ? activeClient.name.substring(0, 2).toUpperCase() : 'AU'}
+                  </div>
+                  <div className="truncate text-left">
+                    <div className="font-bold text-xs text-white truncate leading-tight">
+                      {activeClient?.name || 'Aurum Energy & Resources'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-medium">
+                      Corporate CMS
+                    </div>
+                  </div>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               </div>
             </>
           )}
@@ -324,12 +282,12 @@ export function AdminSidebar() {
             <>
               <div>
                 {!isCollapsed && (
-                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    {activeClient?.name || 'Corporate'} Content
+                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    {activeClient?.name ? `${activeClient.name.toUpperCase()} CONTENT` : 'AURUM ENERGY & RESOURCES CONTENT'}
                   </div>
                 )}
                 <div className="space-y-1">
-                  {renderItem('/admin', 'Executive Overview', LayoutDashboard, pathname === '/admin')}
+                  {renderItem('/admin', 'Executive Overview', Home, pathname === '/admin')}
                   {renderItem('/admin/pages', 'Pages & Navigation', FileText, pathname === '/admin/pages')}
                   {isGoldFields ? (
                     <>
@@ -347,17 +305,17 @@ export function AdminSidebar() {
                 </div>
               </div>
 
-              {isCollapsed ? <div className="my-2 border-t border-slate-200/80 dark:border-slate-800/80 mx-2" /> : null}
+              <div className="my-2.5 border-t border-slate-800/80 mx-2" />
 
               {resultsSection}
 
-              {isCollapsed ? <div className="my-2 border-t border-slate-200/80 dark:border-slate-800/80 mx-2" /> : null}
+              <div className="my-2.5 border-t border-slate-800/80 mx-2" />
 
               {/* Authoring & Media Tools */}
               <div>
                 {!isCollapsed && (
-                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Authoring &amp; Assets
+                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    AUTHORING &amp; ASSETS
                   </div>
                 )}
                 <div className="space-y-1">
@@ -367,19 +325,19 @@ export function AdminSidebar() {
                 </div>
               </div>
 
-              {isCollapsed ? <div className="my-2 border-t border-slate-200/80 dark:border-slate-800/80 mx-2" /> : null}
+              <div className="my-2.5 border-t border-slate-800/80 mx-2" />
 
               {/* Publishing & Governance */}
               <div>
                 {!isCollapsed && (
-                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Governance &amp; Releases
+                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    GOVERNANCE &amp; RELEASES
                   </div>
                 )}
                 <div className="space-y-1">
-                  {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'))}
+                  {renderItem('/admin/releases', 'Content Releases', Send, pathname.startsWith('/admin/releases'))}
                   {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'))}
-                  {renderItem('/admin/tasks', 'Approvals & Sign-Off', Send, pathname.startsWith('/admin/tasks'))}
+                  {renderItem('/admin/tasks', 'Approvals & Sign-Off', CheckCircle, pathname.startsWith('/admin/tasks'))}
                   {renderItem('/admin/users', 'Authorized Editors', Users, pathname.startsWith('/admin/users'))}
                 </div>
               </div>
@@ -504,13 +462,13 @@ export function AdminSidebar() {
         ))}
 
         {/* Footer Collapse Toggle Control */}
-        <div className="p-2 border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-50/40 dark:bg-[#06090F]">
+        <div className="p-2 border-t border-slate-800/80">
           {isCollapsed ? (
             <button
               type="button"
               onClick={toggleCollapse}
               title="Expand Sidebar (⌘B)"
-              className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/60 transition cursor-pointer"
             >
               <PanelLeftOpen className="w-4 h-4" />
             </button>
@@ -518,16 +476,35 @@ export function AdminSidebar() {
             <button
               type="button"
               onClick={toggleCollapse}
-              className="w-full h-8 flex items-center justify-between px-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition text-[11px] font-medium cursor-pointer"
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/60 transition text-xs font-medium cursor-pointer"
             >
-              <span className="flex items-center space-x-2">
-                <PanelLeftClose className="w-4 h-4" />
-                <span>Collapse Sidebar</span>
-              </span>
-              <span className="text-[10px] font-mono text-slate-500">⌘B</span>
+              <ChevronsLeft className="w-4 h-4 text-slate-400" />
+              <span>Collapse Sidebar</span>
             </button>
           )}
         </div>
+
+        {/* User Profile Chip */}
+        {!isCollapsed && (
+          <div className="p-2 border-t border-slate-800/80">
+            <div className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-800/50 transition cursor-pointer">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-900 font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                  {user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'MG'}
+                </div>
+                <div className="truncate text-left">
+                  <div className="font-semibold text-xs text-white truncate leading-tight">
+                    {user?.name || 'Malcolm Govender'}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-medium">
+                    {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Administrator'}
+                  </div>
+                </div>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

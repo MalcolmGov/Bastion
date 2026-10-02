@@ -621,29 +621,31 @@ export function ZaraVoiceCopilot() {
   return (
     <>
       {/* ───────────────────────────────────────────────────────── */}
-      {/* FLOATING TRIGGER BUTTON (Bottom-Right Executive Signature) */}
+      {/* FLOATING TRIGGER BUTTON (Hidden in client CMS mode for clean canvas) */}
       {/* ───────────────────────────────────────────────────────── */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-40 h-12 px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/60 shadow-xl flex items-center gap-2.5 transition-all duration-200 hover:scale-105 active:scale-95 group cursor-pointer"
-        title="Ask AI Assistant"
-        aria-label="Ask AI Assistant"
-      >
-        <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300/30 group-hover:rotate-12 transition-transform" />
-        <span className="text-xs font-bold tracking-wide">Ask AI</span>
-        
-        {/* Pulsing Status Dot */}
-        <span
-          className={`w-2 h-2 rounded-full ${
-            isSpeaking
-              ? 'bg-purple-400 animate-ping'
-              : isListening
-              ? 'bg-emerald-400 animate-pulse'
-              : 'bg-emerald-400'
-          }`}
-        />
-      </button>
+      {!isClient && (
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="fixed bottom-6 right-6 z-40 h-12 px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/60 shadow-xl flex items-center gap-2.5 transition-all duration-200 hover:scale-105 active:scale-95 group cursor-pointer"
+          title="Ask AI Assistant"
+          aria-label="Ask AI Assistant"
+        >
+          <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300/30 group-hover:rotate-12 transition-transform" />
+          <span className="text-xs font-bold tracking-wide">Ask AI</span>
+          
+          {/* Pulsing Status Dot */}
+          <span
+            className={`w-2 h-2 rounded-full ${
+              isSpeaking
+                ? 'bg-purple-400 animate-ping'
+                : isListening
+                ? 'bg-emerald-400 animate-pulse'
+                : 'bg-emerald-400'
+            }`}
+          />
+        </button>
+      )}
 
       {/* ───────────────────────────────────────────────────────── */}
       {/* CLEAN, WHITE, PREMIUM ASK AI DRAWER                       */}

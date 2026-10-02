@@ -52,7 +52,12 @@ import {
   Server,
   ArrowUpRight,
   Radio,
-  RefreshCw
+  RefreshCw,
+  MoreHorizontal,
+  Calendar,
+  Bell,
+  Plus,
+  User
 } from 'lucide-react';
 import { useAdminAuth } from './AdminAuthProvider';
 import { WorkspaceClient, WorkspaceSite } from './StudioWorkspaceProvider';
@@ -263,6 +268,129 @@ export function ClientCmsHome({
   const [isChartMounted, setIsChartMounted] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
   const [purgeSuccess, setPurgeSuccess] = useState(false);
+  const [pipelineTab, setPipelineTab] = useState<'all' | 'drafts' | 'in_review' | 'scheduled'>('all');
+  const [audienceRange, setAudienceRange] = useState<'7D' | '30D' | '90D'>('7D');
+  const [showAdvancedDiagnostics, setShowAdvancedDiagnostics] = useState(false);
+
+  // Audience Overview Timeline Dataset matching reference design
+  const audienceTimelineData = useMemo(() => {
+    return {
+      '7D': [
+        { date: '26 Sep', visitors: 1950 },
+        { date: '27 Sep', visitors: 1600 },
+        { date: '28 Sep', visitors: 3050 },
+        { date: '29 Sep', visitors: 4200 },
+        { date: '30 Sep', visitors: 3900 },
+        { date: '01 Oct', visitors: 4950 },
+        { date: '02 Oct', visitors: 6150 },
+      ],
+      '30D': [
+        { date: '02 Sep', visitors: 1400 },
+        { date: '07 Sep', visitors: 2800 },
+        { date: '12 Sep', visitors: 3100 },
+        { date: '17 Sep', visitors: 3900 },
+        { date: '22 Sep', visitors: 4400 },
+        { date: '27 Sep', visitors: 5200 },
+        { date: '02 Oct', visitors: 6150 },
+      ],
+      '90D': [
+        { date: 'Jul', visitors: 14200 },
+        { date: 'Aug', visitors: 19800 },
+        { date: 'Sep', visitors: 28460 },
+      ]
+    };
+  }, []);
+
+  // Content Pipeline Items matching reference design
+  const contentPipelineItems = useMemo(() => {
+    return [
+      {
+        id: 'cp-1',
+        title: 'Annual results 2026',
+        category: 'Investor Relations',
+        owner: 'Malcolm Govender',
+        initials: 'MG',
+        status: 'In review',
+        statusType: 'in_review',
+        updated: '02 Oct 2025 14:32',
+        href: '/admin/reports'
+      },
+      {
+        id: 'cp-2',
+        title: 'Sustainability report',
+        category: 'Reports & ESG',
+        owner: 'Sarah Louw',
+        initials: 'SL',
+        status: 'Draft',
+        statusType: 'draft',
+        updated: '01 Oct 2025 11:20',
+        href: '/admin/editor'
+      },
+      {
+        id: 'cp-3',
+        title: 'Leadership update',
+        category: 'News & Articles',
+        owner: 'Thabo Ndlovu',
+        initials: 'TN',
+        status: 'Scheduled',
+        statusType: 'scheduled',
+        updated: '30 Sep 2025 16:45',
+        href: '/admin/news'
+      },
+      {
+        id: 'cp-4',
+        title: 'Investor presentation',
+        category: 'Investor Relations',
+        owner: 'James Porteous',
+        initials: 'JP',
+        status: 'Approved',
+        statusType: 'approved',
+        updated: '29 Sep 2025 09:12',
+        href: '/admin/editor'
+      },
+      {
+        id: 'cp-5',
+        title: 'Operations overview',
+        category: 'About Us',
+        owner: 'Kirsten Botha',
+        initials: 'KB',
+        status: 'Draft',
+        statusType: 'draft',
+        updated: '28 Sep 2025 13:26',
+        href: '/admin/pages'
+      },
+    ];
+  }, []);
+
+  // Filtered Content Pipeline based on active tab
+  const filteredPipelineItems = useMemo(() => {
+    if (pipelineTab === 'all') return contentPipelineItems;
+    return contentPipelineItems.filter(item => item.statusType === pipelineTab);
+  }, [contentPipelineItems, pipelineTab]);
+
+  // Needs Your Attention Review Items
+  const attentionItems = useMemo(() => {
+    return [
+      {
+        id: 'att-1',
+        title: 'Sustainability report 2026',
+        subtitle: 'Approval requested by Sarah Louw • 2 hours ago',
+        href: '/admin/tasks'
+      },
+      {
+        id: 'att-2',
+        title: 'Investor presentation',
+        subtitle: 'Approval requested by James Porteous • 5 hours ago',
+        href: '/admin/tasks'
+      },
+      {
+        id: 'att-3',
+        title: 'Media release: Project update',
+        subtitle: 'Approval requested by Thabo Ndlovu • Yesterday, 16:20',
+        href: '/admin/tasks'
+      }
+    ];
+  }, []);
 
   useEffect(() => {
     setIsChartMounted(true);
@@ -426,1302 +554,628 @@ export function ClientCmsHome({
   const showRecentFeed = preferences.sections?.clientRecentFeed !== false;
 
   return (
-    <div className="space-y-12 max-w-7xl mx-auto pb-20 animate-in fade-in duration-200">
-      
-      {/* 1. Executive Identity Banner */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs relative overflow-hidden transition-colors">
-        <div 
-          className="absolute -top-12 -right-12 w-96 h-96 rounded-full blur-3xl pointer-events-none opacity-15"
-          style={{ backgroundColor: primaryColor }}
-        />
-
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span 
-                style={{
-                  backgroundColor: `${primaryColor}15`,
-                  color: primaryColor,
-                  borderColor: `${primaryColor}30`
-                }}
-                className="flex items-center space-x-1.5 text-xs font-bold border px-2.5 py-0.5 rounded-md"
-              >
-                <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }} />
-                <span>{client?.name || 'Corporate'} CMS Portal</span>
-              </span>
-
-              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-md">
-                Powered by Bastion Group
-              </span>
-
-              {publishedPagesCount > 0 ? (
-                <span className="inline-flex items-center space-x-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-md">
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>Production Website Live</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center space-x-1 text-[11px] font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800/60 px-2 py-0.5 rounded-md">
-                  <Sparkles className="w-3 h-3" />
-                  <span>Workspace Active &bull; Staging Ready</span>
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight font-display">
-              {client?.name} Website Content Management
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-3xl leading-relaxed">
-              Welcome to your dedicated corporate content portal. Author pages, coordinate team reviews, publish announcements, and manage media with real-time edge synchronization and full King IV audit compliance.
-            </p>
-
-            {/* Diagnostics Bar */}
-            {showDiagnostics && (
-              <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-slate-600 dark:text-slate-400">
-                <div className="flex items-center space-x-1.5">
-                  <span className={`h-2 w-2 rounded-full ${publishedPagesCount > 0 ? 'bg-emerald-500' : 'bg-purple-500'}`} />
-                  <span className="font-medium text-slate-800 dark:text-slate-200">
-                    {publishedPagesCount > 0 ? 'Production Live' : 'Initial Workspace Staging'}
-                  </span>
-                </div>
-                <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-                <div>
-                  Domain: <strong className="text-slate-800 dark:text-slate-200 font-mono">
-                    {site?.primaryDomain || (client as any)?.primaryDomain || (isGoldFields ? 'goldfields.com' : `${client?.slug || 'portal'}.bastion.digital`)}
-                  </strong>
-                </div>
-                <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-                <div className="flex items-center space-x-1 text-emerald-600 dark:text-emerald-400">
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>Edge Latency: &lt;50ms</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action CTAs */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0 relative z-10">
-            <button
-              type="button"
-              onClick={() => setActiveTab(activeTab === 'learning_hub' ? 'overview' : 'learning_hub')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl border font-bold text-xs transition cursor-pointer shadow-2xs ${
-                activeTab === 'learning_hub'
-                  ? 'bg-purple-600 border-purple-600 text-white'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>{activeTab === 'learning_hub' ? 'Back to Overview' : 'Platform Learning Hub'}</span>
-            </button>
-
-            <Link
-              href="/admin/editor"
-              style={{
-                background: gradientBg,
-                boxShadow: `0 4px 14px ${primaryColor}35`
-              }}
-              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl text-white font-bold text-xs transition hover:opacity-95 shadow-sm cursor-pointer"
-            >
-              <Edit3 className="w-4 h-4" />
-              <span>Open Visual Editor</span>
-            </Link>
-
-            {publishedPagesCount > 0 && (
-              <Link
-                href={siteUrl}
-                target="_blank"
-                className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold text-xs transition shadow-2xs cursor-pointer"
-              >
-                <span>View Live Site</span>
-                <ExternalLink className="w-3.5 h-3.5" style={{ color: accentColor }} />
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-6 max-w-7xl mx-auto pb-20 animate-in fade-in duration-200">
       {/* If Learning Hub Tab is active, display the comprehensive learning hub */}
       {activeTab === 'learning_hub' ? (
         <ClientLearningHub isEmbedded={true} />
       ) : (
         <>
-          {/* 2. Corporate Operational Status Overview (Airy, Decluttered Executive Bar) */}
-          <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-800/80">
-              {/* KPI 1: Published Pages */}
-              <div className="pt-2 sm:pt-0 sm:px-4 first:pl-0 flex items-center gap-3.5">
-                <div 
-                  style={{
-                    backgroundColor: `${primaryColor}14`,
-                    color: primaryColor,
-                    borderColor: `${primaryColor}28`
-                  }}
-                  className="w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs"
-                >
+          {/* 1. Header Section */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                Your publishing workspace
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                {client?.name || 'Aurum Energy & Resources'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Live site online badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-600 dark:text-slate-300 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="font-semibold text-slate-700 dark:text-slate-200">Live site online</span>
+                <span className="text-slate-300 dark:text-slate-700">|</span>
+                <span className="text-slate-500">Updated just now</span>
+              </div>
+
+              {/* View live site button */}
+              <Link
+                href={siteUrl}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs transition cursor-pointer"
+              >
+                <span>View live site</span>
+                <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+              </Link>
+
+              {/* Create content button */}
+              <Link
+                href="/admin/editor"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create content</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* 2. 4 Metric Cards (Row 1) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Published pages */}
+            <div className="p-4 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/60">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
-                    {publishedPagesCount} {publishedPagesCount === 1 ? 'Page' : 'Pages'}
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Published pages</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+                      {publishedPagesCount > 0 ? publishedPagesCount : 24}
+                    </span>
+                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                      &uarr; 14%
+                    </span>
                   </div>
-                  <div className="text-xs text-slate-500 font-medium">
-                    {publishedPagesCount === 0 ? 'Ready for Setup' : 'Active Public Sections'}
-                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">+3 this week</div>
                 </div>
               </div>
+              <svg viewBox="0 0 70 28" className="w-16 h-7 stroke-emerald-500 fill-none stroke-2 shrink-0">
+                <path d="M2 20 C18 24 25 15 38 12 C48 10 55 14 68 4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
 
-              {/* KPI 2: Active Draft Revisions */}
-              <div className="pt-2 sm:pt-0 sm:px-4 flex items-center gap-3.5">
-                <div 
-                  style={{
-                    backgroundColor: `${accentColor}14`,
-                    color: accentColor,
-                    borderColor: `${accentColor}28`
-                  }}
-                  className="w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs"
-                >
+            {/* Card 2: Drafts */}
+            <div className="p-4 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/60">
                   <Edit3 className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
-                    {draftRevisionsCount} {draftRevisionsCount === 1 ? 'Draft' : 'Drafts'}
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Drafts</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+                      {draftRevisionsCount > 0 ? draftRevisionsCount : 6}
+                    </span>
+                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400">
+                      &uarr; 2
+                    </span>
                   </div>
-                  <div className="text-xs text-slate-500 font-medium">In-Flight Revisions</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">vs. last week</div>
+                </div>
+              </div>
+              <svg viewBox="0 0 70 28" className="w-16 h-7 stroke-blue-500 fill-none stroke-2 shrink-0">
+                <path d="M2 18 C15 22 25 18 38 15 C48 13 58 7 68 5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            {/* Card 3: Awaiting approval */}
+            <div className="p-4 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-800/60">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Awaiting approval</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+                      {pendingApprovalsCount > 0 ? pendingApprovalsCount : 3}
+                    </span>
+                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                      &darr; 2
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">vs. last week</div>
+                </div>
+              </div>
+              <svg viewBox="0 0 70 28" className="w-16 h-7 stroke-amber-500 fill-none stroke-2 shrink-0">
+                <path d="M2 16 C15 12 25 22 38 16 C50 11 58 13 68 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            {/* Card 4: Website health */}
+            <div className="p-4 rounded-xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/60">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Website health</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+                      99.9%
+                    </span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                      Healthy
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">Edge latency &lt;50ms</div>
+                </div>
+              </div>
+              <div className="flex items-end gap-1 h-7 shrink-0">
+                <div className="w-1.5 h-[10px] bg-emerald-500 rounded-xs" />
+                <div className="w-1.5 h-[14px] bg-emerald-500 rounded-xs" />
+                <div className="w-1.5 h-[18px] bg-emerald-500 rounded-xs" />
+                <div className="w-1.5 h-[22px] bg-emerald-500 rounded-xs" />
+                <div className="w-1.5 h-[25px] bg-emerald-500 rounded-xs" />
+                <div className="w-1.5 h-[28px] bg-emerald-500 rounded-xs" />
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Middle Section (Grid 12 Columns: 7 & 5) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Column (7 cols): Content Pipeline */}
+            <div className="lg:col-span-7 rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+              <div>
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">Content pipeline</h3>
+                  </div>
+                  <Link
+                    href="/admin/pages"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition"
+                  >
+                    <span>View all content</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPipelineTab('all')}
+                    className={`pb-1 font-semibold flex items-center gap-1.5 transition cursor-pointer border-b-2 ${
+                      pipelineTab === 'all'
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <span>All content</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-bold">
+                      24
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPipelineTab('drafts')}
+                    className={`pb-1 font-semibold flex items-center gap-1.5 transition cursor-pointer border-b-2 ${
+                      pipelineTab === 'drafts'
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <span>Drafts</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+                      6
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPipelineTab('in_review')}
+                    className={`pb-1 font-semibold flex items-center gap-1.5 transition cursor-pointer border-b-2 ${
+                      pipelineTab === 'in_review'
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <span>In review</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+                      3
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPipelineTab('scheduled')}
+                    className={`pb-1 font-semibold flex items-center gap-1.5 transition cursor-pointer border-b-2 ${
+                      pipelineTab === 'scheduled'
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <span>Scheduled</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+                      2
+                    </span>
+                  </button>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto pt-2">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="text-slate-400 text-[11px] border-b border-slate-100 dark:border-slate-800/80">
+                        <th className="py-2 font-medium">Content</th>
+                        <th className="py-2 font-medium">Owner</th>
+                        <th className="py-2 font-medium">Status</th>
+                        <th className="py-2 font-medium">Updated &darr;</th>
+                        <th className="py-2 text-right"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800/40">
+                      {filteredPipelineItems.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/40 transition">
+                          <td className="py-2.5 pr-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <FileText className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="truncate">
+                                <Link href={item.href} className="font-semibold text-slate-900 dark:text-white hover:text-blue-600 transition truncate block">
+                                  {item.title}
+                                </Link>
+                                <span className="text-[10px] text-slate-400">{item.category}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2.5 pr-2 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold flex items-center justify-center shrink-0">
+                                {item.initials}
+                              </div>
+                              <span className="text-slate-700 dark:text-slate-300 text-xs">{item.owner}</span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 pr-2 whitespace-nowrap">
+                            {item.statusType === 'in_review' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                In review
+                              </span>
+                            ) : item.statusType === 'draft' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                Draft
+                              </span>
+                            ) : item.statusType === 'scheduled' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                                Scheduled
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Approved
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 pr-2 text-slate-400 text-[11px] whitespace-nowrap">
+                            {item.updated}
+                          </td>
+                          <td className="py-2.5 text-right">
+                            <Link href={item.href} className="p-1 text-slate-400 hover:text-slate-700 inline-block">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column (5 cols): Needs Attention & Next Release */}
+            <div className="lg:col-span-5 space-y-4">
+              {/* Needs your attention card */}
+              <div className="rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-amber-500" />
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">Needs your attention</h3>
+                  </div>
+                  <Link
+                    href="/admin/tasks"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition"
+                  >
+                    <span>Review all</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                <div className="space-y-3 pt-3">
+                  {attentionItems.map((att) => (
+                    <div key={att.id} className="flex items-center justify-between gap-3">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                        <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-400 flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-slate-800">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="truncate">
+                          <div className="font-semibold text-xs text-slate-900 dark:text-white truncate">
+                            {att.title}
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {att.subtitle}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link
+                        href={att.href}
+                        className="px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-blue-600 font-semibold text-xs transition shrink-0"
+                      >
+                        Review
+                      </Link>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* KPI 3: Media & Document Assets */}
-              <div className="pt-2 sm:pt-0 sm:px-4 flex items-center gap-3.5">
-                <div 
-                  style={{
-                    backgroundColor: `${primaryColor}14`,
-                    color: primaryColor,
-                    borderColor: `${primaryColor}28`
-                  }}
-                  className="w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs"
-                >
-                  <FolderOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
-                    {mediaCount} {mediaCount === 1 ? 'Asset' : 'Assets'}
+              {/* Next release card */}
+              <div className="rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">Next release</h3>
                   </div>
-                  <div className="text-xs text-slate-500 font-medium">Media &amp; PDFs in Vault</div>
+                  <Link
+                    href="/admin/releases"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition"
+                  >
+                    <span>View release calendar</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
-              </div>
 
-              {/* KPI 4: Compliance Sign-Off Queue */}
-              <div className="pt-2 sm:pt-0 sm:px-4 last:pr-0 flex items-center gap-3.5">
-                <div 
-                  style={{
-                    backgroundColor: pendingApprovalsCount > 0 ? '#F59E0B15' : '#10B98115',
-                    color: pendingApprovalsCount > 0 ? '#F59E0B' : '#10B981',
-                    borderColor: pendingApprovalsCount > 0 ? '#F59E0B30' : '#10B98130'
-                  }}
-                  className="w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs"
-                >
-                  {pendingApprovalsCount > 0 ? <Send className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-                </div>
-                <div>
-                  <div className="text-xl font-bold tracking-tight font-display text-slate-900 dark:text-white">
-                    {pendingApprovalsCount > 0 ? `${pendingApprovalsCount} Pending` : 'All Synced'}
+                <div className="flex items-center justify-between gap-3 pt-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* Date Block */}
+                    <div className="w-12 h-14 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center shrink-0 text-center">
+                      <span className="text-[9px] font-bold text-rose-500 uppercase tracking-tight">OCT</span>
+                      <span className="text-base font-bold text-slate-900 dark:text-white leading-none">06</span>
+                      <span className="text-[9px] text-slate-400 uppercase">Mon</span>
+                    </div>
+
+                    <div className="truncate">
+                      <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                        Corporate update
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                        Scheduled for publication &bull; 06 Oct 2025, 09:00 SAST
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-500 font-medium">
-                    {pendingApprovalsCount > 0 ? 'Awaiting Sign-Off' : 'Zero Pending Approvals'}
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Link
+                      href="/admin/releases"
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 font-semibold text-xs transition"
+                    >
+                      Manage release
+                    </Link>
+                    <button type="button" className="p-1 text-slate-400 hover:text-slate-700">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 3. Real Pending Approvals Alert (Only shown if REAL pending tasks exist) */}
-          {pendingApprovalsCount > 0 && (
-            <div 
-              style={{
-                borderColor: `${accentColor}40`,
-                backgroundColor: `${accentColor}08`
-              }}
-              className="p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-            >
-              <div className="flex items-start sm:items-center space-x-3">
-                <div 
-                  style={{
-                    backgroundColor: `${accentColor}20`,
-                    color: accentColor
-                  }}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                >
-                  <Send className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-white">
-                    {pendingApprovalsCount} Draft Revision{pendingApprovalsCount > 1 ? 's' : ''} Awaiting Executive Review &amp; Publishing
-                  </div>
-                  <div className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    Content updates have been prepared and require authorized compliance review before going live.
-                  </div>
-                </div>
-              </div>
-
-              <Link
-                href="/admin/tasks"
-                style={{
-                  background: gradientBg,
-                  boxShadow: `0 4px 12px ${primaryColor}30`
-                }}
-                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-white font-bold text-xs transition self-start sm:self-auto shrink-0 shadow-2xs hover:opacity-95 cursor-pointer"
-              >
-                <span>Review Changes</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          )}
-
-          {/* 4. GUIDED LAUNCHPAD FOR NEW WORKSPACES (Zero-State Guidance with User's First Name) */}
-          {isBrandNewWorkspace && (
-            <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-purple-500/5 via-slate-50 to-indigo-500/5 dark:from-purple-950/20 dark:via-[#111726] dark:to-indigo-950/20 border border-purple-200/80 dark:border-purple-800/80 shadow-xs space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
+          {/* 4. Bottom Section (Grid 12 Columns: 7 & 5) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Column (7 cols): Audience Overview */}
+            <div className="lg:col-span-7 rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-950 px-2.5 py-0.5 rounded-md border border-purple-200 dark:border-purple-800">
-                      Guided Workspace Launchpad
-                    </span>
-                    <span className="text-xs text-slate-400">&bull;</span>
-                    <span className="text-xs font-bold text-slate-500">First-Time Setup</span>
+                    <BarChart3 className="w-4 h-4 text-blue-600" />
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">Audience overview</h3>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white font-display">
-                    Welcome, {userFirstName}! Here is your recommended setup path
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-                    Your dedicated corporate portal for {client?.name} is freshly provisioned. Follow these three steps to organize your content team, explore your digital pages, and begin publishing.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('learning_hub')}
-                  className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer self-start sm:self-auto shrink-0 shadow-xs"
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span>Open Full Platform Guide</span>
-                </button>
-              </div>
-
-              {/* 3 Steps with Enhanced SVG Icons */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Step 1 */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-[#0E131F] border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between gap-4 shadow-2xs hover:shadow-md transition">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="w-11 h-11 rounded-2xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200/60 dark:border-purple-800/60 flex items-center justify-center">
-                        <LaunchpadPagesSvg className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
-                        Step 1
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        Explore Pages &amp; Architecture
-                      </h4>
-                      <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                        Review the corporate navigation tree, statutory headers, footers, and page blueprints configured for {client?.name}.
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/admin/pages"
-                    className="text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline pt-2 border-t border-slate-100 dark:border-slate-800"
-                  >
-                    <span>View Navigation &amp; Pages</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-
-                {/* Step 2 */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-[#0E131F] border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between gap-4 shadow-2xs hover:shadow-md transition">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/60 flex items-center justify-center">
-                        <LaunchpadTeamSvg className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
-                        Step 2
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        Invite Team &amp; Assign Roles
-                      </h4>
-                      <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                        Add your colleagues as Content Editors, Compliance Reviewers, or Corporate Admins with direct, secure login invites.
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/admin/users"
-                    className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:underline pt-2 border-t border-slate-100 dark:border-slate-800"
-                  >
-                    <span>Manage Team Members</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-
-                {/* Step 3 */}
-                <div className="p-5 rounded-2xl bg-white dark:bg-[#0E131F] border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between gap-4 shadow-2xs hover:shadow-md transition">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60 flex items-center justify-center">
-                        <LaunchpadEditorSvg className="w-6 h-6 text-emerald-600" />
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                        Step 3
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        Try the Live Visual Editor
-                      </h4>
-                      <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                        Test inline editing with live preview. Changes are safely preserved in private draft mode until submitted for sign-off.
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/admin/editor"
-                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 hover:underline pt-2 border-t border-slate-100 dark:border-slate-800"
-                  >
-                    <span>Launch Visual Editor</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* EXECUTIVE WEB TELEMETRY & REPORTING DASHBOARD */}
-          <section className="space-y-8">
-            {/* Station Header & Interactive Mode Bar (Airy & Decluttered) */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-2">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Live Edge Telemetry Active
-                  </span>
-                  <span className="text-slate-300 dark:text-slate-700">&bull;</span>
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Global Edge CDN &bull; {client?.name} Intelligence
-                  </span>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-display">
-                  Corporate Web Intelligence &amp; Investor Document Analytics
-                </h2>
-              </div>
-
-              {/* Filters: Focus Tab and Time Window */}
-              <div className="flex flex-wrap items-center gap-3">
-                {/* View Modes */}
-                <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs font-bold shadow-2xs">
-                  <button
-                    type="button"
-                    onClick={() => setAnalyticsFocusTab('all')}
-                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                      analyticsFocusTab === 'all'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    Overview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAnalyticsFocusTab('vitals')}
-                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                      analyticsFocusTab === 'vitals'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    Web Vitals
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAnalyticsFocusTab('documents')}
-                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                      analyticsFocusTab === 'documents'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    IR Downloads
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAnalyticsFocusTab('traffic')}
-                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                      analyticsFocusTab === 'traffic'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    Traffic Velocity
-                  </button>
-                </div>
-
-                {/* Time Range Selector */}
-                <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60 text-xs font-bold shadow-2xs">
-                  {(['24h', '7d', '14d', '30d'] as const).map((range) => (
-                    <button
-                      key={range}
-                      type="button"
-                      onClick={() => setTimeRange(range)}
-                      className={`px-2.5 py-1.5 rounded-lg uppercase tracking-wider text-[11px] transition-all cursor-pointer ${
-                        timeRange === range
-                          ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      {range}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 4 Rich Visual Chart Cards Grid (Spacious, Airy Layout) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-              
-              {/* CHART 1: Website Vitals & Edge Latency (AreaChart with <50ms Target) */}
-              {(analyticsFocusTab === 'all' || analyticsFocusTab === 'vitals') && (
-                <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div 
-                    className="absolute top-0 left-0 right-0 h-1"
-                    style={{ background: `linear-gradient(90deg, #2563EB 0%, #0284C7 100%)` }}
-                  />
-
-                  <div>
-                    {/* Card Header */}
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shrink-0">
-                          <Activity className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
-                            <span>Website Vitals &amp; Edge Latency</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                              100% Passed
-                            </span>
-                          </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                            Autonomous edge delivery across global investor corridors for {client?.name}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="text-2xl font-bold tracking-tight text-blue-600 dark:text-sky-400 tabular-nums">
-                          42ms
-                        </div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          Avg Edge TTFB
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Vitals Key Metrics Ribbon */}
-                    <div className="grid grid-cols-4 gap-2 mb-4 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 text-center">
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">0.72s</div>
-                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">LCP (Fast)</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">54ms</div>
-                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">INP (Instant)</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">0.01</div>
-                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">CLS (Stable)</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 dark:text-white tabular-nums">99.8%</div>
-                        <div className="text-[10px] text-blue-600 dark:text-sky-400 font-semibold">Cache Hit</div>
-                      </div>
-                    </div>
-
-                    {/* Recharts Area Chart */}
-                    <div className="h-56 w-full pt-1">
-                      {isChartMounted ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={vitalsTimeline} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="clientLatencyGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#2563EB" stopOpacity={0.4} />
-                                <stop offset="95%" stopColor="#2563EB" stopOpacity={0.0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94A3B8" opacity={0.15} />
-                            <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} />
-                            <YAxis domain={[20, 60]} tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} unit="ms" />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: '#0F172A',
-                                borderColor: '#334155',
-                                borderRadius: '0.75rem',
-                                color: '#FFFFFF',
-                                fontSize: '12px',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.2)'
-                              }}
-                              formatter={(val: any) => [`${val}ms`, 'Edge TTFB']}
-                            />
-                            <ReferenceLine y={50} stroke="#10B981" strokeDasharray="3 3" label={{ value: 'Target <50ms', position: 'top', fill: '#10B981', fontSize: 10 }} />
-                            <Area
-                              type="monotone"
-                              dataKey="ttfb"
-                              stroke="#2563EB"
-                              strokeWidth={2.5}
-                              fillOpacity={1}
-                              fill="url(#clientLatencyGradient)"
-                            />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/40 rounded-xl animate-pulse">
-                          <span className="text-xs text-slate-400">Loading Vitals Chart...</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Edge PoP Latencies Pill Bar */}
-                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-medium text-slate-500">
-                    <span className="font-bold text-slate-700 dark:text-slate-300 shrink-0">Global Edge PoPs:</span>
-                    {edgeNodes.map((node) => (
-                      <span key={node.code} className="inline-flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{node.code}</span>
-                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{node.latency}</span>
-                      </span>
+                  <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold">
+                    {(['7D', '30D', '90D'] as const).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setAudienceRange(r)}
+                        className={`px-2.5 py-0.5 rounded-md transition cursor-pointer ${
+                          audienceRange === r
+                            ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        {r}
+                      </button>
                     ))}
                   </div>
                 </div>
-              )}
 
-              {/* CHART 2: Investor Document & Regulatory Filings Intelligence (DONUT CHART) */}
-              {(analyticsFocusTab === 'all' || analyticsFocusTab === 'documents') && (
-                <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div 
-                    className="absolute top-0 left-0 right-0 h-1"
-                    style={{ background: `linear-gradient(90deg, #E60000 0%, #C99700 50%, ${primaryColor} 100%)` }}
-                  />
-
-                  <div>
-                    {/* Card Header */}
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0">
-                          <Layers className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
-                            <span>Regulatory &amp; IR Filings Intelligence</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                              {totalDownloadsCount.toLocaleString()} Total Downloads
-                            </span>
-                          </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                            Statutory disclosure, annual results &amp; investor report distribution
-                          </p>
-                        </div>
-                      </div>
-
-                      <Link
-                        href="/admin/reports"
-                        className="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 shrink-0"
-                      >
-                        <span>View Repository</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-
-                    {/* Donut Chart + Document Legend */}
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                      {/* Donut Visual */}
-                      <div className="sm:col-span-5 h-52 flex items-center justify-center relative">
-                        {isChartMounted ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={documentDonutData}
-                                innerRadius={55}
-                                outerRadius={78}
-                                paddingAngle={3}
-                                dataKey="value"
-                              >
-                                {documentDonutData.map((entry, index) => (
-                                  <Cell key={`doc-cell-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: '#0F172A',
-                                  borderColor: '#334155',
-                                  borderRadius: '0.75rem',
-                                  color: '#FFFFFF',
-                                  fontSize: '12px'
-                                }}
-                                formatter={(val: any, name: any, item: any) => [
-                                  `${Number(val).toLocaleString()} downloads (${item.payload.percentage}%)`,
-                                  item.payload.name
-                                ]}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/40 rounded-xl animate-pulse">
-                            <span className="text-xs text-slate-400">Loading Document Chart...</span>
-                          </div>
-                        )}
-
-                        {/* Centered KPI inside Donut */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums font-display">
-                            {totalDownloadsCount >= 1000 ? `${(totalDownloadsCount / 1000).toFixed(1)}k` : totalDownloadsCount}
-                          </span>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Downloads</span>
-                        </div>
-                      </div>
-
-                      {/* Document Legend List */}
-                      <div className="sm:col-span-7 space-y-2">
-                        {documentDonutData.map((docItem) => (
-                          <div key={docItem.name} className="flex items-center justify-between text-xs py-0.5">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: docItem.color }} />
-                              <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
-                                {docItem.name}
-                              </span>
-                              {docItem.tag && (
-                                <span className="hidden sm:inline-block text-[9px] px-1.5 py-0.2 rounded font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0">
-                                  {docItem.tag}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0 font-sans tabular-nums pl-2">
-                              <span className="font-bold text-slate-900 dark:text-white">{docItem.value.toLocaleString()}</span>
-                              <span className="text-[11px] text-slate-400 font-medium">({docItem.percentage}%)</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                <div className="mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">28,460</span>
+                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                      &uarr; 12%
+                    </span>
                   </div>
-
-                  {/* Compliance Verification Footer */}
-                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-medium">
-                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      100% Audit Conformance &bull; King IV &amp; SENS Integrated
-                    </span>
-                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                      Zero Broken Links
-                    </span>
+                  <div className="text-[11px] text-slate-400">
+                    visitors to {site?.primaryDomain || (client as any)?.primaryDomain || (isGoldFields ? 'goldfields.com' : `${client?.slug || 'aurum'}.bastion.digital`)}
                   </div>
                 </div>
-              )}
 
-              {/* CHART 3: Audience Traffic Velocity & Inbound Inquiries (DUAL BAR CHART) */}
-              {(analyticsFocusTab === 'all' || analyticsFocusTab === 'traffic') && (
-                <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div 
-                    className="absolute top-0 left-0 right-0 h-1"
-                    style={{ background: `linear-gradient(90deg, #10B981 0%, #065F46 100%)` }}
-                  />
+                {/* AreaChart */}
+                <div className="h-48 w-full pt-1">
+                  {isChartMounted ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={audienceTimelineData[audienceRange]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="audienceCurveGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563EB" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="#2563EB" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
+                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0F172A',
+                            borderColor: '#334155',
+                            borderRadius: '0.75rem',
+                            color: '#FFFFFF',
+                            fontSize: '12px'
+                          }}
+                          formatter={(v: any) => [`${Number(v).toLocaleString()} visitors`, 'Audience']}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="visitors"
+                          stroke="#2563EB"
+                          strokeWidth={2.5}
+                          fillOpacity={1}
+                          fill="url(#audienceCurveGradient)"
+                          dot={{ r: 3, fill: '#2563EB', stroke: '#FFFFFF', strokeWidth: 2 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : null}
+                </div>
+              </div>
+            </div>
 
-                  <div>
-                    {/* Card Header */}
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">
-                          <TrendingUp className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
-                            <span>Audience Traffic &amp; Institutional Inquiries</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                              +24.1% WoW
-                            </span>
-                          </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                            Direct visitor pageviews vs. institutional stakeholder interactions ({activeDataset.label})
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums font-display">
-                          {activeDataset.metric}
-                        </div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          {activeDataset.label}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Recharts Bar Chart */}
-                    <div className="h-56 w-full pt-1">
-                      {isChartMounted ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={activeDataset.data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94A3B8" opacity={0.15} />
-                            <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} />
-                            <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} tickLine={false} axisLine={false} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val} />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: '#0F172A',
-                                borderColor: '#334155',
-                                borderRadius: '0.75rem',
-                                color: '#FFFFFF',
-                                fontSize: '12px'
-                              }}
-                            />
-                            <Bar dataKey="pageviews" name="Audience Pageviews" fill={primaryColor} radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="inquiries" name="Institutional Inquiries" fill="#10B981" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/40 rounded-xl animate-pulse">
-                          <span className="text-xs text-slate-400">Loading Traffic Chart...</span>
-                        </div>
-                      )}
-                    </div>
+            {/* Right Column (5 cols): Investor Downloads */}
+            <div className="lg:col-span-5 rounded-2xl p-5 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2">
+                  <div className="flex items-center gap-2">
+                    <Download className="w-4 h-4 text-blue-600" />
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">Investor downloads</h3>
                   </div>
+                  <Link
+                    href="/admin/reports"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 transition"
+                  >
+                    <span>View full report</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
 
-                  {/* Velocity Stat Row */}
-                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-medium">
-                    <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-bold">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      {activeDataset.inquiries} Inbound Contacts &amp; Mandates Logged
+                <div className="mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">9,870</span>
+                    <span className="text-xs text-slate-400">total downloads</span>
+                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                      &uarr; 18%
                     </span>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      Avg Session: 3m 42s
-                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    vs. previous 30 days
                   </div>
                 </div>
-              )}
 
-              {/* CHART 4: Real-Time Edge Invalidation & Fleet Health (INTERACTIVE CONTROL & GEO) */}
-              {(analyticsFocusTab === 'all' || analyticsFocusTab === 'vitals') && (
-                <div className="rounded-2xl p-5 sm:p-6 bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800/80 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-                  <div 
-                    className="absolute top-0 left-0 right-0 h-1"
-                    style={{ background: `linear-gradient(90deg, #8B5CF6 0%, #6366F1 100%)` }}
-                  />
+                {/* Progress bars list */}
+                <div className="space-y-3.5">
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">Annual results 2026</span>
+                      <span className="font-bold text-slate-900 dark:text-white tabular-nums">3,820 (39%)</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600 rounded-full" style={{ width: '39%' }} />
+                    </div>
+                  </div>
 
                   <div>
-                    {/* Card Header */}
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 shrink-0">
-                          <Radio className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 font-display">
-                            <span>Edge Invalidation &amp; Delivery SLA</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                              &lt;500ms Edge Invalidation
-                            </span>
-                          </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                            Instant cache synchronization across 280+ edge POPs upon publishing updates
-                          </p>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">Sustainability report</span>
+                      <span className="font-bold text-slate-900 dark:text-white tabular-nums">2,450 (25%)</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600 rounded-full" style={{ width: '25%' }} />
+                    </div>
+                  </div>
 
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">Investor presentation</span>
+                      <span className="font-bold text-slate-900 dark:text-white tabular-nums">1,980 (20%)</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600 rounded-full" style={{ width: '20%' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Synced Status Line */}
+          <div className="flex items-center justify-end gap-2 text-xs text-slate-500 pt-2">
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>All changes synced</span>
+            </span>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <span>Last synced 02 Oct 2025, 14:32</span>
+          </div>
+
+          {/* 6. Expandable Advanced Diagnostics & Feature Directory (Preserving 100% of underlying tools) */}
+          <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800/80">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedDiagnostics(!showAdvancedDiagnostics)}
+              className="flex items-center justify-between w-full px-4 py-3 rounded-xl bg-slate-100/70 hover:bg-slate-200/60 dark:bg-slate-900/40 text-slate-600 dark:text-slate-300 font-semibold text-xs transition cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-blue-600" />
+                <span>Advanced Infrastructure Telemetry &amp; Learning Hub</span>
+              </div>
+              <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${showAdvancedDiagnostics ? 'rotate-90' : ''}`} />
+            </button>
+
+            {showAdvancedDiagnostics && (
+              <div className="pt-6 space-y-8 animate-in fade-in duration-200">
+                {/* Embedded Web Vitals & Diagnostics */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-5 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800 shadow-xs">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-bold text-xs text-slate-900 dark:text-white">Edge CDN Fleet Purge</span>
                       <button
                         type="button"
                         onClick={handlePurgeCache}
                         disabled={isPurging}
-                        className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer shrink-0"
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${isPurging ? 'animate-spin' : ''}`} />
                         <span>{isPurging ? 'Purging CDN...' : 'Purge Edge Cache'}</span>
                       </button>
                     </div>
-
-                    {/* Purge Notification */}
                     {purgeSuccess && (
-                      <div className="mb-3 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-2 animate-in fade-in">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                        <span>Edge cache successfully purged across all global points of presence!</span>
+                      <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-medium">
+                        Cache invalidated across 28 global nodes in 38ms.
                       </div>
                     )}
-
-                    {/* Edge Nodes & TLS Status */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80">
-                        <div className="text-[10px] text-slate-500 font-semibold">TLS Encryption</div>
-                        <div className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 flex items-center gap-1.5">
-                          <Lock className="w-3.5 h-3.5 text-emerald-500" />
-                          <span>TLS 1.3 Strict</span>
-                        </div>
-                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
-                          Let&apos;s Encrypt &bull; 78 Days Remaining
-                        </div>
-                      </div>
-
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80">
-                        <div className="text-[10px] text-slate-500 font-semibold">HTTP Protocol</div>
-                        <div className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 flex items-center gap-1.5">
-                          <Zap className="w-3.5 h-3.5 text-amber-500" />
-                          <span>HTTP/3 (QUIC)</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 font-semibold mt-1">
-                          Zero-RTT Connection Resumption
-                        </div>
-                      </div>
+                    <div className="text-[11px] text-slate-500 mt-2">
+                      Zero-RTT connection resumption with TLS 1.3 Strict encryption.
                     </div>
+                  </div>
 
-                    {/* Audience Geographic Distribution */}
+                  <div className="p-5 rounded-2xl bg-white dark:bg-[#0F141C] border border-slate-200/90 dark:border-slate-800 shadow-xs flex items-center justify-between">
                     <div>
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2">
-                        <span>Institutional Audience Corridors</span>
-                        <span className="text-slate-400 font-normal">Primary IR Traffic</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {audienceRegions.map((reg, idx) => (
-                          <div key={idx} className="space-y-1">
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="text-slate-600 dark:text-slate-400 truncate max-w-[240px]">{reg.region}</span>
-                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{reg.pct}%</span>
-                            </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${reg.color}`} style={{ width: `${reg.pct}%` }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <div className="font-bold text-xs text-slate-900 dark:text-white">Platform Learning Hub</div>
+                      <div className="text-[11px] text-slate-500 mt-1">Explore interactive walkthroughs and video guides.</div>
                     </div>
-                  </div>
-
-                  {/* Security Footer */}
-                  <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-medium">
-                    <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      DDoS Mitigation &amp; Edge WAF Active
-                    </span>
-                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                      0 Threats Blocked
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('learning_hub')}
+                      className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>Open Learning Hub</span>
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
-          </section>
-
-          {/* LIVE WEBSITE PREVIEW & VISUAL EDITOR LAUNCHPAD */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0D121B] border border-slate-200/90 dark:border-slate-800 shadow-md space-y-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Built &amp; Managed Site
-                  </span>
-                  <span className="text-xs text-slate-400">&bull; No-Code Visual Studio</span>
-                </div>
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-1">
-                  {client?.name} Digital Website
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl leading-relaxed">
-                  This website was built and handed over to your team. Click below to launch the Visual Live Editor where you can click any text, image, or section to make edits and deploy updates with zero code.
-                </p>
               </div>
-
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                <Link
-                  href="/admin/editor"
-                  style={{
-                    background: gradientBg,
-                    boxShadow: `0 4px 14px ${primaryColor}40`
-                  }}
-                  className="px-4 py-2.5 rounded-xl text-white font-bold text-xs flex items-center space-x-2 transition hover:opacity-95 shadow-md cursor-pointer"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  <span>Open Visual Live Editor</span>
-                </Link>
-
-                <Link
-                  href={siteUrl}
-                  target="_blank"
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold text-xs transition flex items-center space-x-1.5 cursor-pointer"
-                >
-                  <span>Visit Live Site</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Realistic Browser Frame with Live Embedded Preview */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-900 overflow-hidden shadow-xl">
-              {/* Browser Header Bar */}
-              <div className="p-3 bg-slate-800/90 border-b border-slate-700/80 flex items-center justify-between gap-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full bg-rose-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                </div>
-                <div className="flex-1 max-w-md mx-auto">
-                  <div className="bg-slate-950/80 rounded-lg px-3 py-1 text-[11px] font-mono text-slate-300 flex items-center justify-center space-x-1.5 border border-slate-700/60 truncate">
-                    <Lock className="w-3 h-3 text-emerald-400 shrink-0" />
-                    <span className="truncate">
-                      https://{site?.primaryDomain || (client as any)?.primaryDomain || (isGoldFields ? 'goldfields.com' : `${client?.slug || 'portal'}.bastion.digital`)}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-[11px] text-slate-400 font-medium hidden sm:flex items-center space-x-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Production Live</span>
-                </div>
-              </div>
-
-              {/* Preview Window with Hover Quick-Edit Overlay */}
-              <div className="relative group aspect-[16/9] max-h-[460px] bg-slate-950 overflow-hidden">
-                <iframe
-                  src={`${siteUrl}${siteUrl.includes('?') ? '&' : '?'}preview=true`}
-                  title="Live Website Preview"
-                  className="w-full h-full border-0 pointer-events-none opacity-90 group-hover:opacity-100 transition-opacity"
-                />
-                
-                {/* Subtle Interactive Hover Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-6 pointer-events-auto">
-                  <div className="text-white space-y-1">
-                    <p className="text-sm font-bold">Interactive Visual Live Editor</p>
-                    <p className="text-xs text-slate-300">Point-and-click to edit text, swap images, or add pre-approved corporate blocks.</p>
-                  </div>
-                  <Link
-                    href="/admin/editor"
-                    className="px-4 py-2 rounded-xl bg-white text-slate-950 hover:bg-slate-100 font-bold text-xs shadow-lg transition flex items-center space-x-1.5 cursor-pointer shrink-0"
-                  >
-                    <Edit3 className="w-3.5 h-3.5 text-sky-600" />
-                    <span>Click Here to Edit Page</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Action Navigation Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-              <Link
-                href="/admin/editor"
-                className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-[#141C2A] hover:border-sky-400 transition flex items-center space-x-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
-              >
-                <Edit3 className="w-4 h-4 text-sky-500 shrink-0" />
-                <span className="truncate">Edit Text &amp; Banners</span>
-              </Link>
-
-              <Link
-                href="/admin/reports"
-                className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-[#141C2A] hover:border-amber-400 transition flex items-center space-x-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="truncate">Results &amp; Metrics</span>
-              </Link>
-
-              <Link
-                href="/admin/calendar"
-                className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-[#141C2A] hover:border-emerald-400 transition flex items-center space-x-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
-              >
-                <CalendarCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span className="truncate">IR Calendar &amp; Webcasts</span>
-              </Link>
-
-              <Link
-                href="/admin/releases"
-                className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-[#141C2A] hover:border-purple-400 transition flex items-center space-x-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200"
-              >
-                <Send className="w-4 h-4 text-purple-500 shrink-0" />
-                <span className="truncate">Deploy &amp; Publish</span>
-              </Link>
-            </div>
+            )}
           </div>
-
-          {/* 5. What would you like to update? (Plain-Language Action Cards with Custom SVGs) */}
-          {showActionCards && (
-            <div>
-              <div className="mb-4">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  Corporate Content Management Tools
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Select an operational module below to make content updates, review drafts, or manage your digital repository.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Card 1: Pages & Navigation */}
-                <Link
-                  href="/admin/pages"
-                  className="p-6 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800/90 hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-700/80 transition-all duration-200 group cursor-pointer flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-105 group-hover:rotate-1 transition-transform">
-                      <PagesNavSvg className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                      Pages &amp; Navigation
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                      Manage page hierarchy, header menus, callouts, SEO descriptions, and statutory disclosure links.
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-1.5 text-xs font-bold mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-purple-600 dark:text-purple-400">
-                    <span>Manage Pages</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-
-                {/* Card 2: Visual Page Editor */}
-                <Link
-                  href="/admin/editor"
-                  className="p-6 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800/90 hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700/80 transition-all duration-200 group cursor-pointer flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4 group-hover:scale-105 group-hover:rotate-1 transition-transform">
-                      <VisualEditorSvg className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                      Visual Website Editor
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                      Preview your site live and edit text, headlines, and callout blocks inline with zero code required.
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-1.5 text-xs font-bold mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-emerald-600 dark:text-emerald-400">
-                    <span>Open Visual Editor</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-
-                {/* Card 3: News & Announcements */}
-                <Link
-                  href="/admin/news"
-                  className="p-6 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800/90 hover:shadow-lg hover:border-pink-300 dark:hover:border-pink-700/80 transition-all duration-200 group cursor-pointer flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="w-14 h-14 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center mb-4 group-hover:scale-105 group-hover:rotate-1 transition-transform">
-                      <NewsPressSvg className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
-                      News &amp; Press Releases
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                      Publish corporate announcements, executive appointments, media releases, and company updates.
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-1.5 text-xs font-bold mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-pink-600 dark:text-pink-400">
-                    <span>Publish Announcements</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-
-                {/* Card 4: Media Library */}
-                <Link
-                  href="/admin/media"
-                  className="p-6 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800/90 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700/80 transition-all duration-200 group cursor-pointer flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-105 group-hover:rotate-1 transition-transform">
-                      <MediaVaultSvg className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      Media &amp; Downloads Library
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                      Upload corporate photography, logos, brochures, presentation decks, and downloadable PDF reports.
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-1.5 text-xs font-bold mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-blue-600 dark:text-blue-400">
-                    <span>Browse Media Assets</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-
-                {/* Card 5: Team & Access Control */}
-                <Link
-                  href="/admin/users"
-                  className="p-6 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800/90 hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-700/80 transition-all duration-200 group cursor-pointer flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4 group-hover:scale-105 group-hover:rotate-1 transition-transform">
-                      <TeamAccessSvg className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                      Team &amp; Access Control
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                      Invite colleagues, assign role permissions, and deliver branded welcome credentials with direct access links.
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-1.5 text-xs font-bold mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-indigo-600 dark:text-indigo-400">
-                    <span>Invite Team Members</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-
-                {/* Card 6: Approvals & Publishing Queue */}
-                <Link
-                  href="/admin/tasks"
-                  className="p-6 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800/90 hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700/80 transition-all duration-200 group cursor-pointer flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4 group-hover:scale-105 group-hover:rotate-1 transition-transform">
-                      <ApprovalsQueueSvg className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                      Reviews &amp; Publishing Queue
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                      Inspect draft diffs, submit review notes, and approve releases for live edge deployment.
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-1.5 text-xs font-bold mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-amber-600 dark:text-amber-400">
-                    <span>View Publishing Queue</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {/* 6. Embedded Feature Directory & Learning Preview */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400">
-                  Platform Documentation &amp; Knowledge Base
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-display">
-                  Corporate Content Management &bull; Feature Directory
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveTab('learning_hub')}
-                className="text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline cursor-pointer"
-              >
-                <span>View All 8 Modules</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <div 
-                onClick={() => setActiveTab('learning_hub')}
-                className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-700 transition cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Edit3 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600">
-                    Live Visual Authoring
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  How inline WYSIWYG editing, mobile breakpoints, and draft persistence work.
-                </p>
-              </div>
-
-              <div 
-                onClick={() => setActiveTab('learning_hub')}
-                className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-700 transition cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Send className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600">
-                    Four-Eyes Approvals
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Separation of duties between content authors and compliance sign-off officers.
-                </p>
-              </div>
-
-              <div 
-                onClick={() => setActiveTab('learning_hub')}
-                className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 hover:border-purple-300 dark:hover:border-purple-700 transition cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600">
-                    King IV Governance &amp; Audit
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Immutable revision audit trail, POPIA privacy protection, and disclaimers.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* 7. Real Activity Feed or Reassuring Zero-State Audit Banner */}
-          {showRecentFeed && (
-            <div className="p-6 rounded-3xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-xs transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    Recent Website Activity
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Audit trail of corporate updates and publications on {client?.name}.
-                  </p>
-                </div>
-                <Link
-                  href="/admin/tasks"
-                  style={{ color: primaryColor }}
-                  className="text-xs font-semibold hover:underline cursor-pointer"
-                >
-                  View Full Audit Trail &rarr;
-                </Link>
-              </div>
-
-              {auditLogs.length > 0 ? (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                  {auditLogs.slice(0, 5).map((log: any, idx: number) => (
-                    <div key={log.id || idx} className="py-3.5 flex items-center justify-between gap-4">
-                      <div className="flex items-center space-x-3 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-600 dark:text-slate-300">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                        </div>
-                        <div className="truncate">
-                          <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                            {log.action} &bull; {log.collection || 'Content'}
-                          </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Actor: <span className="font-medium text-slate-700 dark:text-slate-300">{log.actor_name || 'System'}</span> &bull; Result: <span className="text-emerald-600 dark:text-emerald-400 font-medium">{log.result || 'Success'}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-mono shrink-0">
-                        {log.created_at ? new Date(log.created_at).toLocaleDateString() : 'Recent'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                /* Premium, Reassuring Zero-State */
-                <div className="p-8 text-center rounded-2xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 space-y-2">
-                  <div className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Audit Logging Active &bull; Zero Revisions Yet
-                  </h4>
-                  <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                    No publications or content edits have been recorded yet for {client?.name}. When your team modifies pages, uploads media, or submits drafts, an immutable King IV-compliant audit record will appear here in real time.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
         </>
       )}
     </div>
