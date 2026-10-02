@@ -377,8 +377,6 @@ export function AdminSidebar() {
                 <div className="space-y-1">
                   {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'))}
                   {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'))}
-                  {renderItem('/admin/ethics', 'Ethics & Whistleblower', Scale, pathname.startsWith('/admin/ethics'))}
-                  {renderItem('/admin/tenders', 'Tenders & Procurement', Briefcase, pathname.startsWith('/admin/tenders'))}
                   {renderItem('/admin/tasks', 'Approvals & Sign-Off', Send, pathname.startsWith('/admin/tasks'))}
                   {renderItem('/admin/users', 'Authorized Editors', Users, pathname.startsWith('/admin/users'))}
                 </div>
@@ -437,8 +435,6 @@ export function AdminSidebar() {
                 <div className="space-y-1">
                   {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'))}
                   {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'))}
-                  {renderItem('/admin/ethics', 'Ethics & Whistleblower', Scale, pathname.startsWith('/admin/ethics'))}
-                  {renderItem('/admin/tenders', 'Tenders & Procurement', Briefcase, pathname.startsWith('/admin/tenders'))}
                   {renderItem('/admin/tasks', 'Reviews & Publishing', Send, pathname.startsWith('/admin/tasks'))}
                   {renderItem('/admin/users', 'Team & Access Control', UserPlus, pathname.startsWith('/admin/users'))}
                 </div>

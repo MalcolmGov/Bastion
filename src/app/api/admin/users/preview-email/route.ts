@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       clientName = 'Bastion Group',
       initialPassword = ''
     } = body;
-    const temporaryPassword = initialPassword || 'Provided separately by your administrator';
+    const temporaryPassword = initialPassword ? String(initialPassword) : undefined;
 
     // Strict cleansing: Replace any Moove Digital references with Bastion Group
     if (clientName && clientName.toLowerCase().includes('moove')) {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const host = req.headers.get('host') || 'localhost:3010';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const loginUrl = `${protocol}://${host}/admin/login?email=${encodeURIComponent(recipientEmail)}`;
+    const loginUrl = `${protocol}://${host}/admin/invite?email=${encodeURIComponent(recipientEmail)}`;
 
     const emailHtml = generateWelcomeEmailHtml({
       recipientName,

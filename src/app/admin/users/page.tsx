@@ -55,16 +55,6 @@ export default function AdminUsersPage() {
     }
   }, [activeClient?.name]);
 
-  const [dynamicTempPassword, setDynamicTempPassword] = useState('');
-
-  useEffect(() => {
-    if (!showInviteModal) return;
-    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    setDynamicTempPassword(Array.from(bytes, (b) => alphabet[b % alphabet.length]).join(''));
-  }, [showInviteModal]);
-
   // Email Preview Modal State
   const [previewEmailHtml, setPreviewEmailHtml] = useState<string | null>(null);
   const [previewUser, setPreviewUser] = useState<any>(null);
@@ -97,7 +87,7 @@ export default function AdminUsersPage() {
     setNotification(null);
 
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch('/api/admin/users/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -106,25 +96,29 @@ export default function AdminUsersPage() {
           role: inviteRole,
           clientName: inviteClientName,
           clientScope: inviteClientName,
-          clientId: inviteRole === 'platform_admin' ? null : activeClient?.id,
-          initialPassword: dynamicTempPassword
+          clientId: inviteRole === 'platform_admin' ? null : activeClient?.id
         })
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to provision user');
+      if (!res.ok) throw new Error(data.error || 'Failed to dispatch invitation');
 
-      setNotification({ type: 'success', message: `User ${inviteName} provisioned! Visual welcome email prepared.` });
+      setNotification({
+        type: 'success',
+        message: `Official invitation email dispatched to ${inviteName} (${inviteEmail})! They can create their own password to activate access.`
+      });
       setShowInviteModal(false);
-      setPreviewEmailHtml(data.emailHtml);
-      setPreviewUser({ name: inviteName, email: inviteEmail, role: inviteRole, clientName: inviteClientName });
+      if (data.emailHtml) {
+        setPreviewEmailHtml(data.emailHtml);
+        setPreviewUser({ name: inviteName, email: inviteEmail, role: inviteRole, clientName: inviteClientName });
+      }
 
       // Reset form
       setInviteName('');
       setInviteEmail('');
       loadUsers();
     } catch (err: any) {
-      setNotification({ type: 'error', message: err.message || 'Provisioning failed' });
+      setNotification({ type: 'error', message: err.message || 'Invitation failed' });
     } finally {
       setIsSubmitting(false);
     }
@@ -320,12 +314,14 @@ export default function AdminUsersPage() {
 
       {/* Invite New User Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-fadeIn">
-          <div className="bg-[#0D131F] border border-[#1E2E44] rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
-            <div className="flex items-center justify-between border-b border-[#1E293B] pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#0D131F] border border-slate-200 dark:border-[#1E2E44] rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#1E293B] pb-3">
               <div className="flex items-center space-x-2">
-                <UserPlus className="w-5 h-5 text-amber-400" />
-                <h3 className="text-base font-bold text-white">Invite CMS Portal User</h3>
+                <UserPlus className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  {isClientPortal ? 'Invite Authorized Editor' : 'Invite CMS Portal User'}
+                </h3>
               </div>
               <button
                 type="button"
@@ -338,36 +334,36 @@ export default function AdminUsersPage() {
 
             <form onSubmit={handleInviteUser} className="space-y-4 text-xs">
               <div className="space-y-1">
-                <label className="text-slate-700 dark:text-slate-300 font-medium">Full Name</label>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold">Full Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Malcolm Govender"
                   value={inviteName}
                   onChange={(e) => setInviteName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-medium"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-700 dark:text-slate-300 font-medium">Corporate Email Address</label>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold">Corporate Email Address</label>
                 <input
                   type="email"
                   required
-                  placeholder="e.g. malcolm@bastiongroup.co.za"
+                  placeholder="e.g. malcolmgov24@gmail.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 font-medium"
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-slate-700 dark:text-slate-300 font-medium">Assigned Role</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Assigned Role</label>
                   <select
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-medium"
                   >
                     <option value="content_editor">Content Editor</option>
                     <option value="reviewer">Compliance Reviewer</option>
@@ -378,11 +374,11 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-700 dark:text-slate-300 font-medium">Client Organisation</label>
+                  <label className="text-slate-700 dark:text-slate-300 font-semibold">Client Organisation</label>
                   <select
                     value={inviteClientName}
                     onChange={(e) => setInviteClientName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 font-medium"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-medium"
                   >
                     <option value="Bastion Group">Bastion Group (Platform Owner)</option>
                     {clients.map((c) => (
@@ -394,27 +390,31 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400">
-                <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
-                <span>
-                  Initial temporary password will be set to <code className="text-amber-600 dark:text-amber-300 font-mono font-semibold">{dynamicTempPassword}</code> and sent in the visual welcome emailer.
-                </span>
+              {/* No Temporary Password Needed Notice */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#070B12] border border-slate-200 dark:border-[#1E293B] flex items-start space-x-2.5 text-xs text-slate-600 dark:text-slate-400">
+                <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">No temporary password required</span>
+                  <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                    The user will receive an activation email with a secure link to create their own password and sign in directly.
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100 dark:border-[#1E293B]">
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-[#141C2A] dark:text-slate-300 dark:hover:text-white cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-[#141C2A] dark:text-slate-300 dark:hover:text-white text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-gradient-to-r dark:from-amber-500 dark:to-amber-600 dark:hover:from-amber-400 dark:text-black font-bold uppercase tracking-wider shadow-xs disabled:opacity-50 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-black font-bold uppercase tracking-wider text-xs shadow-xs disabled:opacity-50 cursor-pointer"
                 >
-                  {isSubmitting ? 'Provisioning...' : 'Provision & Generate Emailer'}
+                  {isSubmitting ? 'Sending Invitation...' : 'Send Invitation'}
                 </button>
               </div>
             </form>
