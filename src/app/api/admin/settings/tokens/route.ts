@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guard';
-import { isAgencyUser } from '@/lib/auth/roles';
+import { requireAgencyUser } from '@/lib/auth/guard';
+import { assertApiSiteAccess } from '@/lib/auth/apiAccess';
+import { getDb } from '@/lib/db/client';
 import { createApiToken, listApiTokens, revokeApiToken } from '@/lib/auth/apiToken';
 
 export async function GET(req: NextRequest) {
   try {
-    const gate = await requireUser();
+    const gate = await requireAgencyUser();
     if (!gate.ok) return gate.response;
 
-    const clientId = isAgencyUser(gate.user) ? undefined : (gate.user.client_id || undefined);
-    const tokens = await listApiTokens(clientId);
+    const tokens = await listApiTokens();
 
     return NextResponse.json({ success: true, tokens });
   } catch (err: any) {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const gate = await requireUser();
+    const gate = await requireAgencyUser();
     if (!gate.ok) return gate.response;
 
     const body = await req.json();
@@ -30,19 +30,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Token name is required' }, { status: 400 });
     }
 
-    const clientId = isAgencyUser(gate.user)
-      ? (body.clientId || gate.user.client_id || 'client_goldfields')
-      : gate.user.client_id;
+    const clientId = body.clientId || 'client_goldfields';
 
     if (!clientId) {
       return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
+    }
+
+    const allowedScopes = ['content:read', 'content:create', 'content:edit', 'content:publish', 'graphql:read', 'mcp:access', '*'];
+    if (!Array.isArray(scopes) || scopes.length === 0 || scopes.some((scope: unknown) => typeof scope !== 'string' || !allowedScopes.includes(scope))) {
+      return NextResponse.json({ error: 'Invalid API token scopes.' }, { status: 400 });
+    }
+    if (siteId) {
+      try {
+        await assertApiSiteAccess(getDb(), { ok: true, status: 200, clientId }, siteId);
+      } catch {
+        return NextResponse.json({ error: 'Website not found in the selected workspace.' }, { status: 400 });
+      }
     }
 
     const result = await createApiToken({
       name,
       clientId,
       siteId: siteId || null,
-      scopes: Array.isArray(scopes) ? scopes : ['content:read']
+      scopes
     });
 
     return NextResponse.json({
@@ -58,7 +68,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const gate = await requireUser();
+    const gate = await requireAgencyUser();
     if (!gate.ok) return gate.response;
 
     const { searchParams } = new URL(req.url);
@@ -68,8 +78,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Token ID is required' }, { status: 400 });
     }
 
-    const clientId = isAgencyUser(gate.user) ? undefined : (gate.user.client_id || undefined);
-    const revoked = await revokeApiToken(tokenId, clientId);
+    const revoked = await revokeApiToken(tokenId);
 
     if (!revoked) {
       return NextResponse.json({ error: 'Token not found or already revoked' }, { status: 404 });

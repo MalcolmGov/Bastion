@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAdminAuth } from './AdminAuthProvider';
 import { isAgencyUser } from '@/lib/auth/roles';
 
@@ -29,9 +29,11 @@ interface StudioWorkspaceContextType {
   clients: WorkspaceClient[];
   activeClient: WorkspaceClient | null;
   activeSite: WorkspaceSite | null;
+  clientWebsites: WorkspaceSite[];
   setActiveClientId: (id: string) => void;
   setActiveSiteId: (id: string) => void;
   refreshClients: () => Promise<void>;
+  createWebsite: (data: { name: string; slug?: string; blueprintId?: string; designCollectionId?: string; primaryDomain?: string; status?: string; tagline?: string }) => Promise<{ success: boolean; website?: any; error?: string }>;
   isLoading: boolean;
   portalViewMode: 'client' | 'agency';
   setPortalViewMode: (mode: 'client' | 'agency') => void;
@@ -41,11 +43,13 @@ const StudioWorkspaceContext = createContext<StudioWorkspaceContextType>({
   clients: [],
   activeClient: null,
   activeSite: null,
+  clientWebsites: [],
   setActiveClientId: () => {},
   setActiveSiteId: () => {},
   refreshClients: async () => {},
+  createWebsite: async () => ({ success: false, error: 'Not initialized' }),
   isLoading: true,
-  portalViewMode: 'client',
+  portalViewMode: 'agency',
   setPortalViewMode: () => {}
 });
 
@@ -55,8 +59,9 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   const [clients, setClients] = useState<WorkspaceClient[]>([]);
   const [activeClientId, setActiveClientIdState] = useState<string>('client_goldfields');
   const [activeSiteId, setActiveSiteIdState] = useState<string>('site_goldfields_flagship');
-  const [portalViewMode, setPortalViewModeState] = useState<'client' | 'agency'>('client');
+  const [portalViewMode, setPortalViewModeState] = useState<'client' | 'agency'>('agency');
   const [isLoading, setIsLoading] = useState(true);
+  const prevUserIdRef = useRef<string | null>(null);
 
   const fetchClients = async () => {
     try {
@@ -114,18 +119,36 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('move_studio_portal_mode') as 'client' | 'agency' | null;
-      if (savedMode === 'agency' || savedMode === 'client') {
-        setPortalViewModeState(savedMode);
-      }
-    }
     fetchClients();
   }, []);
 
   useEffect(() => {
-    if (user && !agency) {
+    if (!user) return;
+
+    const userSwitched = prevUserIdRef.current !== user.id;
+    prevUserIdRef.current = user.id;
+
+    if (agency) {
+      // Bastion Agency User: ALWAYS default to agency operations mode on login or user switch
+      if (userSwitched) {
+        setPortalViewModeState('agency');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('move_studio_portal_mode', 'agency');
+        }
+      } else {
+        const savedMode = typeof window !== 'undefined' ? (localStorage.getItem('move_studio_portal_mode') as 'client' | 'agency' | null) : null;
+        if (savedMode === 'client' || savedMode === 'agency') {
+          setPortalViewModeState(savedMode);
+        } else {
+          setPortalViewModeState('agency');
+        }
+      }
+    } else {
+      // Corporate client user: ALWAYS locked to client mode and their assigned client workspace
       setPortalViewModeState('client');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('move_studio_portal_mode', 'client');
+      }
       if (user.client_id) {
         setActiveClientIdState(user.client_id);
         const userClient = clients.find(c => c.id === user.client_id);
@@ -158,6 +181,40 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     setActiveSiteIdState(id);
     if (typeof window !== 'undefined') {
       localStorage.setItem('move_studio_active_site', id);
+      document.cookie = `bastion_active_site_id=${encodeURIComponent(id)}; path=/; max-age=31536000; SameSite=Lax`;
+      window.dispatchEvent(new CustomEvent('studio-active-site-changed', { detail: { siteId: id } }));
+    }
+  };
+
+  const createWebsite = async (data: {
+    name: string;
+    slug?: string;
+    blueprintId?: string;
+    designCollectionId?: string;
+    primaryDomain?: string;
+    status?: string;
+    tagline?: string;
+  }) => {
+    try {
+      const res = await fetch('/api/admin/websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: activeClient?.id,
+          ...data
+        })
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        return { success: false, error: result.error || 'Failed to create website' };
+      }
+      await fetchClients();
+      if (result.website?.id) {
+        setActiveSiteId(result.website.id);
+      }
+      return { success: true, website: result.website };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error' };
     }
   };
 
@@ -170,7 +227,8 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   };
 
   const activeClient = clients.find(c => c.id === activeClientId) || clients[0] || null;
-  const activeSite = activeClient?.websites?.find(w => w.id === activeSiteId) || activeClient?.websites?.[0] || null;
+  const clientWebsites = activeClient?.websites || [];
+  const activeSite = clientWebsites.find(w => w.id === activeSiteId) || clientWebsites[0] || null;
 
   return (
     <StudioWorkspaceContext.Provider
@@ -178,9 +236,11 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
         clients,
         activeClient,
         activeSite,
+        clientWebsites,
         setActiveClientId,
         setActiveSiteId,
         refreshClients: fetchClients,
+        createWebsite,
         isLoading,
         portalViewMode,
         setPortalViewMode

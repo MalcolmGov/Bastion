@@ -1,5 +1,7 @@
 import { ensureDbReady } from '@/lib/db/client';
 import crypto from 'crypto';
+import type { Client } from '@libsql/client';
+import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
 
 export interface ContentRelease {
   id: string;
@@ -26,6 +28,40 @@ export interface ContentReleaseItem {
   changesSummary?: string;
   snapshotJson?: string;
   createdAt: string;
+}
+
+export class ReleaseValidationError extends Error {}
+
+async function resolveReleaseItem(
+  db: Pick<Client, 'execute'>,
+  release: ContentRelease,
+  item: Pick<ContentReleaseItem, 'itemType' | 'itemId'>
+) {
+  if (item.itemType === 'page') {
+    const result = await db.execute({
+      sql: `SELECT p.id FROM page_compositions p JOIN websites w ON w.id = p.site_id
+            WHERE (p.id = ? OR p.page_slug = ?) AND p.site_id = ? AND w.client_id = ?
+            ORDER BY CASE WHEN p.id = ? THEN 0 ELSE 1 END, p.version DESC LIMIT 1`,
+      args: [item.itemId, item.itemId, release.siteId, release.clientId, item.itemId]
+    });
+    if (!result.rows.length) throw new ReleaseValidationError('Page not found in the release workspace');
+    return { id: String(result.rows[0].id), kind: 'page' as const };
+  }
+  const collections: Record<string, string> = { article: 'news', report: 'reports', operation: 'operations' };
+  const collection = collections[item.itemType];
+  if (!collection) throw new ReleaseValidationError('Unsupported release item type');
+  const result = await db.execute({
+    sql: `SELECT id, collection, current_draft_revision_id, current_published_revision_id FROM content_records WHERE (id = ? OR slug = ?) AND collection = ?
+          AND site_id = ? AND (client_id = ? OR (client_id IS NULL AND site_id IN (SELECT id FROM websites WHERE client_id = ?)))
+          ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END LIMIT 1`,
+    args: [item.itemId, item.itemId, collection, release.siteId, release.clientId, release.clientId, item.itemId]
+  });
+  if (!result.rows.length) throw new ReleaseValidationError('Content not found in the release workspace');
+  return {
+    id: String(result.rows[0].id), kind: 'record' as const,
+    collection: String(result.rows[0].collection),
+    revisionId: String(result.rows[0].current_draft_revision_id || result.rows[0].current_published_revision_id || '')
+  };
 }
 
 export async function listReleases(params?: {
@@ -127,7 +163,12 @@ export async function createRelease(data: {
   const now = new Date().toISOString();
   const status = data.scheduledAt ? 'scheduled' : (data.status || 'draft');
   const clientId = data.clientId || 'client_goldfields';
-  const siteId = data.siteId || 'site_goldfields_flagship';
+  const sites = await db.execute({
+    sql: `SELECT id FROM websites WHERE client_id = ?${data.siteId ? ' AND id = ?' : ''} ORDER BY id LIMIT 1`,
+    args: [clientId, ...(data.siteId ? [data.siteId] : [])]
+  });
+  if (!sites.rows.length) throw new ReleaseValidationError('Website not found in the release workspace');
+  const siteId = String(sites.rows[0].id);
 
   await db.execute({
     sql: `INSERT INTO content_releases (
@@ -203,6 +244,9 @@ export async function addItemToRelease(releaseId: string, item: {
   const id = `item_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
   const now = new Date().toISOString();
   const action = item.action || 'update';
+  const releaseData = await getRelease(releaseId);
+  if (!releaseData) throw new ReleaseValidationError('Release not found');
+  const target = await resolveReleaseItem(db, releaseData.release, item);
 
   await db.execute({
     sql: `INSERT INTO content_release_items (
@@ -212,7 +256,7 @@ export async function addItemToRelease(releaseId: string, item: {
       id,
       releaseId,
       item.itemType,
-      item.itemId,
+      target.id,
       item.title,
       action,
       item.changesSummary || null,
@@ -234,7 +278,7 @@ export async function addItemToRelease(releaseId: string, item: {
     id,
     releaseId,
     itemType: item.itemType,
-    itemId: item.itemId,
+    itemId: target.id,
     title: item.title,
     action,
     changesSummary: item.changesSummary,
@@ -273,26 +317,47 @@ export async function publishRelease(releaseId: string, publishedBy = 'Malcolm G
 
   const now = new Date().toISOString();
 
-  // Atomically promote bundled items
-  for (const item of releaseData.items) {
-    if (item.itemType === 'page') {
-      await db.execute({
-        sql: `UPDATE page_compositions SET status = 'published', updated_at = ? WHERE page_slug = ? OR id = ?`,
-        args: [now, item.itemId, item.itemId]
-      });
-    } else if (item.itemType === 'article' || item.itemType === 'report' || item.itemType === 'operation') {
-      await db.execute({
-        sql: `UPDATE content_records SET status = 'published', updated_at = ? WHERE slug = ? OR id = ?`,
-        args: [now, item.itemId, item.itemId]
-      });
+  // Validate legacy bundles again at execution time and publish the entire
+  // release in one transaction. A bad item must not leave a partial release.
+  const transaction = await db.transaction('write');
+  try {
+    for (const item of releaseData.items) {
+      const target = await resolveReleaseItem(transaction, releaseData.release, item);
+      if (target.kind === 'page') {
+        await transaction.execute({
+          sql: `UPDATE page_compositions SET status = 'published', updated_at = ?
+                WHERE id = ? AND site_id = ? AND site_id IN (SELECT id FROM websites WHERE client_id = ?)`,
+          args: [now, target.id, releaseData.release.siteId, releaseData.release.clientId]
+        });
+      } else {
+        try {
+          await assertDisclosureApproval(transaction, target.collection, target.revisionId);
+        } catch (error) {
+          throw new ReleaseValidationError((error as Error).message);
+        }
+        await transaction.execute({
+          sql: `UPDATE content_records SET status = 'published',
+                current_published_revision_id = COALESCE(current_draft_revision_id, current_published_revision_id), updated_at = ?
+                WHERE id = ? AND site_id = ? AND (client_id = ? OR (client_id IS NULL AND site_id IN (SELECT id FROM websites WHERE client_id = ?)))`,
+          args: [now, target.id, releaseData.release.siteId, releaseData.release.clientId, releaseData.release.clientId]
+        });
+        await transaction.execute({
+          sql: `UPDATE revisions SET status = 'published' WHERE record_id = ? AND id = (SELECT current_published_revision_id FROM content_records WHERE id = ?)`,
+          args: [target.id, target.id]
+        });
+      }
     }
+    await transaction.execute({
+      sql: `UPDATE content_releases SET status = 'published', published_at = ?, published_by = ?, updated_at = ? WHERE id = ?`,
+      args: [now, publishedBy, now, releaseId]
+    });
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  } finally {
+    transaction.close();
   }
-
-  // Update release status to published
-  await db.execute({
-    sql: `UPDATE content_releases SET status = 'published', published_at = ?, published_by = ?, updated_at = ? WHERE id = ?`,
-    args: [now, publishedBy, now, releaseId]
-  });
 
   // Record in audit log
   try {

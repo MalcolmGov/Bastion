@@ -9,6 +9,7 @@
     "lint": "next lint",
     "lint:ci": "eslint src",
     "typecheck": "tsc --noEmit",
+    "test:security": "node --test tests/security/*.test.cjs",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

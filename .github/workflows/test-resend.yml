@@ -1,0 +1,32 @@
+name: Test Resend Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      recipient:
+        description: 'Recipient Email Address'
+        required: false
+        default: 'malcolm@movedigital.africa'
+
+jobs:
+  dispatch-email:
+    name: Dispatch Test Email via Resend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Execute Live Email Test
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          ALLOW_LOCAL_DB: true
+        run: npx tsx scripts/test-resend-live.ts "${{ github.event.inputs.recipient }}"

@@ -58,6 +58,22 @@ export default function AdminLoginPage() {
         throw new Error(data.error || 'Authentication failed. Please verify your credentials.');
       }
 
+      if (data.user) {
+        if (!data.user.client_id && data.user.role === 'platform_admin') {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('move_studio_portal_mode', 'agency');
+          }
+        } else {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('move_studio_portal_mode', 'client');
+            if (data.user.client_id) {
+              localStorage.setItem('bastion_active_client_id', data.user.client_id);
+              document.cookie = `bastion_active_client_id=${encodeURIComponent(data.user.client_id)}; path=/; max-age=31536000; SameSite=Lax`;
+            }
+          }
+        }
+      }
+
       router.push('/admin');
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check credentials.');
@@ -97,7 +113,7 @@ export default function AdminLoginPage() {
             href="/"
             className="text-xs font-medium text-slate-400 hover:text-white transition-colors duration-150 flex items-center space-x-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-800/50 border border-transparent hover:border-slate-700/50"
           >
-            <span>Gold Fields Corporate</span>
+            <span>Corporate Portal</span>
             <ArrowRight className="w-3.5 h-3.5 opacity-70" />
           </Link>
         </div>

@@ -1,89 +1,144 @@
-# Gold Fields — Digital Flagship Corporate Website Prototype
+# Bastion — Enterprise Multi-Tenant Corporate CMS & Digital Experience Platform
 
-A modern, authoritative, and accessible corporate website prototype for **Gold Fields Limited**, created using [goldfields.com](https://www.goldfields.com/) as the primary reference.
+[![Production Status](https://img.shields.io/badge/status-production--ready-emerald.svg)](https://github.com/MalcolmGov/Bastion)
+[![Verification Gates](https://img.shields.io/badge/gates-40%2F40%20passed-success.svg)](https://github.com/MalcolmGov/Bastion)
+[![Architecture](https://img.shields.io/badge/architecture-strict%20multi--tenant-blue.svg)](https://github.com/MalcolmGov/Bastion)
+[![Framework](https://img.shields.io/badge/next.js-15.1%20%7C%20react%2019-black.svg)](https://nextjs.org/)
 
-> **Concept Prototype Notice:** This implementation is a proposed redesign concept built for demonstration and evaluation purposes. It is not an authorized replacement for the official Gold Fields website. All operational, financial, and sustainability metrics are source-grounded in Gold Fields' published disclosures (as of 27 September 2026).
-
----
-
-## 1. Key Highlights & Architectural Features
-
-- **Authentic Brand Grounding:**
-  - Official vector SVG logo (`/assets/gold-fields-logo.svg`) and mobile icon mark.
-  - Verified deep navy (`#082B49`), midnight (`#061D32`), mineral gold (`#B79855` / `#C8A064`), warm editorial white (`#F7F6F2`), and forest sustainability green (`#24634D`).
-  - Core narrative anchor: **“Creating enduring value beyond mining.”**
-- **Verified H1 2026 Reporting & Operations Portfolio:**
-  - Includes latest **H1 2026 Results** (published 25 August 2026) and Q1 2026 updates.
-  - 9 active mines & projects across 6 countries:
-    - **South Africa:** South Deep (underground deep-level mechanized gold, 151 koz H1 production, landmark 5-year wage agreement signed July 2026, 50MW Khanyisa solar plant).
-    - **Australia:** Agnew, Granny Smith, Gruyere (50% JV), St Ives.
-    - **Ghana:** Tarkwa (90% Gold Fields, 10% Gov of Ghana). *Historical archive note:* Damang formally transferred to the Government of Ghana on 18 April 2026.
-    - **Chile:** Salares Norte (high-altitude open pit ramp-up).
-    - **Peru:** Cerro Corona (copper-gold porphyry).
-    - **Canada:** Windfall Project (50/50 JV with Osisko Mining).
-- **Embedded AI Assistant: "Ask Gold Fields":**
-  - Persistent right drawer and contextual inline triggers.
-  - 6 complete deterministic, source-backed demonstration paths with citations, dates, and action cards.
-  - Ethical boundaries: clearly directs whistleblowing to independent **Speak Up** and disclaims speculative financial predictions.
-- **Client-Side Tools & Discovery:**
-  - **Interactive Global Operations Map:** Custom SVG world map with filterable regional hubs and asset-type switching.
-  - **My Report Pack Shortlist:** Local document queue with deterministic `.txt` link and summary index generation.
-  - **2030 ESG Target Tracker:** Science-based targets tracking Scope 1 & 2 decarbonization, water recycling (78%), and 100% GISTM tailings conformance.
-  - **Country-Specific Supplier Guide:** 5-step compliance and pre-qualification checklist builder with direct links to official procurement portals.
+**Bastion** is an enterprise-grade, multi-tenant digital experience and content management platform engineered specifically for corporate organizations, publicly listed enterprises, and institutional clients.
 
 ---
 
-## 2. Information Architecture & Routes
+## 1. Why Bastion Was Built
 
-| Route | Page Purpose | Key Features |
+Modern enterprise websites and investor portals require institutional-grade reliability, strict statutory compliance (King IV, POPIA, JSE/SENS), high-availability hosting, and rapid content publishing. 
+
+Historically, corporate enterprises have been trapped between two inadequate models:
+1. **Monolithic Legacy CMSs (WordPress, Drupal, Sitecore):** Bloated, vulnerable to security exploits, slow to load, and reliant on costly agency developer hours for even minor narrative or disclosure updates.
+2. **Generic Headless Systems:** Fragmented developer tools that lack built-in governance, regulatory announcement feeds, investor relations tooling, and approval safeguards.
+
+**Bastion bridges this gap.** Bastion Group retains total architectural control over infrastructure, security, performance, templates, and core brand design systems, while empowering corporate communications and investor relations teams with a distraction-free, zero-code publishing suite. Changes to market disclosures, press releases, reports, and ESG targets can be drafted, reviewed, approved under the Two-Person Rule, and published in real time without writing a single line of code.
+
+---
+
+## 2. Who Bastion Is Built For
+
+Bastion delivers two distinct, securely connected experiences:
+
+### 🛡️ 1. Bastion Agency Studio (Platform Operations)
+Built for the **Bastion team, digital agency leads, and platform administrators**:
+- **Centralized Multi-Tenant Portfolio:** Command center to oversee all enterprise clients, manage domains, and monitor site health.
+- **Client Onboarding & Commercial Tiers:** 6-step guided onboarding wizard to provision corporate workspaces with tiered commercial packaging (**Silver**, **Gold**, and **Platinum**) and custom contract pricing.
+- **Enterprise Digital Asset Management (DAM):** High-resolution media repository with folder hierarchies, focal-point cropping, and strict SVG sanitization.
+- **Automated SRE & Site Reliability:** Real-time health probes, anomaly diagnosis, self-healing remediation, and uptime verification.
+- **Client Experience Sandbox:** Instant simulation of any client workspace with one-click role switching to verify workflows before client handover.
+
+### 🏢 2. Corporate Client CMS Workspace (Tenant Operations)
+Built for **corporate communications directors, investor relations officers, sustainability leads, and compliance executives**:
+- **Distraction-Free Publishing:** Autonomous, zero-code content editing for corporate landing pages, executive leadership profiles, and news releases.
+- **Strict Data Isolation:** Cryptographically and relationally isolated tenant boundaries ensuring Company A never sees Company B's data, media, drafts, or disclosures.
+- **Institutional Regulatory Hub:** Dedicated suites for JSE SENS announcements, financial calendars with dividend withholding tax (DWT) calculations, and interactive financial results.
+- **Statutory Compliance & Governance:** Automated King IV and POPIA scorecards, encrypted whistleblower hotlines, and transparent procurement tender boards.
+
+---
+
+## 3. Core Architectural Modules
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        BASTION PLATFORM CORE                           │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │
+          ┌──────────────────────────┴──────────────────────────┐
+          ▼                                                     ▼
+┌───────────────────────────────────┐ ┌───────────────────────────────────┐
+│       BASTION AGENCY STUDIO       │ │      CORPORATE CLIENT WORKSPACE   │
+│  • Multi-Tenant Administration    │ │  • Zero-Code Visual Page Editor   │
+│  • Client Onboarding & Tiers      │ │  • Interactive Results Studio     │
+│  • Enterprise DAM & Media Library │ │  • JSE SENS Regulatory Feeder     │
+│  • Release & Rollout Manager      │ │  • King IV & POPIA Governance     │
+│  • Autonomous SRE Diagnostic Probes││  • Encrypted Whistleblower Portal │
+│  • Commercial Proposal Generator  │ │  • Corporate Supplier Tender Board│
+└───────────────────────────────────┘ └───────────────────────────────────┘
+```
+
+### Strict Multi-Tenant Data Isolation
+- **Tenant Resolver & Cookie Synchronization:** Every request resolves the tenant context from session cookies, secure headers (`x-client-id`), or verified route parameters.
+- **Non-Bypassable Database Queries:** Database queries strictly enforce tenant boundaries (`WHERE client_id = ?`), preventing cross-tenant leakage across pages, media, results conversions, and audit logs.
+- **Automatic Content Provisioning:** Onboarding a new client automatically provisions isolated starter pages, DAM folders, and default site compositions.
+
+### Interactive Results Studio & PDF-to-HTML
+- **Automated Conversion:** Converts complex corporate financial results PDFs into interactive, responsive, branded HTML investor portals.
+- **Institutional Ratio Engine:** Automatically extracts and computes Gross Margin, Operating Margin, Return on Assets (ROA), and Debt-to-Equity ratios.
+- **Balance Sheet Validator:** Programmatically verifies the fundamental accounting equation ($\text{Assets} = \text{Liabilities} + \text{Equity}$) with zero variance tolerance.
+- **Compliant Financial Export:** Generates RFC 4180 CSV exports with proper cell escaping and parenthetical negatives for analyst modeling.
+
+### Regulatory Feeder & Financial Calendar
+- **JSE SENS Feeder:** Publishes price-sensitive stock exchange announcements with ticker references and categorization.
+- **Financial Calendar Hub:** Interactive corporate action tracking with RFC 5545 iCalendar (`.ics`) generation and automated South African Dividend Withholding Tax (DWT) calculations.
+
+### Institutional Two-Person Rule & Visual Diffs
+- **Two-Person Rule:** Author cannot approve their own financial disclosures; independent peer review and sign-off is programmatically enforced.
+- **Visual Myers Diff Engine:** Side-by-side line-by-line and token-level visual diffs highlight exact modifications before publication, invalidating prior approvals if content changes.
+
+### Automated King IV & POPIA Governance Scorecard
+- **16 Statutory Rules:** Automated compliance engine audits board independence, committee composition, privacy statements, and security policies.
+- **Weighted Category Scoring:** Computes transparent governance ratings across Board Leadership, Audit Committee, Stakeholder Relations, and Data Privacy.
+
+### Encrypted Ethics Hotline & Whistleblower Portal
+- **Zero-IP Retention:** Anonymizes whistleblower submissions by stripping headers and zeroing client IP addresses.
+- **AES-256-GCM Encryption:** Confidential whistleblower narratives are encrypted at rest with randomly generated tracking credentials.
+- **Bidirectional Dialogue:** Cryptographically protected channel allowing anonymous whistleblowers and corporate ombudsmen to communicate securely.
+
+### Corporate Supplier Tender Board
+- **Statutory Vendor Validation:** Validates South African CIPC company registration numbers, SARS Tax Compliance Status (TCS) PINs, and B-BBEE certification levels.
+- **RFP Bidding Portal:** Structured tender management for procurement teams with automated compliance verification.
+
+---
+
+## 4. Technology Stack
+
+| Layer | Technology | Details |
 |---|---|---|
-| `/` | Brand Flagship Homepage | Hero, market strip, purpose in action, SVG map, latest results, ESG mosaic, news, careers/suppliers |
-| `/about` | Purpose, Strategy & Governance | Purpose narrative, 5 core values, 3 strategic pillars, Executive Committee, 135+ year heritage |
-| `/operations` | Global Portfolio Explorer | Filterable map/list, regional breakdown, Damang transfer disclosure |
-| `/operations/[slug]` | Reusable Operation Detail | Pre-rendered static pages for all 10 assets (geology, metrics, Khanyisa solar, AI trigger) |
-| `/sustainability` | ESG Commitments & Evidence | 2030 targets tracker, TSF/GISTM stewardship, Salares Norte dry stack tailings, Khanyisa solar |
-| `/investors` | Results & Shareholder Hub | H1 2026 results booklet, dividend track record, dual listing (JSE/NYSE: GFI), financial calendar |
-| `/reports` | Corporate Report Library | Categorized archive, year filters, search, "My Report Pack" builder with export |
-| `/media` | News & Releases | Category filters (Media Releases, SENS, Achievements), press contacts |
-| `/media/[slug]` | Editorial Article Template | Static articles (wage agreement, H1 results, ISO 55001, solar milestone) |
-| `/careers` | People & Work Culture | Culture overview, 6 discipline filters, sample roles with "Demonstration Listing" badges |
-| `/suppliers` | Supplier Prequalification | Regional guidance (ZA, GH, AU, AM), compliance checklist, official portal links, Speak Up |
-| `/contact` | Regional Contact Directory | Verified regional offices, IR contacts, validated demo enquiry form |
-| `/search` | Global Site Search | Full-page indexed search with `?q=` URL synchronization across all content |
-| `/design-system` | Design System Inspector | Development route demonstrating tokens, typography, buttons, badges, and card states |
+| **Framework** | Next.js 15 (App Router), React 19, TypeScript | Server Components, Server Actions, Dynamic Streaming |
+| **Styling & UI** | Tailwind CSS, Lucide Icons | Responsive enterprise design system with light/dark support |
+| **Database** | LibSQL / SQLite, Turso | Versioned schema migrations (13 applied), connection pooling |
+| **Security & Auth** | scrypt password hashing, AES-256-GCM | Encrypted secrets at rest, edge sliding-window rate limiting |
+| **Email Delivery** | Resend API | Transactional invitations, welcome emails, and audit delivery |
+| **Storage & DAM** | Enterprise Media Library | SVG script sanitization, focal-point cropping, folder tagging |
+| **Verification** | Automated Test Suite | 40 production gates verifying security, isolation, and DR |
 
 ---
 
-## 3. Technology Stack
-
-- **Framework:** Next.js 15.1.7 (App Router), React 19, TypeScript
-- **Styling:** Tailwind CSS with semantic design variables
-- **Icons:** Lucide React
-- **Rendering:** Static Site Generation (SSG) for all 30 routes (`generateStaticParams`) ensuring sub-second response times and WCAG 2.2 AA compliance
-- **Data Layer:** Typed repository pattern (`ContentRepository`) abstracting source-backed JSON fixtures
-
----
-
-## 4. Getting Started
+## 5. Getting Started
 
 ### Prerequisites
-- Node.js 18+ (tested on Node v26)
-- npm 9+
+- **Node.js**: v18.18+ (tested on Node v20 & v26)
+- **npm**: v9+
 
-### Installation & Run
+### Installation & Local Setup
 
 ```bash
-cd goldfields
+# Clone the repository
+git clone https://github.com/MalcolmGov/Bastion.git
+cd Bastion
 
-# Install dependencies (if not already installed)
+# Install dependencies
 npm install
 
-# Run development server
+# Run database migrations and seed data
+npm run seed
+
+# Run the development server
 npm run dev
 # -> Opens http://localhost:3000
+```
 
-# Optional: create demo studio logins (password is never stored in source)
-# SEED_DEMO_USERS=true SEED_DEMO_PASSWORD='choose-a-long-password' npm run seed
+### Production Build & Verification
+
+```bash
+# Verify all 40 production gates
+ALLOW_LOCAL_DB=true npx tsx scripts/verify-production-gates.ts
 
 # Build production bundle
 npm run build
@@ -95,19 +150,32 @@ npm run start -- -p 3010
 
 ---
 
-## 5. Prototype vs. Future Production Integrations
+## 6. Commercial Packages
 
-| Feature | Implemented in Concept Prototype | Future Production Roadmap |
-|---|---|---|
-| **AI Assistant** | Deterministic source-backed engine covering 6 core stakeholder paths; zero API keys required | RAG pipeline connected to authenticated vector index of all historical filing PDFs |
-| **Market Data** | Illustrative delayed snapshots (JSE: ZAR 285.50, NYSE: USD 16.20) with disclaimers | Real-time Bloomberg / Refinitiv feed integration |
-| **Report Pack** | Client-side shortlist queue with synthesized text index download | Server-side batch ZIP compilation of original signed PDF reports |
-| **Careers** | Structured role explorer with labeled demonstration vacancies | Direct API integration with Workday / SuccessFactors recruitment systems |
-| **Suppliers** | 5-step preparation checklist builder with official portal redirection | Direct single sign-on (SSO) integration into Coupa and regional ERPs |
-| **Contact Form** | Client-side validation confirming demo state without sending data | CRM integration routing enquiries to regional corporate affairs desks |
+Bastion offers structured multi-tenant packages selectable during onboarding:
+
+| Feature / Tier | Silver | Gold | Platinum |
+|---|:---:|:---:|:---:|
+| **Target Profile** | Mid-market enterprises | Large corporate entities | Publicly listed multinationals |
+| **Dedicated Websites** | 1 corporate site | Up to 3 sites & portals | Unlimited corporate sites |
+| **Visual Page Builder** | Included | Included | Included |
+| **DAM Storage** | 25 GB | 100 GB | 1 TB Dedicated |
+| **Interactive Results** | Standard | Advanced Segmental | Full PDF-to-HTML Studio |
+| **Two-Person Approval Rule**| Optional | Included | Enforced Institutional |
+| **King IV / POPIA Audit** | Basic | Quarterly Automated | Continuous Real-Time |
+| **Ethics Hotline** | — | Included | AES-256-GCM Encrypted |
+| **Tender Procurement Portal** | — | Included | Statutory CIPC/SARS Validation |
+| **Pricing** | Custom Quote | Custom Quote | Custom Quote |
 
 ---
 
-## 6. Brand Audit & Asset Inventory
+## 7. Security & Governance
 
-Consult [BRAND_AUDIT.md](./BRAND_AUDIT.md) for full documentation of verified logo proportions, color measurements, font specifications, operational truth as of 27 September 2026, and asset licensing terms.
+- **Zero Data Leakage:** Cryptographic and query-level isolation ensures no corporate client can access another client's records.
+- **Edge Defense-in-Depth:** HTTP security headers (`HSTS`, `X-Content-Type-Options: nosniff`, `SAMEORIGIN`, `Permissions-Policy`).
+- **Audit Trail:** Immutable audit logs track every authentication, content draft, approval, and release with correlation IDs.
+- **Disaster Recovery:** Fully automated snapshot backups and restore drills ensuring business continuity.
+
+---
+
+© 2026 Bastion Group. All rights reserved. Strictly confidential enterprise digital platform.

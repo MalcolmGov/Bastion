@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Sparkles,
@@ -16,14 +17,28 @@ import {
   CreditCard,
   ExternalLink,
   ChevronRight,
+  ArrowRight,
   Radio,
   FileText,
   AlertTriangle,
   CheckCircle2,
   Minimize2,
-  Maximize2
+  Maximize2,
+  BookOpen,
+  Edit3,
+  Users,
+  FolderOpen,
+  RotateCcw,
+  CalendarCheck
 } from 'lucide-react';
+import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
+import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { useDashboardCustomizer } from '@/components/admin/DashboardCustomizerProvider';
+import {
+  SuggestedNextStep,
+  DEFAULT_CLIENT_SUGGESTED_STEPS,
+  DEFAULT_AGENCY_SUGGESTED_STEPS
+} from '@/lib/copilot/cmsKnowledge';
 
 interface CopilotMessage {
   id: string;
@@ -33,13 +48,20 @@ interface CopilotMessage {
   action?: {
     type: string;
     navigationUrl?: string;
+    label?: string;
     data?: any;
   };
 }
 
 export function ZaraVoiceCopilot() {
   const router = useRouter();
+  const { user } = useAdminAuth();
+  const { activeClient, portalViewMode } = useStudioWorkspace();
   const { primaryColor, accentColor } = useDashboardCustomizer();
+
+  const isClient = portalViewMode === 'client';
+  const clientName = activeClient?.name || 'Corporate';
+  const userFirstName = user?.name ? user.name.trim().split(' ')[0] : 'there';
 
   const [isOpen, setIsOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
@@ -55,10 +77,36 @@ export function ZaraVoiceCopilot() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Good afternoon, Malcolm. Zara Voice Copilot is active. I can inspect SRE health across Move Digital and Gold Fields, deploy remediations, manage invoices, or navigate the platform.',
+      content: isClient
+        ? `Hello ${userFirstName}! I'm Ask AI, your platform assistant for ${clientName}. I'm here to guide you through editing pages, using the Visual Live Editor, uploading media, inviting team members, or reviewing publication drafts. How can I help you today?`
+        : `Hello ${userFirstName}! Ask AI is active. I can guide you through managing client properties, visual editing, releases, team governance, or platform operations.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
+
+  const [suggestedSteps, setSuggestedSteps] = useState<SuggestedNextStep[]>(
+    isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS
+  );
+
+  // Keep welcome message & suggested steps updated if client changes
+  useEffect(() => {
+    setMessages(prev => {
+      if (prev.length === 1 && prev[0].id === 'welcome') {
+        return [
+          {
+            id: 'welcome',
+            role: 'assistant',
+            content: isClient
+              ? `Hello ${userFirstName}! I'm Ask AI, your platform assistant for ${clientName}. I'm here to guide you through editing pages, using the Visual Live Editor, uploading media, inviting team members, or reviewing publication drafts. How can I help you today?`
+              : `Hello ${userFirstName}! Ask AI is active. I can guide you through managing client properties, visual editing, releases, team governance, or platform operations.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ];
+      }
+      return prev;
+    });
+    setSuggestedSteps(isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS);
+  }, [clientName, userFirstName, isClient]);
 
   // Audio & Speech References
   const recognitionRef = useRef<any>(null);
@@ -82,18 +130,22 @@ export function ZaraVoiceCopilot() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, interimTranscript]);
 
-  // Listen to external trigger event
+  // Listen to external trigger events ('open-bastion-copilot' or 'open-ask-ai')
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
     window.addEventListener('open-bastion-copilot', handleOpen);
-    return () => window.removeEventListener('open-bastion-copilot', handleOpen);
+    window.addEventListener('open-ask-ai', handleOpen);
+    return () => {
+      window.removeEventListener('open-bastion-copilot', handleOpen);
+      window.removeEventListener('open-ask-ai', handleOpen);
+    };
   }, []);
 
   // ─────────────────────────────────────────────────────────
   // 1. TTS & BARGE-IN INTERRUPTION ENGINE
   // ─────────────────────────────────────────────────────────
   const interruptSpeaking = useCallback((reason: string = 'User Interruption') => {
-    console.log(`🛑 [BARGE-IN] Interrupting Zara speech: ${reason}`);
+    console.log(`🛑 [BARGE-IN] Interrupting AI speech: ${reason}`);
     speechIdRef.current++;
     speechQueueRef.current = [];
     if (currentAudioRef.current) {
@@ -151,152 +203,157 @@ export function ZaraVoiceCopilot() {
           sum += buf[i] * buf[i];
         }
         const rms = Math.sqrt(sum / buf.length);
-        const normalizedLevel = Math.min(100, Math.round(rms * 400));
-        setAudioLevel(normalizedLevel);
 
-        // Update baseline noise floor when silent
-        if (!isSpeaking && rms < 0.04) {
+        if (!isSpeaking) {
           baselineEnergyRef.current = baselineEnergyRef.current * 0.95 + rms * 0.05;
         }
 
-        const threshold = Math.max(0.045, baselineEnergyRef.current * 2.8);
+        const normalizedLevel = Math.min(100, Math.round(rms * 450));
+        setAudioLevel(normalizedLevel);
 
-        // Hardware VAD Barge-In: interrupt bot playback immediately if user speaks
-        if (isSpeaking && rms > threshold) {
+        const speechThreshold = Math.max(0.045, baselineEnergyRef.current * 2.4);
+
+        if (isSpeaking && rms > speechThreshold) {
           sustainedVadCountRef.current++;
           if (sustainedVadCountRef.current >= 3) {
-            console.log('⚡ [HARDWARE VAD] Barge-In Triggered! Interrupting bot.');
-            interruptSpeaking('Hardware VAD Barge-In');
+            interruptSpeaking('Acoustic VAD threshold breach');
             sustainedVadCountRef.current = 0;
           }
         } else {
-          sustainedVadCountRef.current = 0;
+          sustainedVadCountRef.current = Math.max(0, sustainedVadCountRef.current - 1);
         }
 
         animFrameRef.current = requestAnimationFrame(vadLoop);
       };
 
       animFrameRef.current = requestAnimationFrame(vadLoop);
-    } catch (err) {
-      console.warn('[Copilot VAD] Mic permission or initialization warning:', err);
+    } catch (e) {
+      console.warn('Hardware VAD initialization skipped:', e);
     }
-  }, [isSpeaking, interruptSpeaking]);
+  }, [interruptSpeaking, isSpeaking]);
 
   const teardownHardwareVad = useCallback(() => {
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(t => t.stop());
       mediaStreamRef.current = null;
     }
     if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
+      try { audioContextRef.current.close(); } catch {}
       audioContextRef.current = null;
     }
     analyserRef.current = null;
     setAudioLevel(0);
   }, []);
 
-  const speakSentence = useCallback(async (sentence: string, currentSpeechId: number): Promise<void> => {
-    if (currentSpeechId !== speechIdRef.current) return;
-
-    // ── 1. High-Fidelity ElevenLabs Neural Speech Pipeline ───────────
-    try {
-      const resp = await fetch('/api/admin/voice-copilot/speak', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: sentence,
-          model_id: 'eleven_turbo_v2_5'
-        })
-      });
-
-      if (currentSpeechId !== speechIdRef.current) return;
-
-      const contentType = resp.headers.get('content-type') || '';
-      if (resp.ok && contentType.includes('audio')) {
-        setVoiceProvider('elevenlabs');
-        const blob = await resp.blob();
-        if (currentSpeechId !== speechIdRef.current) return;
-
-        return new Promise<void>((resolve) => {
-          const audioUrl = URL.createObjectURL(blob);
-          const audio = new Audio(audioUrl);
-          currentAudioRef.current = audio;
-
-          audio.onplay = () => {
-            if (currentSpeechId === speechIdRef.current) {
-              setIsSpeaking(true);
-              setVoiceStatus('speaking');
-            }
-          };
-
-          audio.onended = () => {
-            URL.revokeObjectURL(audioUrl);
-            if (currentAudioRef.current === audio) currentAudioRef.current = null;
-            resolve();
-          };
-
-          audio.onerror = () => {
-            URL.revokeObjectURL(audioUrl);
-            if (currentAudioRef.current === audio) currentAudioRef.current = null;
-            resolve();
-          };
-
-          audio.play().catch(() => resolve());
-        });
-      }
-    } catch (err) {
-      console.warn('[Voice Copilot] ElevenLabs audio streaming error, falling back:', err);
-    }
-
-    // ── 2. Resilient Browser Speech Fallback (Female Natural Voice) ───
+  // Browser TTS fallback
+  const speakBrowserFallback = useCallback((text: string, currentId: number): Promise<void> => {
     return new Promise((resolve) => {
-      if (typeof window === 'undefined' || !window.speechSynthesis || currentSpeechId !== speechIdRef.current) {
-        return resolve();
+      if (typeof window === 'undefined' || !window.speechSynthesis) {
+        resolve();
+        return;
       }
-
-      setVoiceProvider('browser');
-      window.speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(sentence);
-      utt.rate = 1.05;
-      utt.pitch = 1.02;
-
-      const voices = window.speechSynthesis.getVoices();
-      const match = voices.find(v =>
-        v.lang.startsWith('en') &&
-        (v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Google UK English Female') || v.name.includes('Natural'))
-      );
-      if (match) utt.voice = match;
-
-      utt.onstart = () => {
-        if (currentSpeechId === speechIdRef.current) {
-          setIsSpeaking(true);
-          setVoiceStatus('speaking');
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1.05;
+      utter.pitch = 1.0;
+      utter.onstart = () => {
+        if (currentId !== speechIdRef.current) {
+          window.speechSynthesis.cancel();
+          resolve();
+          return;
         }
+        setIsSpeaking(true);
+        setVoiceStatus('speaking');
       };
-
-      utt.onend = () => resolve();
-      utt.onerror = () => resolve();
-
-      window.speechSynthesis.speak(utt);
+      utter.onend = () => resolve();
+      utter.onerror = () => resolve();
+      window.speechSynthesis.speak(utter);
     });
   }, []);
 
-  const playSpeechQueue = useCallback(async (text: string) => {
-    if (!text || typeof window === 'undefined') return;
+  // Neural Cloud ElevenLabs Voice Output
+  const speakElevenLabs = useCallback(async (text: string, currentId: number): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/admin/voice-copilot/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
 
-    // Record words into echo guard buffer
-    const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
-    lastSpokenWordsRef.current = words.slice(-30);
+      if (!res.ok) {
+        setVoiceProvider('browser');
+        return false;
+      }
 
+      if (currentId !== speechIdRef.current) return true;
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudioRef.current = audio;
+
+      return new Promise<boolean>((resolve) => {
+        audio.onplay = () => {
+          if (currentId !== speechIdRef.current) {
+            audio.pause();
+            URL.revokeObjectURL(url);
+            resolve(true);
+            return;
+          }
+          setIsSpeaking(true);
+          setVoiceStatus('speaking');
+        };
+
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          currentAudioRef.current = null;
+          resolve(true);
+        };
+
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          currentAudioRef.current = null;
+          setVoiceProvider('browser');
+          resolve(false);
+        };
+
+        audio.play().catch(() => {
+          resolve(false);
+        });
+      });
+    } catch {
+      setVoiceProvider('browser');
+      return false;
+    }
+  }, []);
+
+  // High-level speak sentence router
+  const speakSentence = useCallback(async (sentence: string, currentId: number) => {
+    if (currentId !== speechIdRef.current || !sentence.trim()) return;
+
+    lastSpokenWordsRef.current = sentence.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean);
+
+    let success = false;
+    if (voiceProvider === 'elevenlabs') {
+      success = await speakElevenLabs(sentence, currentId);
+    }
+
+    if (!success && currentId === speechIdRef.current) {
+      await speakBrowserFallback(sentence, currentId);
+    }
+  }, [speakElevenLabs, speakBrowserFallback, voiceProvider]);
+
+  // Process speech sentence queue
+  const playSpeechQueue = useCallback(async (fullText: string) => {
     const thisSpeechId = ++speechIdRef.current;
     setIsSpeaking(true);
     setVoiceStatus('speaking');
 
-    // Split text into sentences for snappy low-latency playback
-    const sentences = text
-      .replace(/([.?!])\s*(?=[A-Z0-9])/g, '$1|')
-      .split('|')
+    const sentences = fullText
+      .split(/(?<=[.?!])\s+/)
       .map(s => s.trim())
       .filter(Boolean);
 
@@ -318,7 +375,6 @@ export function ZaraVoiceCopilot() {
     const text = (contentToSend || textInput).trim();
     if (!text || isProcessing) return;
 
-    // Clear inputs and interim transcript
     setTextInput('');
     setInterimTranscript('');
     interruptSpeaking('New query submitted');
@@ -340,6 +396,10 @@ export function ZaraVoiceCopilot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
+          clientContext: clientName,
+          portalViewMode,
+          userName: user?.name || 'Malcolm',
+          userRole: user?.role || 'admin',
           history: messages.slice(-6).map(m => ({ role: m.role, content: m.content }))
         })
       });
@@ -347,7 +407,7 @@ export function ZaraVoiceCopilot() {
       if (!res.ok) throw new Error('Copilot response error');
 
       const data = await res.json();
-      const reply = data.reply || data.speechText || 'Action acknowledged in Bastion platform.';
+      const reply = data.reply || data.speechText || 'Action acknowledged in platform.';
 
       const assistantMsg: CopilotMessage = {
         id: `msg_a_${Date.now()}`,
@@ -360,11 +420,17 @@ export function ZaraVoiceCopilot() {
       setMessages(prev => [...prev, assistantMsg]);
       setIsProcessing(false);
 
+      // Update guided next steps pills based on response
+      if (data.suggestedNextSteps && Array.isArray(data.suggestedNextSteps) && data.suggestedNextSteps.length > 0) {
+        setSuggestedSteps(data.suggestedNextSteps);
+      }
+
       // Execute platform navigation action if returned
       if (data.action?.type === 'navigate' && data.action.navigationUrl) {
         setTimeout(() => {
+          setIsOpen(false);
           router.push(data.action.navigationUrl);
-        }, 800);
+        }, 1400);
       }
 
       // Voice playback
@@ -379,17 +445,42 @@ export function ZaraVoiceCopilot() {
       const fallbackMsg: CopilotMessage = {
         id: `msg_a_${Date.now()}`,
         role: 'assistant',
-        content: 'Bastion platform intelligence: Edge systems operational. Could not reach cloud LLM service.',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        content: `I'm standing by to help with ${clientName}. You can explore the Visual Live Editor (/admin/editor), manage Pages (/admin/pages), or open the Platform Learning Hub (/admin/learn).`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        action: {
+          type: 'navigate',
+          navigationUrl: '/admin/learn',
+          label: 'Open Platform Learning Hub'
+        }
       };
       setMessages(prev => [...prev, fallbackMsg]);
       setIsProcessing(false);
       setVoiceStatus(isVoiceActive ? 'listening' : 'idle');
     }
-  }, [textInput, isProcessing, interruptSpeaking, messages, isVoiceActive, playSpeechQueue, router]);
+  }, [textInput, isProcessing, interruptSpeaking, clientName, portalViewMode, user, messages, isVoiceActive, playSpeechQueue, router]);
 
   // ─────────────────────────────────────────────────────────
-  // 4. SPEECH RECOGNITION (Snappy VAD & Duplex Echo Guard)
+  // 4. CLEAR CHAT CONVERSATION
+  // ─────────────────────────────────────────────────────────
+  const handleClearChat = useCallback(() => {
+    interruptSpeaking('Chat cleared by user');
+    setTextInput('');
+    setInterimTranscript('');
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: isClient
+          ? `Hello ${userFirstName}! I'm Ask AI, your platform assistant for ${clientName}. I'm here to guide you through editing pages, using the Visual Live Editor, uploading media, inviting team members, or reviewing publication drafts. How can I help you today?`
+          : `Hello ${userFirstName}! Ask AI is active. I can guide you through managing client properties, visual editing, releases, team governance, or platform operations.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setSuggestedSteps(isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS);
+  }, [interruptSpeaking, isClient, userFirstName, clientName]);
+
+  // ─────────────────────────────────────────────────────────
+  // 5. SPEECH RECOGNITION (Snappy VAD & Duplex Echo Guard)
   // ─────────────────────────────────────────────────────────
   const startListening = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -432,11 +523,9 @@ export function ZaraVoiceCopilot() {
           const isEcho = heardWords.length > 0 && (overlap / heardWords.length) > 0.6;
 
           if (isEcho) {
-            // Filter speaker loopback echo
             return;
           }
 
-          // Genuine user speech while bot is talking -> Cut off bot immediately!
           interruptSpeaking('User speech barge-in');
         }
 
@@ -448,51 +537,44 @@ export function ZaraVoiceCopilot() {
         const pauseDelay = endsIncomplete ? 1100 : 750;
 
         silenceTimerRef.current = setTimeout(() => {
-          if (currentHeard && !isProcessing) {
+          if (currentHeard.length > 2) {
+            console.log('⚡ VAD Silence Expired -> Auto-submitting prompt:', currentHeard);
             handleSendMessage(currentHeard);
           }
         }, pauseDelay);
       };
 
       rec.onerror = (e: any) => {
-        console.warn('Speech recognition error:', e.error);
-        if (e.error === 'not-allowed') {
-          setIsVoiceActive(false);
-          setIsListening(false);
+        if (e.error !== 'no-speech' && e.error !== 'aborted') {
+          console.warn('Speech recognition error:', e.error);
         }
       };
 
       rec.onend = () => {
         setIsListening(false);
-        // Automatically restart listening if voice mode remains enabled
-        if (isVoiceActive && isOpen && !isProcessing) {
-          setTimeout(() => {
-            if (isVoiceActive && isOpen && !recognitionRef.current?.running) {
-              try { rec.start(); } catch {}
-            }
-          }, 300);
+        if (isVoiceActive && isOpen) {
+          try { rec.start(); } catch {}
         }
       };
 
       rec.start();
-    } catch (err) {
-      console.warn('Could not start speech recognition:', err);
+    } catch (e) {
+      console.warn('Could not start speech recognition:', e);
     }
-  }, [isSpeaking, interruptSpeaking, isProcessing, handleSendMessage, isVoiceActive, isOpen]);
+  }, [handleSendMessage, interruptSpeaking, isOpen, isSpeaking, isVoiceActive]);
 
   const stopListening = useCallback(() => {
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch {}
+      try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
     }
     setIsListening(false);
-    setInterimTranscript('');
   }, []);
 
-  // Toggle Voice Mode switch
   const toggleVoiceMode = useCallback(() => {
     if (isVoiceActive) {
       setIsVoiceActive(false);
@@ -520,120 +602,126 @@ export function ZaraVoiceCopilot() {
     }
   }, [isOpen, isVoiceActive, stopListening, teardownHardwareVad, interruptSpeaking, initHardwareVad, startListening]);
 
-  const gradientBg = `linear-gradient(135deg, ${primaryColor}, ${accentColor})`;
+  // Helper icon renderer for pills
+  function renderStepIcon(icon?: string) {
+    switch (icon) {
+      case 'edit': return <Edit3 className="w-3 h-3 text-amber-500 shrink-0" />;
+      case 'sparkles': return <Sparkles className="w-3 h-3 text-purple-500 shrink-0" />;
+      case 'users': return <Users className="w-3 h-3 text-indigo-500 shrink-0" />;
+      case 'check': return <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />;
+      case 'folder': return <FolderOpen className="w-3 h-3 text-blue-500 shrink-0" />;
+      case 'book': return <BookOpen className="w-3 h-3 text-teal-500 shrink-0" />;
+      case 'shield': return <ShieldCheck className="w-3 h-3 text-emerald-500 shrink-0" />;
+      case 'file': return <FileText className="w-3 h-3 text-sky-500 shrink-0" />;
+      case 'calendar': return <CalendarCheck className="w-3 h-3 text-amber-500 shrink-0" />;
+      default: return <Sparkles className="w-3 h-3 text-slate-400 shrink-0" />;
+    }
+  }
 
   return (
     <>
       {/* ───────────────────────────────────────────────────────── */}
-      {/* FLOATING TRIGGER BUTTON (Bottom-Right Signature)          */}
+      {/* FLOATING TRIGGER BUTTON (Hidden in client CMS mode for clean canvas) */}
       {/* ───────────────────────────────────────────────────────── */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          background: gradientBg,
-          boxShadow: `0 8px 28px ${primaryColor}55`,
-          borderColor: `${accentColor}60`
-        }}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl text-white border flex items-center justify-center hover:scale-105 active:scale-95 transition-all group"
-        title="Open Zara Voice Copilot"
-        aria-label="Open Zara Voice Copilot"
-      >
-        <Sparkles className="w-6 h-6 fill-current group-hover:rotate-12 transition-transform" />
-        
-        {/* Pulsing Status Dot */}
-        <span
-          className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full ring-2 ring-[#0B0F19] ${
-            isSpeaking
-              ? 'bg-purple-400 animate-ping'
-              : isListening
-              ? 'bg-emerald-400 animate-pulse'
-              : 'bg-emerald-500'
-          }`}
-        />
-
-        {/* Real-time Voice Wave Halo Ring */}
-        {isVoiceActive && audioLevel > 5 && (
+      {!isClient && (
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="fixed bottom-6 right-6 z-40 h-12 px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/60 shadow-xl flex items-center gap-2.5 transition-all duration-200 hover:scale-105 active:scale-95 group cursor-pointer"
+          title="Ask AI Assistant"
+          aria-label="Ask AI Assistant"
+        >
+          <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300/30 group-hover:rotate-12 transition-transform" />
+          <span className="text-xs font-bold tracking-wide">Ask AI</span>
+          
+          {/* Pulsing Status Dot */}
           <span
-            style={{
-              borderColor: primaryColor,
-              transform: `scale(${1 + audioLevel / 120})`,
-              opacity: Math.min(0.8, audioLevel / 60)
-            }}
-            className="absolute inset-0 rounded-2xl border-2 pointer-events-none transition-transform duration-75"
+            className={`w-2 h-2 rounded-full ${
+              isSpeaking
+                ? 'bg-purple-400 animate-ping'
+                : isListening
+                ? 'bg-emerald-400 animate-pulse'
+                : 'bg-emerald-400'
+            }`}
           />
-        )}
-      </button>
+        </button>
+      )}
 
       {/* ───────────────────────────────────────────────────────── */}
-      {/* EXPANDED ZARA VOICE COPILOT DRAWER                        */}
+      {/* CLEAN, WHITE, PREMIUM ASK AI DRAWER                       */}
       {/* ───────────────────────────────────────────────────────── */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-[420px] max-w-[calc(100vw-2.5rem)] h-[580px] bg-[#0E131F]/95 backdrop-blur-xl border border-slate-800/90 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
+        <div className="fixed bottom-24 right-6 z-50 w-[440px] max-w-[calc(100vw-2rem)] h-[620px] bg-white border border-slate-200/90 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.18)] ring-1 ring-slate-900/5 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
           
-          {/* Header */}
-          <div className="p-4 border-b border-slate-800 bg-[#0A0D16] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                style={{ background: gradientBg }}
-                className="w-9 h-9 rounded-xl text-white flex items-center justify-center shadow-md relative"
-              >
-                <Bot className="w-5 h-5" />
+          {/* Header (Clean, White with Clear Chat Action) */}
+          <div className="px-4 py-3 border-b border-slate-100 bg-white flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-xs relative shrink-0">
+                <Sparkles className="w-4 h-4 text-amber-300" />
                 {isSpeaking && (
-                  <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-purple-400 ring-2 ring-[#0A0D16] animate-pulse" />
+                  <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-purple-500 ring-2 ring-white animate-pulse" />
                 )}
               </div>
-              <div>
-                <div className="text-sm font-bold text-white flex items-center gap-2">
-                  <span>Zara Voice Copilot</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
-                    <Sparkles className="w-2.5 h-2.5 text-purple-400" /> ElevenLabs HD
-                  </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    750ms VAD
+              <div className="min-w-0">
+                <div className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5 truncate">
+                  <span>Ask AI</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-700 border border-slate-200/70 truncate">
+                    {clientName} Assistant
                   </span>
                 </div>
-                <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                <div className="text-[11px] text-slate-500 flex items-center gap-1.5 font-medium">
                   <span
-                    className={`w-2 h-2 rounded-full ${
+                    className={`w-1.5 h-1.5 rounded-full ${
                       voiceStatus === 'speaking'
-                        ? 'bg-purple-400 animate-pulse'
+                        ? 'bg-purple-500 animate-pulse'
                         : voiceStatus === 'listening'
-                        ? 'bg-emerald-400 animate-ping'
+                        ? 'bg-emerald-500 animate-ping'
                         : voiceStatus === 'processing'
-                        ? 'bg-amber-400 animate-bounce'
-                        : 'bg-slate-500'
+                        ? 'bg-amber-500 animate-bounce'
+                        : 'bg-emerald-500'
                     }`}
                   />
-                  <span className="capitalize">
+                  <span className="truncate">
                     {voiceStatus === 'speaking'
-                      ? (voiceProvider === 'elevenlabs' ? 'Zara Speaking (ElevenLabs HD) · Duplex Active' : 'Zara Speaking… (Duplex Active)')
+                      ? 'AI Speaking…'
                       : voiceStatus === 'listening'
                       ? 'Listening with Echo Guard…'
                       : voiceStatus === 'processing'
-                      ? 'Executing Platform Action…'
+                      ? 'Analyzing CMS knowledge…'
                       : isVoiceActive
-                      ? 'ElevenLabs Neural Engine Ready'
-                      : 'Voice Muted'}
+                      ? 'Voice Engine Ready'
+                      : 'Platform Assistant Ready'}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Header Controls */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Clear Chat Button */}
+              <button
+                type="button"
+                onClick={handleClearChat}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 transition-all cursor-pointer group"
+                title="Clear conversation and reset"
+                aria-label="Clear chat"
+              >
+                <RotateCcw className="w-3 h-3 text-slate-400 group-hover:rotate-180 transition-transform duration-300" />
+                <span>Clear</span>
+              </button>
+
               {/* Voice Mode Toggle Switch */}
               <button
                 type="button"
                 onClick={toggleVoiceMode}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
                   isVoiceActive
-                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
-                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                    : 'bg-slate-100 text-slate-600 border-slate-200/80 hover:bg-slate-200/80 hover:text-slate-800'
                 }`}
-                title={isVoiceActive ? 'Disable continuous voice' : 'Enable 750ms voice engine'}
+                title={isVoiceActive ? 'Mute continuous voice' : 'Enable duplex voice assistant'}
               >
-                {isVoiceActive ? <Mic className="w-3.5 h-3.5 text-emerald-400" /> : <MicOff className="w-3.5 h-3.5" />}
+                {isVoiceActive ? <Mic className="w-3.5 h-3.5 text-emerald-600" /> : <MicOff className="w-3.5 h-3.5 text-slate-400" />}
                 <span>{isVoiceActive ? 'Voice ON' : 'Voice OFF'}</span>
               </button>
 
@@ -641,17 +729,17 @@ export function ZaraVoiceCopilot() {
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
-                aria-label="Close Copilot"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition cursor-pointer"
+                aria-label="Close Assistant"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Real-time Audio Level Bar (Web Audio VAD) */}
+          {/* Real-time Audio Level Bar (VAD) */}
           {isVoiceActive && (
-            <div className="h-1 bg-slate-900/80 w-full overflow-hidden flex items-center">
+            <div className="h-1 bg-slate-100 w-full overflow-hidden flex items-center">
               <div
                 style={{
                   width: `${audioLevel}%`,
@@ -664,88 +752,45 @@ export function ZaraVoiceCopilot() {
             </div>
           )}
 
-          {/* Messages Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs">
+          {/* Messages Scroll Area (Crisp, High-Readability Light Background with Custom Scrollbar) */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3.5 text-xs bg-[#FBFBFC] custom-scrollbar">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs leading-relaxed ${
+                  className={`max-w-[88%] rounded-2xl px-4 py-3 leading-relaxed text-[13px] shadow-xs select-text ${
                     m.role === 'user'
-                      ? 'bg-purple-600 text-white rounded-br-xs'
-                      : 'bg-slate-900/90 text-slate-200 border border-slate-800/80 rounded-bl-xs'
+                      ? 'bg-slate-900 text-white rounded-br-xs font-medium'
+                      : 'bg-white text-slate-800 border border-slate-200/90 rounded-bl-xs'
                   }`}
                 >
-                  <p>{m.content}</p>
+                  <p className="whitespace-pre-line">{m.content}</p>
 
                   {/* Render Execution Action Card */}
                   {m.action && (
-                    <div className="mt-2.5 pt-2 border-t border-slate-800/80 text-[11px]">
-                      {m.action.type === 'sre_health' && (
-                        <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-lg p-2 flex items-center justify-between text-emerald-400">
-                          <span className="flex items-center gap-1.5 font-medium">
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            100% Operational (84ms Edge)
-                          </span>
-                          <button
-                            onClick={() => router.push('/status')}
-                            className="text-[10px] underline hover:text-white flex items-center gap-0.5"
+                    <div className="mt-3 pt-2.5 border-t border-slate-100">
+                      {m.action.navigationUrl && (
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          <span className="text-[11px] text-slate-500 font-medium">Quick link:</span>
+                          <Link
+                            href={m.action.navigationUrl}
+                            onClick={() => {
+                              setIsOpen(false);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition cursor-pointer active:scale-95 group"
                           >
-                            Status Page <ChevronRight className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-
-                      {m.action.type === 'list_incidents' && (
-                        <div className="bg-purple-500/10 border border-purple-500/25 rounded-lg p-2 flex items-center justify-between text-purple-300">
-                          <span className="flex items-center gap-1.5 font-medium">
-                            <Activity className="w-3.5 h-3.5" />
-                            {m.action.data?.openCount > 0 ? `${m.action.data.openCount} Open Incident` : 'Incidents Remediated'}
-                          </span>
-                          <button
-                            onClick={() => router.push('/admin/incidents')}
-                            className="text-[10px] underline hover:text-white flex items-center gap-0.5"
-                          >
-                            Open SRE <ChevronRight className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-
-                      {m.action.type === 'create_invoice' && (
-                        <div className="bg-blue-500/10 border border-blue-500/25 rounded-lg p-2 flex items-center justify-between text-blue-300">
-                          <span className="flex items-center gap-1.5 font-medium">
-                            <CreditCard className="w-3.5 h-3.5" />
-                            {m.action.data?.docNumber || 'Invoice Created'}
-                          </span>
-                          <button
-                            onClick={() => router.push('/admin/billing')}
-                            className="text-[10px] underline hover:text-white flex items-center gap-0.5"
-                          >
-                            View Invoice <ChevronRight className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-
-                      {m.action.type === 'billing_summary' && (
-                        <div className="bg-slate-800/80 border border-slate-700/60 rounded-lg p-2 flex items-center justify-between text-slate-300">
-                          <span className="font-mono text-emerald-400 font-bold">
-                            {m.action.data?.totalInvoicedFmt || 'R0'} Invoiced
-                          </span>
-                          <button
-                            onClick={() => router.push('/admin/billing')}
-                            className="text-[10px] underline hover:text-white flex items-center gap-0.5"
-                          >
-                            Billing Console <ChevronRight className="w-3 h-3" />
-                          </button>
+                            <span>{m.action.label || 'Open Section'}</span>
+                            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                          </Link>
                         </div>
                       )}
                     </div>
                   )}
                 </div>
 
-                <span className="text-[10px] text-slate-500 px-1 mt-1">
+                <span className="text-[10px] text-slate-400 px-1 mt-1 font-medium">
                   {m.timestamp}
                 </span>
               </div>
@@ -754,7 +799,7 @@ export function ZaraVoiceCopilot() {
             {/* Interim Real-time Transcript Indicator */}
             {interimTranscript && (
               <div className="flex flex-col items-end">
-                <div className="max-w-[85%] rounded-2xl rounded-br-xs px-3.5 py-2 bg-purple-900/40 text-purple-200 border border-purple-500/40 italic animate-pulse">
+                <div className="max-w-[85%] rounded-2xl rounded-br-xs px-3.5 py-2.5 bg-amber-50 text-amber-900 border border-amber-200/80 italic animate-pulse text-xs">
                   <span>🎙️ {interimTranscript}</span>
                 </div>
               </div>
@@ -762,68 +807,57 @@ export function ZaraVoiceCopilot() {
 
             {/* Processing Indicator */}
             {isProcessing && (
-              <div className="flex items-center gap-2 text-slate-400 italic text-[11px] p-2">
-                <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
-                <span>Zara is executing command across Bastion edge...</span>
+              <div className="flex items-center gap-2 text-slate-500 italic text-[11px] p-2 bg-white rounded-xl border border-slate-100 shadow-2xs w-fit">
+                <span className="w-2 h-2 rounded-full bg-slate-900 animate-ping" />
+                <span>Ask AI is checking platform knowledge…</span>
               </div>
             )}
 
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Voice Command Chips */}
-          <div className="px-3 py-2 bg-[#090C14] border-t border-slate-800/60 overflow-x-auto flex gap-1.5 scrollbar-none text-[11px]">
-            <button
-              type="button"
-              onClick={() => handleSendMessage('Check Move Digital health and SLA uptime')}
-              className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white whitespace-nowrap transition border border-slate-700/50 flex items-center gap-1"
-            >
-              <ShieldCheck className="w-3 h-3 text-emerald-400" />
-              SRE Health
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSendMessage('Are there any active incidents or open PR fixes?')}
-              className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white whitespace-nowrap transition border border-slate-700/50 flex items-center gap-1"
-            >
-              <Activity className="w-3 h-3 text-purple-400" />
-              Incidents
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSendMessage('What is our total invoiced revenue and outstanding billing?')}
-              className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white whitespace-nowrap transition border border-slate-700/50 flex items-center gap-1"
-            >
-              <CreditCard className="w-3 h-3 text-blue-400" />
-              Commercial MRR
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSendMessage('Open the public 90-day status page')}
-              className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white whitespace-nowrap transition border border-slate-700/50 flex items-center gap-1"
-            >
-              <ExternalLink className="w-3 h-3 text-cyan-400" />
-              Public Status
-            </button>
-          </div>
+          {/* Guided Next Steps (Wrapped Stacked Pills, No Horizontal Scrollbar) */}
+          {suggestedSteps.length > 0 && (
+            <div className="px-4 py-2.5 bg-slate-50/90 border-t border-slate-100/90">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  Recommended Next Steps
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">Click to ask</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 max-h-[76px] overflow-y-auto custom-scrollbar">
+                {suggestedSteps.map((step, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSendMessage(step.query)}
+                    className="px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 hover:border-slate-300 text-slate-700 hover:text-slate-900 border border-slate-200/90 shadow-2xs text-[11px] font-medium flex items-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 text-left"
+                  >
+                    {renderStepIcon(step.icon)}
+                    <span className="truncate max-w-[200px]">{step.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-          {/* Input Bar */}
+          {/* Input Bar (Clean White) */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="p-3 bg-[#0A0D16] border-t border-slate-800 flex items-center gap-2"
+            className="p-3 bg-white border-t border-slate-100 flex items-center gap-2"
           >
             {/* Mic Button */}
             <button
               type="button"
               onClick={toggleVoiceMode}
-              style={isVoiceActive ? { background: gradientBg } : undefined}
-              className={`p-2 rounded-xl border transition cursor-pointer ${
+              className={`p-2.5 rounded-xl border transition cursor-pointer ${
                 isVoiceActive
-                  ? 'text-white border-purple-500 shadow-md'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'bg-emerald-500 text-white border-emerald-600 shadow-xs'
+                  : 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-200/70'
               }`}
               title={isVoiceActive ? 'Voice mode on' : 'Click to enable voice'}
             >
@@ -835,16 +869,15 @@ export function ZaraVoiceCopilot() {
               type="text"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder={isVoiceActive ? 'Listening... or type command' : 'Ask Zara or command platform...'}
-              className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              placeholder={isVoiceActive ? 'Listening… or ask a question' : `Ask AI anything about ${clientName} CMS…`}
+              className="flex-1 px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200/90 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-400 focus:ring-2 focus:ring-slate-900/5 font-medium transition-all"
             />
 
             {/* Send Button */}
             <button
               type="submit"
               disabled={!textInput.trim() || isProcessing}
-              style={{ background: gradientBg }}
-              className="p-2 rounded-xl text-white disabled:opacity-50 transition shadow-xs cursor-pointer"
+              className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white disabled:opacity-30 disabled:hover:bg-slate-900 transition shadow-xs cursor-pointer"
             >
               <Send className="w-4 h-4" />
             </button>

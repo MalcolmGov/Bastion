@@ -6,14 +6,15 @@ import {
   handleMcpResourceRead
 } from '@/lib/mcp/server';
 import { verifyApiToken } from '@/lib/auth/apiToken';
+import type { ApiAccess } from '@/lib/auth/apiAccess';
 import { getCurrentUser } from '@/lib/auth/auth';
 import { isAgencyUser } from '@/lib/auth/roles';
 
-async function mcpAuthorized(req: NextRequest): Promise<boolean> {
+async function mcpAuthorized(req: NextRequest): Promise<ApiAccess> {
   const auth = await verifyApiToken(req, new URL(req.url).searchParams.get('apiKey'), 'mcp:access');
-  if (auth.ok) return true;
+  if (auth.ok) return auth;
   const user = await getCurrentUser();
-  return isAgencyUser(user);
+  return isAgencyUser(user) ? { ok: true, status: 200, isAgencyAdmin: true, scopes: ['*'], actorId: user?.id } : auth;
 }
 
 /**
@@ -33,7 +34,8 @@ interface JsonRpcRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!(await mcpAuthorized(req))) {
+    const access = await mcpAuthorized(req);
+    if (!access.ok) {
       return NextResponse.json({
         jsonrpc: '2.0',
         id: null,
@@ -98,7 +100,7 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        const executionResult = await handleMcpToolCall(toolName, toolArgs);
+        const executionResult = await handleMcpToolCall(toolName, toolArgs, access);
         return NextResponse.json({
           jsonrpc: '2.0',
           id,
@@ -154,7 +156,7 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        const resource = await handleMcpResourceRead(uri);
+        const resource = await handleMcpResourceRead(uri, access);
         return NextResponse.json({
           jsonrpc: '2.0',
           id,
@@ -200,7 +202,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!(await mcpAuthorized(req))) {
+  if (!(await mcpAuthorized(req)).ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const host = req.headers.get('host') || 'localhost:3010';

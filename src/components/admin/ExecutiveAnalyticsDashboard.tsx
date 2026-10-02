@@ -58,9 +58,15 @@ const vitalsTimeline = [
 // Brand styling & industry sectors for Bastion's core enterprise clients
 const clientBrandMap: Record<string, { color: string; sector: string }> = {
   'Vodacom Group': { color: '#E60000', sector: 'Telecom & Techco' },
+  'Vodacom Group Limited': { color: '#E60000', sector: 'Telecom & Techco' },
   'Gold Fields Limited': { color: '#C99700', sector: 'Mining & Resources' },
+  'Aurum Energy & Resources': { color: '#059669', sector: 'Energy & Renewables' },
   'Solaris Clean Energy': { color: '#10B981', sector: 'Clean Energy' },
   'Apex Advisory Partners': { color: '#2563EB', sector: 'Financial Advisory' },
+  'Lumina Botanical Dining': { color: '#3B82F6', sector: 'Hospitality & Luxury' },
+  'Bastion Group Holdings': { color: '#8B5CF6', sector: 'Agency Holding' },
+  'Moove Digital': { color: '#06B6D4', sector: 'Digital Innovation' },
+  'Payguard': { color: '#EC4899', sector: 'Fintech & Security' },
   'Valence Private Wealth': { color: '#7C3AED', sector: 'Wealth Management' },
   'Meridian Strategic Capital': { color: '#0284C7', sector: 'Asset Management' },
 };

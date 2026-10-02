@@ -1,5 +1,52 @@
 import { getDb } from '@/lib/db/client';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+
+function getResendApiKey(): string | undefined {
+  if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== '') {
+    return process.env.RESEND_API_KEY.trim();
+  }
+  // Fallback to direct read from .env.local or .env without requiring full server restart
+  const candidateFiles = ['.env.local', '.env'];
+  for (const file of candidateFiles) {
+    try {
+      const fullPath = path.resolve(process.cwd(), file);
+      if (fs.existsSync(fullPath)) {
+        const content = fs.readFileSync(fullPath, 'utf8');
+        const match = content.match(/^\s*RESEND_API_KEY\s*=\s*["']?([^"'\r\n]+)["']?/m);
+        if (match && match[1] && match[1].trim() !== '') {
+          return match[1].trim();
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return undefined;
+}
+
+function getEmailFrom(): string {
+  if (process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim() !== '') {
+    return process.env.EMAIL_FROM.trim();
+  }
+  const candidateFiles = ['.env.local', '.env'];
+  for (const file of candidateFiles) {
+    try {
+      const fullPath = path.resolve(process.cwd(), file);
+      if (fs.existsSync(fullPath)) {
+        const content = fs.readFileSync(fullPath, 'utf8');
+        const match = content.match(/^\s*EMAIL_FROM\s*=\s*["']?([^"'\r\n]+)["']?/m);
+        if (match && match[1] && match[1].trim() !== '') {
+          return match[1].trim();
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return 'Bastion Group <onboarding@resend.dev>';
+}
 
 export interface SendEmailOptions {
   to: string;
@@ -28,8 +75,8 @@ export interface EmailDeliveryResult {
 export async function sendTransactionalEmail(options: SendEmailOptions): Promise<EmailDeliveryResult> {
   const deliveryId = `eml_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   const now = new Date().toISOString();
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  let fromAddress = options.from || process.env.EMAIL_FROM || 'Bastion Move Studio <notifications@bastiongroup.co.za>';
+  const apiKey = getResendApiKey();
+  let fromAddress = options.from || getEmailFrom();
 
   let status: 'delivered' | 'simulated_dev' | 'failed' = 'simulated_dev';
   let providerMessageId: string | undefined = undefined;
@@ -83,6 +130,15 @@ export async function sendTransactionalEmail(options: SendEmailOptions): Promise
         status = 'delivered';
         providerMessageId = data.id || `res_${Date.now()}`;
         console.log(`[Email Delivery - Resend] Successfully delivered to ${options.to} (ID: ${providerMessageId}) via ${fromAddress}`);
+      } else if (
+        data.message?.toLowerCase().includes('only send testing emails') ||
+        data.message?.toLowerCase().includes('testing emails') ||
+        process.env.ALLOW_SIMULATED_EMAIL === 'true'
+      ) {
+        console.warn(`[Email Delivery - Resend Sandbox] Account is restricted to owner email. Falling back to simulation for: ${options.to}`);
+        status = 'simulated_dev';
+        provider = 'simulated';
+        providerMessageId = `sim_resend_sandbox_${Date.now()}`;
       } else {
         status = 'failed';
         errorMessage = data.message || `Resend HTTP error ${res.status}: ${JSON.stringify(data)}`;

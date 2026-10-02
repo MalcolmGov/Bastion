@@ -65,6 +65,12 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       await fetch('/api/admin/auth/logout', { method: 'POST' });
       setUser(null);
       setPermissions([]);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('move_studio_portal_mode');
+        localStorage.removeItem('bastion_active_client_id');
+        localStorage.removeItem('move_studio_active_client');
+        document.cookie = 'bastion_active_client_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      }
       router.push('/admin/login');
     } catch (err) {
       console.error('Logout error:', err);

@@ -56,7 +56,12 @@ import {
   Square,
   Sparkle,
   Maximize,
-  SlidersHorizontal
+  SlidersHorizontal,
+  QrCode,
+  Building2,
+  Quote,
+  TrendingUp,
+  ShieldCheck
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
@@ -261,6 +266,8 @@ function VisualWebsiteEditorContent() {
 
   // Save state
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploySuccess, setDeploySuccess] = useState(false);
   const [savedTime, setSavedTime] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -273,9 +280,11 @@ function VisualWebsiteEditorContent() {
   const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai' | 'keys'>('content');
   const [isLocaleMenuOpen, setIsLocaleMenuOpen] = useState(false);
 
-  // Dynamic Zones Builder Left Panel Mode: 'dynamic_zones' | 'outline'
-  const [leftPanelMode, setLeftPanelMode] = useState<'dynamic_zones' | 'outline'>('dynamic_zones');
+  // Dynamic Zones Builder Left Panel Mode: 'dynamic_zones' | 'outline' | 'brand_vault'
+  const [leftPanelMode, setLeftPanelMode] = useState<'dynamic_zones' | 'outline' | 'brand_vault'>('dynamic_zones');
   const [isContentAgentModalOpen, setIsContentAgentModalOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [copiedQrUrl, setCopiedQrUrl] = useState(false);
 
   // Collapsible panels & Zen focus mode
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -562,6 +571,130 @@ function VisualWebsiteEditorContent() {
     setSelectedSectionId(newId);
   };
 
+  const CORPORATE_BRAND_VAULT = [
+    {
+      id: 'bv_executive_quote',
+      title: 'Executive Quote & Signature',
+      category: 'Leadership & Vision',
+      icon: Quote,
+      description: 'Prominent C-Suite message with high-contrast portrait, name, designation, and corporate signature line.',
+      componentId: 'rich_text',
+      variant: 'editorial_quote',
+      defaultProps: {
+        headline: 'A Message from our Leadership',
+        quote: 'Our commitment to sustainable mining, operational discipline, and shareholder value creation remains unwavering.',
+        author: 'Malcolm Govender',
+        title: 'Chief Executive Officer',
+        organization: 'Corporate Board of Directors'
+      }
+    },
+    {
+      id: 'bv_financial_metrics',
+      title: 'Key Operating & Financial Metrics',
+      category: 'Investor Relations',
+      icon: TrendingUp,
+      description: '4-pillar statistical counter displaying gold production, revenue, EBITDA margin, and dividend yield.',
+      componentId: 'hero',
+      variant: 'contemporary_bold',
+      defaultProps: {
+        headline: 'Unlocking Long-Term Sustainable Value',
+        subheadline: 'Proven operational excellence across our global asset portfolio.',
+        primaryButtonText: 'View Q3 2026 Results',
+        primaryButtonUrl: '/admin/calendar',
+        secondaryButtonText: 'Download Integrated Report',
+        secondaryButtonUrl: '/admin/reports',
+        stats: [
+          { label: 'Gold Equivalent Ounces', value: '2.4Moz', subtext: '+4.2% YoY Growth' },
+          { label: 'All-In Sustaining Costs', value: '$1,190/oz', subtext: 'Top Quartile Efficiency' },
+          { label: 'Interim Dividend', value: '450cps', subtext: 'Paid Oct 2026' },
+          { label: 'Renewable Power Mix', value: '42%', subtext: 'On track for 2030' }
+        ]
+      }
+    },
+    {
+      id: 'bv_esg_targets',
+      title: '2030 ESG Strategic Targets',
+      category: 'Sustainability & Governance',
+      icon: ShieldCheck,
+      description: 'Structured 3-column scorecard showing Net-Zero carbon progress, water stewardship, and community impact.',
+      componentId: 'services_grid',
+      variant: 'cards_3col',
+      defaultProps: {
+        headline: 'Our 2030 ESG Commitments',
+        subheadline: 'Targeted sustainability pillars aligned with UN SDGs and King IV principles.',
+        services: [
+          {
+            title: 'Decarbonization & Clean Energy',
+            description: 'Achieve 50% net reduction in Scope 1 & 2 carbon emissions by 2030, powered by renewable microgrids.',
+            deliverables: ['Khanyisa Solar Plant', 'Agnew Wind Hybrid', 'Scope 1 & 2 Net Zero by 2050']
+          },
+          {
+            title: 'Water Stewardship & Tailings',
+            description: 'Zero catastrophic tailings failures, full GISTM compliance, and 85% water recycled across all operations.',
+            deliverables: ['Dry Stack Tailings', 'Real-time Satellite InSAR', 'Zero Harm Protocol']
+          },
+          {
+            title: 'Community Shared Value',
+            description: 'Investing in host community health, local procurement, and enterprise development programs.',
+            deliverables: ['80% Local Workforce', 'Community Clinics', 'Tertiary STEM Bursaries']
+          }
+        ]
+      }
+    },
+    {
+      id: 'bv_ir_contact',
+      title: 'Investor Relations & Media Inquiries',
+      category: 'Corporate Comms',
+      icon: Building2,
+      description: 'Corporate affairs contact box with spokesperson details, JSE sponsor accreditation, and registered office.',
+      componentId: 'cta',
+      variant: 'split_card',
+      defaultProps: {
+        headline: 'Institutional Investor & Analyst Inquiries',
+        subheadline: 'For investor relations inquiries, financial releases, or executive interview requests, reach our team directly.',
+        buttonText: 'Schedule IR Briefing',
+        buttonUrl: 'mailto:ir@goldfields.com',
+        contactInfo: {
+          phone: '+27 11 562 9700',
+          email: 'investors@goldfields.com',
+          hours: 'Mon - Fri: 08:00 - 17:00 SAST'
+        }
+      }
+    }
+  ];
+
+  const handleInsertCorporateBlock = (block: typeof CORPORATE_BRAND_VAULT[0]) => {
+    const newId = `sec_${siteSlug || 'site'}_${block.componentId}_${Date.now()}`;
+    const newSection: SectionInstance = {
+      id: newId,
+      componentId: block.componentId,
+      variant: block.variant,
+      visible: true,
+      props: JSON.parse(JSON.stringify(block.defaultProps)),
+      styles: {
+        backgroundType: 'solid',
+        backgroundColor: '#0A0D14',
+        headingColor: '#FFFFFF',
+        textColor: '#94A3B8',
+        accentColor: '#38BDF8',
+        paddingY: 'py-24'
+      }
+    };
+
+    let insertIdx = sections.length;
+    if (selectedSectionId) {
+      const selIdx = sections.findIndex(s => s.id === selectedSectionId);
+      if (selIdx !== -1) insertIdx = selIdx + 1;
+    } else {
+      const ftrIdx = sections.findIndex(s => s.componentId === 'footer');
+      if (ftrIdx !== -1) insertIdx = ftrIdx;
+    }
+
+    const updated = [...sections.slice(0, insertIdx), newSection, ...sections.slice(insertIdx)];
+    updateSections(updated);
+    setSelectedSectionId(newId);
+  };
+
   const handlePropChange = (field: string, val: any) => {
     if (!selectedSectionId) return;
     const updated = sections.map(s => {
@@ -787,6 +920,41 @@ function VisualWebsiteEditorContent() {
       console.warn('Save error:', err);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeployPublish = async () => {
+    setIsDeploying(true);
+    setDeploySuccess(false);
+    try {
+      const res = await fetch('/api/admin/editor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siteId: siteData?.id || siteSlug,
+          pageSlug: activePageSlug,
+          sections,
+          title: `${siteData?.name || 'Site'} — ${activePageSlug.toUpperCase()}`,
+          status: 'published'
+        })
+      });
+      if (res.ok) {
+        const saveRes = await res.json();
+        if (saveRes.version) {
+          setCurrentVersionNumber(Number(saveRes.version));
+        }
+        setSavedTime(new Date().toLocaleTimeString());
+        setHasUnsavedChanges(false);
+        setDeploySuccess(true);
+        setTimeout(() => setDeploySuccess(false), 4000);
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to deploy updates');
+      }
+    } catch (err) {
+      console.warn('Deploy error:', err);
+    } finally {
+      setIsDeploying(false);
     }
   };
 
@@ -1133,6 +1301,15 @@ function VisualWebsiteEditorContent() {
             >
               <Smartphone className="w-4 h-4" />
             </button>
+            <button
+              type="button"
+              onClick={() => setIsQrModalOpen(true)}
+              title="Executive Phone Preview (Scan QR code)"
+              className="p-1.5 rounded-lg text-emerald-400 hover:text-white hover:bg-emerald-500/20 transition flex items-center space-x-1 cursor-pointer"
+            >
+              <QrCode className="w-4 h-4" />
+              <span className="hidden xl:inline text-[10px] font-bold">QR</span>
+            </button>
           </div>
 
           {/* Canvas Theme Toggle (Light / Dark) */}
@@ -1224,11 +1401,22 @@ function VisualWebsiteEditorContent() {
           <button
             type="button"
             onClick={handleSaveDraft}
-            disabled={isSaving}
+            disabled={isSaving || isDeploying}
             className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5 cursor-pointer"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSaving ? 'Saving...' : 'Save Draft'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDeployPublish}
+            disabled={isDeploying || isSaving}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5 cursor-pointer"
+            title="Deploy and publish live website updates with zero code"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>{isDeploying ? 'Deploying...' : deploySuccess ? 'Deployed Live!' : 'Deploy Updates'}</span>
           </button>
 
           <button
@@ -1315,6 +1503,18 @@ function VisualWebsiteEditorContent() {
                 <FileText className="w-3 h-3" />
                 <span>Tree</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setLeftPanelMode('brand_vault')}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition flex items-center space-x-1 ${
+                  leftPanelMode === 'brand_vault'
+                    ? 'bg-amber-500 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Building2 className="w-3 h-3 text-amber-400" />
+                <span>Vault</span>
+              </button>
             </div>
 
             <div className="flex items-center space-x-1">
@@ -1356,6 +1556,54 @@ function VisualWebsiteEditorContent() {
                   setIsContentAgentModalOpen(true);
                 }}
               />
+            </div>
+          ) : leftPanelMode === 'brand_vault' ? (
+            /* CORPORATE BRAND VAULT ("SAVED BLOCKS") VIEW */
+            <div className="flex-1 flex flex-col justify-between overflow-hidden w-full">
+              <div className="p-3 border-b border-slate-200 dark:border-[#1E293B] flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-white uppercase tracking-wider text-[10px] flex items-center space-x-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Brand Vault ({CORPORATE_BRAND_VAULT.length})</span>
+                  </span>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Pre-approved corporate layout blocks</p>
+                </div>
+              </div>
+
+              <div className="flex-1 p-2 space-y-2.5 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
+                {CORPORATE_BRAND_VAULT.map((block) => {
+                  const Icon = block.icon;
+                  return (
+                    <div
+                      key={block.id}
+                      className="p-3 rounded-xl border border-slate-200/80 dark:border-[#1E293B] bg-slate-50/60 dark:bg-[#141C2A] hover:border-amber-400/50 transition group space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                          {block.category}
+                        </span>
+                        <Icon className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                          {block.title}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                          {block.description}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleInsertCorporateBlock(block)}
+                        className="w-full py-1.5 px-2.5 rounded-lg bg-amber-500/10 hover:bg-amber-500 text-amber-600 dark:text-amber-400 hover:text-white border border-amber-500/30 text-[11px] font-bold flex items-center justify-center space-x-1 transition cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Insert Block</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             /* COMPACT TREE OUTLINE VIEW */
@@ -1496,14 +1744,21 @@ function VisualWebsiteEditorContent() {
           <div
             className={`transition-all duration-300 shadow-2xl ${
               isCanvasDark ? 'bg-[#05080F] text-slate-100 border-slate-800' : 'bg-white text-slate-900 border-slate-700/60'
-            } overflow-hidden rounded-xl border ${
+            } overflow-hidden ${
               viewport === 'desktop'
-                ? 'w-full max-w-[1280px]'
+                ? 'w-full max-w-[1280px] rounded-xl border'
                 : viewport === 'tablet'
-                ? 'w-[768px]'
-                : 'w-[375px]'
+                ? 'w-[768px] rounded-xl border'
+                : 'w-[375px] rounded-[44px] border-[8px] border-slate-800 dark:border-slate-700 shadow-2xl relative my-4'
             }`}
           >
+            {viewport === 'mobile' && (
+              <div className="w-full bg-slate-800 dark:bg-slate-700 py-2 flex items-center justify-center select-none">
+                <div className="w-24 h-4 bg-black rounded-full mx-auto flex items-center justify-end px-2">
+                  <div className="w-2 h-2 rounded-full bg-slate-900" />
+                </div>
+              </div>
+            )}
             {sections.map((sec) => (
               <StudioComponentRenderer
                 key={sec.id}
@@ -1536,6 +1791,11 @@ function VisualWebsiteEditorContent() {
                 }}
               />
             ))}
+            {viewport === 'mobile' && (
+              <div className="w-full bg-slate-800 dark:bg-slate-700 py-2 flex items-center justify-center select-none">
+                <div className="w-28 h-1 bg-white/30 rounded-full mx-auto" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -3297,6 +3557,84 @@ function VisualWebsiteEditorContent() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Executive Mobile Phone Preview QR Modal */}
+      {isQrModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0D131F] border border-slate-200 dark:border-[#1E2E44] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
+                  <QrCode className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">Executive Mobile QR Preview</h3>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Boardroom &amp; C-Suite Live Phone Verification</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsQrModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="text-center space-y-3">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Scan with your iPhone or Android camera to instantly view and test this page draft on your personal phone before giving executive sign-off.
+              </p>
+
+              {/* QR Image Box */}
+              <div className="p-4 bg-white rounded-2xl border border-slate-200 inline-block shadow-inner mx-auto">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(
+                    typeof window !== 'undefined'
+                      ? `${window.location.origin}/sites/${siteSlug}?preview=true`
+                      : `http://localhost:3010/sites/${siteSlug}?preview=true`
+                  )}`}
+                  alt="Executive Mobile Preview QR Code"
+                  className="w-48 h-48 mx-auto"
+                />
+              </div>
+
+              {/* Direct Link & Copy */}
+              <div className="flex items-center space-x-2 pt-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={
+                    typeof window !== 'undefined'
+                      ? `${window.location.origin}/sites/${siteSlug}?preview=true`
+                      : `http://localhost:3010/sites/${siteSlug}?preview=true`
+                  }
+                  className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#141C2A] text-slate-600 dark:text-slate-300 text-[11px] font-mono select-all focus:outline-hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = typeof window !== 'undefined'
+                      ? `${window.location.origin}/sites/${siteSlug}?preview=true`
+                      : `http://localhost:3010/sites/${siteSlug}?preview=true`;
+                    navigator.clipboard.writeText(url);
+                    setCopiedQrUrl(true);
+                    setTimeout(() => setCopiedQrUrl(false), 2000);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold transition hover:opacity-90 shrink-0 cursor-pointer"
+                >
+                  {copiedQrUrl ? 'Copied!' : 'Copy Link'}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-center space-x-1.5 text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Local Staging Draft Active &bull; Real-time Viewport</span>
+              </div>
             </div>
           </div>
         </div>

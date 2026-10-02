@@ -21,6 +21,8 @@ jobs:
       NEXT_TELEMETRY_DISABLED: 1
       CRON_SECRET: sec_bastion_ci_cron_token_2026
       API_SECRET_TOKEN: sec_bastion_ci_api_token_2026
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
 
     steps:
       - name: Checkout Source Code
@@ -40,6 +42,9 @@ jobs:
 
       - name: Lint
         run: npm run lint:ci
+
+      - name: Run Tenant Authorization Regression Tests
+        run: npm run test:security
 
       - name: Run Gates 1 & 2 Automated Security Verification Suite
         run: npx tsx scripts/verify-production-gates.ts
