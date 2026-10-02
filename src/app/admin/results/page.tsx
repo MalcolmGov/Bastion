@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ResultsCodingChat } from '@/components/results/ResultsCodingChat';
+import { InteractiveResultsViewer } from '@/components/results/InteractiveResultsViewer';
 import { applyFigureEdit } from '@/lib/results/applyFigureEdit';
 import { renderResultsHtml } from '@/lib/results/renderHtml';
 import type { ResultsBrand, ResultsDocument, StoredResultsDocument } from '@/lib/results/types';
@@ -18,6 +19,7 @@ export default function ResultsStudioPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [htmlStale, setHtmlStale] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'analytics' | 'document'>('analytics');
 
   async function refresh() {
     const response = await fetch('/api/admin/results');
@@ -273,7 +275,31 @@ export default function ResultsStudioPage() {
                 <p className="font-semibold">{current.document.issuer}</p>
                 <p className="text-xs text-slate-500">{current.status === 'published' ? 'Published' : 'Draft'} · {current.document.periodLabel}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-800 dark:bg-slate-900">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('analytics')}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                      previewMode === 'analytics'
+                        ? 'bg-white text-violet-700 shadow-sm dark:bg-slate-800 dark:text-violet-300'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    }`}
+                  >
+                    Interactive Analytics
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('document')}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                      previewMode === 'document'
+                        ? 'bg-white text-violet-700 shadow-sm dark:bg-slate-800 dark:text-violet-300'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    }`}
+                  >
+                    Document HTML
+                  </button>
+                </div>
                 <button type="button" onClick={() => save('draft')} disabled={busy !== null} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold">
                   Save draft
                 </button>
@@ -281,7 +307,7 @@ export default function ResultsStudioPage() {
                   {busy === 'published' ? 'Publishing…' : 'Publish HTML'}
                 </button>
                 {current.status === 'published' && (
-                  <Link href={`/results/${current.slug}/document`} target="_blank" className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700">
+                  <Link href={`/results/${current.slug}`} target="_blank" className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-50">
                     Open live page
                   </Link>
                 )}
@@ -300,12 +326,22 @@ export default function ResultsStudioPage() {
                 {current.document.warnings.map((warning) => <li key={warning}>{warning}</li>)}
               </ul>
             )}
-            <iframe
-              title="Results preview"
-              srcDoc={previewHtml}
-              sandbox="allow-popups allow-popups-to-escape-sandbox"
-              className="h-[820px] w-full rounded-3xl border border-slate-200 bg-white"
-            />
+            {previewMode === 'analytics' ? (
+              <div className="max-h-[850px] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <InteractiveResultsViewer
+                  document={current.document}
+                  slug={current.slug}
+                  published={current.status === 'published'}
+                />
+              </div>
+            ) : (
+              <iframe
+                title="Results preview"
+                srcDoc={previewHtml}
+                sandbox="allow-popups allow-popups-to-escape-sandbox"
+                className="h-[820px] w-full rounded-3xl border border-slate-200 bg-white"
+              />
+            )}
             <details className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
               <summary className="cursor-pointer text-sm font-semibold">Check extracted figures</summary>
               <div className="mt-4 space-y-4">

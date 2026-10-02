@@ -13,7 +13,15 @@ import { hasPermission } from '../src/lib/auth/auth';
 import { resolveDomain } from '../src/lib/domains/registry';
 import { encryptSecret, decryptSecret, isEncrypted } from '../src/lib/crypto/encryption';
 import { saveGitHubIntegration, getActiveGitHubIntegration } from '../src/lib/github/client';
-import { saveResultsDocument, listResultsDocuments, getResultsDocument } from '../src/lib/results/store';
+import { saveResultsDocument, listResultsDocuments, getResultsDocument, getPublishedResultsBySlug } from '../src/lib/results/store';
+import {
+  calculateKeyRatios,
+  validateBalanceSheetEquation,
+  extractSegmentalBreakdown,
+  generateStatementCsv,
+  parseFinancialNumber,
+} from '../src/lib/results/analytics';
+import { GOLD_FIELDS_H1_2026_DOCUMENT, seedGoldFieldsResults } from './seed-results-document';
 import { createDatabaseBackup, runRestoreDrill } from './backup-restore-drill';
 import { checkLoginRateLimit, checkApiRateLimit, resetRateLimit } from '../src/lib/security/rateLimiter';
 import { createSensAnnouncement, listSensAnnouncements, deleteSensAnnouncement } from '../src/lib/ir/sensService';
@@ -42,7 +50,7 @@ async function test(suite: string, name: string, fn: () => Promise<void>) {
   }
 }
 
-function assert(condition: boolean, msg: string) {
+function assert(condition: boolean, msg: string): asserts condition {
   if (!condition) throw new Error(msg);
 }
 
@@ -890,6 +898,89 @@ async function runAll() {
     await db.execute({ sql: `DELETE FROM revisions WHERE id = ?`, args: [testRevId] });
     await db.execute({ sql: `DELETE FROM content_records WHERE id = ?`, args: [testRecordId] });
     await db.execute({ sql: `DELETE FROM users WHERE id IN (?, ?)`, args: [authorId, reviewerId] });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SUITE 21: INTERACTIVE RESULTS VIEWER & FINANCIAL ANALYTICS ENGINE
+  // ─────────────────────────────────────────────────────────────
+  console.log('\n📦 SUITE 21: Interactive Results Viewer & Financial Analytics Engine');
+
+  await test('Financial Analytics', 'Balance Sheet equation validator confirms Assets = Liabilities + Equity with zero variance', async () => {
+    const validation = validateBalanceSheetEquation(GOLD_FIELDS_H1_2026_DOCUMENT);
+    assert(validation.balanced === true, 'Gold Fields H1 2026 balance sheet must be mathematically balanced');
+    assert(validation.totalAssets === 10500, 'Total assets must equal 10,500 US$m');
+    assert(validation.totalEquityAndLiabilities === 10500, 'Total equity and liabilities must equal 10,500 US$m');
+    assert(validation.variance === 0, 'Variance must be exactly 0 US$m');
+
+    // Test corrupted / imbalanced balance sheet
+    const corruptedDoc = structuredClone(GOLD_FIELDS_H1_2026_DOCUMENT);
+    const bs = corruptedDoc.statements.find((s) => s.id === 'balance-sheet');
+    const totAssetsRow = bs?.rows.find((r) => r.id === 'tot_assets');
+    if (totAssetsRow) totAssetsRow.cells[0] = '12,000.0';
+
+    const corruptedValidation = validateBalanceSheetEquation(corruptedDoc);
+    assert(corruptedValidation.balanced === false, 'Imbalanced balance sheet must be flagged as unbalanced');
+    assert(corruptedValidation.variance === 1500, 'Variance of 1,500 US$m must be detected');
+  });
+
+  await test('Financial Analytics', 'Institutional ratio engine derives Gross Margin, Operating Margin, ROA, and Debt-to-Equity', async () => {
+    const ratios = calculateKeyRatios(GOLD_FIELDS_H1_2026_DOCUMENT);
+    assert(ratios.length >= 4, 'Must compute at least 4 corporate financial ratios');
+
+    const opMargin = ratios.find((r) => r.id === 'operating_margin');
+    assert(!!opMargin, 'Operating Margin ratio must be present');
+    assert(opMargin!.numericValue > 36 && opMargin!.numericValue < 37, 'Operating margin must be ~36.8%');
+    assert(opMargin!.status === 'healthy', '36.8% margin should have healthy status against >20% benchmark');
+
+    const grossMargin = ratios.find((r) => r.id === 'gross_margin');
+    assert(!!grossMargin, 'Gross Margin ratio must be present');
+    assert(grossMargin!.numericValue > 40 && grossMargin!.numericValue < 41, 'Gross profit margin must be ~40.6%');
+
+    const roa = ratios.find((r) => r.id === 'roa');
+    assert(!!roa, 'Return on Assets must be present');
+    assert(roa!.numericValue > 8 && roa!.numericValue < 9.5, 'ROA must be ~8.9%');
+
+    const dToE = ratios.find((r) => r.id === 'debt_to_equity');
+    assert(!!dToE, 'Debt-to-equity ratio must be present');
+    assert(dToE!.numericValue < 0.35, 'Debt-to-equity ratio must be conservative (< 0.35x)');
+  });
+
+  await test('Financial Analytics', 'RFC 4180 CSV engine generates compliant spreadsheet export with escaping and parenthetical negatives', async () => {
+    const incomeStatement = GOLD_FIELDS_H1_2026_DOCUMENT.statements[0];
+    const csv = generateStatementCsv(incomeStatement, GOLD_FIELDS_H1_2026_DOCUMENT.issuer);
+
+    assert(csv.includes('"Gold Fields Limited" - "Condensed Consolidated Income Statement"'), 'CSV header must include issuer and statement title');
+    assert(csv.includes('"US$ Million","H1 2026","H1 2025","% Change"'), 'CSV must contain standard table column headers');
+    assert(csv.includes('"Revenue","2,548.0","2,105.0","+21.0%"'), 'CSV row values must be quoted and comma-separated');
+    assert(csv.includes('"(1,128.0)"'), 'Negative numbers in parentheses must be preserved in CSV');
+  });
+
+  await test('Financial Analytics', 'Segmental mining extraction accurately computes regional revenue contributions and percentages', async () => {
+    const segments = extractSegmentalBreakdown(GOLD_FIELDS_H1_2026_DOCUMENT);
+    assert(segments.length === 4, 'Must extract 4 mining operational segments');
+    const southDeep = segments.find((s) => s.name === 'South Deep');
+    assert(!!southDeep, 'South Deep segment must be present');
+    assert(southDeep!.revenue === 420 && southDeep!.percentage === 16, 'South Deep segment must be 420 US$m (16%)');
+    const totalPercentage = segments.reduce((sum, s) => sum + s.percentage, 0);
+    assert(totalPercentage === 100, 'Segment percentages must sum to 100%');
+  });
+
+  await test('Multi-Tenant Results Store', 'Multi-tenant isolation and published slug retrieval function securely for investor portal', async () => {
+    // Seed results document
+    await seedGoldFieldsResults();
+
+    // 1. Retrieve published document by slug
+    const published = await getPublishedResultsBySlug('gold-fields-interim-h1-2026');
+    assert(!!published, 'Published results document must be retrievable by public slug');
+    assert(published!.document.issuer === 'Gold Fields Limited', 'Retrieved document issuer must match Gold Fields Limited');
+    assert(published!.clientId === 'client_goldfields', 'Document must be bound to client_goldfields');
+
+    // 2. Multi-tenant listing isolation
+    const gfDocs = await listResultsDocuments('client_goldfields');
+    assert(gfDocs.some((d) => d.slug === 'gold-fields-interim-h1-2026'), 'Gold Fields tenant query must return its own document');
+
+    const vodacomDocs = await listResultsDocuments('client_vodacom_group');
+    assert(!vodacomDocs.some((d) => d.slug === 'gold-fields-interim-h1-2026'), 'Vodacom tenant must NOT receive Gold Fields results documents');
   });
 
   // ─────────────────────────────────────────────────────────────

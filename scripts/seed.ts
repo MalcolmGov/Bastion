@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { hashPassword } from '../src/lib/auth/password';
+import { seedGoldFieldsResults } from './seed-results-document';
 
 function hashContent(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -389,6 +390,9 @@ async function main() {
       now
     ]
   });
+
+  // 15. Seed Gold Fields H1 2026 Interactive Results Document
+  await seedGoldFieldsResults();
 
   console.log('--- Gold Fields Studio Database Successfully Provisioned & Seeded ---');
 }

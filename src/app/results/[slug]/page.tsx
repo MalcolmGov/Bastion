@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ResultsPublication } from '@/components/results/ResultsPublication';
+import { InteractiveResultsViewer } from '@/components/results/InteractiveResultsViewer';
 import { getPublishedResultsBySlug } from '@/lib/results/store';
 
 export const dynamic = 'force-dynamic';
@@ -16,11 +16,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function PublishedResultsPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PublishedResultsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ format?: string }>;
+}) {
   const { slug } = await params;
+  const sp = searchParams ? await searchParams : {};
   const stored = await getPublishedResultsBySlug(slug);
   if (!stored) notFound();
-  if (stored.document.presentationHtml) {
+
+  if (sp.format === 'document' && stored.document.presentationHtml) {
     return (
       <iframe
         title={stored.title}
@@ -29,5 +37,12 @@ export default async function PublishedResultsPage({ params }: { params: Promise
       />
     );
   }
-  return <ResultsPublication document={stored.document} published />;
+
+  return (
+    <InteractiveResultsViewer
+      document={stored.document}
+      slug={slug}
+      published={stored.status === 'published'}
+    />
+  );
 }
