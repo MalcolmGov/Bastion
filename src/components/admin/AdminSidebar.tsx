@@ -219,9 +219,7 @@ export function AdminSidebar() {
           '/admin/results',
           'PDF to HTML',
           Table,
-          pathname.startsWith('/admin/results'),
-          'New',
-          'bg-violet-100 dark:bg-violet-950/80 text-violet-700 dark:text-violet-300 border border-violet-200'
+          pathname.startsWith('/admin/results')
         )}
       </div>
     </div>
@@ -325,18 +323,8 @@ export function AdminSidebar() {
             <>
               <div>
                 {!isCollapsed && (
-                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider flex items-center justify-between" style={{ color: accentColor }}>
-                    <span>{activeClient?.name || 'Website'} Content</span>
-                    <span 
-                      style={{
-                        backgroundColor: `${primaryColor}15`,
-                        color: primaryColor,
-                        borderColor: `${primaryColor}30`
-                      }}
-                      className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase border"
-                    >
-                      Live
-                    </span>
+                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {activeClient?.name || 'Corporate'} Content
                   </div>
                 )}
                 <div className="space-y-1">
@@ -344,16 +332,16 @@ export function AdminSidebar() {
                   {renderItem('/admin/pages', 'Pages & Navigation', FileText, pathname === '/admin/pages')}
                   {isGoldFields ? (
                     <>
-                      {renderItem('/admin/operations', 'Mining Operations', Compass, pathname.startsWith('/admin/operations'), '10', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
-                      {renderItem('/admin/reports', 'Financial Results', FileSpreadsheet, pathname.startsWith('/admin/reports'), '11', 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200')}
-                      {renderItem('/admin/sustainability', '2030 ESG Targets', Leaf, pathname.startsWith('/admin/sustainability'), 'ESG', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
+                      {renderItem('/admin/operations', 'Mining Operations', Compass, pathname.startsWith('/admin/operations'))}
+                      {renderItem('/admin/reports', 'Financial Results', FileSpreadsheet, pathname.startsWith('/admin/reports'))}
+                      {renderItem('/admin/sustainability', '2030 ESG Targets', Leaf, pathname.startsWith('/admin/sustainability'))}
                     </>
                   ) : (
                     <>
                       {renderItem('/admin/news', 'News & Articles', Newspaper, pathname.startsWith('/admin/news'))}
                     </>
                   )}
-                  {renderItem('/admin/learn', 'Platform Learning Hub', BookOpen, pathname.startsWith('/admin/learn'), 'Guide', 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200')}
+                  {renderItem('/admin/learn', 'Platform Learning Hub', BookOpen, pathname.startsWith('/admin/learn'))}
                 </div>
               </div>
 
@@ -371,7 +359,7 @@ export function AdminSidebar() {
                   </div>
                 )}
                 <div className="space-y-1">
-                  {renderItem('/admin/editor', 'Visual Page Editor', Edit3, pathname.startsWith('/admin/editor'), 'Studio', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
+                  {renderItem('/admin/editor', 'Visual Page Editor', Edit3, pathname.startsWith('/admin/editor'))}
                   {renderItem('/admin/analytics', 'Audience & Analytics', BarChart3, pathname.startsWith('/admin/analytics'))}
                   {renderItem('/admin/media', 'Media Library', FolderOpen, pathname.startsWith('/admin/media'))}
                 </div>
@@ -387,11 +375,11 @@ export function AdminSidebar() {
                   </div>
                 )}
                 <div className="space-y-1">
-                  {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'), 'Drops', 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800')}
-                  {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'), 'King IV', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
-                  {renderItem('/admin/ethics', 'Ethics & Whistleblower', Scale, pathname.startsWith('/admin/ethics'), 'Safe', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
-                  {renderItem('/admin/tenders', 'Tenders & Procurement', Briefcase, pathname.startsWith('/admin/tenders'), 'RFP', 'bg-gold/15 text-gold-dark dark:text-gold-light border border-gold/30')}
-                  {renderItem('/admin/tasks', 'Approvals & Sign-Off', Send, pathname.startsWith('/admin/tasks'), 'Queue', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
+                  {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'))}
+                  {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'))}
+                  {renderItem('/admin/ethics', 'Ethics & Whistleblower', Scale, pathname.startsWith('/admin/ethics'))}
+                  {renderItem('/admin/tenders', 'Tenders & Procurement', Briefcase, pathname.startsWith('/admin/tenders'))}
+                  {renderItem('/admin/tasks', 'Approvals & Sign-Off', Send, pathname.startsWith('/admin/tasks'))}
                   {renderItem('/admin/users', 'Authorized Editors', Users, pathname.startsWith('/admin/users'))}
                 </div>
               </div>
@@ -408,10 +396,10 @@ export function AdminSidebar() {
                 )}
                 <div className="space-y-1">
                   {renderItem('/admin', 'Overview', LayoutDashboard, pathname === '/admin')}
-                  {renderItem('/admin/clients', 'Clients & Websites', Users, pathname.startsWith('/admin/clients'), String(clients.length))}
-                  {renderItem('/admin/onboard', 'Onboard Client', UserPlus, pathname.startsWith('/admin/onboard'), 'Wizard', 'bg-blue-100 dark:bg-sky-950 text-bastion-blue dark:text-sky-300 border border-blue-200 dark:border-sky-800')}
+                  {renderItem('/admin/clients', 'Clients & Websites', Users, pathname.startsWith('/admin/clients'))}
+                  {renderItem('/admin/onboard', 'Onboard Client', UserPlus, pathname.startsWith('/admin/onboard'))}
                   {renderItem('/admin/billing', 'Commercial & Billing', CreditCard, pathname.startsWith('/admin/billing'))}
-                  {renderItem('/admin/sens', 'JSE SENS & IR Command', Newspaper, pathname.startsWith('/admin/sens'), 'JSE', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
+                  {renderItem('/admin/sens', 'JSE SENS & IR Command', Newspaper, pathname.startsWith('/admin/sens'))}
                 </div>
               </div>
 
@@ -429,8 +417,8 @@ export function AdminSidebar() {
                   </div>
                 )}
                 <div className="space-y-1">
-                  {renderItem('/admin/brand', 'Brand DNA & Kits', Palette, pathname.startsWith('/admin/brand'), 'DNA', 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800')}
-                  {renderItem('/admin/editor', 'Visual Page Editor', Edit3, pathname.startsWith('/admin/editor'), 'Zones', 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800')}
+                  {renderItem('/admin/brand', 'Brand DNA & Kits', Palette, pathname.startsWith('/admin/brand'))}
+                  {renderItem('/admin/editor', 'Visual Page Editor', Edit3, pathname.startsWith('/admin/editor'))}
                   {renderItem('/admin/create', 'Canvas Site Builder', Sparkles, pathname.startsWith('/admin/create'))}
                   {renderItem('/admin/blueprints', 'Blueprints & Templates', Layers, pathname.startsWith('/admin/blueprints'))}
                   {renderItem('/admin/design-system', 'Tokens & Tokens CSS', SlidersHorizontal, pathname.startsWith('/admin/design-system'))}
@@ -447,11 +435,11 @@ export function AdminSidebar() {
                   </div>
                 )}
                 <div className="space-y-1">
-                  {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'), 'Drops', 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800')}
-                  {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'), 'King IV', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
-                  {renderItem('/admin/ethics', 'Ethics & Whistleblower', Scale, pathname.startsWith('/admin/ethics'), 'Safe', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
-                  {renderItem('/admin/tenders', 'Tenders & Procurement', Briefcase, pathname.startsWith('/admin/tenders'), 'RFP', 'bg-gold/15 text-gold-dark dark:text-gold-light border border-gold/30')}
-                  {renderItem('/admin/tasks', 'Reviews & Publishing', Send, pathname.startsWith('/admin/tasks'), '2', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
+                  {renderItem('/admin/releases', 'Content Releases', CalendarCheck, pathname.startsWith('/admin/releases'))}
+                  {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'))}
+                  {renderItem('/admin/ethics', 'Ethics & Whistleblower', Scale, pathname.startsWith('/admin/ethics'))}
+                  {renderItem('/admin/tenders', 'Tenders & Procurement', Briefcase, pathname.startsWith('/admin/tenders'))}
+                  {renderItem('/admin/tasks', 'Reviews & Publishing', Send, pathname.startsWith('/admin/tasks'))}
                   {renderItem('/admin/users', 'Team & Access Control', UserPlus, pathname.startsWith('/admin/users'))}
                 </div>
               </div>
@@ -466,12 +454,12 @@ export function AdminSidebar() {
                   </div>
                 )}
                 <div className="space-y-1">
-                  {renderItem('/admin/incidents', 'Incidents & SRE Audit', ShieldAlert, pathname.startsWith('/admin/incidents'), 'SRE', 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200')}
-                  {renderItem('/admin/health', 'Website Health', Activity, pathname.startsWith('/admin/health'), '100%', 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200')}
-                  {renderItem('/admin/api-keys', 'AI API Keys', Key, pathname.startsWith('/admin/api-keys'), 'NEW', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200')}
+                  {renderItem('/admin/incidents', 'Incidents & SRE Audit', ShieldAlert, pathname.startsWith('/admin/incidents'))}
+                  {renderItem('/admin/health', 'Website Health', Activity, pathname.startsWith('/admin/health'))}
+                  {renderItem('/admin/api-keys', 'AI API Keys', Key, pathname.startsWith('/admin/api-keys'))}
                   {renderItem('/admin/analytics', 'Analytics', BarChart3, pathname.startsWith('/admin/analytics'))}
-                  {renderItem('/admin/sandbox', 'API Sandbox', Terminal, pathname.startsWith('/admin/sandbox'), 'Live', 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200')}
-                  {renderItem('/api/mcp', 'MCP Server Hub', Bot, false, 'MCP', 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200', true)}
+                  {renderItem('/admin/sandbox', 'API Sandbox', Terminal, pathname.startsWith('/admin/sandbox'))}
+                  {renderItem('/api/mcp', 'MCP Server Hub', Bot, false, undefined, undefined, true)}
                   {renderItem('/admin/settings', 'Headless & Webhooks', Settings, pathname.startsWith('/admin/settings'))}
                 </div>
               </div>
