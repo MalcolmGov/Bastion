@@ -34,18 +34,29 @@ function mapModelId(provider: string, modelId: string): string {
   return modelId;
 }
 
+const URL_ATTRS = ['href', 'src', 'xlink:href', 'action', 'formaction', 'poster', 'data', 'srcset', 'background'];
+
+/** Browsers ignore tabs, newlines and other control characters inside a URL scheme, so strip them before checking. */
+function isUnsafeUrl(value: string): boolean {
+  const normalised = value.replace(/[\u0000-\u0020\u007f-\u009f]/g, '').toLowerCase();
+  if (/^(javascript|vbscript):/.test(normalised)) return true;
+  if (normalised.startsWith('data:') && !/^data:image\/(png|jpe?g|gif|webp|avif);/.test(normalised)) return true;
+  return false;
+}
+
 export function sanitizePublicationHtml(html: string): string {
   const $ = cheerio.load(html);
-  $('script, iframe, object, embed, base, link, meta[http-equiv="refresh"]').remove();
+  $('script, iframe, frame, frameset, object, embed, applet, base, link, form, input, button, textarea, select, meta[http-equiv]').remove();
   $('*').each((_, element) => {
     const node = $(element);
     const attribs = (element as { attribs?: Record<string, string> }).attribs || {};
     for (const name of Object.keys(attribs)) {
-      if (name.toLowerCase().startsWith('on')) node.removeAttr(name);
-    }
-    for (const attr of ['href', 'src', 'xlink:href']) {
-      const value = node.attr(attr);
-      if (value && /^\s*javascript:/i.test(value)) node.removeAttr(attr);
+      const lower = name.toLowerCase();
+      if (lower.startsWith('on') || lower === 'srcdoc') {
+        node.removeAttr(name);
+        continue;
+      }
+      if (URL_ATTRS.includes(lower) && isUnsafeUrl(attribs[name] || '')) node.removeAttr(name);
     }
   });
   const rendered = $.html() || '';
