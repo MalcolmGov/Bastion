@@ -11,7 +11,7 @@ import { ClientSandboxBanner } from '@/components/admin/ClientSandboxBanner';
 import { DashboardCustomizerProvider } from '@/components/admin/DashboardCustomizerProvider';
 import { ZaraVoiceCopilot } from '@/components/copilot/ZaraVoiceCopilot';
 
-export function FloatingCopilotButton() {
+function FloatingCopilotButton() {
   return <ZaraVoiceCopilot />;
 }
 
@@ -24,6 +24,12 @@ export default function AdminRootLayout({
 }) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/admin/login';
+
+  if (pathname === '/admin/editor/preview') return <>{children}</>;
+
+  if (pathname === '/admin/editor') {
+    return <ThemeProvider><AdminAuthProvider><StudioWorkspaceProvider><DashboardCustomizerProvider><div className="h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">{children}</div></DashboardCustomizerProvider></StudioWorkspaceProvider></AdminAuthProvider></ThemeProvider>;
+  }
 
   if (isLoginPage) {
     return (

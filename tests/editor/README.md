@@ -1,0 +1,7 @@
+Run `npm run test:editor` for isolated regression tests. The harness uses the actual authorization helpers, routes, AI proposal validator, and database SQL with a fresh in-memory libSQL database. Authentication and the database connection are replaced; provider responses are mocked. Tests never use live AI credentials.
+
+Coverage: metadata preservation; version conflicts; atomic composition/history/audit writes; published baselines retained through drafts and release publication; tenant and role restrictions; version restoration; complete AI JSON validation; nested content preservation; provider failures without fabricated changes.
+
+Browser verification should use a disposable database and an authenticated client editor account. Check direct canvas selection, content/image editing, undo/redo, failed saves, edits during saving, version conflicts, switching pages, 1280/768/375 iframe widths, small-screen panels, preview, publication confirmation, and the assistant's review/apply/undo flow. Mock provider success and failure responses for repeatability, then separately smoke-test the deployment's configured live provider.
+
+AI chat reuses the existing `bastion_ai_keys_v1` browser credentials and server environment credentials used by AI Polish. Server credential availability is returned without the keys. Corporate users see chat; agency users can open the existing AI settings. Chat changes are proposals only, checked against the section snapshot before application. They use editor history and remain subject to normal draft saving and publication.

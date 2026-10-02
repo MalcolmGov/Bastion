@@ -63,12 +63,19 @@ import {
   TrendingUp,
   ShieldCheck
 } from 'lucide-react';
+import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
+import { isAgencyUser } from '@/lib/auth/roles';
+import { EditorAssistant } from '@/components/studio/editor/EditorAssistant';
+import { EditorContentFields } from '@/components/studio/editor/EditorContentFields';
+import { EditorDialog } from '@/components/studio/editor/EditorDialog';
+import { EditorToolbar } from '@/components/studio/editor/EditorToolbar';
+import { EditorSectionList } from '@/components/studio/editor/EditorSectionList';
+import { ResponsiveEditorCanvas } from '@/components/studio/editor/ResponsiveEditorCanvas';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { StudioComponentRenderer } from '@/components/studio/StudioComponentRenderer';
 import { SectionLibraryDrawer } from '@/components/studio/SectionLibraryDrawer';
 import { DynamicZonesBuilder } from '@/components/studio/DynamicZonesBuilder';
 import { InEditorContentAgent } from '@/components/studio/InEditorContentAgent';
-import { MultiModelAiCodingChat } from '@/components/studio/MultiModelAiCodingChat';
 import { ApiKeysTab } from '@/components/studio/ApiKeysTab';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, getLocaleMeta } from '@/lib/i18n/locales';
@@ -224,9 +231,15 @@ const PADDING_OPTIONS = [
 function VisualWebsiteEditorContent() {
   const searchParams = useSearchParams();
   const siteSlugParam = searchParams.get('siteSlug') || searchParams.get('siteId');
-  const { activeClient, activeSite, setActiveClientId, setActiveSiteId } = useStudioWorkspace();
+  const { activeClient, activeSite, setActiveClientId, setActiveSiteId, isLoading: workspaceLoading } = useStudioWorkspace();
 
-  const siteSlug = siteSlugParam || activeSite?.slug || 'apex-advisory';
+  const { user, hasPerm } = useAdminAuth();
+  const [siteOverride, setSiteOverride] = useState(siteSlugParam);
+  const siteSlug = siteOverride || activeSite?.id || '';
+  const workspaceActions = useRef({ setActiveClientId, setActiveSiteId });
+  workspaceActions.current = { setActiveClientId, setActiveSiteId };
+  const workspaceSelection = useRef({clientId: activeClient?.id, siteId: activeSite?.id});
+  workspaceSelection.current = {clientId: activeClient?.id, siteId: activeSite?.id};
 
   // Responsive Viewport: 'desktop' | 'tablet' | 'mobile'
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -235,7 +248,7 @@ function VisualWebsiteEditorContent() {
   const [canvasTheme, setCanvasTheme] = useState<'auto' | 'light' | 'dark'>('auto');
 
   // Active page
-  const [activePageSlug, setActivePageSlug] = useState('home');
+  const [activePageSlug, setActivePageSlug] = useState(searchParams.get('pageSlug') || 'home');
 
   // Loaded site, brand kit, and compositions
   const [siteData, setSiteData] = useState<any>(null);
@@ -269,7 +282,22 @@ function VisualWebsiteEditorContent() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploySuccess, setDeploySuccess] = useState(false);
   const [savedTime, setSavedTime] = useState<string | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [savedSections, setSavedSections] = useState('[]');
+  const hasUnsavedChanges = JSON.stringify(sections) !== savedSections;
+  const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+  const [pageSlugs, setPageSlugs] = useState<string[]>(['home']);
+  const [pageTitle, setPageTitle] = useState('');
+  const [pageMeta, setPageMeta] = useState<any>(null);
+  const [pageLayout, setPageLayout] = useState<DesignCollectionId>('contemporary');
+  const [isPreview, setIsPreview] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const documentKey = `${siteSlug}:${activePageSlug}`;
+  const currentKey = useRef(documentKey);
+  currentKey.current = documentKey;
+  const loadedKey = useRef('');
+  const saveInFlight = useRef(false);
 
   // AI Assistant Panel state
   const [aiPrompt, setAiPrompt] = useState('');
@@ -281,7 +309,7 @@ function VisualWebsiteEditorContent() {
   const [isLocaleMenuOpen, setIsLocaleMenuOpen] = useState(false);
 
   // Dynamic Zones Builder Left Panel Mode: 'dynamic_zones' | 'outline' | 'brand_vault'
-  const [leftPanelMode, setLeftPanelMode] = useState<'dynamic_zones' | 'outline' | 'brand_vault'>('dynamic_zones');
+  const [leftPanelMode, setLeftPanelMode] = useState<'dynamic_zones' | 'outline' | 'brand_vault'>('outline');
   const [isContentAgentModalOpen, setIsContentAgentModalOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
@@ -289,6 +317,14 @@ function VisualWebsiteEditorContent() {
   // Collapsible panels & Zen focus mode
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [compactEditor, setCompactEditor] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1023px)');
+    const update = () => { setCompactEditor(media.matches); setIsLeftPanelOpen(!media.matches); setIsRightPanelOpen(!media.matches); };
+    update(); media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
   const [isZenMode, setIsZenMode] = useState(false);
 
   const toggleZenMode = () => {
@@ -307,8 +343,8 @@ function VisualWebsiteEditorContent() {
   };
 
   // Resizable Panel Widths (Mouse Drag & Expand/Collapse)
-  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(320);
-  const [rightPanelWidth, setRightPanelWidth] = useState<number>(440);
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(260);
+  const [rightPanelWidth, setRightPanelWidth] = useState<number>(340);
   const [isDraggingLeft, setIsDraggingLeft] = useState(false);
   const [isDraggingRight, setIsDraggingRight] = useState(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -407,44 +443,80 @@ function VisualWebsiteEditorContent() {
   const [rollbackStatusMsg, setRollbackStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [currentVersionNumber, setCurrentVersionNumber] = useState<number>(1);
 
-  // Fetch composition from API
+  // A late response from a previous website/page must never replace this document.
   useEffect(() => {
+    if (workspaceLoading || !siteSlug) return;
+    const controller = new AbortController();
+    const key = documentKey;
+    setIsLoadingPage(true);
+    setEditorError(null);
+    setSections([]);
+    setSavedSections('[]');
+    setSelectedSectionId(null);
+    setFocusedFieldPath(null);
+    setHistory([]);
+    setHistoryIndex(-1);
+    setSavedTime(null);
+    loadedKey.current = '';
     async function loadComposition() {
       try {
-        const res = await fetch(`/api/admin/editor?siteId=${siteSlug}&pageSlug=${activePageSlug}`);
-        if (res.ok) {
-          const data = await res.json();
-          setSiteData(data.site);
-          setBrandKit(data.brandKit);
-
-          if (data.site?.id && data.site?.clientId) {
-            setActiveClientId(data.site.clientId);
-            setActiveSiteId(data.site.id);
-          }
-
-          const comp = data.compositions?.find((c: any) => c.pageSlug === activePageSlug) || data.compositions?.[0];
-          if (comp?.sections) {
-            setSections(comp.sections);
-            setHistory([comp.sections]);
-            setHistoryIndex(0);
-            if (comp.sections[0]) {
-              setSelectedSectionId(comp.sections[0].id);
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to load editor composition:', err);
+        const res = await fetch(`/api/admin/editor?${new URLSearchParams({siteId: siteSlug, pageSlug: activePageSlug})}`, {signal: controller.signal, cache:'no-store'});
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'This page could not be loaded.');
+        if (controller.signal.aborted || currentKey.current !== key) return;
+        setSiteData(data.site);
+        setBrandKit(data.brandKit);
+        if (data.site.clientId !== workspaceSelection.current.clientId) workspaceActions.current.setActiveClientId(data.site.clientId);
+        if (data.site.id !== workspaceSelection.current.siteId) workspaceActions.current.setActiveSiteId(data.site.id);
+        const comp = data.compositions?.find((c: any) => c.pageSlug === activePageSlug);
+        const next = comp?.sections || [];
+        setPageSlugs([...new Set<string>(['home',...data.compositions.map((c: any) => c.pageSlug),activePageSlug])]);
+        setPageTitle(comp?.title || activePageSlug.replaceAll('-', ' '));
+        setPageMeta(comp?.meta || null);
+        setPageLayout(comp?.layoutCollection || data.site.designCollectionId || 'contemporary');
+        setCurrentVersionNumber(comp?.version || 0);
+        setSections(next);
+        setSavedSections(JSON.stringify(next));
+        setHistory([next]);
+        setHistoryIndex(0);
+        loadedKey.current = key;
+      } catch (error: any) {
+        if (!controller.signal.aborted && currentKey.current === key) setEditorError(error.message || 'This page could not be loaded.');
+      } finally {
+        if (!controller.signal.aborted && currentKey.current === key) setIsLoadingPage(false);
       }
     }
-    loadComposition();
-  }, [siteSlug, activePageSlug]);
+    void loadComposition();
+    return () => controller.abort();
+  }, [siteSlug, activePageSlug, documentKey, workspaceLoading, reload]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    const beforeNavigation = (event: MouseEvent) => {
+      const link = (event.target as HTMLElement).closest('a');
+      if (link && link.target !== '_blank' && !link.getAttribute('href')?.startsWith('#') && !window.confirm('Leave this page and discard your unsaved changes?')) { event.preventDefault(); event.stopPropagation(); }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('click', beforeNavigation, true);
+    return () => { window.removeEventListener('beforeunload',beforeUnload); document.removeEventListener('click',beforeNavigation,true); };
+  }, [hasUnsavedChanges]);
+
+  const switchDocument = (siteId: string, pageSlug: string) => {
+    if (saveInFlight.current || (hasUnsavedChanges && !window.confirm('Switch pages and discard your unsaved changes?'))) return;
+    setSiteOverride(siteId);
+    setActivePageSlug(pageSlug);
+    setSiteData(null);
+    setIsLoadingPage(true);
+    setEditorError(null);
+  };
 
   const updateSections = (newSections: SectionInstance[], recordHistory = true) => {
     setSections(newSections);
-    setHasUnsavedChanges(true);
     if (recordHistory) {
       const nextHistory = history.slice(0, historyIndex + 1);
       nextHistory.push(newSections);
+      if (nextHistory.length > 100) nextHistory.shift();
       setHistory(nextHistory);
       setHistoryIndex(nextHistory.length - 1);
     }
@@ -518,13 +590,14 @@ function VisualWebsiteEditorContent() {
   };
 
   const handleSelectField = (sectionId: string, fieldPath: string) => {
+    if (compactEditor) setIsLeftPanelOpen(false);
     setSelectedSectionId(sectionId);
     setFocusedFieldPath(fieldPath);
     if (!isRightPanelOpen) setIsRightPanelOpen(true);
     setInspectorTab('content');
 
     setTimeout(() => {
-      const el = document.getElementById(`field-${fieldPath}`);
+      const el = document.getElementById(`field-${fieldPath === 'image' ? 'bgImage' : fieldPath}`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.focus();
@@ -894,81 +967,53 @@ function VisualWebsiteEditorContent() {
     updateSections(updated);
   };
 
-  const handleSaveDraft = async () => {
-    setIsSaving(true);
+  const saveDocument = async (status: 'draft' | 'published') => {
+    if (saveInFlight.current || isLoadingPage || loadedKey.current !== documentKey) return false;
+    const key = documentKey;
+    const submittedSections = JSON.stringify(sections);
+    saveInFlight.current = true;
+    setIsSaving(status === 'draft');
+    setIsDeploying(status === 'published');
+    setEditorError(null);
     try {
-      const res = await fetch('/api/admin/editor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          siteId: siteData?.id || siteSlug,
-          pageSlug: activePageSlug,
-          sections,
-          title: `${siteData?.name || 'Site'} — ${activePageSlug.toUpperCase()}`,
-          status: 'draft'
-        })
-      });
-      if (res.ok) {
-        const saveRes = await res.json();
-        if (saveRes.version) {
-          setCurrentVersionNumber(Number(saveRes.version));
-        }
-        setSavedTime(new Date().toLocaleTimeString());
-        setHasUnsavedChanges(false);
-      }
-    } catch (err) {
-      console.warn('Save error:', err);
+      const res = await fetch('/api/admin/editor', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({siteId: siteData.id, pageSlug: activePageSlug, sections: JSON.parse(submittedSections), title: pageTitle, layoutCollection: pageLayout, meta: pageMeta, expectedVersion: currentVersionNumber, status}) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Your changes could not be saved. Please try again.');
+      if (currentKey.current !== key) return false;
+      setCurrentVersionNumber(data.version);
+      // Edits made while saving remain unsaved, because only the submitted snapshot is acknowledged.
+      setSavedSections(submittedSections);
+      setSavedTime(new Date(data.savedAt).toLocaleTimeString());
+      setDeploySuccess(status === 'published');
+      return true;
+    } catch (error: any) {
+      if (currentKey.current === key) setEditorError(error.message);
+      return false;
     } finally {
+      saveInFlight.current = false;
       setIsSaving(false);
-    }
-  };
-
-  const handleDeployPublish = async () => {
-    setIsDeploying(true);
-    setDeploySuccess(false);
-    try {
-      const res = await fetch('/api/admin/editor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          siteId: siteData?.id || siteSlug,
-          pageSlug: activePageSlug,
-          sections,
-          title: `${siteData?.name || 'Site'} — ${activePageSlug.toUpperCase()}`,
-          status: 'published'
-        })
-      });
-      if (res.ok) {
-        const saveRes = await res.json();
-        if (saveRes.version) {
-          setCurrentVersionNumber(Number(saveRes.version));
-        }
-        setSavedTime(new Date().toLocaleTimeString());
-        setHasUnsavedChanges(false);
-        setDeploySuccess(true);
-        setTimeout(() => setDeploySuccess(false), 4000);
-      } else {
-        const errData = await res.json();
-        alert(errData.error || 'Failed to deploy updates');
-      }
-    } catch (err) {
-      console.warn('Deploy error:', err);
-    } finally {
       setIsDeploying(false);
     }
   };
+  const handleSaveDraft = () => saveDocument('draft');
+  const handleDeployPublish = () => setPublishOpen(true);
 
   // Open Content Release Bundling Modal
   const handleOpenReleaseModal = async () => {
+    if (hasUnsavedChanges && !(await saveDocument('draft'))) return;
+    const key = documentKey;
     setIsReleaseModalOpen(true);
+    setAvailableReleases([]);
+    setSelectedReleaseId('');
     setReleaseStatusMsg(null);
     try {
       const res = await fetch(`/api/admin/releases?siteId=${siteData?.id || siteSlug}`);
       if (res.ok) {
         const data = await res.json();
+        if (currentKey.current !== key) return;
         const nonPublished = (data.releases || []).filter((r: any) => r.status !== 'published');
         setAvailableReleases(nonPublished);
-        if (nonPublished.length > 0 && !selectedReleaseId) {
+        if (nonPublished.length > 0) {
           setSelectedReleaseId(nonPublished[0].id);
         }
       }
@@ -1045,6 +1090,9 @@ function VisualWebsiteEditorContent() {
     if (!confirm(`Are you sure you want to roll back this page to Version ${targetVersion}? A new version will be created preserving your audit history.`)) {
       return;
     }
+    if (saveInFlight.current) return;
+    const key = documentKey;
+    saveInFlight.current = true;
     setIsRollingBack(true);
     setRollbackStatusMsg(null);
     try {
@@ -1055,14 +1103,20 @@ function VisualWebsiteEditorContent() {
         body: JSON.stringify({
           siteId,
           pageSlug: activePageSlug,
-          targetVersion
+          targetVersion,
+          expectedVersion: currentVersionNumber
         })
       });
       const data = await res.json();
+      if (currentKey.current !== key) return;
       if (res.ok) {
         setRollbackStatusMsg({ type: 'success', text: `Successfully restored Version ${targetVersion} as Version ${data.newVersion}!` });
         if (data.sections) {
           updateSections(data.sections, true);
+          setSavedSections(JSON.stringify(data.sections));
+          setPageTitle(data.title);
+          setPageMeta(data.meta);
+          setPageLayout(data.layoutCollection);
         }
         if (data.newVersion) {
           setCurrentVersionNumber(Number(data.newVersion));
@@ -1076,6 +1130,7 @@ function VisualWebsiteEditorContent() {
     } catch (err: any) {
       setRollbackStatusMsg({ type: 'error', text: err.message || 'Rollback error' });
     } finally {
+      saveInFlight.current = false;
       setIsRollingBack(false);
     }
   };
@@ -1175,307 +1230,34 @@ function VisualWebsiteEditorContent() {
   };
 
   const selectedSection = sections.find(s => s.id === selectedSectionId);
-  const collection: DesignCollectionId = (siteData?.designCollectionId as any) || 'contemporary';
+  const collection: DesignCollectionId = pageLayout || 'contemporary';
   const registeredComp = selectedSection ? COMPONENT_REGISTRY[selectedSection.componentId] : null;
 
   return (
-    <div className="h-[calc(100vh-100px)] flex flex-col bg-slate-100 dark:bg-[#070B12] -m-6 lg:-m-8 select-none">
-      {/* Top Editor Toolbar */}
-      <div className="h-14 bg-white dark:bg-[#0A0D14] border-b border-slate-200 dark:border-[#1E293B] px-4 lg:px-6 flex items-center justify-between z-30 shrink-0 gap-3">
-        <div className="flex items-center space-x-2.5 text-xs min-w-0">
-          {/* Main Bastion Sidebar Toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
-              }
-            }}
-            title="Toggle Bastion Navigation Sidebar (⌘B)"
-            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0 cursor-pointer"
-          >
-            <Sidebar className="w-4 h-4" />
-          </button>
-
-          <div className="flex items-center space-x-2 truncate">
-            <span className="font-bold text-slate-900 dark:text-white tracking-wide truncate">{siteData?.name || 'Bastion Editor'}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-blue-50 dark:bg-sky-950 text-bastion-blue dark:text-sky-400 border border-blue-200 dark:border-sky-800 shrink-0">
-              {collection.toUpperCase()}
-            </span>
-          </div>
-
-          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">|</span>
-
-          {/* Page Selector Pill */}
-          <div className="hidden md:flex space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-lg border border-slate-200 dark:border-[#232F42] shrink-0">
-            {['home', 'about', 'services', 'contact'].map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setActivePageSlug(p)}
-                className={`px-2.5 py-1 rounded text-[11px] font-semibold capitalize transition ${
-                  activePageSlug === p
-                    ? 'bg-bastion text-white dark:bg-sky-500 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-
-          {/* Compact Multi-Locale (i18n) Dropdown */}
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsLocaleMenuOpen(!isLocaleMenuOpen)}
-              title="Change active preview locale"
-              className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-[#141C2A] hover:bg-slate-200 dark:hover:bg-[#1E293B] border border-slate-200 dark:border-[#232F42] text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center space-x-1.5 transition cursor-pointer"
-            >
-              <Globe className="w-3.5 h-3.5 text-slate-400" />
-              <span>{getLocaleMeta(selectedLocale).flag}</span>
-              <span className="uppercase font-mono">{selectedLocale}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
-
-            {isLocaleMenuOpen && (
-              <div className="absolute left-0 mt-1 w-44 rounded-xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-50 animate-in fade-in-50 zoom-in-95">
-                <div className="px-3 py-1 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800/60">
-                  Select Language
-                </div>
-                {SUPPORTED_LOCALES.map((loc) => (
-                  <button
-                    key={loc.code}
-                    type="button"
-                    onClick={() => {
-                      setSelectedLocale(loc.code);
-                      setIsLocaleMenuOpen(false);
-                    }}
-                    className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800/70 transition cursor-pointer ${
-                      selectedLocale === loc.code ? 'text-sky-500 font-bold bg-sky-50/50 dark:bg-sky-950/30' : 'text-slate-600 dark:text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <span>{loc.flag}</span>
-                      <span>{loc.name}</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-slate-400 uppercase">{loc.code}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Center: Viewport & Panel Controls */}
-        <div className="flex items-center space-x-2">
-          {/* Viewport Width Controls */}
-          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-xl border border-slate-200 dark:border-[#232F42]">
-            <button
-              type="button"
-              onClick={() => setViewport('desktop')}
-              title="Desktop Viewport (1440px)"
-              className={`p-1.5 rounded-lg transition ${
-                viewport === 'desktop' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Monitor className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewport('tablet')}
-              title="Tablet Viewport (768px)"
-              className={`p-1.5 rounded-lg transition ${
-                viewport === 'tablet' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Tablet className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewport('mobile')}
-              title="Mobile Viewport (375px)"
-              className={`p-1.5 rounded-lg transition ${
-                viewport === 'mobile' ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Smartphone className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsQrModalOpen(true)}
-              title="Executive Phone Preview (Scan QR code)"
-              className="p-1.5 rounded-lg text-emerald-400 hover:text-white hover:bg-emerald-500/20 transition flex items-center space-x-1 cursor-pointer"
-            >
-              <QrCode className="w-4 h-4" />
-              <span className="hidden xl:inline text-[10px] font-bold">QR</span>
-            </button>
-          </div>
-
-          {/* Canvas Theme Toggle (Light / Dark) */}
-          <button
-            type="button"
-            onClick={() => setCanvasTheme(isCanvasDark ? 'light' : 'dark')}
-            title={isCanvasDark ? 'Switch Canvas Preview to Light Mode' : 'Switch Canvas Preview to Dark Mode'}
-            className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
-              isCanvasDark
-                ? 'bg-slate-800 border-slate-700 text-sky-300 hover:text-white'
-                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            {isCanvasDark ? <Moon className="w-3.5 h-3.5 text-sky-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
-            <span className="hidden md:inline">{isCanvasDark ? 'Dark Canvas' : 'Light Canvas'}</span>
-          </button>
-
-          {/* Panel Visibility & Focus Controls */}
-          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-[#141C2A] p-1 rounded-xl border border-slate-200 dark:border-[#232F42]">
-            <button
-              type="button"
-              onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
-              title={isLeftPanelOpen ? 'Collapse Dynamic Zones Panel' : 'Expand Dynamic Zones Panel'}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
-                isLeftPanelOpen ? 'bg-sky-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">Blocks</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleZenMode}
-              title={isZenMode ? 'Exit Zen Focus Mode' : 'Zen Focus Mode (Hide Panels)'}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
-                isZenMode ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">{isZenMode ? 'Exit Zen' : 'Zen'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-              title={isRightPanelOpen ? 'Collapse Inspector Panel' : 'Expand Inspector Panel'}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
-                isRightPanelOpen ? 'bg-sky-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Sliders className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">Inspector</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Undo/Redo & Save Actions */}
-        <div className="flex items-center space-x-3 text-xs">
-          <div className="flex items-center space-x-1">
-            <button
-              type="button"
-              disabled={historyIndex <= 0}
-              onClick={handleUndo}
-              title="Undo change"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400"
-            >
-              <Undo2 className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              disabled={historyIndex >= history.length - 1}
-              onClick={handleRedo}
-              title="Redo change"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400"
-            >
-              <Redo2 className="w-4 h-4" />
-            </button>
-          </div>
-
-          <span className="text-slate-600">|</span>
-
-          {hasUnsavedChanges ? (
-            <span className="text-[11px] text-amber-400 font-medium">Unsaved changes</span>
-          ) : savedTime ? (
-            <span className="text-[11px] text-slate-500 font-mono">Saved at {savedTime}</span>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            disabled={isSaving || isDeploying}
-            className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5 cursor-pointer"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span>{isSaving ? 'Saving...' : 'Save Draft'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDeployPublish}
-            disabled={isDeploying || isSaving}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5 cursor-pointer"
-            title="Deploy and publish live website updates with zero code"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>{isDeploying ? 'Deploying...' : deploySuccess ? 'Deployed Live!' : 'Deploy Updates'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleOpenVersionModal}
-            title="Page Version History & Rollback"
-            className="px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer border bg-slate-100 dark:bg-[#141C2A] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#232F42] hover:text-white hover:border-slate-600"
-          >
-            <History className="w-3.5 h-3.5 text-indigo-400" />
-            <span>v{currentVersionNumber} History</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setIsRightPanelOpen(true);
-              setInspectorTab('keys');
-            }}
-            title="Manage AI API Keys (Claude, OpenAI, Gemini, DeepSeek, Qwen)"
-            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer border ${
-              inspectorTab === 'keys' && isRightPanelOpen
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-xs'
-                : 'bg-slate-100 dark:bg-[#141C2A] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#232F42] hover:text-white hover:border-slate-600'
-            }`}
-          >
-            <Key className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden md:inline">API Keys</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleOpenReleaseModal}
-            title="Bundle page into scheduled or draft release"
-            className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition shadow-sm flex items-center space-x-1.5 cursor-pointer"
-          >
-            <CalendarCheck className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Add to Release</span>
-          </button>
-
-          <a
-            href={`/sites/${siteSlug}?preview=true`}
-            target="_blank"
-            title="Open live preview in new tab"
-            className="p-2 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        </div>
-      </div>
+    <div className="h-dvh flex flex-col bg-slate-50 dark:bg-slate-950">
+      <EditorDialog open={publishOpen} title="Publish this page?" onClose={() => setPublishOpen(false)}><p className="mt-3 text-sm leading-relaxed text-slate-500">Your current changes to <strong className="text-slate-900 dark:text-white">{pageTitle}</strong> will become visible on <strong className="text-slate-900 dark:text-white">{siteData?.name}</strong>.</p><p className="mt-2 text-xs text-slate-400">{sections.filter(section => section.visible).length} visible sections · Version {currentVersionNumber + 1}</p><div className="mt-6 flex justify-end gap-3"><button type="button" autoFocus disabled={isDeploying} onClick={() => setPublishOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm">Keep editing</button><button type="button" disabled={isDeploying} onClick={async () => { await saveDocument('published'); setPublishOpen(false); }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">{isDeploying ? 'Publishing…' : 'Publish page'}</button></div></EditorDialog>
+      <EditorToolbar siteName={siteData?.name || 'Choose a website'} siteId={siteData?.id || siteSlug} sites={activeClient?.websites || []} page={activePageSlug} pages={pageSlugs} busy={isSaving || isDeploying || isRollingBack || isAddingToRelease} dirty={hasUnsavedChanges} savedTime={savedTime} loading={isLoadingPage} isNew={currentVersionNumber === 0} advancedTools={isAgencyUser(user)} canEdit={hasPerm('content:edit')} canPublish={hasPerm('content:publish')} viewport={viewport} preview={isPreview} leftOpen={isLeftPanelOpen} rightOpen={isRightPanelOpen} canUndo={historyIndex > 0} canRedo={historyIndex < history.length - 1} onSite={id => switchDocument(id,'home')} onPage={slug => switchDocument(siteSlug,slug)} onSave={() => void handleSaveDraft()} onPublish={handleDeployPublish} onViewport={setViewport} onPreview={() => setIsPreview(value => !value)} onLeft={() => { if (compactEditor) setIsRightPanelOpen(false); setIsLeftPanelOpen(value => !value); }} onRight={() => { if (compactEditor) setIsLeftPanelOpen(false); setIsRightPanelOpen(value => !value); }} onUndo={handleUndo} onRedo={handleRedo} onMore={action => {
+        if (action === 'history') void handleOpenVersionModal();
+        if (action === 'release') void handleOpenReleaseModal();
+        if (action === 'ai' || action === 'keys') { if (compactEditor) setIsLeftPanelOpen(false); setInspectorTab(action); setIsRightPanelOpen(true); setIsPreview(false); }
+        if (action === 'saved' || action === 'advanced') { setLeftPanelMode(action === 'saved' ? 'brand_vault' : 'dynamic_zones'); setIsLeftPanelOpen(true); setIsPreview(false); }
+        if (action === 'qr') { if (hasUnsavedChanges) setEditorError('Save your draft before sharing a preview link.'); else setIsQrModalOpen(true); }
+        if (action === 'theme') setCanvasTheme(isCanvasDark ? 'light' : 'dark');
+      }} />
+      {deploySuccess && !hasUnsavedChanges && <div role="status" className="flex items-center justify-between border-b border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-800"><span>Your page has been published.</span><a href={`/sites/${siteData?.slug}${activePageSlug === 'home' ? '' : `/${activePageSlug}`}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold underline">View published page</a></div>}
+      {editorError && <div role="alert" className="flex items-center justify-between gap-4 border-b border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-700"><p>{editorError}</p><button type="button" onClick={() => { if (!hasUnsavedChanges || window.confirm('Reload the saved page and discard your unsaved changes?')) setReload(value => value + 1); }} className="shrink-0 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold">Reload page</button></div>}
 
       {/* 3-Panel Main Area */}
       <div ref={editorContainerRef} className={`flex-1 flex overflow-hidden relative ${isDraggingLeft || isDraggingRight ? 'select-none' : ''}`}>
         {/* LEFT PANEL: Dynamic Zones Manager / Outline Tree */}
         <div
-          style={{ width: isLeftPanelOpen ? leftPanelWidth : 0 }}
+          style={{ width: isLeftPanelOpen && !isPreview ? (compactEditor ? 'min(320px, 92vw)' : leftPanelWidth) : 0 }}
           className={`${
             isLeftPanelOpen ? '' : 'border-r-0'
-          } ${isDraggingLeft ? '' : 'transition-[width] duration-200 ease-out'} bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-[#1E293B] flex flex-col justify-between shrink-0 overflow-hidden relative`}
+          } ${isDraggingLeft ? '' : 'transition-[width] duration-200 ease-out'} bg-white dark:bg-[#0A0D14] border-r border-slate-200 dark:border-[#1E293B] flex flex-col justify-between shrink-0 overflow-hidden ${compactEditor ? 'absolute inset-y-0 left-0 z-40 shadow-xl' : 'relative'}`}
         >
+          {compactEditor && <button type="button" onClick={() => setIsLeftPanelOpen(false)} className="m-3 self-end text-xs text-slate-500">Close sections</button>}
+          {leftPanelMode === 'outline' ? <EditorSectionList sections={sections} canEdit={hasPerm('content:edit')} selectedId={selectedSectionId} onSelect={id => { if (compactEditor) setIsLeftPanelOpen(false); setSelectedSectionId(id); setInspectorTab('content'); setIsRightPanelOpen(true); }} onAdd={() => setIsLibraryOpen(true)} onMove={handleMoveSection} onDuplicate={handleDuplicateSection} onDelete={handleDeleteSection} onVisibility={handleToggleVisibility} /> : <><button type="button" onClick={() => setLeftPanelMode('outline')} className="m-3 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300">Back to page sections</button>
           {/* View Mode Switcher Header */}
           <div className="p-2.5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0E1522] flex items-center justify-between text-xs w-full">
             <div className="flex items-center space-x-1 bg-[#141C2A] p-0.5 rounded-lg border border-[#232F42]">
@@ -1495,7 +1277,7 @@ function VisualWebsiteEditorContent() {
                 type="button"
                 onClick={() => setLeftPanelMode('outline')}
                 className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition flex items-center space-x-1 ${
-                  leftPanelMode === 'outline'
+                  false
                     ? 'bg-sky-500 text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
@@ -1692,10 +1474,11 @@ function VisualWebsiteEditorContent() {
               </div>
             </div>
           )}
+          </>}
         </div>
 
         {/* LEFT SPLITTER RESIZE HANDLE (Drag & Expand/Collapse) */}
-        {isLeftPanelOpen && (
+        {isLeftPanelOpen && !isPreview && !compactEditor && (
           <div
             onMouseDown={(e) => {
               e.preventDefault();
@@ -1714,9 +1497,9 @@ function VisualWebsiteEditorContent() {
         )}
 
         {/* CENTER CANVAS: Responsive Live Website Preview */}
-        <div className="flex-1 bg-[#05070B] overflow-y-auto p-6 flex justify-center items-start relative min-w-0">
+        <div className="flex-1 bg-slate-100 dark:bg-slate-900 overflow-auto p-6 flex items-start relative min-w-0">
           {/* Floating trigger to re-open left blocks panel */}
-          {!isLeftPanelOpen && (
+          {!isLeftPanelOpen && !isPreview && (
             <button
               type="button"
               onClick={() => setIsLeftPanelOpen(true)}
@@ -1729,7 +1512,7 @@ function VisualWebsiteEditorContent() {
           )}
 
           {/* Floating trigger to re-open right inspector */}
-          {!isRightPanelOpen && selectedSection && (
+          {!isRightPanelOpen && !isPreview && selectedSection && (
             <button
               type="button"
               onClick={() => setIsRightPanelOpen(true)}
@@ -1741,31 +1524,15 @@ function VisualWebsiteEditorContent() {
             </button>
           )}
 
-          <div
-            className={`transition-all duration-300 shadow-2xl ${
-              isCanvasDark ? 'bg-[#05080F] text-slate-100 border-slate-800' : 'bg-white text-slate-900 border-slate-700/60'
-            } overflow-hidden ${
-              viewport === 'desktop'
-                ? 'w-full max-w-[1280px] rounded-xl border'
-                : viewport === 'tablet'
-                ? 'w-[768px] rounded-xl border'
-                : 'w-[375px] rounded-[44px] border-[8px] border-slate-800 dark:border-slate-700 shadow-2xl relative my-4'
-            }`}
-          >
-            {viewport === 'mobile' && (
-              <div className="w-full bg-slate-800 dark:bg-slate-700 py-2 flex items-center justify-center select-none">
-                <div className="w-24 h-4 bg-black rounded-full mx-auto flex items-center justify-end px-2">
-                  <div className="w-2 h-2 rounded-full bg-slate-900" />
-                </div>
-              </div>
-            )}
+          {isLoadingPage ? <p role="status" className="mt-24 text-sm text-slate-500">Loading your page…</p> : !editorError && !sections.length ? <div className="my-20 max-w-sm rounded-2xl border border-slate-200 bg-white p-8 text-center"><h2 className="text-lg font-semibold text-slate-900">This page has no sections yet</h2><p className="my-3 text-sm leading-relaxed text-slate-500">Add a section to this page, or choose another existing page to update.</p><button type="button" disabled={!hasPerm('content:edit')} onClick={() => setIsLibraryOpen(true)} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">Add a section</button></div> : <ResponsiveEditorCanvas width={viewport === 'desktop' ? 1280 : viewport === 'tablet' ? 768 : 375} dark={isCanvasDark}>
             {sections.map((sec) => (
               <StudioComponentRenderer
                 key={sec.id}
                 section={sec}
                 collection={collection}
-                isEditor={true}
-                isSelected={sec.id === selectedSectionId}
+                isEditor={!isPreview && hasPerm('content:edit')}
+                minimalEditorControls={true}
+                isSelected={!isPreview && sec.id === selectedSectionId}
                 focusedFieldPath={sec.id === selectedSectionId ? focusedFieldPath : null}
                 onSelectSection={(id) => {
                   setSelectedSectionId(id);
@@ -1782,7 +1549,7 @@ function VisualWebsiteEditorContent() {
                 }}
                 onQuickStyleChange={(id, key, val) => {
                   setSelectedSectionId(id);
-                  handleStyleChange(key, val);
+                  updateSections(sections.map(section => section.id === id ? { ...section, styles: { ...section.styles, [key]: val } } : section));
                 }}
                 onOpenDesignTab={(id) => {
                   setSelectedSectionId(id);
@@ -1791,16 +1558,11 @@ function VisualWebsiteEditorContent() {
                 }}
               />
             ))}
-            {viewport === 'mobile' && (
-              <div className="w-full bg-slate-800 dark:bg-slate-700 py-2 flex items-center justify-center select-none">
-                <div className="w-28 h-1 bg-white/30 rounded-full mx-auto" />
-              </div>
-            )}
-          </div>
+          </ResponsiveEditorCanvas>}
         </div>
 
         {/* RIGHT SPLITTER RESIZE HANDLE (Drag & Expand/Collapse) */}
-        {isRightPanelOpen && (
+        {isRightPanelOpen && !isPreview && !compactEditor && (
           <div
             onMouseDown={(e) => {
               e.preventDefault();
@@ -1820,10 +1582,10 @@ function VisualWebsiteEditorContent() {
 
         {/* RIGHT PANEL: Selected Section Inspector & Design Studio */}
         <div
-          style={{ width: isRightPanelOpen ? rightPanelWidth : 0 }}
+          style={{ width: isRightPanelOpen && !isPreview ? (compactEditor ? 'min(360px, 92vw)' : inspectorTab === 'ai' ? Math.max(400, rightPanelWidth) : rightPanelWidth) : 0 }}
           className={`${
             isRightPanelOpen ? '' : 'border-l-0'
-          } ${isDraggingRight ? '' : 'transition-[width] duration-200 ease-out'} bg-[#0A0D14] border-l border-[#1E293B] flex flex-col justify-between shrink-0 overflow-y-auto overflow-x-hidden relative`}
+          } ${isDraggingRight ? '' : 'transition-[width] duration-200 ease-out'} bg-white dark:bg-[#0A0D14] border-l border-[#1E293B] flex flex-col justify-between shrink-0 overflow-y-auto overflow-x-hidden ${compactEditor ? 'absolute inset-y-0 right-0 z-40 shadow-xl' : 'relative'}`}
         >
           <div className="p-4 space-y-4 w-full">
             {/* Header */}
@@ -1832,11 +1594,11 @@ function VisualWebsiteEditorContent() {
                 <div className="flex items-center space-x-1.5 text-xs text-sky-400 font-bold uppercase tracking-wider truncate">
                   <Sliders className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">
-                    {selectedSection ? `Block: ${selectedSection.componentId.replace('_', ' ')}` : 'Inspector & AI Studio'}
+                    {selectedSection ? (registeredComp?.name || selectedSection.componentId.replaceAll('_', ' ')) : 'Section settings'}
                   </span>
                 </div>
                 <div className="flex items-center space-x-1 shrink-0">
-                  {selectedSection && (
+                  {selectedSection && inspectorTab === 'design' && hasPerm('content:edit') && (
                     <button
                       type="button"
                       onClick={handleResetSectionStyles}
@@ -1859,13 +1621,13 @@ function VisualWebsiteEditorContent() {
               </div>
               <div className="text-[11px] text-slate-400 mt-0.5">
                 {selectedSection
-                  ? 'Customize content copy, layout variants, colors, and gradients.'
-                  : 'Select a block on canvas or configure AI coding models & credentials.'}
+                  ? 'Edit this section’s content or change its design.'
+                  : 'Choose a section from the list or click it on the canvas.'}
               </div>
             </div>
 
             {/* Navigation Tabs: Content | Design | AI Polish | API Keys */}
-            <div className="flex p-1 rounded-xl bg-[#141C2A] border border-[#232F42] text-xs gap-1">
+            <div className="flex p-1 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] text-xs gap-1">
               <button
                 id="tab-btn-content"
                 type="button"
@@ -1877,7 +1639,7 @@ function VisualWebsiteEditorContent() {
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Content</span>
+                <span>Content</span>
               </button>
               <button
                 id="tab-btn-design"
@@ -1890,9 +1652,10 @@ function VisualWebsiteEditorContent() {
                 }`}
               >
                 <Palette className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Design</span>
+                <span>Design</span>
               </button>
               <button
+                style={{display: inspectorTab === 'ai' ? undefined : 'none'}}
                 id="tab-btn-ai"
                 type="button"
                 onClick={() => setInspectorTab('ai')}
@@ -1908,6 +1671,7 @@ function VisualWebsiteEditorContent() {
               <button
                 id="tab-btn-keys"
                 type="button"
+                style={{display: inspectorTab === 'keys' ? undefined : 'none'}}
                 onClick={() => setInspectorTab('keys')}
                 className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
                   inspectorTab === 'keys'
@@ -1920,539 +1684,19 @@ function VisualWebsiteEditorContent() {
               </button>
             </div>
 
-            {/* TAB 1: CONTENT & COPY */}
-            {inspectorTab === 'content' && (
-              selectedSection ? (
-                <div className="space-y-4 animate-in fade-in duration-150">
-                  {/* AI Translation & Multi-Locale Bar */}
-                  <div className="p-3 rounded-xl bg-gradient-to-r from-purple-950/40 via-sky-950/40 to-slate-900 border border-purple-500/30 flex items-center justify-between gap-2 shadow-xs">
-                    <div className="flex items-center space-x-2 min-w-0">
-                      <Globe className="w-4 h-4 text-purple-400 shrink-0" />
-                      <div className="truncate">
-                        <div className="text-[11px] font-bold text-white flex items-center gap-1.5 truncate">
-                          <span>{getLocaleMeta(selectedLocale).flag} {getLocaleMeta(selectedLocale).name}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 truncate">
-                          {selectedLocale === 'en' ? 'Preserves AISC, EBITDA & SENS' : `Translating into ${selectedLocale.toUpperCase()}`}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={isTranslating}
-                      onClick={() => handleTranslateSection(selectedLocale === 'en' ? 'es' : selectedLocale)}
-                      className="px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold flex items-center space-x-1.5 transition cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
-                    >
-                      <Sparkles className="w-3 h-3 text-purple-200" />
-                      <span>{isTranslating ? 'Translating...' : selectedLocale === 'en' ? 'Translate (ES)' : `Translate (${selectedLocale.toUpperCase()})`}</span>
-                    </button>
-                  </div>
-
-                  {translationNotice && (
-                    <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[11px] font-medium flex items-center space-x-2 animate-in fade-in">
-                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>{translationNotice}</span>
-                    </div>
-                  )}
-
-                  {/* Layout Variant Dropdown */}
-                  {registeredComp?.variants && registeredComp.variants.length > 0 && (
-                    <div className="space-y-1.5">
-                      <label className="block text-[11px] font-semibold uppercase text-slate-400">
-                        Component Layout Variant
-                      </label>
-                      <select
-                        value={selectedSection.variant}
-                        onChange={(e) => handleVariantChange(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500"
-                      >
-                        {registeredComp.variants.map((v) => (
-                          <option key={v.id} value={v.id}>{v.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Eyebrow / Badge */}
-                  {(selectedSection.props.eyebrow !== undefined || selectedSection.props.badge !== undefined) && (
-                    <div>
-                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
-                        Badge / Eyebrow Tag
-                      </label>
-                      <input
-                        id="field-eyebrow"
-                        type="text"
-                        value={selectedSection.props.eyebrow !== undefined ? (selectedSection.props.eyebrow || '') : (selectedSection.props.badge || '')}
-                        onChange={(e) => {
-                          if (selectedSection.props.eyebrow !== undefined) handlePropChange('eyebrow', e.target.value);
-                          else handlePropChange('badge', e.target.value);
-                        }}
-                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500 transition-all"
-                      />
-                    </div>
-                  )}
-
-                  {/* Section Headline */}
-                  {selectedSection.props.title !== undefined && (
-                    <div>
-                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
-                        Section Headline
-                      </label>
-                      <textarea
-                        id="field-title"
-                        rows={3}
-                        value={selectedSection.props.title || ''}
-                        onChange={(e) => handlePropChange('title', e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500 transition-all"
-                      />
-                    </div>
-                  )}
-
-                  {/* Section Subtitle */}
-                  {(selectedSection.props.subtitle !== undefined || selectedSection.props.description !== undefined) && (
-                    <div>
-                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
-                        Supporting Subtitle / Paragraph
-                      </label>
-                      <textarea
-                        id="field-subtitle"
-                        rows={3}
-                        value={selectedSection.props.subtitle !== undefined ? (selectedSection.props.subtitle || '') : (selectedSection.props.description || '')}
-                        onChange={(e) => {
-                          if (selectedSection.props.subtitle !== undefined) handlePropChange('subtitle', e.target.value);
-                          else handlePropChange('description', e.target.value);
-                        }}
-                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs leading-relaxed focus:outline-none focus:border-sky-500 transition-all"
-                      />
-                    </div>
-                  )}
-
-                  {/* Primary CTA */}
-                  {selectedSection.props.primaryCta && (
-                    <div id="field-primaryCta" className="space-y-2 p-3 rounded-xl bg-[#141C2A] border border-[#232F42] transition-all">
-                      <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wide">
-                        Primary CTA Button
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-slate-400 mb-1">Button Label</label>
-                        <input
-                          type="text"
-                          value={selectedSection.props.primaryCta.label || ''}
-                          onChange={(e) => handlePropChange('primaryCta', { ...selectedSection.props.primaryCta, label: e.target.value })}
-                          className="w-full px-3 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-xs focus:outline-none focus:border-sky-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-slate-400 mb-1">Target Link (href)</label>
-                        <input
-                          type="text"
-                          value={selectedSection.props.primaryCta.href || ''}
-                          onChange={(e) => handlePropChange('primaryCta', { ...selectedSection.props.primaryCta, href: e.target.value })}
-                          className="w-full px-3 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-xs focus:outline-none focus:border-sky-500"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Standalone ctaText (Header, CTA) */}
-                  {selectedSection.props.ctaText !== undefined && (
-                    <div>
-                      <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1.5">
-                        Action CTA Button Text
-                      </label>
-                      <input
-                        type="text"
-                        value={selectedSection.props.ctaText || ''}
-                        onChange={(e) => handlePropChange('ctaText', e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500"
-                      />
-                    </div>
-                  )}
-
-                  {/* PRICING PLANS COMPONENT FIELDS */}
-                  {selectedSection.componentId === 'pricing' && (
-                    <div className="space-y-4 pt-3 border-t border-[#232F42]">
-                      <div>
-                        <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">
-                          Annual Savings Badge
-                        </label>
-                        <input
-                          type="text"
-                          value={selectedSection.props.annualSavingsNote || ''}
-                          onChange={(e) => handlePropChange('annualSavingsNote', e.target.value)}
-                          placeholder="e.g. Save 20% on annual billing"
-                          className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs focus:outline-none focus:border-sky-500"
-                        />
-                      </div>
-
-                      <div className="space-y-3">
-                        <label className="block text-[11px] font-bold uppercase text-sky-400">
-                          Pricing Tiers ({selectedSection.props.plans?.length || 0})
-                        </label>
-                        {(selectedSection.props.plans || []).map((plan: any, pIdx: number) => (
-                          <div key={pIdx} className="p-3 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-white text-xs">{plan.name}</span>
-                              <label className="flex items-center space-x-1.5 text-[10px] text-slate-400 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={plan.isPopular || false}
-                                  onChange={(e) => {
-                                    const nextPlans = [...selectedSection.props.plans];
-                                    nextPlans[pIdx] = { ...plan, isPopular: e.target.checked };
-                                    handlePropChange('plans', nextPlans);
-                                  }}
-                                  className="rounded border-slate-700 bg-slate-900 text-sky-500"
-                                />
-                                <span>Featured Tier</span>
-                              </label>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Monthly</label>
-                                <input
-                                  type="text"
-                                  value={plan.monthlyPrice || ''}
-                                  onChange={(e) => {
-                                    const nextPlans = [...selectedSection.props.plans];
-                                    nextPlans[pIdx] = { ...plan, monthlyPrice: e.target.value };
-                                    handlePropChange('plans', nextPlans);
-                                  }}
-                                  className="w-full px-2 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-xs"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Annual</label>
-                                <input
-                                  type="text"
-                                  value={plan.annualPrice || ''}
-                                  onChange={(e) => {
-                                    const nextPlans = [...selectedSection.props.plans];
-                                    nextPlans[pIdx] = { ...plan, annualPrice: e.target.value };
-                                    handlePropChange('plans', nextPlans);
-                                  }}
-                                  className="w-full px-2 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-xs"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* FAQ ACCORDION COMPONENT FIELDS */}
-                  {selectedSection.componentId === 'faq' && (
-                    <div className="space-y-4 pt-3 border-t border-[#232F42]">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold uppercase text-sky-400">
-                          FAQ Questions ({selectedSection.props.items?.length || 0})
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextItems = [
-                              ...(selectedSection.props.items || []),
-                              { question: 'New Question', answer: 'Provide comprehensive answer details here.' }
-                            ];
-                            handlePropChange('items', nextItems);
-                          }}
-                          className="px-2 py-1 rounded bg-sky-500/20 text-sky-300 hover:bg-sky-500 hover:text-white text-[10px] font-semibold flex items-center space-x-1"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>Add FAQ</span>
-                        </button>
-                      </div>
-
-                      <div className="space-y-3">
-                        {(selectedSection.props.items || []).map((faq: any, fIdx: number) => (
-                          <div key={fIdx} className="p-3 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-mono text-slate-400">Q{fIdx + 1}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const nextItems = selectedSection.props.items.filter((_: any, i: number) => i !== fIdx);
-                                  handlePropChange('items', nextItems);
-                                }}
-                                className="text-slate-500 hover:text-rose-400 p-0.5"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                            <input
-                              type="text"
-                              value={faq.question || ''}
-                              onChange={(e) => {
-                                const nextItems = [...selectedSection.props.items];
-                                nextItems[fIdx] = { ...faq, question: e.target.value };
-                                handlePropChange('items', nextItems);
-                              }}
-                              placeholder="Question headline..."
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-xs font-semibold"
-                            />
-                            <textarea
-                              rows={2}
-                              value={faq.answer || ''}
-                              onChange={(e) => {
-                                const nextItems = [...selectedSection.props.items];
-                                nextItems[fIdx] = { ...faq, answer: e.target.value };
-                                handlePropChange('items', nextItems);
-                              }}
-                              placeholder="Answer explanation..."
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-slate-300 text-xs leading-relaxed"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* PROCESS ROADMAP COMPONENT FIELDS */}
-                  {selectedSection.componentId === 'process' && (
-                    <div className="space-y-4 pt-3 border-t border-[#232F42]">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold uppercase text-sky-400">
-                          Process Steps ({selectedSection.props.steps?.length || 0})
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const count = (selectedSection.props.steps || []).length;
-                            const nextSteps = [
-                              ...(selectedSection.props.steps || []),
-                              { number: `0${count + 1}`, title: `Step ${count + 1}`, description: 'Step description and key milestones.' }
-                            ];
-                            handlePropChange('steps', nextSteps);
-                          }}
-                          className="px-2 py-1 rounded bg-sky-500/20 text-sky-300 hover:bg-sky-500 hover:text-white text-[10px] font-semibold flex items-center space-x-1"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>Add Step</span>
-                        </button>
-                      </div>
-
-                      <div className="space-y-3">
-                        {(selectedSection.props.steps || []).map((step: any, sIdx: number) => (
-                          <div key={sIdx} className="p-3 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2 text-xs">
-                            <div className="flex items-center justify-between">
-                              <input
-                                type="text"
-                                value={step.number || `0${sIdx + 1}`}
-                                onChange={(e) => {
-                                  const nextSteps = [...selectedSection.props.steps];
-                                  nextSteps[sIdx] = { ...step, number: e.target.value };
-                                  handlePropChange('steps', nextSteps);
-                                }}
-                                className="w-12 px-1.5 py-0.5 rounded bg-[#0E1522] border border-[#222E42] text-sky-400 font-mono text-[10px] font-bold text-center"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const nextSteps = selectedSection.props.steps.filter((_: any, i: number) => i !== sIdx);
-                                  handlePropChange('steps', nextSteps);
-                                }}
-                                className="text-slate-500 hover:text-rose-400 p-0.5"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                            <input
-                              type="text"
-                              value={step.title || ''}
-                              onChange={(e) => {
-                                const nextSteps = [...selectedSection.props.steps];
-                                nextSteps[sIdx] = { ...step, title: e.target.value };
-                                handlePropChange('steps', nextSteps);
-                              }}
-                              placeholder="Step title..."
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-white text-xs font-semibold"
-                            />
-                            <textarea
-                              rows={2}
-                              value={step.description || ''}
-                              onChange={(e) => {
-                                const nextSteps = [...selectedSection.props.steps];
-                                nextSteps[sIdx] = { ...step, description: e.target.value };
-                                handlePropChange('steps', nextSteps);
-                              }}
-                              placeholder="Step description..."
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-slate-300 text-xs leading-relaxed"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* TESTIMONIALS COMPONENT FIELDS */}
-                  {selectedSection.componentId === 'testimonials' && (
-                    <div className="space-y-4 pt-3 border-t border-[#232F42]">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold uppercase text-sky-400">
-                          Reviews & Endorsements ({selectedSection.props.items?.length || 0})
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextItems = [
-                              ...(selectedSection.props.items || []),
-                              { quote: 'Outstanding execution and precision results.', author: 'Executive Name', role: 'Partner', company: 'Company LLC', rating: 5, verified: true }
-                            ];
-                            handlePropChange('items', nextItems);
-                          }}
-                          className="px-2 py-1 rounded bg-sky-500/20 text-sky-300 hover:bg-sky-500 hover:text-white text-[10px] font-semibold flex items-center space-x-1"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>Add Review</span>
-                        </button>
-                      </div>
-
-                      <div className="space-y-3">
-                        {(selectedSection.props.items || []).map((t: any, tIdx: number) => (
-                          <div key={tIdx} className="p-3 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-2 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-white">{t.author || 'Reviewer'}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const nextItems = selectedSection.props.items.filter((_: any, i: number) => i !== tIdx);
-                                  handlePropChange('items', nextItems);
-                                }}
-                                className="text-slate-500 hover:text-rose-400 p-0.5"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                            <textarea
-                              rows={2}
-                              value={t.quote || ''}
-                              onChange={(e) => {
-                                const nextItems = [...selectedSection.props.items];
-                                nextItems[tIdx] = { ...t, quote: e.target.value };
-                                handlePropChange('items', nextItems);
-                              }}
-                              placeholder="Testimonial quote..."
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-[#0E1522] border border-[#222E42] text-slate-200 text-xs italic"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <input
-                                type="text"
-                                value={t.author || ''}
-                                onChange={(e) => {
-                                  const nextItems = [...selectedSection.props.items];
-                                  nextItems[tIdx] = { ...t, author: e.target.value };
-                                  handlePropChange('items', nextItems);
-                                }}
-                                placeholder="Author name"
-                                className="w-full px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white text-[11px]"
-                              />
-                              <input
-                                type="text"
-                                value={t.company || ''}
-                                onChange={(e) => {
-                                  const nextItems = [...selectedSection.props.items];
-                                  nextItems[tIdx] = { ...t, company: e.target.value };
-                                  handlePropChange('items', nextItems);
-                                }}
-                                placeholder="Company"
-                                className="w-full px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white text-[11px]"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* MAP & BUSINESS HOURS COMPONENT FIELDS */}
-                  {selectedSection.componentId === 'map_hours' && (
-                    <div className="space-y-4 pt-3 border-t border-[#232F42]">
-                      <div className="space-y-2">
-                        <label className="block text-[11px] font-bold uppercase text-sky-400">
-                          Office Location & Contacts
-                        </label>
-                        <input
-                          type="text"
-                          value={selectedSection.props.city || ''}
-                          onChange={(e) => handlePropChange('city', e.target.value)}
-                          placeholder="City / Region"
-                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#141C2A] border border-[#232F42] text-white text-xs"
-                        />
-                        <input
-                          type="text"
-                          value={selectedSection.props.address || ''}
-                          onChange={(e) => handlePropChange('address', e.target.value)}
-                          placeholder="Street Address"
-                          className="w-full px-2.5 py-1.5 rounded-lg bg-[#141C2A] border border-[#232F42] text-white text-xs"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            value={selectedSection.props.phone || ''}
-                            onChange={(e) => handlePropChange('phone', e.target.value)}
-                            placeholder="Phone Number"
-                            className="w-full px-2 py-1.5 rounded-lg bg-[#141C2A] border border-[#232F42] text-white text-xs"
-                          />
-                          <input
-                            type="text"
-                            value={selectedSection.props.email || ''}
-                            onChange={(e) => handlePropChange('email', e.target.value)}
-                            placeholder="Email Address"
-                            className="w-full px-2 py-1.5 rounded-lg bg-[#141C2A] border border-[#232F42] text-white text-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-[11px] font-bold uppercase text-slate-400">
-                          Operating Hours
-                        </label>
-                        {(selectedSection.props.hours || []).map((h: any, hIdx: number) => (
-                          <div key={hIdx} className="grid grid-cols-2 gap-2">
-                            <input
-                              type="text"
-                              value={h.day || ''}
-                              onChange={(e) => {
-                                const nextHours = [...selectedSection.props.hours];
-                                nextHours[hIdx] = { ...h, day: e.target.value };
-                                handlePropChange('hours', nextHours);
-                              }}
-                              className="px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white text-xs"
-                            />
-                            <input
-                              type="text"
-                              value={h.time || ''}
-                              onChange={(e) => {
-                                const nextHours = [...selectedSection.props.hours];
-                                nextHours[hIdx] = { ...h, time: e.target.value };
-                                handlePropChange('hours', nextHours);
-                              }}
-                              className="px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white text-xs"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="p-8 text-center text-xs text-slate-500">
-                  Select a section in the preview canvas to inspect its properties.
-                </div>
-              )
-            )}
+            {inspectorTab === 'content' && (selectedSection ? <EditorContentFields clientId={siteData?.clientId} component={registeredComp || undefined} values={selectedSection.props} onChange={handlePropChange} disabled={!hasPerm('content:edit') || isLoadingPage || isRollingBack} /> : <div className="rounded-xl border border-dashed border-slate-200 p-6 text-sm leading-relaxed text-slate-500 dark:border-slate-700"><p className="font-medium text-slate-700 dark:text-slate-200">Choose a section to start editing</p><p className="mt-2 text-xs">Select it from the list or click directly on the page. Its content will appear here.</p></div>)}
 
             {/* TAB 2: DESIGN & COLORS */}
             {inspectorTab === 'design' && (
               selectedSection ? (
-                <div className="space-y-5 animate-in fade-in duration-150">
+                <fieldset disabled={!hasPerm('content:edit') || isRollingBack} className="space-y-5 animate-in fade-in duration-150">
+                  {registeredComp?.variants && <div><label htmlFor="section-layout" className="mb-2 block text-xs font-medium text-slate-600 dark:text-slate-400">Section layout</label><select id="section-layout" value={selectedSection.variant} onChange={event => handleVariantChange(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm dark:border-slate-700 dark:bg-slate-800">{registeredComp.variants.map(variant => <option key={variant.id} value={variant.id}>{variant.name}</option>)}</select><p className="mt-2 text-xs text-slate-400">Choose a layout that works with your content.</p></div>}
                   {/* Background Mode Toggle */}
                   <div className="space-y-1.5">
-                    <label className="block text-[11px] font-semibold uppercase text-slate-400">
+                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
                       Background Fill Mode
                     </label>
-                    <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[#141C2A] border border-[#232F42] text-xs">
+                    <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] text-xs">
                       <button
                         type="button"
                         onClick={() => handleStyleChange('backgroundType', 'solid')}
@@ -2491,7 +1735,7 @@ function VisualWebsiteEditorContent() {
 
                   {/* SOLID COLOR PICKER */}
                   {selectedSection.styles?.backgroundType === 'solid' && (
-                    <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3">
+                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3">
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-semibold text-slate-300">Section Background Color</span>
                         <div className="flex items-center space-x-2">
@@ -2505,7 +1749,7 @@ function VisualWebsiteEditorContent() {
                             type="text"
                             value={selectedSection.styles?.backgroundColor || '#09090B'}
                             onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
-                            className="w-20 px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[11px] uppercase"
+                            className="w-20 px-2 py-1 rounded bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-white font-mono text-[11px] uppercase"
                           />
                         </div>
                       </div>
@@ -2541,7 +1785,7 @@ function VisualWebsiteEditorContent() {
 
                   {/* GRADIENT BUILDER & PRESETS */}
                   {selectedSection.styles?.backgroundType === 'gradient' && (
-                    <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-4">
+                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-4">
                       {/* One-Click Presets */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs">
@@ -2596,7 +1840,7 @@ function VisualWebsiteEditorContent() {
                               className={`py-1 rounded border text-center transition ${
                                 customGradDir === d.val
                                   ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               {d.label}
@@ -2625,7 +1869,7 @@ function VisualWebsiteEditorContent() {
                                   setCustomGradFrom(e.target.value);
                                   handleUpdateCustomGradient(customGradDir, e.target.value, customGradTo);
                                 }}
-                                className="w-full px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                                className="w-full px-2 py-1 rounded bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-white font-mono text-[10px] uppercase"
                               />
                             </div>
                           </div>
@@ -2649,7 +1893,7 @@ function VisualWebsiteEditorContent() {
                                   setCustomGradTo(e.target.value);
                                   handleUpdateCustomGradient(customGradDir, customGradFrom, e.target.value);
                                 }}
-                                className="w-full px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                                className="w-full px-2 py-1 rounded bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-white font-mono text-[10px] uppercase"
                               />
                             </div>
                           </div>
@@ -2667,7 +1911,7 @@ function VisualWebsiteEditorContent() {
                   )}
 
                   {/* AMBIENT FX & BACKGROUND TEXTURES */}
-                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3.5">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Sparkles className="w-3.5 h-3.5 text-sky-400" />
@@ -2697,13 +1941,13 @@ function VisualWebsiteEditorContent() {
                             className={`p-2.5 rounded-xl border text-left flex items-start space-x-2.5 transition group ${
                               isCurrent
                                 ? 'bg-sky-950/60 border-sky-400 ring-1 ring-sky-400 text-white shadow-sm'
-                                : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white hover:border-slate-600'
+                                : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white hover:border-slate-600'
                             }`}
                           >
                             <div className={`p-1.5 rounded-lg border mt-0.5 ${
                               isCurrent
                                 ? 'bg-sky-500/20 border-sky-400/40 text-sky-300'
-                                : 'bg-[#141C2A] border-[#222E42] text-slate-400 group-hover:text-white'
+                                : 'bg-slate-50 dark:bg-[#141C2A] border-slate-200 dark:border-[#222E42] text-slate-400 group-hover:text-white'
                             }`}>
                               <Icon className="w-3.5 h-3.5" />
                             </div>
@@ -2748,7 +1992,7 @@ function VisualWebsiteEditorContent() {
                                 className={`py-1 rounded border text-center font-medium transition ${
                                   isMatch
                                     ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                    : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                    : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                                 }`}
                               >
                                 {op.label}
@@ -2766,7 +2010,7 @@ function VisualWebsiteEditorContent() {
                             step="0.05"
                             value={selectedSection.styles?.patternOpacity ?? 0.35}
                             onChange={(e) => handleStyleChange('patternOpacity', parseFloat(e.target.value))}
-                            className="w-full accent-sky-500 cursor-pointer h-1.5 bg-[#0E1522] rounded-lg"
+                            className="w-full accent-sky-500 cursor-pointer h-1.5 bg-white dark:bg-[#0E1522] rounded-lg"
                           />
                         </div>
                       </div>
@@ -2774,7 +2018,7 @@ function VisualWebsiteEditorContent() {
                   </div>
 
                   {/* TYPOGRAPHY COLORS: HEADINGS & BODY */}
-                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-4">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-4">
                     <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
                       Text & Typography Colors
                     </div>
@@ -2794,7 +2038,7 @@ function VisualWebsiteEditorContent() {
                             type="text"
                             value={selectedSection.styles?.headingColor || '#FFFFFF'}
                             onChange={(e) => handleStyleChange('headingColor', e.target.value)}
-                            className="w-20 px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                            className="w-20 px-2 py-1 rounded bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-white font-mono text-[10px] uppercase"
                           />
                         </div>
                       </div>
@@ -2827,7 +2071,7 @@ function VisualWebsiteEditorContent() {
                             type="text"
                             value={selectedSection.styles?.textColor || '#CBD5E1'}
                             onChange={(e) => handleStyleChange('textColor', e.target.value)}
-                            className="w-20 px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                            className="w-20 px-2 py-1 rounded bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-white font-mono text-[10px] uppercase"
                           />
                         </div>
                       </div>
@@ -2860,7 +2104,7 @@ function VisualWebsiteEditorContent() {
                             type="text"
                             value={selectedSection.styles?.accentColor || '#0284C7'}
                             onChange={(e) => handleStyleChange('accentColor', e.target.value)}
-                            className="w-20 px-2 py-1 rounded bg-[#0E1522] border border-[#222E42] text-white font-mono text-[10px] uppercase"
+                            className="w-20 px-2 py-1 rounded bg-white dark:bg-[#0E1522] border border-slate-200 dark:border-[#222E42] text-white font-mono text-[10px] uppercase"
                           />
                         </div>
                       </div>
@@ -2880,7 +2124,7 @@ function VisualWebsiteEditorContent() {
                   </div>
 
                   {/* SUITE 1: INTERACTIVE BOX MODEL & LAYOUT SPACING */}
-                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3.5">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Box className="w-3.5 h-3.5 text-sky-400" />
@@ -2894,7 +2138,7 @@ function VisualWebsiteEditorContent() {
                     </div>
 
                     {/* Interactive 2D Box Model Diagram */}
-                    <div className="p-2.5 rounded-xl bg-[#0A0D14] border border-[#1E293B] text-center text-xs relative select-none">
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#0A0D14] border border-[#1E293B] text-center text-xs relative select-none">
                       {/* Outer: Margin / Container Bounds */}
                       <div className="border border-dashed border-sky-500/40 rounded-lg p-2.5 bg-sky-950/20 relative">
                         <div className="flex items-center justify-between text-[9px] uppercase font-mono font-bold text-sky-400/80 mb-1.5 px-1">
@@ -2912,7 +2156,7 @@ function VisualWebsiteEditorContent() {
                           </div>
 
                           {/* Center Content Block */}
-                          <div className="bg-[#141C2A] border border-slate-700/60 rounded py-2 px-3 text-[10px] font-semibold text-slate-200 flex items-center justify-between">
+                          <div className="bg-slate-50 dark:bg-[#141C2A] border border-slate-700/60 rounded py-2 px-3 text-[10px] font-semibold text-slate-200 flex items-center justify-between">
                             <span className="truncate">Block: {selectedSection.componentId.replace('_', ' ')}</span>
                             <span className="text-[9px] text-slate-400 font-mono capitalize">{selectedSection.styles?.alignment || 'left'} align</span>
                           </div>
@@ -2938,7 +2182,7 @@ function VisualWebsiteEditorContent() {
                               className={`py-1.5 rounded-lg border text-center font-medium transition ${
                                 isCurrent
                                   ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               <div>{cw.label}</div>
@@ -2966,7 +2210,7 @@ function VisualWebsiteEditorContent() {
                               className={`py-1 rounded-lg border text-center font-medium transition ${
                                 isCurrent
                                   ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               <div className="font-mono text-[9px]">{pad.label}</div>
@@ -2979,7 +2223,7 @@ function VisualWebsiteEditorContent() {
                   </div>
 
                   {/* SUITE 2: TYPOGRAPHY ENGINE & PAIRINGS */}
-                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3.5">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Type className="w-3.5 h-3.5 text-sky-400" />
@@ -3009,7 +2253,7 @@ function VisualWebsiteEditorContent() {
                               className={`p-2 rounded-xl border text-center transition flex flex-col items-center justify-between ${
                                 isCurrent
                                   ? 'bg-sky-950/70 border-sky-400 ring-1 ring-sky-400 text-white shadow-sm'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               <span className={`text-xl font-bold mb-0.5 ${font.fontClass}`}>
@@ -3047,7 +2291,7 @@ function VisualWebsiteEditorContent() {
                               className={`py-1 rounded border text-center font-medium transition ${
                                 isCurrent
                                   ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               <div>{hs.label}</div>
@@ -3081,7 +2325,7 @@ function VisualWebsiteEditorContent() {
                               className={`py-1 rounded border text-center font-medium transition ${
                                 isCurrent
                                   ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               <div className="text-[9px] font-mono">{ls.label}</div>
@@ -3114,7 +2358,7 @@ function VisualWebsiteEditorContent() {
                               className={`py-1.5 px-2 rounded-lg border flex items-center justify-center space-x-1.5 transition ${
                                 isCurrent
                                   ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               <Icon className="w-3.5 h-3.5" />
@@ -3127,7 +2371,7 @@ function VisualWebsiteEditorContent() {
                   </div>
 
                   {/* SUITE 3: GEOMETRY, GLASSMORPHISM & AMBIENT GLOW */}
-                  <div className="p-3.5 rounded-xl bg-[#141C2A] border border-[#232F42] space-y-3.5">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Sparkle className="w-3.5 h-3.5 text-sky-400" />
@@ -3158,7 +2402,7 @@ function VisualWebsiteEditorContent() {
                               className={`py-1.5 rounded border text-center flex flex-col items-center justify-center transition ${
                                 isCurrent
                                   ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               <div className={`w-3.5 h-3.5 border border-current mb-0.5 ${br.iconClass}`} />
@@ -3197,7 +2441,7 @@ function VisualWebsiteEditorContent() {
                               className={`py-1 rounded border text-center font-medium transition ${
                                 isCurrent
                                   ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               {bl.label}
@@ -3227,7 +2471,7 @@ function VisualWebsiteEditorContent() {
                               className={`p-2 rounded-xl border text-center flex items-center space-x-2 transition ${
                                 isCurrent
                                   ? 'bg-sky-950/70 border-sky-400 ring-1 ring-sky-400 text-white shadow-sm'
-                                  : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                               }`}
                             >
                               <div
@@ -3266,7 +2510,7 @@ function VisualWebsiteEditorContent() {
                           className={`py-1.5 px-2 rounded-lg border text-center font-medium transition ${
                             selectedSection.styles?.borderTop
                               ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                              : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                           }`}
                         >
                           Border Top
@@ -3277,7 +2521,7 @@ function VisualWebsiteEditorContent() {
                           className={`py-1.5 px-2 rounded-lg border text-center font-medium transition ${
                             selectedSection.styles?.borderBottom
                               ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                              : 'bg-[#0E1522] border-[#222E42] text-slate-400 hover:text-white'
+                              : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
                           }`}
                         >
                           Border Bottom
@@ -3285,7 +2529,7 @@ function VisualWebsiteEditorContent() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </fieldset>
               ) : (
                 <div className="p-8 text-center text-xs text-slate-500">
                   Select a section in the preview canvas to customize colors and styling.
@@ -3295,21 +2539,7 @@ function VisualWebsiteEditorContent() {
 
             {/* TAB 3: MULTI-MODEL AI CODING & POLISH CHAT (Kept mounted to preserve conversation history) */}
             <div className={inspectorTab === 'ai' ? 'block animate-in fade-in duration-150' : 'hidden'}>
-              <MultiModelAiCodingChat
-                section={selectedSection}
-                allSections={sections}
-                onSelectSection={(secId) => setSelectedSectionId(secId)}
-                onApplyField={handlePropChange}
-                onApplyMultipleProps={handleMultiplePropsChange}
-                onApplyDarkThemeToAllSections={handleApplyDarkThemeToAllSections}
-                onSwitchToKeysTab={() => setInspectorTab('keys')}
-                pageContext={{
-                  pageSlug: activePageSlug,
-                  siteName: siteData?.name || 'Gold Fields / Bastion',
-                  totalSections: sections.length
-                }}
-                brandKit={brandKit}
-              />
+              <EditorAssistant active={inspectorTab === 'ai'} key={documentKey} siteId={siteData?.id || siteSlug} pageSlug={activePageSlug} siteName={siteData?.name || 'Your website'} sections={sections} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onApply={handleMultiplePropsChange} brandKit={brandKit} canEdit={hasPerm('content:edit') && !isLoadingPage && !isRollingBack} onSettings={isAgencyUser(user) ? () => setInspectorTab('keys') : undefined} />
             </div>
 
             {/* TAB 4: API KEYS CREDENTIAL MANAGEMENT (Kept mounted) */}
@@ -3534,7 +2764,7 @@ function VisualWebsiteEditorContent() {
                         ) : (
                           <button
                             type="button"
-                            disabled={isRollingBack}
+                            disabled={isRollingBack || !hasPerm('content:edit')}
                             onClick={() => handleRollback(ver.version)}
                             className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-[11px] flex items-center space-x-1 cursor-pointer transition shadow-xs disabled:opacity-50"
                           >
@@ -3595,8 +2825,8 @@ function VisualWebsiteEditorContent() {
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(
                     typeof window !== 'undefined'
-                      ? `${window.location.origin}/sites/${siteSlug}?preview=true`
-                      : `http://localhost:3010/sites/${siteSlug}?preview=true`
+                      ? `${window.location.origin}/admin/editor/preview?siteId=${encodeURIComponent(siteData?.id || siteSlug)}&pageSlug=${encodeURIComponent(activePageSlug)}`
+                      : `/admin/editor/preview?siteId=${encodeURIComponent(siteData?.id || siteSlug)}&pageSlug=${encodeURIComponent(activePageSlug)}`
                   )}`}
                   alt="Executive Mobile Preview QR Code"
                   className="w-48 h-48 mx-auto"
@@ -3610,8 +2840,8 @@ function VisualWebsiteEditorContent() {
                   readOnly
                   value={
                     typeof window !== 'undefined'
-                      ? `${window.location.origin}/sites/${siteSlug}?preview=true`
-                      : `http://localhost:3010/sites/${siteSlug}?preview=true`
+                      ? `${window.location.origin}/admin/editor/preview?siteId=${encodeURIComponent(siteData?.id || siteSlug)}&pageSlug=${encodeURIComponent(activePageSlug)}`
+                      : `/admin/editor/preview?siteId=${encodeURIComponent(siteData?.id || siteSlug)}&pageSlug=${encodeURIComponent(activePageSlug)}`
                   }
                   className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#141C2A] text-slate-600 dark:text-slate-300 text-[11px] font-mono select-all focus:outline-hidden"
                 />
@@ -3619,8 +2849,8 @@ function VisualWebsiteEditorContent() {
                   type="button"
                   onClick={() => {
                     const url = typeof window !== 'undefined'
-                      ? `${window.location.origin}/sites/${siteSlug}?preview=true`
-                      : `http://localhost:3010/sites/${siteSlug}?preview=true`;
+                      ? `${window.location.origin}/admin/editor/preview?siteId=${encodeURIComponent(siteData?.id || siteSlug)}&pageSlug=${encodeURIComponent(activePageSlug)}`
+                      : `/admin/editor/preview?siteId=${encodeURIComponent(siteData?.id || siteSlug)}&pageSlug=${encodeURIComponent(activePageSlug)}`;
                     navigator.clipboard.writeText(url);
                     setCopiedQrUrl(true);
                     setTimeout(() => setCopiedQrUrl(false), 2000);
@@ -3633,7 +2863,7 @@ function VisualWebsiteEditorContent() {
 
               <div className="flex items-center justify-center space-x-1.5 text-[11px] text-slate-500 dark:text-slate-400 pt-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Local Staging Draft Active &bull; Real-time Viewport</span>
+                <span>Last saved draft · Sign-in required</span>
               </div>
             </div>
           </div>
