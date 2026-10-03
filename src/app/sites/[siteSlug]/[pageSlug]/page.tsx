@@ -63,7 +63,7 @@ export default async function DynamicSiteSubPage({ params, searchParams }: SubPa
 
   const siteRow = siteRes.rows[0];
   // Draft mode is only a cookie: show drafts only to someone who may see this client's unpublished work.
-  const isDraftPreview = await draftPreviewActive(String(siteRow.client_id));
+  const isDraftPreview = await draftPreviewActive(siteRow);
 
   // 2. Fetch Brand Kit
   const brandRes = await db.execute({

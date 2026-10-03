@@ -484,6 +484,11 @@ export default function WorkspaceSettingsAndExportPage() {
                   <SecretNote
                     unsafe={unsafeSecrets.includes('previewSecret')}
                     warning="The token saved for this site was a public demo value. Generate a new one and save."
+                    hint={
+                      activeSite?.slug
+                        ? `Opens this site's drafts for 12 hours: /api/preview?site=${activeSite.slug}&secret=<token>&slug=<page>. Changing or clearing the token ends every pass already issued. At least 16 characters.`
+                        : 'Opens this site\'s drafts for 12 hours through /api/preview?site=<site>&secret=<token>. Changing or clearing the token ends every pass already issued. At least 16 characters.'
+                    }
                   />
                 </div>
               </div>

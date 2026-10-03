@@ -63,7 +63,7 @@ export default async function DynamicSitePage({ params }: PageProps) {
 
   const siteRow = siteRes.rows[0];
   // Draft mode is only a cookie: show drafts only to someone who may see this client's unpublished work.
-  const isDraftPreview = await draftPreviewActive(String(siteRow.client_id));
+  const isDraftPreview = await draftPreviewActive(siteRow);
   const settings = typeof siteRow.settings_json === 'string' ? JSON.parse(siteRow.settings_json) : (siteRow.settings_json || {});
 
   // 2. Fetch Brand Kit
