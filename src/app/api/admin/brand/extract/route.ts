@@ -4,6 +4,9 @@ import { BrandDnaExtractor } from '@/lib/studio/brandExtractor';
 import { JobManager } from '@/lib/studio/worker';
 import { requireAgencyUser } from '@/lib/auth/guard';
 
+export const maxDuration = 120;
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     const gate = await requireAgencyUser();
@@ -19,7 +22,7 @@ export async function POST(req: NextRequest) {
     const job = JobManager.createJob(url);
     try {
       const headlessExtractor = new HeadlessBrandExtractor();
-      const result = await headlessExtractor.extractWithJob(url, job.id, maxPages);
+      const result = await headlessExtractor.extractWithJob(url, job.id, Math.min(4, Math.max(1, Number(maxPages) || 1)));
       return NextResponse.json({
         success: true,
         jobId: job.id,

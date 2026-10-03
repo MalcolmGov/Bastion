@@ -125,7 +125,7 @@ export function StudioServices({ props, styles, collection = 'contemporary', var
             <div
               key={idx}
               className={`p-7 ${cardBorderRadiusClass} flex flex-col justify-between transition group ${
-                hasCustomBg || isDarkMode
+                isDarkMode
                   ? 'bg-white/[0.04] border border-white/10 hover:border-white/25 hover:bg-white/[0.08] text-white shadow-sm'
                   : isImmersive
                   ? 'bg-[#141416] border border-[#27272A] hover:border-amber-600/50 text-white'

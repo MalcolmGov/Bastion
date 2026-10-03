@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import puppeteer, { Browser, Page } from 'puppeteer-core';
 import * as cheerio from 'cheerio';
+import { readPublicResource } from './publicResource';
 import { JobManager } from './worker';
 import { validateSafeUrl, normalizeUrl } from './importer';
 import {
@@ -142,6 +143,7 @@ export class HeadlessBrandExtractor {
   }
 
   static async extractWithJob(url: string, jobId: string, maxPages = 4): Promise<BrandKitDnaResult> {
+    maxPages = Math.min(4, Math.max(1, Number(maxPages) || 1));
     const chromePath = findChromeExecutable();
     JobManager.appendLog(jobId, `Target URL validation: ${url}`);
 
@@ -187,12 +189,24 @@ export class HeadlessBrandExtractor {
 
       if (browser) {
         const page = await browser.newPage();
+        await page.setRequestInterception(true);
+        let requests = 0;
+        let totalBytes = 0;
+        page.on('request', async request => {
+          if (request.method() !== 'GET' || ++requests > 100 || totalBytes > 20000000) { await request.abort().catch(() => {}); return; }
+          try {
+            const resource = await readPublicResource(request.url(), 2000000);
+            totalBytes += resource.body.length;
+            await request.respond({ status: resource.status, contentType: resource.contentType, body: resource.body });
+          } catch { await request.abort().catch(() => {}); }
+        });
         await page.setViewport({ width: 1440, height: 900 });
         await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 (Bastion Brand DNA Extractor)');
 
         const response = await page.goto(safeUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
         const title = await page.title();
-        crawledPages.push({ url: safeUrl, title, status: response ? response.status() : 200 });
+        if (!response || !response.ok()) throw new Error(`The homepage returned HTTP ${response?.status() || 'no response'}.`);
+        crawledPages.push({ url: page.url(), title, status: response.status() });
         JobManager.appendLog(jobId, `Loaded homepage: "${title}" (Status ${crawledPages[0].status})`);
 
         // Harvest computed styles, :root tokens, and elements on live DOM
@@ -345,7 +359,7 @@ export class HeadlessBrandExtractor {
           homepageData.navLinks.find((l: any) => /services|solutions|capabilities|practice|operations/i.test(l.href)),
           homepageData.navLinks.find((l: any) => /contact|offices|connect/i.test(l.href)),
           homepageData.navLinks.find((l: any) => /investors|sustainability|esg|governance/i.test(l.href))
-        ].filter(Boolean).slice(0, 3);
+        ].filter(Boolean).slice(0, maxPages - 1);
 
         for (const sub of subpageTargets) {
           try {
@@ -472,12 +486,12 @@ export class HeadlessBrandExtractor {
       const lightColors = hexColors.filter((c: any) => getLuminance(c.hex) > 0.8);
       const midColors = hexColors.filter((c: any) => getLuminance(c.hex) >= 0.2 && getLuminance(c.hex) <= 0.8);
 
-      const primary = darkColors[0]?.hex || '#0F172A';
-      const accent = midColors[0]?.hex || '#0284C7';
-      const bg = lightColors[0]?.hex || '#F8FAFC';
-      const surface = '#FFFFFF';
-      const text = primary;
-      const muted = '#64748B';
+      const primary = rgbToHex(homepageData?.btnStyle?.bg) || darkColors[0]?.hex || '#0F172A';
+      const accent = rgbToHex(homepageData?.rootVars?.['--brand-accent'] || '') || midColors[0]?.hex || '#0284C7';
+      const bg = rgbToHex(homepageData?.bodyStyle?.bg) || lightColors[0]?.hex || '#F8FAFC';
+      const surface = rgbToHex(homepageData?.cardStyle?.bg) || bg;
+      const text = rgbToHex(homepageData?.pStyle?.color || homepageData?.bodyStyle?.color) || primary;
+      const muted = text;
       const border = '#E2E8F0';
 
       // WCAG Compliance Calculations
@@ -543,6 +557,9 @@ export class HeadlessBrandExtractor {
         },
         sources: {
           site: safeUrl,
+          'color.background': homepageData?.bodyStyle?.bg ? 'Observed body computed background' : 'Proposed canvas from colour frequency',
+          'color.textPrimary': homepageData?.pStyle?.color ? 'Observed paragraph computed colour' : 'Proposed text colour',
+          'font.heading': 'Observed heading font with licensing guidance; alternatives require review',
           extractedEngine: chromePath ? 'Headless Chromium Engine (Puppeteer-Core)' : 'Cheerio Static DOM Parser Fallback'
         }
       };
@@ -564,7 +581,7 @@ export class HeadlessBrandExtractor {
         },
         copyAnalysis: {
           title: crawledPages[0]?.title || 'Client Website',
-          metaDescription: homepageData?.metaDesc || 'Specialized enterprise delivering corporate capabilities with rigorous governance.',
+          metaDescription: homepageData?.metaDesc || '',
           readingLevel: reading.gradeLevel,
           readingScore: reading.score,
           sentiment: reading.score < 50 ? 'Institutional & Authoritative' : 'Modern & Accessible',

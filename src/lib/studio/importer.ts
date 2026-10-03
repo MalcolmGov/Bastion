@@ -4,6 +4,7 @@
  * automated brand asset discovery, and evidence provenance tracking.
  */
 
+import { readPublicResource } from './publicResource';
 import * as cheerio from 'cheerio';
 import type { DiscoveredPage, WebsiteImport, BrandKit } from './types';
 
@@ -152,36 +153,15 @@ export class MoveStudioIngestProvider implements WebsiteImportProvider {
     try {
       return await this.extractLiveWebsite(url, capturedAt, options);
     } catch (liveErr: any) {
-      console.warn(`[MoveStudioIngest] Live extraction notice for ${url}: ${liveErr.message}. Utilizing resilient fallback.`);
-      return this.generateGenericExtraction(url, capturedAt, options, liveErr.message);
+      throw new Error(`Could not extract this website: ${liveErr.message}. Try another public page or enter the client brief manually.`);
     }
   }
 
   private async extractLiveWebsite(url: string, capturedAt: string, options: ScopeOptions): Promise<ExtractionResult> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 MoveStudio/1.0',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Cache-Control': 'no-cache'
-        },
-        signal: controller.signal
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    if (!res.ok) {
-      throw new Error(`Target site returned HTTP ${res.status} ${res.statusText}`);
-    }
-
-    const html = await res.text();
-    const finalUrl = res.url || url;
+    const response = await readPublicResource(url);
+    if (!/text\/html|application\/xhtml/i.test(response.contentType)) throw new Error('The source did not return HTML.');
+    const html = response.body.toString('utf8');
+    const finalUrl = response.url;
     const $ = cheerio.load(html);
 
     // 1. JSON-LD Structured Data Parsing
@@ -280,15 +260,6 @@ export class MoveStudioIngestProvider implements WebsiteImportProvider {
       const rel = $(el).attr('rel') || 'icon';
       addLogo(href, `Favicon Icon Candidate (${rel})`, 0.88, `<link rel="${rel}" href="${href}">`);
     });
-
-    if (logos.length === 0) {
-      logos.push({
-        url: '/assets/logo-placeholder.svg',
-        label: 'Generated Brand Emblem',
-        confidence: 0.7,
-        evidence: 'Default fallback vector emblem'
-      });
-    }
 
     // 5. Colors & Palette
     const colorTally: Record<string, number> = {};
@@ -439,21 +410,6 @@ export class MoveStudioIngestProvider implements WebsiteImportProvider {
           }
         }
       });
-    }
-
-    // Fallback from navigation items if needed
-    if (servicesFound.length < 3) {
-      navigationFound
-        .filter(n => /platform|engine|solution|service|product|capability/i.test(n.label))
-        .slice(0, 3)
-        .forEach(n => {
-          if (!servicesFound.some(s => s.title === n.label)) {
-            servicesFound.push({
-              title: n.label,
-              description: `Enterprise-grade ${n.label.toLowerCase()} architecture engineered for ${brandName} client mandates.`
-            });
-          }
-        });
     }
 
     // 9. Contact Info Extraction

@@ -19,6 +19,7 @@ import {
   Palette
 } from 'lucide-react';
 import type { SectionInstance, DesignCollectionId, SectionStyles } from '@/lib/studio/types';
+import { safeFont } from '@/lib/studio/designSystem';
 import { StudioHeader } from './StudioHeader';
 import { StudioHero } from './StudioHero';
 import { StudioServices } from './StudioServices';
@@ -133,6 +134,16 @@ export function StudioComponentRenderer({
           [Component: {section.componentId} (Variant: {section.variant})]
         </div>
       );
+  }
+
+  if (section.styles?.headingFont || section.styles?.bodyFont) {
+    const headingCategory = /georgia|times|serif|playfair/i.test(section.styles.headingFont || '') ? 'serif' : 'sans';
+    const useHeadingFont = !!section.styles.headingFont && (!section.styles.fontFamily || section.styles.fontFamily === headingCategory);
+    renderedContent = <div className={`brand-token-section ${useHeadingFont ? 'has-heading-font' : ''} ${section.styles.bodyFont ? 'has-body-font' : ''}`} style={{ display: 'contents',
+      '--website-heading-font': `"${safeFont(section.styles.headingFont)}", serif`,
+      '--website-body-font': `"${safeFont(section.styles.bodyFont)}", sans-serif`,
+      '--website-heading-weight': /^[1-9]00$/.test(section.styles.headingWeight || '') ? section.styles.headingWeight : '600',
+    } as React.CSSProperties}>{renderedContent}</div>;
   }
 
   const handleElementClick = (e: React.MouseEvent) => {
