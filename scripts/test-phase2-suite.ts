@@ -8,8 +8,6 @@
 
 import { loginViaApi } from './lib/devLogin';
 
-export {};
-
 const BASE_URL = 'http://localhost:3010';
 
 interface TestResult {
