@@ -397,6 +397,7 @@ export function ZaraVoiceCopilot() {
         body: JSON.stringify({
           message: text,
           clientContext: clientName,
+          clientId: activeClient?.id,
           portalViewMode,
           userName: user?.name || 'Malcolm',
           userRole: user?.role || 'admin',
@@ -457,7 +458,7 @@ export function ZaraVoiceCopilot() {
       setIsProcessing(false);
       setVoiceStatus(isVoiceActive ? 'listening' : 'idle');
     }
-  }, [textInput, isProcessing, interruptSpeaking, clientName, portalViewMode, user, messages, isVoiceActive, playSpeechQueue, router]);
+  }, [textInput, isProcessing, interruptSpeaking, clientName, activeClient?.id, portalViewMode, user, messages, isVoiceActive, playSpeechQueue, router]);
 
   // ─────────────────────────────────────────────────────────
   // 4. CLEAR CHAT CONVERSATION

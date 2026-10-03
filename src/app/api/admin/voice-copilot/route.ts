@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
       message = '',
       history = [],
       clientContext = 'Payguard',
+      clientId: requestedClientId = null,
       portalViewMode = 'client',
       userName = 'Malcolm',
       userRole = 'admin'
@@ -118,11 +119,15 @@ export async function POST(req: NextRequest) {
 
       if (lower.includes('invoice') || lower.includes('billing') || lower.includes('mrr') || lower.includes('revenue')) {
         if (lower.includes('create') || lower.includes('draft') || lower.includes('generate')) {
+          // The client is the workspace the person is in, named by id; it is never worked out from the words in a name.
           const inv = await createQuickInvoiceAction({
+            clientId: requestedClientId,
             clientName: clientName,
-            amount: 28500,
-            description: `Enterprise Platform Retainer — ${clientName}`
+            amount: 28500
           });
+          if (!inv.success) {
+            return NextResponse.json({ reply: inv.speechText, speechText: inv.speechText, suggestedNextSteps: defaultSteps });
+          }
           return NextResponse.json({
             reply: inv.speechText,
             speechText: inv.speechText,

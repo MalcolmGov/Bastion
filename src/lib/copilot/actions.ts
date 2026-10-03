@@ -1,3 +1,4 @@
+import type { Client } from '@libsql/client';
 import { getDb } from '@/lib/db/client';
 import crypto from 'node:crypto';
 
@@ -204,6 +205,22 @@ export async function getBillingSummaryAction(): Promise<CopilotActionResponse> 
 }
 
 /**
+ * The client an invoice is for: the one named by id or, from a browser that only sends a name, the one client with exactly that
+ * name. An id that does not exist is not a reason to look at the name, and nothing is ever guessed from what a name contains.
+ */
+async function findInvoiceClient(db: Client, params: { clientId?: unknown; clientName?: unknown }): Promise<{ id: string; name: string } | null> {
+  const byId = params.clientId !== undefined && params.clientId !== null && params.clientId !== '';
+  if (byId && typeof params.clientId !== 'string') return null;
+  const name = typeof params.clientName === 'string' ? params.clientName.trim() : '';
+  if (!byId && !name) return null;
+
+  const found = byId
+    ? await db.execute({ sql: `SELECT id, name FROM clients WHERE id = ?`, args: [params.clientId as string] })
+    : await db.execute({ sql: `SELECT id, name FROM clients WHERE LOWER(name) = LOWER(?)`, args: [name] });
+  return found.rows.length === 1 ? { id: String(found.rows[0].id), name: String(found.rows[0].name) } : null;
+}
+
+/**
  * Voice Copilot Action: Create Quick Commercial Invoice
  */
 export async function createQuickInvoiceAction(params: {
@@ -214,13 +231,24 @@ export async function createQuickInvoiceAction(params: {
 }): Promise<CopilotActionResponse> {
   try {
     const db = getDb();
+    const client = await findInvoiceClient(db, params);
+    if (!client) {
+      return {
+        success: false,
+        action: 'create_invoice',
+        speechText: "I couldn't tell which client this invoice is for. Open that client's workspace and ask me again.",
+        error: 'client_not_identified'
+      };
+    }
+
     const id = `inv_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
     const docNumber = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
     const now = new Date().toISOString().split('T')[0];
     const dueDate = new Date(Date.now() + 14 * 864e5).toISOString().split('T')[0];
 
-    const clientName = params.clientName || 'Move Digital';
-    const description = params.description || 'Enterprise SRE & Automated Remediation Retainer';
+    // The client's own name from the database, not whatever the browser called it.
+    const clientName = client.name;
+    const description = params.description || `Enterprise Platform Retainer — ${clientName}`;
     const amount = Number(params.amount) || 28500;
 
     const items = [
@@ -234,7 +262,7 @@ export async function createQuickInvoiceAction(params: {
     ];
 
     const token = crypto.randomBytes(16).toString('hex');
-    const clientId = params.clientId || (clientName.toLowerCase().includes('gold') ? 'client_goldfields' : 'client_moove_digital');
+    const clientId = client.id;
 
     await db.execute({
       sql: `
