@@ -161,7 +161,6 @@ export default function MoveStudioOverviewPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">
-      <WorkspaceActionCenter />
       {/* Signature Hero Card with Embedded Search & Voice Composer */}
       {dashboardPrefs.sections.heroComposer && (
         <div className="relative group">
@@ -645,6 +644,9 @@ export default function MoveStudioOverviewPage() {
           </div>
         )}
       </div>
+
+      {/* 6. Workspace Action Center: Your Next Steps & Workspace Activity */}
+      <WorkspaceActionCenter clientId={activeClient?.id} siteId={activeSite?.id} />
     </div>
   );
 }
