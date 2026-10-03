@@ -9,6 +9,7 @@ import { runMigrations } from '../src/lib/db/migrations';
 import { createApiToken, verifyApiToken, revokeApiToken } from '../src/lib/auth/apiToken';
 import { hashPassword, verifyPassword } from '../src/lib/auth/password';
 import { PUBLISHED_PASSWORDS } from '../src/lib/auth/bootstrapAdmin';
+import { passwordProblem } from '../src/lib/auth/passwordPolicy';
 import { sendTransactionalEmail } from '../src/lib/email/delivery';
 import { hasPermission } from '../src/lib/auth/auth';
 import { resolveDomain } from '../src/lib/domains/registry';
@@ -60,7 +61,7 @@ interface TestResult {
 
 const results: TestResult[] = [];
 
-async function test(suite: string, name: string, fn: () => Promise<void>) {
+async function test(suite: string, name: string, fn: () => void | Promise<void>) {
   try {
     await fn();
     results.push({ suite, name, status: 'PASS' });
@@ -125,6 +126,15 @@ async function runAll() {
       .filter(row => PUBLISHED_PASSWORDS.some(password => verifyPassword(password, String(row.password_hash))))
       .map(row => String(row.email));
     assert(offenders.length === 0, `Accounts still accept a published password: ${offenders.join(', ')}`);
+  });
+
+  await test('Migrations', 'The password policy refuses every published password in any capitalisation, and accepts an ordinary one', () => {
+    for (const password of PUBLISHED_PASSWORDS) {
+      for (const variant of [password, password.toLowerCase(), password.toUpperCase()]) {
+        assert(passwordProblem(variant) === 'published', `The policy accepts the published password ${variant}`);
+      }
+    }
+    assert(passwordProblem('correct-horse-battery-staple-91') === null, 'The policy refuses an ordinary strong password');
   });
 
   // ─────────────────────────────────────────────────────────────

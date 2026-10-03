@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { passwordRefusal } from '@/lib/auth/passwordPolicy';
 import { getDb } from '@/lib/db/client';
 import { createSession, hashPassword } from '@/lib/auth/auth';
 import crypto from 'node:crypto';
@@ -68,8 +69,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invite token is required' }, { status: 400 });
     }
 
-    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 12) {
-      return NextResponse.json({ error: 'Password must be at least 12 characters long' }, { status: 400 });
+    const refusal = passwordRefusal(newPassword, 'Password must be at least 12 characters long');
+    if (refusal) {
+      return NextResponse.json({ error: refusal }, { status: 400 });
     }
 
     const db = getDb();
