@@ -197,11 +197,29 @@ async function resolveMediaAsset(db: any, access: ApiAccess, assetIdOrUrl: strin
 }
 
 // GraphQL serves what the public site serves and nothing else. Pages come from selectApiPages (live row, or the
-// last published version while a new draft is being written). A record is live when it has a published revision and
-// has not been archived; its data always comes from that revision, never from a draft one.
-const LIVE_RECORD_JOIN = 'JOIN revisions rev ON r.current_published_revision_id = rev.id';
-const NOT_ARCHIVED = "AND r.status <> 'archived'";
+// last published version while a new draft is being written). Releases are served once published.
 const PUBLISHED_ONLY = 'published';
+
+/**
+ * The live records of a collection: those with a published revision that have not been archived, read from that
+ * revision and never from a draft one. Their status is therefore 'published' whatever state a newer draft is in.
+ */
+function liveRecords(collection: string, filter: { sql: string; args: string[] }) {
+  return {
+    sql: `SELECT r.id, r.slug, r.title, 'published' AS status, r.updated_at, rev.data_json
+          FROM content_records r JOIN revisions rev ON r.current_published_revision_id = rev.id
+          WHERE r.collection = ? AND r.status <> 'archived'${filter.sql}`,
+    args: [collection, ...filter.args] as any[],
+  };
+}
+
+function revisionData(row: any): any {
+  try {
+    return row.data_json ? JSON.parse(String(row.data_json)) : {};
+  } catch {
+    return {};
+  }
+}
 
 // Resolver Root
 function createRootResolvers(db: any, access: ApiAccess) {
@@ -224,13 +242,9 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
     // 2. Operations Query
     operations: async ({ country, limit = 20 }: any) => {
-      let sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        ${LIVE_RECORD_JOIN}
-        WHERE r.collection = 'operations' ${NOT_ARCHIVED}${recordsFilter.sql}
-      `;
-      const args: any[] = [...recordsFilter.args];
+      const live = liveRecords('operations', recordsFilter);
+      let sql = live.sql;
+      const args = live.args;
 
       if (country) {
         sql += ` AND rev.data_json LIKE ?`;
@@ -242,19 +256,13 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
       const res = await db.execute({ sql, args });
       return res.rows.map((row: any) => {
-        let data: any = {};
-        try {
-          data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-        } catch {
-          // ignore
-        }
-
+        const data = revisionData(row);
         return {
           id: String(row.id),
           slug: String(row.slug),
           title: String(row.title),
           country: data.country || 'Global',
-          status: PUBLISHED_ONLY,
+          status: String(row.status || 'published'),
           metrics: data.metrics || null,
           infrastructure: data.infrastructure || null,
           updatedAt: String(row.updated_at || new Date().toISOString()),
@@ -264,30 +272,19 @@ function createRootResolvers(db: any, access: ApiAccess) {
     },
 
     operation: async ({ slug }: any) => {
-      const sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        ${LIVE_RECORD_JOIN}
-        WHERE r.collection = 'operations' AND r.slug = ? ${NOT_ARCHIVED}${recordsFilter.sql}
-        LIMIT 1
-      `;
-      const res = await db.execute({ sql, args: [slug, ...recordsFilter.args] });
+      const live = liveRecords('operations', recordsFilter);
+      const res = await db.execute({ sql: `${live.sql} AND r.slug = ? LIMIT 1`, args: [...live.args, slug] });
       if (res.rows.length === 0) return null;
 
       const row = res.rows[0];
-      let data: any = {};
-      try {
-        data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-      } catch {
-        // ignore
-      }
+      const data = revisionData(row);
 
       return {
         id: String(row.id),
         slug: String(row.slug),
         title: String(row.title),
         country: data.country || 'Global',
-        status: PUBLISHED_ONLY,
+        status: String(row.status || 'published'),
         metrics: data.metrics || null,
         infrastructure: data.infrastructure || null,
         updatedAt: String(row.updated_at || new Date().toISOString()),
@@ -297,13 +294,9 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
     // 3. Reports Query
     reports: async ({ year, category, limit = 50 }: any) => {
-      let sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        ${LIVE_RECORD_JOIN}
-        WHERE r.collection = 'reports' ${NOT_ARCHIVED}${recordsFilter.sql}
-      `;
-      const args: any[] = [...recordsFilter.args];
+      const live = liveRecords('reports', recordsFilter);
+      let sql = live.sql;
+      const args = live.args;
 
       if (year) {
         sql += ` AND rev.data_json LIKE ?`;
@@ -319,12 +312,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
       const res = await db.execute({ sql, args });
       return res.rows.map((row: any) => {
-        let data: any = {};
-        try {
-          data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-        } catch {
-          // ignore
-        }
+        const data = revisionData(row);
         return {
           id: String(row.id),
           slug: String(row.slug),
@@ -333,7 +321,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
           category: data.category || 'Integrated Annual Report',
           fileUrl: data.fileUrl || `/reports/${row.slug}.pdf`,
           fileSize: data.fileSize || '14.2 MB',
-          status: PUBLISHED_ONLY,
+          status: String(row.status || 'published'),
           updatedAt: String(row.updated_at || new Date().toISOString())
         };
       });
@@ -341,13 +329,9 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
     // 4. News Query
     news: async ({ category, limit = 20 }: any) => {
-      let sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        ${LIVE_RECORD_JOIN}
-        WHERE r.collection = 'news' ${NOT_ARCHIVED}${recordsFilter.sql}
-      `;
-      const args: any[] = [...recordsFilter.args];
+      const live = liveRecords('news', recordsFilter);
+      let sql = live.sql;
+      const args = live.args;
       if (category) {
         sql += ` AND rev.data_json LIKE ?`;
         args.push(`%"category":"${category}"%`);
@@ -358,12 +342,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
       const res = await db.execute({ sql, args });
       return res.rows.map((row: any) => {
-        let data: any = {};
-        try {
-          data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-        } catch {
-          // ignore
-        }
+        const data = revisionData(row);
         return {
           id: String(row.id),
           slug: String(row.slug),
@@ -371,29 +350,18 @@ function createRootResolvers(db: any, access: ApiAccess) {
           category: data.category || 'SENS Regulatory',
           summary: data.summary || data.teaser || '',
           publishedAt: data.publishedAt || String(row.updated_at),
-          status: PUBLISHED_ONLY,
+          status: String(row.status || 'published'),
           featuredMedia: async () => resolveMediaAsset(db, access, data.featuredImage || data.imageUrl)
         };
       });
     },
 
     newsArticle: async ({ slug }: any) => {
-      const sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        ${LIVE_RECORD_JOIN}
-        WHERE r.collection = 'news' AND r.slug = ? ${NOT_ARCHIVED}${recordsFilter.sql}
-        LIMIT 1
-      `;
-      const res = await db.execute({ sql, args: [slug, ...recordsFilter.args] });
+      const live = liveRecords('news', recordsFilter);
+      const res = await db.execute({ sql: `${live.sql} AND r.slug = ? LIMIT 1`, args: [...live.args, slug] });
       if (res.rows.length === 0) return null;
       const row = res.rows[0];
-      let data: any = {};
-      try {
-        data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-      } catch {
-        // ignore
-      }
+      const data = revisionData(row);
       return {
         id: String(row.id),
         slug: String(row.slug),
@@ -401,7 +369,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
         category: data.category || 'SENS Regulatory',
         summary: data.summary || data.teaser || '',
         publishedAt: data.publishedAt || String(row.updated_at),
-        status: PUBLISHED_ONLY,
+        status: String(row.status || 'published'),
         featuredMedia: async () => resolveMediaAsset(db, access, data.featuredImage || data.imageUrl)
       };
     },

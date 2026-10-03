@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { verifyApiToken } from '@/lib/auth/apiToken';
 import { apiTenantFilter } from '@/lib/auth/apiAccess';
-import { canPreviewDrafts, selectApiPages } from '@/lib/studio/publishedPages';
+import { previewRefusal, selectApiPages } from '@/lib/studio/publishedPages';
 
 export async function GET(
   req: NextRequest,
@@ -17,12 +17,8 @@ export async function GET(
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
     const isPreview = searchParams.get('preview') === 'true';
-    if (isPreview && !canPreviewDrafts(auth)) {
-      return NextResponse.json(
-        { error: "Forbidden: previewing unpublished content needs an API token with the 'content:edit' or 'content:publish' scope" },
-        { status: 403 }
-      );
-    }
+    const refused = previewRefusal(auth, isPreview);
+    if (refused) return refused;
 
     const effectiveClientId: string = auth.isAgencyAdmin
       ? (searchParams.get('clientId') || 'client_goldfields')

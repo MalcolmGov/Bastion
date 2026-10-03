@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import type { Client } from '@libsql/client';
 import { apiTenantFilter, type ApiAccess } from '@/lib/auth/apiAccess';
 
@@ -10,6 +11,15 @@ const DRAFT_SCOPES = ['*', 'content:create', 'content:edit', 'content:publish'];
 export function canPreviewDrafts(access: ApiAccess): boolean {
   if (!access.ok) return false;
   return !!access.isAgencyAdmin || DRAFT_SCOPES.some((scope) => access.scopes?.includes(scope));
+}
+
+/** The 403 for a request that asks for drafts without being allowed to see them, or null when the request may go on. */
+export function previewRefusal(access: ApiAccess, isPreview: boolean): NextResponse | null {
+  if (!isPreview || canPreviewDrafts(access)) return null;
+  return NextResponse.json(
+    { error: "Forbidden: previewing unpublished content needs an API token with the 'content:edit' or 'content:publish' scope" },
+    { status: 403 }
+  );
 }
 
 /**
