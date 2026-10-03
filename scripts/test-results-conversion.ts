@@ -327,6 +327,11 @@ async function main() {
     assert.ok(merafe.narrative.length >= 2 && merafe.narrative.length <= 12, `narrative length ${merafe.narrative.length}`);
     assert.ok(merafe.narrative.every((paragraph) => paragraph.split(/\s+/).length >= 12), merafe.narrative.join('\n---\n'));
     const publication = merafe.publication || [];
+    const metrics = publication.flatMap((block) => block.metrics || []);
+    assert.ok(metrics.some((metric) => metric.value === 'R5 835 million' && /revenue/i.test(metric.label)), 'KPI columns must remain separate');
+    assert.ok(metrics.some((metric) => metric.value === '12.2 cents' && /headline/i.test(metric.label)));
+    assert.ok(metrics.some((metric) => metric.value === '5.7 cents' && /basic/i.test(metric.label)));
+    assert.ok(!metrics.some((metric) => /million.*cents/.test(metric.value)));
     const positionTable = publication.find((block) => block.table?.rows.some((row) => row.label === 'Property, plant and equipment'));
     const equipmentRow = positionTable?.table?.rows.find((row) => row.label === 'Property, plant and equipment');
     assert.deepEqual(equipmentRow?.cells, [null, '1 147 920', '1 124 913']);

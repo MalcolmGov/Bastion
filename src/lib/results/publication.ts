@@ -409,18 +409,32 @@ function metricBlocks(lines: Line[]): PublicationBlock[] {
   for (const line of lines) {
     if (title && line === title) continue;
     if (groups.includes(line)) continue;
-    const key = [...bands.keys()].find((start) => Math.abs(start - line.x) < 50) ?? line.x;
-    bands.set(key, [...(bands.get(key) || []), line]);
+    // A PDF baseline can contain several KPI columns. Split its phrases before
+    // grouping vertically, otherwise unrelated figures become one metric.
+    const zones: Phrase[][] = [];
+    for (const phrase of line.phrases) {
+      const zone = zones[zones.length - 1];
+      const previous = zone?.[zone.length - 1];
+      if (!zone || (previous && phrase.x - previous.right > 18)) zones.push([phrase]);
+      else zone.push(phrase);
+    }
+    for (const zone of zones) {
+      const x = zone[0].x;
+      const key = [...bands.keys()].find((start) => Math.abs(start - x) < 50) ?? x;
+      const zoned = { ...line, x, phrases: zone, text: clean(zone.map((phrase) => phrase.text).join(' ')), fontSize: Math.max(...zone.map((phrase) => phrase.height)) };
+      bands.set(key, [...(bands.get(key) || []), zoned]);
+    }
   }
   const metrics: PublicationMetric[] = [];
   for (const band of bands.values()) {
     const ordered = [...band].sort((a, b) => b.y - a.y);
     ordered.forEach((line, index) => {
-      if (line.fontSize < 16) return;
+      const valuePattern = /^(?:R[\d\s]+ million|[\d.]+\s*cents|None|\d+\.\d+|\d[\d\s]*kt|\d[\d\s,]*oz)$/i;
+      if (line.fontSize < 16 && !valuePattern.test(line.text)) return;
       const caption: string[] = [];
       for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
         const prior = ordered[cursor];
-        if (prior.fontSize >= 16 || /^\(/.test(prior.text)) break;
+        if (prior.fontSize >= 16 || valuePattern.test(prior.text) || /^\(/.test(prior.text)) break;
         caption.unshift(prior.text);
       }
       const comparison = ordered[index + 1]?.text.startsWith('(') ? ordered[index + 1].text : '';
