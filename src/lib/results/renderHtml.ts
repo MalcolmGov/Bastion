@@ -108,7 +108,7 @@ function publicationHtml(blocks: PublicationBlock[]): string {
     ensure(region);
     if (block.sourcePage && block.sourcePage !== sourcePage) {
       sourcePage = block.sourcePage;
-      chunks.push(`<a class="source-reference" href="#source-page-${sourcePage}">Source page ${sourcePage}</a>`);
+      chunks.push(`<a id="transcript-page-${sourcePage}" class="source-reference" href="#source-page-${sourcePage}">Source page ${sourcePage}</a>`);
     }
     if (block.kind === 'heading') {
       const tag = block.level === 3 ? 'h3' : 'h2';

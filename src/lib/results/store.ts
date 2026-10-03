@@ -68,6 +68,7 @@ export async function saveResultsDocument(input: {
   clientId?: string | null;
   document: ResultsDocument;
   status: 'draft' | 'published';
+  expectedUpdatedAt?: string;
 }): Promise<StoredResultsDocument> {
   await ensureSchema();
   const db = getDb();
@@ -78,10 +79,10 @@ export async function saveResultsDocument(input: {
     const current = await getResultsDocument(input.id);
     if (!current) throw new Error('Results document not found');
     const publishedAt = input.status === 'published' ? current.publishedAt || now : null;
-    await db.execute({
+    const updated = await db.execute({
       sql: `UPDATE results_documents
             SET title = ?, status = ?, source_filename = ?, document_json = ?, updated_at = ?, published_at = ?
-            WHERE id = ?`,
+            WHERE id = ? AND updated_at = ?`,
       args: [
         title,
         input.status,
@@ -90,8 +91,10 @@ export async function saveResultsDocument(input: {
         now,
         publishedAt,
         input.id,
+        input.expectedUpdatedAt || current.updatedAt,
       ],
     });
+    if (!updated.rowsAffected) throw new Error('This draft was changed in another session. Reopen it before saving to avoid overwriting newer work.');
     const saved = await getResultsDocument(input.id);
     if (!saved) throw new Error('Results document not found after save');
     return saved;

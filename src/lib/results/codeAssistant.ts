@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import crypto from 'crypto';
+import { rasterizeLogoDataUrl } from './logoRaster';
 
 export type CodeProvider = 'anthropic' | 'openai' | 'gemini' | 'deepseek' | 'qwen';
 
@@ -25,15 +26,6 @@ const REGION_IDS = [
   'results-footer',
   'results-layout',
 ];
-
-function mapModelId(provider: string, modelId: string): string {
-  if (provider === 'openai') {
-    if (modelId === 'gpt-6-astra') return 'o3-mini';
-    if (modelId === 'gpt-6-sol') return 'gpt-4o';
-    if (modelId === 'gpt-6-luna') return 'gpt-4o-mini';
-  }
-  return modelId;
-}
 
 const URL_ATTRS = ['href', 'src', 'xlink:href', 'action', 'formaction', 'poster', 'data', 'srcset', 'background'];
 
@@ -62,9 +54,18 @@ export function maskPublicationAssets(html: string): { html: string; restore: (v
 
 export function sanitizePublicationHtml(html: string): string {
   if (html.length > 12_000_000) throw new Error('This publication exceeds the 12 MB artwork limit.');
+  // Keep the strict ban on active SVG data URLs; retain static logo artwork as inert pixels.
+  html = html.replace(/data:image\/svg\+xml(?:;base64|;charset=utf-8)?,[^"'<>\s]+/gi, value => rasterizeLogoDataUrl(value) || '');
   const assets = maskPublicationAssets(html);
   const $ = cheerio.load(assets.html);
-  $('script, iframe, frame, frameset, object, embed, applet, base, link, form, input, button, textarea, select, meta[http-equiv]').remove();
+  $('script, iframe, frame, frameset, object, embed, applet, base, form, input, button, textarea, select, meta[http-equiv]').remove();
+  $('link').each((_, element) => {
+    const node = $(element);
+    try {
+      const url = new URL(node.attr('href') || '');
+      if (node.attr('rel') !== 'stylesheet' || url.protocol !== 'https:' || url.hostname !== 'fonts.googleapis.com' || url.pathname !== '/css2' || url.username || url.password || url.port) node.remove();
+    } catch { node.remove(); }
+  });
   $('*').each((_, element) => {
     const node = $(element);
     const attribs = (element as { attribs?: Record<string, string> }).attribs || {};
@@ -257,11 +258,11 @@ export function codePublicationLocally(html: string, prompt: string): { html: st
   const updated = sanitizePublicationHtml($.html() || html);
   const summary = changes[0];
   const replyText = [
-    'I edited the publication source directly.',
+    'Your design proposal is ready to review.',
     ...changes.map((change) => `• ${change}`),
     '',
     '```html',
-    '/* Stylesheet and markup were written back onto the live page. Open View source to read the full document. */',
+    '/* Review the proposal, then apply it to the preview. */',
     '```',
     '',
     'Add a provider API key in this chat if you want a frontier model to rewrite arbitrary sections, components, or copy.',
@@ -279,18 +280,11 @@ async function completeWithProvider(input: {
 }): Promise<string> {
   const history = input.history.slice(-6);
   if (input.provider === 'anthropic') {
-    let targetModel = input.modelId || 'claude-sonnet-5';
-    if (
-      targetModel === 'claude-3-7-sonnet-20250219' ||
-      targetModel === 'claude-3-7-sonnet' ||
-      targetModel === 'claude-sonnet-5-5' ||
-      targetModel === 'claude-opus-5-5'
-    ) {
-      targetModel = 'claude-sonnet-5';
-    }
+    const targetModel = input.modelId;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      signal: AbortSignal.timeout(60_000),
       headers: {
         'x-api-key': input.apiKey,
         'anthropic-version': '2023-06-01',
@@ -315,6 +309,7 @@ async function completeWithProvider(input: {
     const model = input.modelId || 'gemini-2.0-flash';
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${input.apiKey}`, {
       method: 'POST',
+      signal: AbortSignal.timeout(60_000),
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: input.systemPrompt }] },
@@ -333,7 +328,7 @@ async function completeWithProvider(input: {
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
 
-  const actualModel = mapModelId(input.provider, input.modelId);
+  const actualModel = input.modelId;
   const isOpenRouter = input.provider === 'qwen' && input.apiKey.startsWith('sk-or-');
   const endpoint = input.provider === 'deepseek'
     ? 'https://api.deepseek.com/chat/completions'
@@ -347,6 +342,7 @@ async function completeWithProvider(input: {
       : (actualModel || 'gpt-4o');
   const response = await fetch(endpoint, {
     method: 'POST',
+      signal: AbortSignal.timeout(60_000),
     headers: {
       Authorization: `Bearer ${input.apiKey}`,
       'content-type': 'application/json',
@@ -367,20 +363,37 @@ async function completeWithProvider(input: {
   return data.choices?.[0]?.message?.content || '';
 }
 
-function systemPrompt(html: string): string {
-  const large = html.length > 14000;
-  return `You are a staff frontend engineer editing a self-contained corporate results publication.
-You write production HTML and CSS. You may change layout, typography, colour, spacing, sections, and wording.
-Preserve all financial figures, periods, units and footnotes unless the instruction explicitly requests changing them. Never invent financial data. Keep the financial tables present unless the user explicitly tells you to remove one.
-Keep section#results-source-visuals and its image URLs unchanged. These URLs are placeholders for original PDF artwork restored locally after your edit.
-${large
-    ? `The document is long. Return only a json fence:
-\`\`\`json
-{ "summary": "what you changed", "css": "full replacement for style#results-theme, or omit", "regions": { "results-header": "<header ...>...</header>" } }
-\`\`\`
-Region ids you may replace: ${REGION_IDS.join(', ')}. Omit regions you do not change.`
-    : `Return a short explanation, then one html fence containing the COMPLETE updated document, starting with <!DOCTYPE html> and ending with </html>.`}
-Do not include script tags or event handlers.`;
+/** A design pass must preserve report text, table boundaries, artwork and page provenance. */
+export function assertPublicationContentPreserved(before: string, after: string): void {
+  const snapshot = (html: string) => {
+    const $ = cheerio.load(html);
+    $('style, script, link').remove();
+    const text = (value: string) => value.replace(/\s+/g, ' ').trim();
+    return JSON.stringify({
+      text: text($('body').text()),
+      tables: $('table').toArray().map(table => $(table).find('tr').toArray().map(row => $(row).find('th, td').toArray().map(cell => ({ text: text($(cell).text()), colspan: $(cell).attr('colspan') || '1', rowspan: $(cell).attr('rowspan') || '1' })))),
+      images: $('img').toArray().map(image => $(image).attr('src') || ''),
+      references: $('.source-reference').toArray().map(anchor => $(anchor).attr('href')),
+    });
+  };
+  if (snapshot(before) !== snapshot(after)) throw new Error('This design proposal changed report content, financial tables or source artwork. No changes were applied. Use the figures review to make intentional financial corrections.');
+}
+
+function systemPrompt(_html: string): string {
+  return `You are styling an investor results publication. Return a short explanation and a JSON fence containing {"summary":"what changed","css":"the COMPLETE replacement stylesheet for style#results-theme"}.
+Change only typography, colours, spacing, responsive layout and print styles. Preserve all content and readability. Never hide, remove or alter figures, periods, units, tables, footnotes, disclosures or source artwork. Never return replacement HTML or regions. If the request requires changing financial content, explain that it must be corrected in the figures review instead.`;
+}
+
+function publicationDesignContext(html: string): string {
+  const $ = cheerio.load(html);
+  const selectors = new Set<string>();
+  $('body *').each((_, element) => {
+    const node = $(element);
+    const id = node.attr('id');
+    if (id) selectors.add(`#${id}`);
+    for (const name of (node.attr('class') || '').split(/\s+/).filter(Boolean)) selectors.add(`.${name}`);
+  });
+  return JSON.stringify({ stylesheet: $('style#results-theme').text(), selectors: [...selectors].slice(0, 200), tables: $('table').length, sourcePages: $('#results-source-visuals img').length });
 }
 
 export async function codeResultsPublication(input: {
@@ -404,7 +417,11 @@ export async function codeResultsPublication(input: {
     };
   };
 
-  if (!input.apiKey) return local();
+  if (!input.apiKey) {
+    const result = local();
+    assertPublicationContentPreserved(sanitizePublicationHtml(input.html), result.html);
+    return result;
+  }
 
   try {
     const replyText = await completeWithProvider({
@@ -412,17 +429,12 @@ export async function codeResultsPublication(input: {
       modelId: input.modelId,
       apiKey: input.apiKey,
       systemPrompt: systemPrompt(current),
-      userMessage: `Instruction:\n${input.prompt}\n\nCurrent publication source:\n${current}`,
+      userMessage: `Instruction:\n${input.prompt}\n\nDesign context (content is protected):\n${publicationDesignContext(current)}`,
       history: input.history || [],
     });
     const extracted = extractCodedHtml(replyText, current);
-    if (!extracted) {
-      const fallback = local();
-      return {
-        ...fallback,
-        replyText: `${replyText}\n\nThe model reply did not contain applicable HTML, so the built-in coder wrote a stylesheet pass instead.`,
-      };
-    }
+    if (!extracted) throw new Error('The provider did not return a usable design proposal. No changes were applied. Try a more specific styling request.');
+    assertPublicationContentPreserved(current, extracted.html);
     const summary = replyText.split('\n').find((line) => line.trim() && !line.trim().startsWith('```'))?.trim()
       || extracted.summary;
     return {
@@ -433,11 +445,7 @@ export async function codeResultsPublication(input: {
       modelId: input.modelId,
     };
   } catch (error) {
-    const fallback = local();
-    const reason = error instanceof Error ? error.message : 'the model was unavailable';
-    return {
-      ...fallback,
-      replyText: `${fallback.replyText}\n\nLive model call failed (${reason}). The built-in coder applied the edit above.`,
-    };
+    if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) throw new Error('The AI provider took too long to respond. No changes were applied. Please try again.');
+    throw error;
   }
 }

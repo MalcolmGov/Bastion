@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guard';
+import { requirePermission, clientOwns } from '@/lib/auth/guard';
+import { getResultsDocument } from '@/lib/results/store';
 import { codeResultsPublication, type CodeProvider } from '@/lib/results/codeAssistant';
 
 export const runtime = 'nodejs';
@@ -15,11 +16,13 @@ function serverKey(provider: CodeProvider): string | undefined {
 }
 
 export async function POST(req: NextRequest) {
-  const gate = await requireUser();
+  const gate = await requirePermission('content:edit');
   if (!gate.ok) return gate.response;
 
   try {
     const body = await req.json();
+    const document = typeof body.documentId === 'string' ? await getResultsDocument(body.documentId) : null;
+    if (!document || !clientOwns(gate.user, document.clientId)) return NextResponse.json({ error: 'Publication not found in your workspace.' }, { status: 404 });
     const provider = PROVIDERS.has(body.provider) ? body.provider as CodeProvider : 'anthropic';
     const prompt = String(body.prompt || '').trim();
     const html = String(body.html || '');
@@ -28,6 +31,7 @@ export async function POST(req: NextRequest) {
     if (html.length > 12_000_000) return NextResponse.json({ error: 'This publication is too large to edit in one pass.' }, { status: 400 });
 
     const userKey = typeof body.userApiKey === 'string' ? body.userApiKey.trim() : '';
+    if ((userKey || serverKey(provider)) && !String(body.modelId || '').trim()) return NextResponse.json({ error: 'Enter a model ID available in your provider account.' }, { status: 400 });
     const history = Array.isArray(body.history)
       ? body.history
         .filter((turn: { role?: string; content?: string }) => (turn.role === 'user' || turn.role === 'assistant') && typeof turn.content === 'string')

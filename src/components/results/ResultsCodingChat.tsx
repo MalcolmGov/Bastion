@@ -13,25 +13,15 @@ import {
   Sparkles,
   Trash2,
   Undo2,
-  Zap,
 } from 'lucide-react';
 import { ApiKeysTab, getStoredApiKeys, type StoredApiKeys } from '@/components/studio/ApiKeysTab';
 
 const MODEL_OPTIONS = [
-  { id: 'claude-opus-5-5', provider: 'anthropic' as const, name: 'Claude Opus 5.5', tag: 'Highest capability coding', badge: 'Anthropic' },
-  { id: 'claude-sonnet-5-5', provider: 'anthropic' as const, name: 'Claude Sonnet 5.5', tag: 'Fast design and code', badge: 'Anthropic' },
-  { id: 'claude-sonnet-5', provider: 'anthropic' as const, name: 'Claude Sonnet 5', tag: 'Upgraded frontier intelligence', badge: 'Anthropic' },
-  { id: 'claude-3-5-sonnet-20241022', provider: 'anthropic' as const, name: 'Claude 3.5 Sonnet', tag: 'UI and HTML polish', badge: 'Anthropic' },
-  { id: 'gpt-6-astra', provider: 'openai' as const, name: 'GPT-6 Astra', tag: 'Flagship engineering', badge: 'OpenAI' },
-  { id: 'gpt-6-sol', provider: 'openai' as const, name: 'GPT-6 Sol', tag: 'Multi-step coding', badge: 'OpenAI' },
-  { id: 'gpt-4o', provider: 'openai' as const, name: 'GPT-4o', tag: 'Design and code', badge: 'OpenAI' },
-  { id: 'gpt-4o-mini', provider: 'openai' as const, name: 'GPT-4o mini', tag: 'Fast edits', badge: 'OpenAI' },
-  { id: 'gemini-2.0-flash', provider: 'gemini' as const, name: 'Gemini 2.0 Flash', tag: 'Low latency', badge: 'Google' },
-  { id: 'gemini-1.5-pro', provider: 'gemini' as const, name: 'Gemini 1.5 Pro', tag: 'Long document context', badge: 'Google' },
-  { id: 'deepseek-reasoner', provider: 'deepseek' as const, name: 'DeepSeek-R1', tag: 'Reasoning coder', badge: 'DeepSeek' },
-  { id: 'deepseek-chat', provider: 'deepseek' as const, name: 'DeepSeek-V3', tag: 'Frontier coder', badge: 'DeepSeek' },
-  { id: 'qwen-2.5-coder-32b-instruct', provider: 'qwen' as const, name: 'Qwen 2.5 Coder 32B', tag: 'Open code model', badge: 'Qwen' },
-  { id: 'qwen-max', provider: 'qwen' as const, name: 'Qwen Max', tag: 'Enterprise coder', badge: 'Qwen' },
+  { id: 'gpt-4o', provider: 'openai' as const, name: 'OpenAI', tag: 'Configured model' },
+  { id: 'anthropic', provider: 'anthropic' as const, name: 'Anthropic', tag: 'Enter your model ID' },
+  { id: 'gemini', provider: 'gemini' as const, name: 'Google', tag: 'Enter your model ID' },
+  { id: 'deepseek-chat', provider: 'deepseek' as const, name: 'DeepSeek', tag: 'Configured model' },
+  { id: 'qwen-max', provider: 'qwen' as const, name: 'Qwen', tag: 'Configured model' },
 ];
 
 const QUICK_PROMPTS = [
@@ -64,7 +54,7 @@ export function ResultsCodingChat({
   documentId: string;
   onApplyHtml: (nextHtml: string) => void;
 }) {
-  const [selectedModelId, setSelectedModelId] = useState('claude-3-5-sonnet-20241022');
+  const [selectedModelId, setSelectedModelId] = useState('gpt-4o');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputPrompt, setInputPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +64,9 @@ export function ResultsCodingChat({
   const [showKeys, setShowKeys] = useState(false);
   const [showSource, setShowSource] = useState(false);
   const [sourceDraft, setSourceDraft] = useState(html);
-  const [autoApply, setAutoApply] = useState(true);
+  const [modelId, setModelId] = useState('gpt-4o');
+  const liveHtml = useRef(html);
+  liveHtml.current = html;
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -83,8 +75,6 @@ export function ResultsCodingChat({
 
   useEffect(() => {
     setStoredKeys(getStoredApiKeys());
-    const savedAuto = localStorage.getItem('bastion_results_code_auto_apply');
-    if (savedAuto !== null) setAutoApply(savedAuto === 'true');
   }, [showKeys]);
 
   useEffect(() => {
@@ -113,9 +103,11 @@ export function ResultsCodingChat({
       const response = await fetch('/api/admin/results/code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(70_000),
         body: JSON.stringify({
           provider: selectedModel.provider,
-          modelId: selectedModel.id,
+          modelId,
+          documentId,
           prompt: text,
           html,
           userApiKey: storedKeys[selectedModel.provider] || undefined,
@@ -128,8 +120,7 @@ export function ResultsCodingChat({
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'The coding assistant failed');
       const nextHtml = typeof body.html === 'string' ? body.html : html;
-      const changed = nextHtml !== html;
-      if (changed && autoApply) onApplyHtml(nextHtml);
+
       setMessages((current) => [...current, {
         id: `assist_${Date.now()}`,
         role: 'assistant',
@@ -139,12 +130,8 @@ export function ResultsCodingChat({
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         previousHtml: html,
         nextHtml,
-        applied: changed && autoApply,
+        applied: false,
       }]);
-      if (changed && autoApply) {
-        setAppliedNotice('Applied the HTML update to the preview.');
-        setTimeout(() => setAppliedNotice(null), 3500);
-      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'The coding assistant failed');
     } finally {
@@ -155,6 +142,7 @@ export function ResultsCodingChat({
   function applyMessage(index: number) {
     const message = messages[index];
     if (!message?.nextHtml) return;
+    if (liveHtml.current !== message.previousHtml) { setErrorMessage("The preview has changed since this proposal. Request a fresh proposal before applying it."); return; }
     onApplyHtml(message.nextHtml);
     setMessages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, applied: true, previousHtml: html } : item));
     setAppliedNotice('Applied that code revision.');
@@ -164,6 +152,7 @@ export function ResultsCodingChat({
   function revertMessage(index: number) {
     const message = messages[index];
     if (!message?.previousHtml) return;
+    if (liveHtml.current !== message.nextHtml) { setErrorMessage("A newer edit exists. Reverting this proposal would overwrite it."); return; }
     onApplyHtml(message.previousHtml);
     setMessages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, applied: false } : item));
   }
@@ -177,18 +166,7 @@ export function ResultsCodingChat({
             AI coding assistant
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                const next = !autoApply;
-                setAutoApply(next);
-                localStorage.setItem('bastion_results_code_auto_apply', String(next));
-              }}
-              className={`flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] ${autoApply ? 'border-sky-500/40 bg-sky-500/20 text-sky-300' : 'border-slate-700 bg-slate-800 text-slate-400'}`}
-            >
-              <Zap className="h-3 w-3" />
-              Auto-apply {autoApply ? 'on' : 'off'}
-            </button>
+            <span className="rounded-full border border-sky-500/30 px-2 py-0.5 text-[10px] text-sky-300">Review before applying</span>
             <button type="button" onClick={() => setShowKeys((open) => !open)} className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[10px] text-amber-200">
               <Key className="h-3 w-3" />
               {hasUserKey ? 'Key ready' : 'API keys'}
@@ -207,7 +185,7 @@ export function ResultsCodingChat({
         <div className="relative">
           <select
             value={selectedModelId}
-            onChange={(event) => setSelectedModelId(event.target.value)}
+            onChange={(event) => { setSelectedModelId(event.target.value); setModelId(['anthropic', 'gemini'].includes(event.target.value) ? '' : event.target.value); }}
             className="w-full appearance-none rounded-xl border border-[#232F42] bg-[#0A0D14] px-3 py-2 pr-8 text-xs font-medium text-white"
           >
             <optgroup label="Anthropic">
@@ -233,7 +211,11 @@ export function ResultsCodingChat({
           </select>
           <ChevronDown className="pointer-events-none absolute right-2.5 top-2.5 h-4 w-4 text-slate-400" />
         </div>
-        <p className="px-1 text-[11px] text-slate-500">Editing publication {documentId.slice(0, 8)} as HTML and CSS. Tables stay in the source until you tell the assistant to change them.</p>
+        <label className="block text-[11px] text-slate-400">Provider model ID
+          <input aria-label="Provider model ID" value={modelId} onChange={event => setModelId(event.target.value)} placeholder="Use a model ID available in your provider account" className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white" />
+        </label>
+        {!hasUserKey && <p className="text-[11px] text-amber-200">Without a provider key, requests use the built-in stylesheet presets.</p>}
+        <p className="px-1 text-[11px] text-slate-500">Editing publication {documentId.slice(0, 8)} as HTML and CSS. Report text, tables and source artwork are protected.</p>
       </div>
 
       {showKeys && (
@@ -286,7 +268,7 @@ export function ResultsCodingChat({
             <Sparkles className="mb-3 h-6 w-6 text-sky-400" />
             <p className="font-semibold text-white">Code the results page in chat</p>
             <p className="mt-2 max-w-xs leading-5 text-slate-400">
-              Ask for layout, CSS, type, colour, or copy changes. The assistant rewrites the publication HTML and the preview updates.
+              Ask for typography, colour, spacing or responsive layout. Review the proposal and apply it when ready. Financial corrections belong in the figures review.
             </p>
           </div>
         )}

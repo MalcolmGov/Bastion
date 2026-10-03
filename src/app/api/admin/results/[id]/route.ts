@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guard';
-import { isAgencyUser } from '@/lib/auth/roles';
-import { sanitizePublicationHtml } from '@/lib/results/codeAssistant';
+import { requireUser, clientOwns } from '@/lib/auth/guard';
+import { hasPermission } from '@/lib/auth/auth';
+import { renderResultsHtml } from '@/lib/results/renderHtml';
+import { sanitizePublicationHtml, assertPublicationContentPreserved } from '@/lib/results/codeAssistant';
 import { getResultsDocument, saveResultsDocument } from '@/lib/results/store';
 import type { ResultsDocument } from '@/lib/results/types';
 
@@ -20,7 +21,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   const document = await getResultsDocument(id);
   if (!document) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  if (!isAgencyUser(user) && document.clientId && document.clientId !== user.client_id) {
+  if (!clientOwns(user, document.clientId)) {
     return NextResponse.json({ error: 'Forbidden: Document belongs to another client tenant.' }, { status: 403 });
   }
 
@@ -36,7 +37,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   const current = await getResultsDocument(id);
   if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  if (!isAgencyUser(user) && current.clientId && current.clientId !== user.client_id) {
+  if (!clientOwns(user, current.clientId)) {
     return NextResponse.json({ error: 'Forbidden: Cannot edit document belonging to another client tenant.' }, { status: 403 });
   }
 
@@ -45,13 +46,24 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     return NextResponse.json({ error: 'A results document is required.' }, { status: 400 });
   }
   const status = body.status === 'published' ? 'published' : 'draft';
-  if (typeof body.document.presentationHtml === 'string') {
-    body.document.presentationHtml = sanitizePublicationHtml(body.document.presentationHtml);
+  if (!hasPermission(user.role, status === 'published' ? 'content:publish' : 'content:edit')) return NextResponse.json({ error: 'Your role does not permit this action.' }, { status: 403 });
+  if (body.expectedUpdatedAt !== current.updatedAt) return NextResponse.json({ error: 'This draft changed in another session. Reopen it before saving.' }, { status: 409 });
+  try {
+    // Original PDF evidence cannot be replaced by a styling or figures request.
+    body.document.sourcePages = current.document.sourcePages;
+    body.document.sourceFilename = current.document.sourceFilename;
+    body.document.pageCount = current.document.pageCount;
+    body.document.warnings = current.document.warnings;
+    if (status === 'published' && !hasPermission(user.role, 'content:edit') && JSON.stringify(body.document) !== JSON.stringify(current.document)) return NextResponse.json({ error: 'Save content changes through an editor before publishing.' }, { status: 403 });
+    if (typeof body.document.presentationHtml !== 'string') body.document.presentationHtml = renderResultsHtml(body.document);
+    if (typeof body.document.presentationHtml === 'string') {
+      body.document.presentationHtml = sanitizePublicationHtml(body.document.presentationHtml);
+      assertPublicationContentPreserved(sanitizePublicationHtml(renderResultsHtml(body.document)), body.document.presentationHtml);
+    }
+    if (status === 'published' && body.sourceReviewed !== true) return NextResponse.json({ error: 'Compare the complete publication with the original PDF and confirm the source review before publishing.' }, { status: 400 });
+    const saved = await saveResultsDocument({ id, document: body.document, status, expectedUpdatedAt: body.expectedUpdatedAt });
+    return NextResponse.json(saved);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'The publication could not be saved.' }, { status: 400 });
   }
-  const saved = await saveResultsDocument({
-    id,
-    document: body.document,
-    status,
-  });
-  return NextResponse.json(saved);
 }

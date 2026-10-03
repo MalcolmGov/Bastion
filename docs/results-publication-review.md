@@ -25,3 +25,13 @@ Source previews are faithful raster reproductions, not editable HTML charts. The
 Merafe's six missing-figure warnings were traced to intentional source blanks in previously/currently stated disclosures. Word hyphens are now distinguished from financial dashes; wrapped labels stay together; grouped year/state headings expand to their numeric and percentage columns. Source blanks are recorded separately from unrecognised missing values, and ordinary incomplete-table warnings remain active. Regression checks cover both parser statements and publication tables.
 
 A separate source review item remains: on PDF page 18, the previously stated chrome revenue total is printed as 2 262 211 (R’000), while its two reported regional amounts, 506 580 and 1 755 641, add to 2 262 221. The converter preserves the printed amounts and total. This requires issuer/source review, not an automatic arithmetic correction.
+
+## Safe design editing and source review
+
+The workspace now compares a selected original PDF page with that page's actual HTML transcription. A separate confirmation is required before publishing; editing resets it. Front matter without a separate transcription remains explicitly identified. This is a human source check, not automated assurance that every PDF is accurate.
+
+Design proposals require an explicit Apply action. Styling calls send the stylesheet and layout selectors rather than the full financial report or source imagery. Provider errors, timeouts, unusable replies, and changes to report text, table cells/structure or source artwork are rejected without a substitute edit. The built-in no-key mode is identified as stylesheet presets. Provider model IDs are transparent, without invented labels or silent model substitutions. Safe static SVG logos are rasterized to PNG before sanitization; active/external SVG content is excluded. Google Fonts stylesheet links survive saving, while arbitrary external stylesheets remain excluded.
+
+Draft writes compare the loaded timestamp with the saved revision and use an atomic SQL condition to reject conflicts. Source evidence is retained from the stored draft. Tenant ownership, edit permission, publish permission, transcription consistency and source-review confirmation are checked on the server. A publisher without edit permission can publish the saved draft but cannot combine publishing with content changes.
+
+CI runs the financial regression suite. App fonts use the existing runtime stylesheet and CSS fallbacks, removing the Next.js build's dependency on Google's font download service.

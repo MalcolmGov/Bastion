@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as cheerio from 'cheerio';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { sanitizePublicationHtml, maskPublicationAssets, codeResultsPublication } from '../src/lib/results/codeAssistant';
+import { sanitizePublicationHtml, maskPublicationAssets, codeResultsPublication, assertPublicationContentPreserved } from '../src/lib/results/codeAssistant';
+import { rasterizeLogoDataUrl } from '../src/lib/results/logoRaster';
 import { BrandDnaExtractor } from '../src/lib/studio/brandExtractor';
 import { applyFigureEdit } from '../src/lib/results/applyFigureEdit';
 import { parseBrandHtml, chooseBrandColors } from '../src/lib/results/brand';
@@ -11,6 +12,11 @@ import { reconstructStatements } from '../src/lib/results/reconstruct';
 import { isFinancialNumber } from '../src/lib/results/numbers';
 import { renderResultsHtml } from '../src/lib/results/renderHtml';
 import type { ResultsDocument, ResultsStatement } from '../src/lib/results/types';
+
+const logoFixture = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="30"><rect width="100" height="30" fill="#123456"/><script>alert(1)</script><image href="https://unsafe.example/private"/></svg>');
+assert.match(rasterizeLogoDataUrl(logoFixture) || '', /^data:image\/png;base64,/);
+assert.match(sanitizePublicationHtml(`<html><body><img alt="Corporate logo" src="${logoFixture}"></body></html>`), /data:image\/png;base64,/);
+assert.equal(rasterizeLogoDataUrl('data:image/svg+xml,' + encodeURIComponent('<!DOCTYPE svg [<!ENTITY x SYSTEM "file:///private">]><svg/>')), null);
 
 async function fragmentedPdf(): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
@@ -314,11 +320,34 @@ async function main() {
     const merafeHtml = renderResultsHtml(merafe);
     const sanitized = sanitizePublicationHtml(merafeHtml);
     assert.match(sanitized, /results-footer/);
+    assert.match(sanitizePublicationHtml('<html><head><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter"><link rel="stylesheet" href="https://evil.example/style.css"></head><body>Report</body></html>'), /fonts.googleapis.com/);
+    assert.doesNotMatch(sanitizePublicationHtml('<html><head><link rel="stylesheet" href="https://evil.example/style.css"></head><body>Report</body></html>'), /evil.example/);
     assert.match(sanitized, /source-page-22/);
     const masked = maskPublicationAssets(sanitized);
     assert.ok(!masked.html.includes('data:image/jpeg;base64,'));
     assert.equal(masked.restore(masked.html), sanitized);
     const polished = await codeResultsPublication({ provider: 'openai', modelId: '', prompt: 'polish the spacing', html: merafeHtml });
+    assertPublicationContentPreserved(sanitized, polished.html);
+    assert.throws(() => assertPublicationContentPreserved(sanitized, sanitized.replace('360 756', '999 999')), /changed report content/);
+    assert.throws(() => assertPublicationContentPreserved(sanitized, sanitized.replace(/<table[\s\S]*?<\/table>/, '')), /changed report content/);
+    assert.throws(() => assertPublicationContentPreserved(sanitized, sanitized.replace(/<img[^>]*>/, '')), /changed report content/);
+    await assert.rejects(() => codeResultsPublication({ provider: 'openai', modelId: '', prompt: 'remove notes', html: merafeHtml }), /changed report content/);
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async () => new Response(JSON.stringify({ error: { message: 'Provider unavailable' } }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+      await assert.rejects(() => codeResultsPublication({ provider: 'openai', modelId: 'configured-model', prompt: 'polish spacing', html: merafeHtml, apiKey: 'test-only' }), /Provider unavailable/);
+      globalThis.fetch = async () => new Response(JSON.stringify({ choices: [{ message: { content: 'Here is some advice without a proposal.' } }] }), { status: 200 });
+      await assert.rejects(() => codeResultsPublication({ provider: 'openai', modelId: 'configured-model', prompt: 'polish spacing', html: merafeHtml, apiKey: 'test-only' }), /did not return a usable/);
+      globalThis.fetch = async (_url, init) => {
+        const request = String(init?.body || '');
+        assert.ok(!request.includes('360 756'), 'styling context must not include financial table values');
+        assert.ok(!request.includes('data:image'), 'styling context must not include page imagery');
+        const css = cheerio.load(sanitized)('style#results-theme').text() + '\n.statement { border-radius: 24px; }';
+        return new Response(JSON.stringify({ choices: [{ message: { content: '```json\n' + JSON.stringify({ summary: 'Refined cards', css }) + '\n```' } }] }), { status: 200 });
+      };
+      const proposal = await codeResultsPublication({ provider: 'openai', modelId: 'configured-model', prompt: 'polish spacing', html: merafeHtml, apiKey: 'test-only' });
+      assertPublicationContentPreserved(sanitized, proposal.html);
+    } finally { globalThis.fetch = originalFetch; }
     assert.match(polished.html, /source-page-22/);
     assert.match(polished.html, /data:image\/jpeg;base64,/);
     assert.match(merafeHtml, /scope="row"/);
