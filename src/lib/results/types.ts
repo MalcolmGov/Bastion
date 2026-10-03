@@ -99,3 +99,5 @@ export interface StoredResultsDocument {
   updatedAt: string;
   publishedAt: string | null;
 }
+
+export type ResultsDocumentSummary = Omit<StoredResultsDocument, 'document'>;

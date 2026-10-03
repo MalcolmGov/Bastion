@@ -242,6 +242,15 @@ function testMissingFiguresRemainVisible() {
 }
 
 async function main() {
+  const blankPdf = await PDFDocument.create();
+  blankPdf.addPage([300, 400]).drawRectangle({ x: 30, y: 30, width: 100, height: 100 });
+  const blankBytes = await blankPdf.save();
+  await assert.rejects(() => convertPdfBytes(blankBytes, 'scan.pdf'), /no selectable text/);
+  const mixedPdf = await PDFDocument.load(await fragmentedPdf());
+  mixedPdf.addPage([300, 400]).drawRectangle({ x: 30, y: 30, width: 100, height: 100 });
+  const mixedDocument = await convertPdfBytes(await mixedPdf.save(), 'mixed.pdf');
+  assert.ok(mixedDocument.warnings.some(warning => /Pages 2 have no selectable text/.test(warning)));
+
   testMissingFiguresRemainVisible();
   if (process.env.RESULTS_LIVE_BRAND_TEST === '1') await testStandardBankDna();
   testBrandLogo();

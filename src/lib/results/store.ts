@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { getDb } from '@/lib/db/client';
 import { slugify } from './numbers';
-import type { ResultsDocument, StoredResultsDocument } from './types';
+import type { ResultsDocument, StoredResultsDocument, ResultsDocumentSummary } from './types';
 
 let schemaReady: Promise<void> | null = null;
 
@@ -158,4 +158,19 @@ export async function getPublishedResultsBySlug(slug: string): Promise<StoredRes
   });
   const row = result.rows[0];
   return row ? mapRow(row as Record<string, unknown>) : null;
+}
+
+/** List metadata only: PDF images and full report HTML are loaded on demand. */
+export async function listResultsSummaries(clientId?: string | null, offset = 0): Promise<ResultsDocumentSummary[]> {
+  await ensureSchema();
+  const db = getDb();
+  const result = await db.execute({
+    sql: `SELECT id, client_id, slug, title, status, source_filename, created_at, updated_at, published_at FROM results_documents ${clientId ? 'WHERE client_id = ?' : ''} ORDER BY updated_at DESC, id DESC LIMIT 51 OFFSET ?`,
+    args: [...(clientId ? [clientId] : []), offset],
+  });
+  return result.rows.map(row => ({
+    id: String(row.id), clientId: row.client_id ? String(row.client_id) : null,
+    slug: String(row.slug), title: String(row.title), status: row.status === 'published' ? 'published' : 'draft',
+    sourceFilename: String(row.source_filename || ''), createdAt: String(row.created_at), updatedAt: String(row.updated_at), publishedAt: row.published_at ? String(row.published_at) : null,
+  }));
 }

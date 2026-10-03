@@ -35,3 +35,11 @@ Design proposals require an explicit Apply action. Styling calls send the styles
 Draft writes compare the loaded timestamp with the saved revision and use an atomic SQL condition to reject conflicts. Source evidence is retained from the stored draft. Tenant ownership, edit permission, publish permission, transcription consistency and source-review confirmation are checked on the server. A publisher without edit permission can publish the saved draft but cannot combine publishing with content changes.
 
 CI runs the financial regression suite. App fonts use the existing runtime stylesheet and CSS fallbacks, removing the Next.js build's dependency on Google's font download service.
+
+## Final review follow-up
+
+The recent-conversions endpoint now reads only report metadata with 50-item pagination; opening a selected publication fetches its current full draft separately. This avoids transferring every stored PDF image on each visit or save. The old full-document store function remains available for internal verification. Workspace switches invalidate pending open, conversion, branding and save responses so they cannot populate another client's view.
+
+The source comparison uses compact review typography and table spacing, retaining the report's actual cell content while fitting more comparative columns beside the original. The full publication keeps its presentation typography.
+
+Fully image-only PDFs stop with a searchable-PDF/OCR instruction instead of producing an empty transcription. Mixed PDFs warn about painted pages without extractable text; genuinely blank pages are retained as artwork without an OCR warning. This detects absent text, not imperfect OCR or text partly embedded in diagrams, which still require source review. No provider-based OCR or invented financial figures are introduced. Built-in styling rejects unsupported requests rather than silently applying unrelated polish.

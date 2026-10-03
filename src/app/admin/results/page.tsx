@@ -7,13 +7,15 @@ import { ResultsCodingChat } from '@/components/results/ResultsCodingChat';
 import { InteractiveResultsViewer } from '@/components/results/InteractiveResultsViewer';
 import { applyFigureEdit } from '@/lib/results/applyFigureEdit';
 import { renderResultsHtml } from '@/lib/results/renderHtml';
-import type { ResultsBrand, ResultsDocument, StoredResultsDocument } from '@/lib/results/types';
+import type { ResultsBrand, ResultsDocument, StoredResultsDocument, ResultsDocumentSummary } from '@/lib/results/types';
 
 const STEPS = ['Converter', 'Brand', 'PDF', 'Review and publish'];
 
 export default function ResultsStudioPage() {
   const { activeClient } = useStudioWorkspace();
-  const [documents, setDocuments] = useState<StoredResultsDocument[]>([]);
+  const [documents, setDocuments] = useState<ResultsDocumentSummary[]>([]);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
+  const workspaceEpoch = useRef(0);
   const [current, setCurrent] = useState<StoredResultsDocument | null>(null);
   const [step, setStep] = useState(0);
   const [websiteUrl, setWebsiteUrl] = useState('');
@@ -27,24 +29,37 @@ export default function ResultsStudioPage() {
   const [previewMode, setPreviewMode] = useState<'analytics' | 'document' | 'compare'>('document');
 
   const refreshSequence = useRef(0);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (offset = 0) => {
     const sequence = ++refreshSequence.current;
-    const url = '/api/admin/results' + (activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '');
+    const params = new URLSearchParams({ offset: String(offset) });
+    if (activeClient?.id) params.set('clientId', activeClient.id);
+    const url = '/api/admin/results?' + params;
     const response = await fetch(url);
-    if (!response.ok) return;
+    if (!response.ok) throw new Error('Could not load saved results.');
     const body = await response.json();
-    if (sequence === refreshSequence.current) setDocuments(body.documents || []);
+    if (sequence === refreshSequence.current) {
+      setDocuments(existing => offset ? [...existing, ...(body.documents || [])].filter((item, index, all) => all.findIndex(other => other.id === item.id) === index) : body.documents || []);
+      setNextOffset(body.nextOffset ?? null);
+    }
   }, [activeClient?.id]);
 
   useEffect(() => {
+    workspaceEpoch.current += 1;
+    setBusy(null);
     setCurrent(null);
     setSourceReviewed(false);
+    setBrand(null);
+    setWebsiteUrl('');
+    setShowAssistant(false);
+    setNotice(null);
+    setHtmlStale(false);
     setDocuments([]);
     refresh().catch(() => setError('Could not load saved results.'));
     return () => { refreshSequence.current += 1; };
   }, [refresh]);
 
   async function extractBrand() {
+    const epoch = workspaceEpoch.current;
     setBusy('brand');
     setError(null);
     try {
@@ -55,17 +70,20 @@ export default function ResultsStudioPage() {
         signal: AbortSignal.timeout(25_000),
       });
       const body = await response.json();
+      if (epoch !== workspaceEpoch.current) return;
       if (!response.ok) throw new Error(body.error || 'Could not read that website');
       setBrand(body.brand);
     } catch (err) {
+      if (epoch !== workspaceEpoch.current) return;
       const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
       setError(timedOut ? 'That website took too long to read. Try again, or continue without it.' : (err instanceof Error ? err.message : 'Could not read that website'));
     } finally {
-      setBusy(null);
+      if (epoch === workspaceEpoch.current) setBusy(null);
     }
   }
 
   async function convert(payload: { sample?: boolean; example?: string; file?: File }) {
+    const epoch = workspaceEpoch.current;
     setBusy(payload.file ? 'upload' : payload.example || 'sample');
     setError(null);
     try {
@@ -89,6 +107,7 @@ export default function ResultsStudioPage() {
         });
       }
       const body = await response.json();
+      if (epoch !== workspaceEpoch.current) return;
       if (!response.ok) throw new Error(body.error || 'PDF conversion failed');
       setCurrent(body);
       setSourceReviewed(false);
@@ -97,9 +116,10 @@ export default function ResultsStudioPage() {
       setStep(3);
       await refresh();
     } catch (err) {
+      if (epoch !== workspaceEpoch.current) return;
       setError(err instanceof Error ? err.message : 'PDF conversion failed');
     } finally {
-      setBusy(null);
+      if (epoch === workspaceEpoch.current) setBusy(null);
     }
   }
 
@@ -137,6 +157,7 @@ export default function ResultsStudioPage() {
 
   async function save(status: 'draft' | 'published') {
     if (!current) return;
+    const epoch = workspaceEpoch.current;
     setBusy(status);
     setError(null);
     try {
@@ -149,29 +170,40 @@ export default function ResultsStudioPage() {
         body: JSON.stringify({ document, status, expectedUpdatedAt: current.updatedAt, sourceReviewed }),
       });
       const body = await response.json();
+      if (epoch !== workspaceEpoch.current) return;
       if (!response.ok) throw new Error(body.error || 'Save failed');
       setCurrent(body);
       setHtmlStale(false);
       setNotice(status === 'published' ? 'Publication saved and published.' : 'Draft saved.');
       await refresh();
     } catch (err) {
+      if (epoch !== workspaceEpoch.current) return;
       setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
-      setBusy(null);
+      if (epoch === workspaceEpoch.current) setBusy(null);
     }
   }
 
-  function openExisting(item: StoredResultsDocument) {
+  async function openExisting(item: ResultsDocumentSummary) {
     if (busy) return;
-    setSourceReviewed(false);
-    setNotice(null);
-    const document = item.document.presentationHtml
-      ? item.document
-      : { ...item.document, presentationHtml: renderResultsHtml(item.document) };
-    setCurrent({ ...item, document });
-    setBrand(item.document.brand || null);
-    setHtmlStale(false);
-    setStep(3);
+    const epoch = workspaceEpoch.current;
+    setBusy('open');
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/results/${encodeURIComponent(item.id)}`, { signal: AbortSignal.timeout(30_000) });
+      const saved = await response.json() as StoredResultsDocument & { error?: string };
+      if (!response.ok) throw new Error(saved.error || 'Could not open the publication.');
+      if (epoch !== workspaceEpoch.current) return;
+      setSourceReviewed(false);
+      setNotice(null);
+      const document = saved.document.presentationHtml ? saved.document : { ...saved.document, presentationHtml: renderResultsHtml(saved.document) };
+      setCurrent({ ...saved, document });
+      setBrand(document.brand || null);
+      setHtmlStale(false);
+      setStep(3);
+    } catch (err) {
+      if (epoch === workspaceEpoch.current) setError(err instanceof Error ? err.message : 'Could not open the publication.');
+    } finally { if (epoch === workspaceEpoch.current) setBusy(null); }
   }
 
   const previewHtml = current?.document.presentationHtml || '';
@@ -431,13 +463,15 @@ export default function ResultsStudioPage() {
           {documents.length === 0 && <li className="px-4 py-3 text-sm text-slate-500">No booklets converted yet.</li>}
           {documents.map((item) => (
             <li key={item.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-              <button type="button" onClick={() => openExisting(item)} className="truncate text-left font-medium">
+              <button type="button" disabled={busy !== null} onClick={() => openExisting(item)} className="truncate text-left font-medium">
                 {item.title}
               </button>
               <span className="shrink-0 text-xs uppercase tracking-wide text-slate-500">{item.status}</span>
             </li>
           ))}
         </ul>
+        {busy === 'open' && <p role="status" className="mt-3 text-sm text-slate-500">Opening publication…</p>}
+        {nextOffset !== null && <button disabled={busy !== null} onClick={async () => { setBusy('list'); try { await refresh(nextOffset); } catch { setError('Could not load more publications.'); } finally { setBusy(null); } }} className="mt-3 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold">Load more publications</button>}
       </section>
     </div>
   );
@@ -468,6 +502,10 @@ function SourceComparison({ document, html }: { document: ResultsDocument; html:
       wrapper.append(message);
     }
     parsed.body.replaceChildren(wrapper);
+    // A compact review density fits all comparative columns beside the source page.
+    const reviewStyle = parsed.createElement('style');
+    reviewStyle.textContent = 'main { width: calc(100% - 24px); margin: 16px auto; } #results-layout h2 { font-size: 22px; line-height: 1.3; } #results-layout p { font-size: 13px; line-height: 1.6; } table { min-width: 0; width: 100%; font-size: 11px; } th, td { padding: 8px 5px; } thead th { font-size: 9px; letter-spacing: 0; } tbody th { font-size: 10px; overflow-wrap: anywhere; } .statement { margin: 18px 0; }';
+    parsed.head.append(reviewStyle);
     setTranscript('<!DOCTYPE html>' + parsed.documentElement.outerHTML);
   }, [html, page]);
   if (!page) return <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">No original page images are available in this older draft. Convert the PDF again to enable source comparison.</p>;
@@ -482,7 +520,7 @@ function SourceComparison({ document, html }: { document: ResultsDocument; html:
     </div>
     <div className="grid lg:grid-cols-2">
       <div className="border-r border-slate-200 bg-slate-100"><p className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Original PDF · page {page.page}</p><div className="h-[700px] overflow-auto p-4"><img src={page.image} alt={`Original PDF page ${page.page}`} width={page.width} height={page.height} className="h-auto w-full bg-white shadow" /></div></div>
-      <div><p className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">HTML transcription</p><iframe title={`HTML transcription page ${page.page}`} srcDoc={transcript} sandbox="" className="h-[700px] w-full border-0" /></div>
+      <div><p className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">HTML transcription · compact comparison</p><iframe title={`HTML transcription page ${page.page}`} srcDoc={transcript} sandbox="" className="h-[700px] w-full border-0" /></div>
     </div>
   </section>;
 }
