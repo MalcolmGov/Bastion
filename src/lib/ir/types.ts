@@ -29,6 +29,13 @@ export interface SensAnnouncement {
   embargoUntil?: string;
   createdAt: string;
   updatedAt: string;
+  /** Who wrote it. Absent on announcements that predate the approval workflow or came from the exchange wire. */
+  createdBy?: string;
+  /** Who signed it off, and when. An announcement can only be published once someone other than its author has. */
+  approvedBy?: string;
+  approvedAt?: string;
+  /** Hash of the content at sign-off; an approval no longer counts if the content has since changed. */
+  approvedContentHash?: string;
 }
 
 export const SENS_TYPE_LABELS: Record<SensType, string> = {

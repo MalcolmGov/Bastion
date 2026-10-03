@@ -627,7 +627,7 @@ async function runAll() {
     // Create a results document for Client Goldfields
     const docGoldfields = await saveResultsDocument({
       clientId: 'client_goldfields',
-      status: 'published',
+      status: 'draft',
       document: {
         issuer: 'Gold Fields Limited',
         title: 'Interim Results Announcement',

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser, clientOwns } from '@/lib/auth/guard';
+import { packRevision } from '@/lib/results/history';
 import { hasPermission } from '@/lib/auth/auth';
 import { validateFinancials } from '@/lib/results/validateFinancials';
 import { renderResultsHtml } from '@/lib/results/renderHtml';
@@ -56,15 +57,23 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     body.document.sourceFilename = current.document.sourceFilename;
     body.document.pageCount = current.document.pageCount;
     body.document.warnings = current.document.warnings;
-    if (status === 'published' && !hasPermission(user.role, 'content:edit') && JSON.stringify(body.document) !== JSON.stringify(current.document)) return NextResponse.json({ error: 'Save content changes through an editor before publishing.' }, { status: 403 });
+    if (status === 'published' && !hasPermission(user.role, 'content:edit') && packRevision(body.document).hash !== packRevision(current.document).hash) return NextResponse.json({ error: 'Save content changes through an editor before publishing.' }, { status: 403 });
     if (typeof body.document.presentationHtml !== 'string') body.document.presentationHtml = renderResultsHtml(body.document);
     if (typeof body.document.presentationHtml === 'string') {
       body.document.presentationHtml = sanitizePublicationHtml(body.document.presentationHtml);
-      assertPublicationContentPreserved(sanitizePublicationHtml(renderResultsHtml(body.document)), body.document.presentationHtml);
+      try {
+        assertPublicationContentPreserved(sanitizePublicationHtml(renderResultsHtml(body.document)), body.document.presentationHtml);
+      } catch (error) {
+        // Renderer upgrades must not prevent an unchanged legacy publication from being saved.
+        // Only accept its existing content baseline when the underlying transcription is unchanged.
+        const transcription = (document: ResultsDocument) => packRevision({ ...document, presentationHtml: undefined, brand: undefined }).hash;
+        if (!current.document.presentationHtml || transcription(body.document) !== transcription(current.document)) throw error;
+        assertPublicationContentPreserved(sanitizePublicationHtml(current.document.presentationHtml), body.document.presentationHtml);
+      }
     }
     if (status === 'published' && body.sourceReviewed !== true) return NextResponse.json({ error: 'Compare the complete publication with the original PDF and confirm the source review before publishing.' }, { status: 400 });
     if (status === 'published' && validateFinancials(body.document).issues.length && body.validationReviewed !== true) return NextResponse.json({ error: 'Review the financial validation items before publishing. Original source figures have not been changed.' }, { status: 400 });
-    const saved = await saveResultsDocument({ id, document: body.document, status, expectedUpdatedAt: body.expectedUpdatedAt });
+    const saved = await saveResultsDocument({ id, document: body.document, status, expectedUpdatedAt: body.expectedUpdatedAt, actor: { id: user.id, name: user.name } });
     return NextResponse.json(saved);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'The publication could not be saved.' }, { status: 400 });

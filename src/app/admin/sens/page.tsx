@@ -40,6 +40,12 @@ import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import type { SensAnnouncement, SensType, FinancialCalendarEvent, CalendarEventType, InvestorReport, ReportType } from '@/lib/ir/types';
 import { SENS_TYPE_LABELS, SENS_TYPE_COLORS, EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, REPORT_TYPE_LABELS, calculateDividendTax } from '@/lib/ir/types';
 
+/** What the list shows for a studio-created announcement, from its place in the approval workflow. */
+function sensWorkflowLabel(item: SensAnnouncement): string {
+  if (item.status === 'published') return 'Published';
+  return item.approvedBy ? 'Approved · ready to publish' : 'Draft · awaiting approval';
+}
+
 export default function SensAndIrHubPage() {
   const { user } = useAdminAuth();
   const isAgency = isAgencyUser(user);
@@ -319,6 +325,26 @@ export default function SensAndIrHubPage() {
       console.error('Error creating event:', err);
     } finally {
       setSubmittingEvent(false);
+    }
+  };
+
+  // Approve / publish. The server enforces the two-person rule and the role permissions; show its answer when it refuses.
+  const handleSensWorkflow = async (id: string, action: 'approve' | 'publish') => {
+    try {
+      const res = await fetch(`/api/admin/ir/sens/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || `Could not ${action} this announcement.`);
+        return;
+      }
+      setAnnouncements((prev) => prev.map((a) => (a.id === id ? data.announcement : a)));
+      setSelectedSens((prev) => (prev?.id === id ? data.announcement : prev));
+    } catch (err) {
+      console.error(`Error trying to ${action} SENS:`, err);
     }
   };
 
@@ -721,7 +747,7 @@ export default function SensAndIrHubPage() {
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-300 dark:border-sky-800/60">
-                                Bastion Staged Draft
+                                {sensWorkflowLabel(item)}
                               </span>
                             )}
 
@@ -778,6 +804,29 @@ export default function SensAndIrHubPage() {
                               <span>Public Wire</span>
                               <ExternalLink className="w-3.5 h-3.5" />
                             </a>
+                          )}
+
+                          {!isLiveFeed && item.status !== 'published' && !item.approvedBy && (
+                            <button
+                              onClick={() => handleSensWorkflow(item.id, 'approve')}
+                              disabled={!!item.createdBy && item.createdBy === user?.id}
+                              title={item.createdBy && item.createdBy === user?.id ? 'A second person must approve an announcement you wrote' : 'Sign off this announcement so it can be published'}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-800 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>Approve</span>
+                            </button>
+                          )}
+
+                          {!isLiveFeed && item.status !== 'published' && item.approvedBy && (
+                            <button
+                              onClick={() => handleSensWorkflow(item.id, 'publish')}
+                              title="Publish this approved announcement"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Publish</span>
+                            </button>
                           )}
 
                           <button
