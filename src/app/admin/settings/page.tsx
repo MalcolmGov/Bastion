@@ -31,7 +31,7 @@ function generateSecret(prefix: string): string {
 }
 
 /** The line under a secret field: a warning when the stored value was a public demo secret, otherwise an optional hint. */
-function SecretNote({ unsafe, warning, hint }: { unsafe: boolean; warning: string; hint?: string }) {
+function SecretNote({ unsafe, warning, hint }: Readonly<{ unsafe: boolean; warning: string; hint?: string }>) {
   if (unsafe) return <p className="text-[11px] text-rose-400">{warning}</p>;
   return hint ? <p className="text-[11px] text-slate-500">{hint}</p> : null;
 }
