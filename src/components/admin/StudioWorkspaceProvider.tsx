@@ -125,7 +125,7 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!user) return;
 
-    const userSwitched = prevUserIdRef.current !== user.id;
+    const userSwitched = prevUserIdRef.current !== null && prevUserIdRef.current !== user.id;
     prevUserIdRef.current = user.id;
 
     if (agency) {
@@ -168,6 +168,7 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     setActiveClientIdState(id);
     if (typeof window !== 'undefined') {
       localStorage.setItem('move_studio_active_client', id);
+      localStorage.setItem('bastion_active_client_id', id);
       document.cookie = `bastion_active_client_id=${encodeURIComponent(id)}; path=/; max-age=31536000; SameSite=Lax`;
       window.dispatchEvent(new CustomEvent('studio-active-client-changed', { detail: { clientId: id } }));
     }
@@ -181,6 +182,7 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     setActiveSiteIdState(id);
     if (typeof window !== 'undefined') {
       localStorage.setItem('move_studio_active_site', id);
+      localStorage.setItem('bastion_active_site_id', id);
       document.cookie = `bastion_active_site_id=${encodeURIComponent(id)}; path=/; max-age=31536000; SameSite=Lax`;
       window.dispatchEvent(new CustomEvent('studio-active-site-changed', { detail: { siteId: id } }));
     }

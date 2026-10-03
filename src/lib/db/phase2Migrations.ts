@@ -207,4 +207,410 @@ export async function runPhase2Migrations(db: Client): Promise<void> {
   } catch (err) {
     console.warn('[DB Migration] Notice seeding initial releases:', err);
   }
+
+  // 8. Seed corporate page compositions for multi-website properties if missing
+  try {
+    const now = new Date().toISOString();
+    const demoCompositions = [
+      // Gold Fields Corporate Flagship
+      {
+        id: 'comp_gf_flagship_operations',
+        siteId: 'site_goldfields_flagship',
+        slug: 'operations',
+        title: 'Global Mining Operations & Mineral Reserves',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_ops_hero',
+            componentId: 'hero',
+            variant: 'bold_split',
+            visible: true,
+            props: {
+              eyebrow: 'Tier-1 Asset Portfolio',
+              title: 'Global Mining Operations & Mineral Reserves',
+              description: 'World-class mechanized gold operations across South Africa, Ghana, Australia, Chile, and Peru.',
+              primaryCtaText: 'View Mine Profiles',
+              primaryCtaHref: '#mines'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_flagship_leadership',
+        siteId: 'site_goldfields_flagship',
+        slug: 'leadership',
+        title: 'Executive Leadership & Board of Directors',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_lead_hero',
+            componentId: 'hero',
+            variant: 'centered',
+            visible: true,
+            props: {
+              eyebrow: 'Corporate Governance',
+              title: 'Executive Leadership & Board of Directors',
+              description: 'Disciplined capital allocation, operational excellence, and industry-leading safety standards.',
+              primaryCtaText: 'Executive Profiles',
+              primaryCtaHref: '#board'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_flagship_report',
+        siteId: 'site_goldfields_flagship',
+        slug: 'integrated-report',
+        title: '2026 Integrated Annual Report',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_rep_hero',
+            componentId: 'hero',
+            variant: 'bold_split',
+            visible: true,
+            props: {
+              eyebrow: 'Annual Reporting Suite',
+              title: '2026 Integrated Annual Report',
+              description: 'Comprehensive financial, operational, and sustainability performance disclosures.',
+              primaryCtaText: 'Download Full Suite (PDF)',
+              primaryCtaHref: '/assets/integrated-report-2026.pdf'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_flagship_contact',
+        siteId: 'site_goldfields_flagship',
+        slug: 'contact',
+        title: 'Global Corporate & Regional Offices',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_contact_hero',
+            componentId: 'hero',
+            variant: 'centered',
+            visible: true,
+            props: {
+              eyebrow: 'Global Enquiries',
+              title: 'Global Corporate & Regional Offices',
+              description: 'Connect with our corporate office in Sandton, Johannesburg, or our regional leadership hubs.',
+              primaryCtaText: 'Contact Investor Relations',
+              primaryCtaHref: 'mailto:investors@goldfields.com'
+            }
+          }
+        ]
+      },
+
+      // Gold Fields Investor Relations
+      {
+        id: 'comp_gf_inv_home',
+        siteId: 'site_goldfields_investors',
+        slug: 'home',
+        title: 'Investor Relations Hub & Shareholder Portal',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_inv_hero',
+            componentId: 'hero',
+            variant: 'bold_split',
+            visible: true,
+            props: {
+              eyebrow: 'JSE: GFI | NYSE: GFI',
+              title: 'Gold Fields Investor Relations Hub',
+              description: 'Market disclosures, quarterly financial results, production guidance, and institutional presentations.',
+              primaryCtaText: 'Latest Financial Results',
+              primaryCtaHref: '/results'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_inv_results',
+        siteId: 'site_goldfields_investors',
+        slug: 'results',
+        title: 'Financial Results, Webcasts & Presentations',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_results_hero',
+            componentId: 'hero',
+            variant: 'centered',
+            visible: true,
+            props: {
+              eyebrow: 'Reporting Calendar',
+              title: 'Financial Results, Webcasts & Presentations',
+              description: 'Access audited statements, management presentations, and webcast recordings for analysts and investors.',
+              primaryCtaText: 'H1 2026 Webcast',
+              primaryCtaHref: '#webcast'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_inv_sens',
+        siteId: 'site_goldfields_investors',
+        slug: 'sens',
+        title: 'JSE SENS & Regulatory Filings',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_sens_hero',
+            componentId: 'hero',
+            variant: 'bold_split',
+            visible: true,
+            props: {
+              eyebrow: 'Regulatory Disclosures',
+              title: 'JSE SENS Announcements & Circulars',
+              description: 'Official price-sensitive announcements filed with the Johannesburg Stock Exchange and SEC.',
+              primaryCtaText: 'Subscribe to SENS Alerts',
+              primaryCtaHref: '#subscribe'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_inv_shareholder',
+        siteId: 'site_goldfields_investors',
+        slug: 'shareholder-info',
+        title: 'Shareholder Information & Dividend Policy',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_share_hero',
+            componentId: 'hero',
+            variant: 'centered',
+            visible: true,
+            props: {
+              eyebrow: 'Capital Allocation',
+              title: 'Shareholder Distribution & Dividends',
+              description: 'Gold Fields targets payout ratios between 30% and 45% of normalized earnings.',
+              primaryCtaText: 'Dividend History',
+              primaryCtaHref: '#history'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_inv_calendar',
+        siteId: 'site_goldfields_investors',
+        slug: 'calendar',
+        title: 'Financial Reporting & AGM Calendar',
+        collection: 'contemporary',
+        status: 'draft',
+        sections: [
+          {
+            id: 'sec_gf_cal_hero',
+            componentId: 'hero',
+            variant: 'centered',
+            visible: true,
+            props: {
+              eyebrow: 'Upcoming Events',
+              title: '2026 Financial Calendar & AGM',
+              description: 'Key dates for interim results announcements, quiet periods, and annual general meetings.',
+              primaryCtaText: 'Add to Calendar',
+              primaryCtaHref: '#export'
+            }
+          }
+        ]
+      },
+
+      // Gold Fields 2030 ESG & Sustainability
+      {
+        id: 'comp_gf_esg_home',
+        siteId: 'site_goldfields_sustainability',
+        slug: 'home',
+        title: '2030 ESG & Sustainable Value Strategy',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_esg_hero',
+            componentId: 'hero',
+            variant: 'bold_split',
+            visible: true,
+            props: {
+              eyebrow: 'Sustainable Value Creation',
+              title: '2030 ESG & Decarbonisation Strategy',
+              description: 'Committed to safe operations, renewable power micro-grids, and net positive biodiversity impact.',
+              primaryCtaText: 'Read ESG Charter',
+              primaryCtaHref: '#charter'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_esg_decarb',
+        siteId: 'site_goldfields_sustainability',
+        slug: 'decarbonisation',
+        title: 'Khanyisa Micro-Grid & Decarbonisation Roadmap',
+        collection: 'contemporary',
+        status: 'draft',
+        sections: [
+          {
+            id: 'sec_gf_decarb_hero',
+            componentId: 'hero',
+            variant: 'bold_split',
+            visible: true,
+            props: {
+              eyebrow: 'Net-Zero Pathway',
+              title: 'Khanyisa Solar Micro-Grid & Scope 1-2 Roadmap',
+              description: 'Delivering 50MW clean photovoltaic energy to the South Deep mechanized mine.',
+              primaryCtaText: 'Live Solar Telemetry',
+              primaryCtaHref: '#telemetry'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_esg_water',
+        siteId: 'site_goldfields_sustainability',
+        slug: 'water-stewardship',
+        title: 'Water Stewardship & Catchment Protection',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_water_hero',
+            componentId: 'hero',
+            variant: 'centered',
+            visible: true,
+            props: {
+              eyebrow: 'ICMM Conformance',
+              title: 'Water Stewardship & Catchment Protection',
+              description: 'Recycling 75% of operational water and implementing Global Industry Standard on Tailings Management (GISTM).',
+              primaryCtaText: 'View Water Metrics',
+              primaryCtaHref: '#metrics'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_gf_esg_safety',
+        siteId: 'site_goldfields_sustainability',
+        slug: 'safety',
+        title: 'Courageous Safety Leadership & Zero Harm',
+        collection: 'contemporary',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_gf_safety_hero',
+            componentId: 'hero',
+            variant: 'centered',
+            visible: true,
+            props: {
+              eyebrow: 'Core Value',
+              title: 'If We Cannot Mine Safely, We Will Not Mine',
+              description: 'Eliminating fatal risks through critical control management and human-centric safety culture.',
+              primaryCtaText: 'Safety Dashboard',
+              primaryCtaHref: '#dashboard'
+            }
+          }
+        ]
+      },
+
+      // Aurum Energy Flagship
+      {
+        id: 'comp_aurum_about',
+        siteId: 'site_aurum_energy',
+        slug: 'about',
+        title: 'Corporate Profile & Transition Mandate',
+        collection: 'editorial',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_aurum_abt_hero',
+            componentId: 'hero',
+            variant: 'bold_split',
+            visible: true,
+            props: {
+              eyebrow: 'Clean Power Pioneer',
+              title: 'Powering Africa’s Clean Industrial Transition',
+              description: 'Accelerating high-capacity grid storage and renewable utility generation across sub-Saharan Africa.',
+              primaryCtaText: 'Our Track Record',
+              primaryCtaHref: '#track-record'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_aurum_projects',
+        siteId: 'site_aurum_energy',
+        slug: 'projects',
+        title: 'Grid-Scale Solar & Wind Asset Portfolio',
+        collection: 'editorial',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_aurum_proj_hero',
+            componentId: 'hero',
+            variant: 'bold_split',
+            visible: true,
+            props: {
+              eyebrow: '1.2 GW Installed Capacity',
+              title: 'Active Solar & Wind Utility Assets',
+              description: 'Operating high-availability solar PV and battery energy storage across Northern Cape and Karoo basins.',
+              primaryCtaText: 'View Asset Map',
+              primaryCtaHref: '#assets'
+            }
+          }
+        ]
+      },
+      {
+        id: 'comp_aurum_contact',
+        siteId: 'site_aurum_energy',
+        slug: 'contact',
+        title: 'Commercial Power & Investor Inquiries',
+        collection: 'editorial',
+        status: 'published',
+        sections: [
+          {
+            id: 'sec_aurum_cnt_hero',
+            componentId: 'hero',
+            variant: 'centered',
+            visible: true,
+            props: {
+              eyebrow: 'Sandton Office',
+              title: 'Commercial Power & Investor Inquiries',
+              description: 'Direct inquiries for corporate Power Purchase Agreements (PPAs) and institutional financing.',
+              primaryCtaText: 'Reach Commercial Team',
+              primaryCtaHref: 'mailto:contact@aurumenergy.com'
+            }
+          }
+        ]
+      }
+    ];
+
+    for (const comp of demoCompositions) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO page_compositions (
+          id, site_id, page_slug, title, layout_collection, sections_json, meta_json, version, status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          comp.id,
+          comp.siteId,
+          comp.slug,
+          comp.title,
+          comp.collection,
+          JSON.stringify(comp.sections),
+          JSON.stringify({ description: comp.title }),
+          1,
+          comp.status,
+          now,
+          now
+        ]
+      });
+    }
+    console.log('[DB Migration] Seeded corporate compositions for multi-website portfolios.');
+  } catch (err) {
+    console.warn('[DB Migration] Notice seeding demo compositions:', err);
+  }
 }
