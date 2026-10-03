@@ -158,6 +158,7 @@ test('cron legacy releases: an approved report is published, and a refused relea
   await h.db.execute({ sql: "INSERT INTO releases VALUES('lr-ok','Approved','tenant-a',?,'scheduled',NULL)", args: [DUE] });
   await h.db.execute({ sql: "INSERT INTO release_items VALUES('lr-ok','report',?,'publish')", args: [allowed.rec] });
   await h.db.execute({ sql: "INSERT INTO release_items VALUES('lr-ok','page','page-a','publish')" });
+  await h.approvePage(); // pages follow the same rule: an unapproved page would hold this release back too
   await runCron(h);
   assert.equal(await isLive(h, blocked), false);
   assert.equal(await isLive(h, allowed), true);

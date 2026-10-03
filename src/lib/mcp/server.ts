@@ -457,7 +457,11 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>,
     case 'save_page_composition': {
       const { siteId, pageSlug, title = 'Page', sections, status = 'draft' } = args;
       await assertApiSiteAccess(db, access, siteId);
-      if (status === 'published') assertApiScope(access, 'content:publish');
+      if (status === 'published') {
+        assertApiScope(access, 'content:publish');
+        // Going live needs an independent approval of the exact content, which only the editor records.
+        throw new Error('Pages cannot be published through this tool: save a draft, then publish it from the visual editor once a reviewer who did not write it has given approval.');
+      }
       const compId = `comp_${siteId}_${pageSlug}_v1`;
       const now = new Date().toISOString();
 

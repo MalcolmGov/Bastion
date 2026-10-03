@@ -25,6 +25,8 @@ import { GOLD_FIELDS_H1_2026_DOCUMENT, seedGoldFieldsResults } from './seed-resu
 import { createDatabaseBackup, runRestoreDrill } from './backup-restore-drill';
 import { checkLoginRateLimit, checkApiRateLimit, resetRateLimit } from '../src/lib/security/rateLimiter';
 import { createSensAnnouncement, listSensAnnouncements, deleteSensAnnouncement } from '../src/lib/ir/sensService';
+import { saveComposition } from '../src/lib/studio/editor/saveComposition';
+import { approvePageVersion } from '../src/lib/studio/editor/pageApproval';
 import { createCalendarEvent, listCalendarEvents, generateIcsContent, calculateDividendTax, deleteCalendarEvent } from '../src/lib/ir/calendarService';
 import { runGovernanceAudit, getLatestGovernanceAudit, getGovernanceAuditHistory } from '../src/lib/governance/governanceEngine';
 import { computeLineDiff, computeWordDiff, computeRecordDiff, generateContentHash } from '../src/lib/diff/diffEngine';
@@ -470,6 +472,34 @@ async function runAll() {
     // Cleanup
     await db.execute({ sql: `DELETE FROM page_versions WHERE site_id = ?`, args: [testSiteId] });
     await db.execute({ sql: `DELETE FROM page_compositions WHERE id = ?`, args: [compId] });
+  });
+
+  await test('Version History', 'A page goes live only with a version approved by someone other than its author', async () => {
+    const siteId = 'site_bastion_core';
+    const pageSlug = 'approval-gate-test';
+    const author: any = { id: 'gate-author', name: 'Gate Author', role: 'platform_admin', client_id: null };
+    const reviewer: any = { id: 'gate-reviewer', name: 'Gate Reviewer', role: 'platform_admin', client_id: null };
+    const sections = [{ id: 'hero-1', componentId: 'hero', visible: true, props: { title: 'Approved heading' }, styles: {} }];
+    const input = (expectedVersion: number, status: string) => ({ siteId, pageSlug, sections, expectedVersion, status });
+    try {
+      await saveComposition(author, input(0, 'draft'));
+      let refusal: any;
+      try { await saveComposition(author, input(1, 'published')); } catch (error) { refusal = error; }
+      assert(refusal?.code === 'approval_required', 'An unapproved page was published');
+      let selfApproval: any;
+      try { await approvePageVersion(author, { siteId, pageSlug, version: 1 }); } catch (error) { selfApproval = error; }
+      assert(selfApproval?.status === 403, 'An author approved their own page version');
+      await approvePageVersion(reviewer, { siteId, pageSlug, version: 1 });
+      await saveComposition(author, input(1, 'published'));
+      const live = await db.execute({ sql: `SELECT status, version FROM page_compositions WHERE site_id = ? AND page_slug = ?`, args: [siteId, pageSlug] });
+      assert(String(live.rows[0].status) === 'published' && Number(live.rows[0].version) === 2, 'The approved page did not publish');
+      const published = await db.execute({ sql: `SELECT approved_by FROM page_versions WHERE site_id = ? AND page_slug = ? AND version = 2`, args: [siteId, pageSlug] });
+      assert(String(published.rows[0].approved_by) === 'gate-reviewer', 'The published version does not record its approver');
+    } finally {
+      await db.execute({ sql: `DELETE FROM page_versions WHERE site_id = ? AND page_slug = ?`, args: [siteId, pageSlug] });
+      await db.execute({ sql: `DELETE FROM page_compositions WHERE site_id = ? AND page_slug = ?`, args: [siteId, pageSlug] });
+      await db.execute({ sql: `DELETE FROM audit_log WHERE actor_id IN ('gate-author','gate-reviewer')` });
+    }
   });
 
   // ─────────────────────────────────────────────────────────────

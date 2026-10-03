@@ -2,6 +2,7 @@ import { ensureDbReady } from '@/lib/db/client';
 import crypto from 'crypto';
 import type { Client } from '@libsql/client';
 import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
+import { assertPageApproved } from '@/lib/studio/editor/pageApproval';
 
 export interface ContentRelease {
   id: string;
@@ -306,6 +307,15 @@ export async function removeItemFromRelease(releaseId: string, itemId: string): 
   return (res.rowsAffected || 0) > 0;
 }
 
+/** Reports a refused approval check as the validation error a release publish returns. */
+async function requireApproval(check: Promise<void>): Promise<void> {
+  try {
+    await check;
+  } catch (error) {
+    throw new ReleaseValidationError((error as Error).message);
+  }
+}
+
 export async function publishRelease(releaseId: string, publishedBy = 'Malcolm Govender'): Promise<{
   success: boolean;
   publishedCount: number;
@@ -321,20 +331,19 @@ export async function publishRelease(releaseId: string, publishedBy = 'Malcolm G
   // release in one transaction. A bad item must not leave a partial release.
   const transaction = await db.transaction('write');
   try {
-    for (const item of releaseData.items) {
-      const target = await resolveReleaseItem(transaction, releaseData.release, item);
+    // Resolve every item before checking approvals or writing, so a bundle with a bad item is refused for that reason first.
+    const targets = [];
+    for (const item of releaseData.items) targets.push(await resolveReleaseItem(transaction, releaseData.release, item));
+    for (const target of targets) {
       if (target.kind === 'page') {
+        await requireApproval(assertPageApproved(transaction, target.id));
         await transaction.execute({
           sql: `UPDATE page_compositions SET status = 'published', updated_at = ?
                 WHERE id = ? AND site_id = ? AND site_id IN (SELECT id FROM websites WHERE client_id = ?)`,
           args: [now, target.id, releaseData.release.siteId, releaseData.release.clientId]
         });
       } else {
-        try {
-          await assertDisclosureApproval(transaction, target.collection, target.revisionId);
-        } catch (error) {
-          throw new ReleaseValidationError((error as Error).message);
-        }
+        await requireApproval(assertDisclosureApproval(transaction, target.collection, target.revisionId));
         await transaction.execute({
           sql: `UPDATE content_records SET status = 'published',
                 current_published_revision_id = COALESCE(current_draft_revision_id, current_published_revision_id), updated_at = ?

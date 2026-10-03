@@ -229,6 +229,18 @@ const PADDING_OPTIONS = [
   { id: 'py-36', label: '144px', name: 'Epic' },
 ];
 
+type PageApprovalState = { version: number; status: string; approved: boolean; canApprove: boolean; approvedByName: string | null };
+
+/** What the approval banner says about the version being edited. */
+function approvalBannerText(approval: PageApprovalState, version: number, dirty: boolean): string {
+  if (approval.approved) {
+    const by = approval.approvedByName ? ` by ${approval.approvedByName}` : '';
+    return `Version ${approval.version} was approved${by} and is ready to publish.`;
+  }
+  if (dirty) return 'Save your changes as a draft to submit them for approval.';
+  return `Version ${version} needs approval from a reviewer who did not write it before it can be published.`;
+}
+
 function VisualWebsiteEditorContent() {
   const searchParams = useSearchParams();
   const siteSlugParam = searchParams.get('siteSlug') || searchParams.get('siteId');
@@ -285,6 +297,10 @@ function VisualWebsiteEditorContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploySuccess, setDeploySuccess] = useState(false);
+  // Two-person rule for pages: a version is published only after someone who did not write it has approved it.
+  const [approval, setApproval] = useState<PageApprovalState | null>(null);
+  const [approvalNotice, setApprovalNotice] = useState<string | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
   const [savedTime, setSavedTime] = useState<string | null>(null);
   const [savedSections, setSavedSections] = useState('[]');
   const hasUnsavedChanges = JSON.stringify(sections) !== savedSections;
@@ -495,6 +511,19 @@ function VisualWebsiteEditorContent() {
     void loadComposition();
     return () => controller.abort();
   }, [siteSlug, activePageSlug, documentKey, workspaceLoading, reload]);
+
+  // Re-read the approval state whenever the page loads or a new version is saved.
+  useEffect(() => {
+    if (isLoadingPage || !siteData?.id) return;
+    const controller = new AbortController();
+    setApproval(null);
+    setApprovalNotice(null);
+    fetch(`/api/admin/editor/approve?${new URLSearchParams({ siteId: siteData.id, pageSlug: activePageSlug })}`, { signal: controller.signal, cache: 'no-store' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => { if (!controller.signal.aborted) setApproval(data); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [siteData?.id, activePageSlug, currentVersionNumber, isLoadingPage]);
 
   useEffect(() => {
     if (!hasUnsavedChanges) return;
@@ -981,9 +1010,15 @@ function VisualWebsiteEditorContent() {
     setIsSaving(status === 'draft');
     setIsDeploying(status === 'published');
     setEditorError(null);
+    setApprovalNotice(null);
     try {
       const res = await fetch('/api/admin/editor', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({siteId: siteData.id, pageSlug: activePageSlug, sections: JSON.parse(submittedSections), title: pageTitle, layoutCollection: pageLayout, meta: pageMeta, expectedVersion: currentVersionNumber, status}) });
       const data = await res.json();
+      if (res.status === 409 && data.code === 'approval_required') {
+        // Not a failed save: the page is intact and simply needs a reviewer's approval before it can go live.
+        if (currentKey.current === key) setApprovalNotice(data.error);
+        return false;
+      }
       if (!res.ok) throw new Error(data.error || 'Your changes could not be saved. Please try again.');
       if (currentKey.current !== key) return false;
       setCurrentVersionNumber(data.version);
@@ -1018,6 +1053,26 @@ function VisualWebsiteEditorContent() {
       return true;
     }finally{saveInFlight.current=false;setIsAssistantApplying(false);}
   };
+  const handleApprove = async () => {
+    if (!siteData?.id || isApproving) return;
+    setIsApproving(true);
+    setApprovalNotice(null);
+    try {
+      // Approve the version this editor is showing; the server refuses it if a newer one has been saved since.
+      const res = await fetch('/api/admin/editor/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siteId: siteData.id, pageSlug: activePageSlug, version: currentVersionNumber }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'The approval could not be recorded.');
+      setApproval({ version: data.version, status: 'draft', approved: true, canApprove: false, approvedByName: data.approvedByName });
+    } catch (error: any) {
+      setApprovalNotice(error.message);
+    } finally {
+      setIsApproving(false);
+    }
+  };
+  const approvalPending = approval?.status === 'draft' && approval.version === currentVersionNumber;
+  const approvalMessage = approvalNotice || (approvalPending && approval ? approvalBannerText(approval, currentVersionNumber, hasUnsavedChanges) : null);
+  const approvalTone = !approvalNotice && approval?.approved ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-900';
+  const canApproveNow = approvalPending && approval?.approved === false && approval.canApprove && !hasUnsavedChanges;
   const handleSaveDraft = () => saveDocument('draft');
   const handleDeployPublish = () => setPublishOpen(true);
 
@@ -1268,6 +1323,7 @@ function VisualWebsiteEditorContent() {
         if (action === 'theme') setCanvasTheme(isCanvasDark ? 'light' : 'dark');
       }} />
       {deploySuccess && !hasUnsavedChanges && <div role="status" className="flex items-center justify-between border-b border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-800"><span>Your page has been published.</span><a href={`/sites/${siteData?.slug}${activePageSlug === 'home' ? '' : `/${activePageSlug}`}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold underline">View published page</a></div>}
+      {approvalMessage && !isLoadingPage && <output className={`flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3 text-sm ${approvalTone}`}><span>{approvalMessage}</span>{canApproveNow && <button type="button" disabled={isApproving} onClick={() => void handleApprove()} className="shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900">{isApproving ? 'Approving…' : 'Approve this version'}</button>}</output>}
       {editorError && <div role="alert" className="flex items-center justify-between gap-4 border-b border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-700"><p>{editorError}</p><button type="button" onClick={() => { if (!hasUnsavedChanges || window.confirm('Reload the saved page and discard your unsaved changes?')) setReload(value => value + 1); }} className="shrink-0 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold">Reload page</button></div>}
 
       {/* 3-Panel Main Area */}
