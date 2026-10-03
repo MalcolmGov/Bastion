@@ -113,12 +113,94 @@ test('agency staff in agency mode still get platform health, incidents and billi
 
 test('agency staff can still draft an invoice by voice, and it is only a draft', async t => {
   const h = await fixture(t);
-  const result = await ask(h, AGENCY, REQUESTS.invoice, { portalViewMode: 'agency', clientContext: 'Gold Fields' });
+  const result = await ask(h, AGENCY, REQUESTS.invoice, { portalViewMode: 'agency', clientId: 'tenant-a', clientContext: 'A' });
   assert.equal(result.status, 200, JSON.stringify(result.body));
   assert.equal(result.body.action.type, 'create_invoice');
   const drafts = await invoices(h);
   assert.equal(drafts.length, 1);
   assert.equal(drafts[0].status, 'draft');
+});
+
+// ---- the invoice is for the client the person is working in, and is never guessed ----
+
+const AGENCY_INVOICE = { portalViewMode: 'agency' };
+const addClient = (h, id, name) => h.db.execute({ sql: 'INSERT INTO clients(id,name,slug) VALUES(?,?,?)', args: [id, name, id] });
+
+test('a voice invoice is drafted for the client in use, and says that client\'s own name', async t => {
+  const h = await fixture(t);
+  const result = await ask(h, AGENCY, REQUESTS.invoice, { ...AGENCY_INVOICE, clientId: 'tenant-b', clientContext: 'Some name the browser made up' });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal(result.body.action.type, 'create_invoice');
+  const drafts = await invoices(h);
+  assert.equal(drafts.length, 1);
+  assert.equal(drafts[0].client_id, 'tenant-b', 'the invoice went to another client');
+  assert.equal(result.body.action.data.clientName, 'B', 'the confirmation names something other than the client billed');
+  assert.ok(result.body.speechText.includes(' B '), result.body.speechText);
+  assert.ok(!JSON.stringify(result.body).includes('made up'), 'the browser\'s text was repeated back as the client');
+  assert.ok(!drafts[0].items_json.includes('made up'), 'the browser\'s text reached the invoice');
+});
+
+test('the client is the one named by its id, whatever its name looks like', async t => {
+  const h = await fixture(t);
+  await addClient(h, 'client_goldfields', 'Gold Fields');
+  await addClient(h, 'tenant-gold', 'Goldwater Mining');
+  // A name containing "gold" must not send the invoice to Gold Fields.
+  const result = await ask(h, AGENCY, REQUESTS.invoice, { ...AGENCY_INVOICE, clientId: 'tenant-gold', clientContext: 'Goldwater Mining' });
+  assert.equal(result.body.action.type, 'create_invoice', JSON.stringify(result.body));
+  assert.deepEqual((await invoices(h)).map(row => row.client_id), ['tenant-gold']);
+});
+
+test('without a client that exists, no invoice is drafted and nothing is guessed', async t => {
+  const h = await fixture(t);
+  await addClient(h, 'client_goldfields', 'Gold Fields');
+  const attempts = [
+    { clientContext: 'Payguard' },
+    { clientContext: 'Corporate' },
+    {},
+    { clientId: 'client_moove_digital' },
+    // An id that does not exist is an error, not a reason to look at the name.
+    { clientId: 'client_moove_digital', clientContext: 'A' },
+    { clientId: ['tenant-a'], clientContext: 'A' },
+    { clientId: { id: 'tenant-a' } },
+    { clientId: "tenant-a' OR '1'='1" },
+    { clientId: '', clientContext: 'No such client' },
+  ];
+  for (const extra of attempts) {
+    const result = await ask(h, AGENCY, REQUESTS.invoice, { ...AGENCY_INVOICE, ...extra });
+    assert.notEqual(result.body.action?.type, 'create_invoice', `drafted for ${JSON.stringify(extra)}`);
+    assert.match(result.body.speechText, /client/i, JSON.stringify(extra));
+  }
+  assert.deepEqual(await invoices(h), [], 'an invoice was drafted for a client that was not identified');
+});
+
+test('a browser that sends only the client\'s exact name is still understood, but a name that is not exact or not unique is not', async t => {
+  const h = await fixture(t);
+  assert.equal((await ask(h, AGENCY, REQUESTS.invoice, { ...AGENCY_INVOICE, clientContext: 'a' })).body.action?.type, 'create_invoice');
+  assert.deepEqual((await invoices(h)).map(row => row.client_id), ['tenant-a'], 'the name was not matched without regard to capitals');
+  await addClient(h, 'tenant-a-twin', 'A');
+  for (const clientContext of ['A', 'Gold', 'AA']) {
+    const result = await ask(h, AGENCY, REQUESTS.invoice, { ...AGENCY_INVOICE, clientContext });
+    assert.notEqual(result.body.action?.type, 'create_invoice', `drafted for the name ${clientContext}`);
+  }
+  assert.equal((await invoices(h)).length, 1, 'a second invoice was drafted from a name that was not unique');
+});
+
+test('the invoice action itself will not draft for a client it cannot find', async t => {
+  const h = await fixture(t);
+  const { createQuickInvoiceAction } = h.load('lib/copilot/actions.ts');
+  for (const params of [{ clientName: 'Move Digital' }, { clientName: 'Gold Fields' }, {}, { clientId: 'client_moove_digital' }, { clientId: 'nope', clientName: 'A' }]) {
+    const result = await createQuickInvoiceAction(params);
+    assert.equal(result.success, false, `drafted for ${JSON.stringify(params)}`);
+  }
+  assert.deepEqual(await invoices(h), []);
+  const ok = await createQuickInvoiceAction({ clientId: 'tenant-b' });
+  assert.equal(ok.success, true);
+  assert.equal(ok.data.clientName, 'B');
+});
+
+test('the assistant in the browser tells the server which client it is working in', () => {
+  const source = require('node:fs').readFileSync(require('node:path').join(__dirname, '../../src/components/copilot/ZaraVoiceCopilot.tsx'), 'utf8');
+  assert.match(source, /clientId:\s*activeClient\?\.id/, 'the browser does not send the active client\'s id');
 });
 
 test('agency staff previewing a client\'s view get the client\'s view, and a missing mode means the client view', async t => {
