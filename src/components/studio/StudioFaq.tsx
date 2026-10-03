@@ -4,6 +4,16 @@ import React, { useState } from 'react';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 import { ChevronDown, HelpCircle, MessageSquare } from 'lucide-react';
 import { StudioBackgroundFx } from './StudioBackgroundFx';
+import {
+  getFontFamilyClass,
+  getHeadingScaleClass,
+  getTrackingClass,
+  getAlignmentClasses,
+  getContainerWidthClass,
+  getBorderRadiusClass,
+  getGlowEffectStyles,
+  getFrostedGlassStyle,
+} from '@/lib/studio/styleResolver';
 
 interface FaqItem {
   question: string;
@@ -43,9 +53,26 @@ export const StudioFaq: React.FC<StudioFaqProps> = ({
   const subtitle = props.subtitle || 'Everything you need to know about our platform, onboarding timeline, and institutional compliance.';
   const items = props.items || [];
 
+  const defaultFont = collection === 'editorial' ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = getFontFamilyClass(styles?.fontFamily, defaultFont);
+  const headingScaleClass = getHeadingScaleClass(styles?.headingScale, 'text-3xl sm:text-4xl lg:text-5xl');
+  const trackingClass = getTrackingClass(styles?.letterSpacing, 'tracking-tight');
+  const alignClass = getAlignmentClasses(styles?.alignment, 'center');
+  const containerWidthClass = getContainerWidthClass(styles?.containerWidth, 'max-w-4xl');
+  const cardRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-2xl');
+  const buttonRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-xl');
+  const glowStyle = getGlowEffectStyles(styles?.glowEffect);
+  const frostedGlassStyle = getFrostedGlassStyle(styles);
+
   // Compute section style wrapper
   const paddingClass = styles?.paddingY || 'py-24';
-  const inlineStyle: React.CSSProperties = {};
+  const inlineStyle: React.CSSProperties = {
+    ...glowStyle,
+    ...frostedGlassStyle,
+    ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+    ...(styles?.borderTop ? { borderTopWidth: '1px', borderTopStyle: 'solid' } : {}),
+    ...(styles?.borderBottom ? { borderBottomWidth: '1px', borderBottomStyle: 'solid' } : {}),
+  };
 
   if (styles?.backgroundType === 'solid' && styles.backgroundColor) {
     inlineStyle.backgroundColor = styles.backgroundColor;
@@ -66,9 +93,9 @@ export const StudioFaq: React.FC<StudioFaqProps> = ({
         opacity={styles?.patternOpacity}
         accentColor={accentColor}
       />
-      <div className="max-w-4xl mx-auto px-6 sm:px-8 relative z-10">
+      <div className={`${containerWidthClass} mx-auto px-6 sm:px-8 relative z-10`}>
         {/* Header */}
-        <div className="text-center space-y-4 mb-14">
+        <div className={`space-y-4 mb-14 ${alignClass.container}`}>
           {eyebrow && (
             <div
               className="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-sky-400/30 bg-sky-500/10 text-xs font-semibold tracking-wide uppercase"
@@ -79,13 +106,13 @@ export const StudioFaq: React.FC<StudioFaqProps> = ({
             </div>
           )}
           <h2
-            className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white"
+            className={`${fontFamilyClass} ${headingScaleClass} font-extrabold ${trackingClass} text-white ${alignClass.text}`}
             style={headingStyle}
           >
             {title}
           </h2>
           {subtitle && (
-            <p className="text-base sm:text-lg text-slate-300 leading-relaxed font-light max-w-2xl mx-auto" style={textStyle}>
+            <p className={`text-base sm:text-lg text-slate-300 leading-relaxed font-light max-w-2xl ${alignClass.text}`} style={textStyle}>
               {subtitle}
             </p>
           )}
@@ -99,18 +126,22 @@ export const StudioFaq: React.FC<StudioFaqProps> = ({
             return (
               <div
                 key={idx}
-                className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                className={`${cardRadiusClass} border transition-all duration-200 overflow-hidden ${
                   isOpen
                     ? 'bg-slate-900/80 border-slate-700 shadow-lg'
                     : 'bg-slate-950/50 border-slate-800/80 hover:border-slate-700/60'
                 }`}
+                style={{
+                  ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+                  ...frostedGlassStyle,
+                }}
               >
                 <button
                   type="button"
                   onClick={() => toggleItem(idx)}
                   className="w-full px-6 py-5 flex items-center justify-between text-left space-x-4 focus:outline-none"
                 >
-                  <span className="text-base font-semibold text-white tracking-tight">
+                  <span className={`text-base font-semibold text-white tracking-tight ${fontFamilyClass}`}>
                     {item.question}
                   </span>
                   <div
@@ -134,9 +165,15 @@ export const StudioFaq: React.FC<StudioFaqProps> = ({
         </div>
 
         {/* Bottom Help Desk Card */}
-        <div className="mt-12 p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+        <div
+          className={`mt-12 p-6 ${cardRadiusClass} bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left`}
+          style={{
+            ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+            ...frostedGlassStyle,
+          }}
+        >
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center" style={{ color: accentColor }}>
+            <div className={`w-10 h-10 ${buttonRadiusClass} bg-sky-500/10 border border-sky-400/20 flex items-center justify-center`} style={{ color: accentColor }}>
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
@@ -146,7 +183,7 @@ export const StudioFaq: React.FC<StudioFaqProps> = ({
           </div>
           <a
             href="/contact"
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-white border border-slate-700 hover:bg-slate-800 transition"
+            className={`px-4 py-2 ${buttonRadiusClass} text-xs font-semibold text-white border border-slate-700 hover:bg-slate-800 transition`}
           >
             Contact Support
           </a>

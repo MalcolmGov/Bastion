@@ -88,19 +88,19 @@ export function StudioComponentRenderer({
       renderedContent = <StudioServices props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;
       break;
     case 'case_studies':
-      renderedContent = <StudioCaseStudies props={section.props as any} collection={collection} variant={section.variant} />;
+      renderedContent = <StudioCaseStudies props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;
       break;
     case 'team':
-      renderedContent = <StudioTeam props={section.props as any} collection={collection} variant={section.variant} />;
+      renderedContent = <StudioTeam props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;
       break;
     case 'rich_text':
-      renderedContent = <StudioRichText props={section.props as any} collection={collection} variant={section.variant} />;
+      renderedContent = <StudioRichText props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;
       break;
     case 'cta':
       renderedContent = <StudioCta props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
       break;
     case 'contact_form':
-      renderedContent = <StudioContactForm props={section.props as any} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      renderedContent = <StudioContactForm props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
       break;
     case 'footer':
       renderedContent = <StudioFooter props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;

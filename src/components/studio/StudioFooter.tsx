@@ -3,6 +3,11 @@
 import React from 'react';
 import { MapPin, Mail, Phone, ArrowUp, Globe, Clock, ShieldCheck } from 'lucide-react';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
+import {
+  getContainerWidthClass,
+  getFontFamilyClass,
+  getBorderRadiusClass
+} from '@/lib/studio/styleResolver';
 
 interface FooterLink {
   label: string;
@@ -150,12 +155,17 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
     }
   };
 
+  const defaultFont = isEditorial ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = getFontFamilyClass(styles?.fontFamily, defaultFont);
+  const containerWidthClass = getContainerWidthClass(styles?.containerWidth, 'max-w-7xl');
+  const borderRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-lg');
+
   return (
     <footer
       style={footerStyle}
       className={`px-6 transition-colors ${!hasCustomBg ? defaultBgClass : ''} ${paddingClass}`}
     >
-      <div className="max-w-7xl mx-auto space-y-16">
+      <div className={`${containerWidthClass} mx-auto space-y-16`}>
         {/* Top Tier: Brand Identity & Social Links Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pb-12 border-b border-white/10">
           <div className="space-y-3 max-w-xl">
