@@ -11,7 +11,7 @@ import {
   SensApprovalError,
   type SensAnnouncement,
 } from '@/lib/ir/sensService';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 interface RouteContext {
   params: Promise<{ id: string }>;

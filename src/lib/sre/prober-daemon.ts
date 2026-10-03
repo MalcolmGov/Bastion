@@ -5,7 +5,7 @@
  */
 
 import { getDb } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export interface SiteSlaSummary {
   siteId: string;

@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { rasterizeLogoDataUrl } from './logoRaster';
 
 export type CodeProvider = 'anthropic' | 'openai' | 'gemini' | 'deepseek' | 'qwen';

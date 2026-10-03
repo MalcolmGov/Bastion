@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/auth/auth';
 import { tenantClause, resolveTargetClientId } from '@/lib/auth/guard';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function GET(req: NextRequest) {
   try {

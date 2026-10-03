@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import { getDb, ensureDbReady } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function GET(req: NextRequest) {
   try {

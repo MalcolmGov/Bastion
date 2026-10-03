@@ -5,7 +5,7 @@ import { publishRelease } from '@/lib/releases/service';
 import { assertRecordApproval } from '@/lib/auth/contentApproval';
 import { assertPageApproved } from '@/lib/studio/editor/pageApproval';
 import { runDueScheduledJobs } from '@/lib/worker/scheduledJobs';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 const DEV_DEFAULT_CRON_SECRET = 'bastion_cron_worker_production_key_2026';
 

@@ -1,5 +1,5 @@
 import { ensureDbReady } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { sanitizeHtmlFragment } from '@/lib/security/sanitizeHtmlFragment';
 import type { SensAnnouncement, SensType } from './types';
 import { SENS_TYPE_LABELS, SENS_TYPE_COLORS } from './types';

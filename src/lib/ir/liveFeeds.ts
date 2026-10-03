@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio';
 import { ensureDbReady } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { SensAnnouncement, SensType } from './types';
 
 export interface LiveSensItem {

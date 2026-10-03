@@ -49,7 +49,7 @@ import {
   listTenderSubmissions,
   updateTenderSubmissionStatus,
 } from '../src/lib/tenders/tenderService';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 interface TestResult {
   suite: string;

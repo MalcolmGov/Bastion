@@ -3,7 +3,7 @@
  * Connects Autonomous SRE incident events with Zara AI WhatsApp messaging.
  */
 
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { readSecret } from '@/lib/auth/apiToken';
 
 const SECRET_KEY = readSecret('SRE_APPROVAL_SECRET');

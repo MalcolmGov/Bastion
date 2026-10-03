@@ -1,7 +1,7 @@
 import { createClient } from '@libsql/client';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { hashPassword } from '../src/lib/auth/password';
 import { seedGoldFieldsResults } from './seed-results-document';
 import { encryptSecret } from '../src/lib/crypto/encryption';

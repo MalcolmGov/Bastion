@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { BillingDoc, LineItem } from '@/lib/studio/billingTypes';
 import { requireAgencyUser } from '@/lib/auth/guard';
 

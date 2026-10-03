@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { dispatchContentWebhook } from '@/lib/webhooks/dispatcher';
 import { requireAgencyUser } from '@/lib/auth/guard';
 import { isPublicDemoSecret } from '@/lib/auth/apiToken';

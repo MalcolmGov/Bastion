@@ -10,7 +10,7 @@
  * 4. Multi-tenant client boundary isolation
  */
 
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { getDb, ensureDbReady } from '@/lib/db/client';
 import { encryptSecret, decryptSecret } from '@/lib/crypto/encryption';
 

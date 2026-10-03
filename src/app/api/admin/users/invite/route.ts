@@ -5,7 +5,7 @@ import { isAgencyUser } from '@/lib/auth/roles';
 import { generateToken, hashPassword, ROLE_PERMISSIONS } from '@/lib/auth/auth';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 import { sendTransactionalEmail } from '@/lib/email/delivery';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function POST(req: NextRequest) {
   try {
