@@ -1,22 +1,8 @@
-/**
- * Move Studio — Automatic Website Assembly Pipeline
- * Takes extracted or reviewed client material, selected blueprint, and design collection,
- * then maps content into typed CMS records and generates full page compositions with a gap report.
- */
-
 import type { Client as DbClient } from '@libsql/client';
-import type {
-  BlueprintId,
-  DesignCollectionId,
-  Website,
-  BrandKit,
-  PageComposition,
-  SectionInstance,
-  ContentGapItem
-} from './types';
+import type { BlueprintId, DesignCollectionId, BrandKit, PageComposition, SectionInstance, ContentGapItem } from './types';
+import type { WebsiteDesignSystem } from './designSystem';
 import { BLUEPRINTS } from './blueprints';
-import { COMPONENT_REGISTRY } from './componentRegistry';
-
+import { createDesignSystem, normalizeDesignSystem, designSystemIssues, safeAssetUrl, sectionDesignStyles } from './designSystem';
 export interface AssembleInput {
   clientId: string;
   clientName: string;
@@ -25,6 +11,10 @@ export interface AssembleInput {
   blueprintId: BlueprintId;
   collectionId: DesignCollectionId;
   brandKit: Partial<BrandKit>;
+  sourceUrl?: string;
+  heroImage?: string;
+  designReviewed?: boolean;
+  designSystem?: WebsiteDesignSystem;
   extractedContent: {
     tagline?: string;
     services?: Array<{ title: string; description: string; metrics?: string; href?: string }>;
@@ -39,375 +29,114 @@ export interface AssembleInput {
   };
 }
 
+
+export class AssemblyError extends Error {
+  constructor(message: string, public status = 400) { super(message); }
+}
 export interface AssembleResult {
   websiteId: string;
   previewUrl: string;
   compositions: PageComposition[];
   gaps: ContentGapItem[];
 }
-
 export class WebsiteAssembler {
-  static async assembleAndSave(input: AssembleInput, db: DbClient): Promise<AssembleResult> {
+  static async assembleAndSave(input: AssembleInput, db: DbClient, actor?: { id: string; name: string }): Promise<AssembleResult> {
+    if (!input || !actor) throw new AssemblyError('An authenticated agency author is required.');
+    for (const key of ['clientId', 'clientName', 'websiteName', 'websiteSlug'] as const) {
+      if (typeof input[key] !== 'string' || !input[key].trim() || input[key].length > 160) throw new AssemblyError(`A valid ${key} is required.`);
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.websiteSlug) || input.websiteSlug.length > 70) throw new AssemblyError('Use a lowercase website slug with letters, numbers and hyphens.');
+    if (!/^[\w-]{1,100}$/.test(input.clientId)) throw new AssemblyError('Invalid client identifier.');
+    if (!Object.hasOwn(BLUEPRINTS, input.blueprintId) || !['contemporary', 'editorial', 'immersive'].includes(input.collectionId)) throw new AssemblyError('Choose a supported blueprint and design direction.');
+    if (input.designReviewed !== true) throw new AssemblyError('Review the design tokens and source content before creating the website.');
+    if (!input.extractedContent || typeof input.extractedContent !== 'object' || JSON.stringify(input).length > 250000) throw new AssemblyError('Provide a website brief within the 250 KB limit.');
+    const content = input.extractedContent;
+    for (const key of ['services', 'stats', 'teamMembers', 'caseStudies'] as const) {
+      if (content[key] !== undefined && (!Array.isArray(content[key]) || content[key]!.length > 40)) throw new AssemblyError(`Invalid ${key} collection.`);
+    }
+    if (content.services?.some(s => typeof s?.title !== 'string' || typeof s.description !== 'string')) throw new AssemblyError('Each service needs a title and description.');
+    if (content.businessSummary && typeof content.businessSummary !== 'string') throw new AssemblyError('Business summary must be text.');
+    for (const key of ['tagline', 'businessSummary'] as const) {
+      if (content[key] !== undefined && (typeof content[key] !== 'string' || content[key]!.length > 10000)) throw new AssemblyError(`Invalid ${key}.`);
+    }
+    if (content.contactInfo && (typeof content.contactInfo !== 'object' || Object.values(content.contactInfo).some(v => typeof v !== 'string' || v.length > 1000))) throw new AssemblyError('Invalid contact information.');
+    if (content.socialLinks && (!Array.isArray(content.socialLinks) || content.socialLinks.length > 20 || content.socialLinks.some(s => typeof s?.url !== 'string' || typeof s.platform !== 'string'))) throw new AssemblyError('Invalid social links.');
+    if (content.stats?.some(s => typeof s?.value !== 'string' || typeof s.label !== 'string')) throw new AssemblyError('Invalid statistics.');
+    if (content.teamMembers?.some(m => typeof m?.name !== 'string' || typeof m.role !== 'string')) throw new AssemblyError('Invalid team member.');
+    if (content.caseStudies?.some(c => typeof c?.headline !== 'string' || typeof c.client !== 'string' || typeof c.outcome !== 'string')) throw new AssemblyError('Invalid case study.');
+    const system = input.designSystem ? normalizeDesignSystem(input.designSystem) : createDesignSystem(input.brandKit, undefined, input.sourceUrl);
+    const issues = designSystemIssues(system);
+    if (issues.length) throw new AssemblyError(issues.join(' '));
     const now = new Date().toISOString();
-    const siteId = `site_${input.websiteSlug.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
-    const blueprint = BLUEPRINTS[input.blueprintId] || BLUEPRINTS.corporate;
-
-    // 1. Prepare Curated Navigation (clean, uncrowded, top 5 primary links)
-    const rawNav = input.extractedContent.navigation || [];
-    const seenNavLabels = new Set<string>();
-    const curatedMainNav: Array<{ label: string; href: string }> = [];
-
-    for (const item of rawNav) {
-      const cleanLabel = item.label.trim();
-      const lower = cleanLabel.toLowerCase();
-      if (
-        !cleanLabel ||
-        seenNavLabels.has(lower) ||
-        lower === 'home' ||
-        lower.startsWith('sign in') ||
-        lower.startsWith('log in') ||
-        curatedMainNav.length >= 5
-      ) {
-        continue;
-      }
-      seenNavLabels.add(lower);
-      const displayLabel = cleanLabel.length > 18 ? cleanLabel.slice(0, 16) + '…' : cleanLabel;
-      curatedMainNav.push({ label: displayLabel, href: item.url });
-    }
-
-    if (curatedMainNav.length === 0) {
-      curatedMainNav.push(
-        { label: 'Services', href: '/services' },
-        { label: 'About', href: '/about' },
-        { label: 'Contact', href: '/contact' }
-      );
-    }
-
-    // Default rich footer columns
-    const defaultFooterColumns = [
-      {
-        category: 'Capabilities',
-        links: [
-          { label: 'Platform Architecture', url: '/services' },
-          { label: 'Core Solutions', url: '/services' },
-          { label: 'Systems Integration', url: '/services' }
-        ]
-      },
-      {
-        category: 'Organization',
-        links: [
-          { label: 'About Executive Team', url: '/about' },
-          { label: 'Practice Philosophy', url: '/about' },
-          { label: 'Client Mandates', url: '/about' }
-        ]
-      },
-      {
-        category: 'Governance & Connect',
-        links: [
-          { label: 'Direct Partner Contact', url: '/contact' },
-          { label: 'Privacy & Disclosures', url: '/privacy' },
-          { label: 'Terms of Engagement', url: '/terms' }
-        ]
-      }
-    ];
-
-    const footerColumns = (input.extractedContent.footerNavigation && input.extractedContent.footerNavigation.length > 0)
-      ? input.extractedContent.footerNavigation
-      : defaultFooterColumns;
-
-    const socialLinks = (input.extractedContent.socialLinks && input.extractedContent.socialLinks.length > 0)
-      ? input.extractedContent.socialLinks
-      : [
-          { platform: 'linkedin', url: `https://linkedin.com/company/${input.websiteSlug}`, handle: input.websiteSlug },
-          { platform: 'twitter', url: `https://x.com/${input.websiteSlug}`, handle: `@${input.websiteSlug}` }
-        ];
-
-    const settings = {
-      enabledModules: {
-        servicesList: input.blueprintId === 'professional_services',
-        caseStudies: input.blueprintId === 'professional_services',
-        menusAndOfferings: input.blueprintId === 'hospitality',
-        miningOperations: false,
-        investorDisclosures: false,
-        publicAssistant: true
-      },
-      navigation: {
-        mainNav: curatedMainNav,
-        allNav: rawNav.map(n => ({ label: n.label, href: n.url })),
-        primaryCta: { label: 'Get in Touch', href: '/contact' }
-      },
-      footer: {
-        copyright: `© ${new Date().getFullYear()} ${input.clientName}. All rights reserved.`,
-        officeAddress: input.extractedContent.contactInfo?.address || 'Corporate Headquarters',
-        contactEmail: input.extractedContent.contactInfo?.email || `contact@${input.websiteSlug}.com`,
-        contactPhone: input.extractedContent.contactInfo?.phone,
-        columns: footerColumns,
-        socialLinks
-      }
-    };
-
-    // 0. Ensure Client Record exists
-    await db.execute({
-      sql: `INSERT OR IGNORE INTO clients (id, name, slug, industry, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [
-        input.clientId,
-        input.clientName,
-        input.websiteSlug,
-        input.blueprintId === 'hospitality' ? 'hospitality' : (input.blueprintId === 'professional_services' ? 'professional_services' : 'corporate'),
-        now,
-        now
-      ]
-    });
-
-    // 2. Insert Website Record
-    await db.execute({
-      sql: `INSERT OR REPLACE INTO websites (id, client_id, name, slug, blueprint_id, design_collection_id, status, settings_json, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        siteId,
-        input.clientId,
-        input.websiteName,
-        input.websiteSlug,
-        input.blueprintId,
-        input.collectionId,
-        'draft',
-        JSON.stringify(settings),
-        now,
-        now
-      ]
-    });
-
-    // 3. Save / Update Brand Kit
-    const brandKitId = `brand_${siteId}_v1`;
-    const fullBrandKit = {
-      id: brandKitId,
-      siteId,
-      version: 1,
-      status: 'approved',
-      logos: input.brandKit.logos || {
-        primary: { url: '/assets/logo-placeholder.svg', status: 'approved' }
-      },
-      colors: input.brandKit.colors || {
-        primary: { name: 'Primary Slate', value: '#0F172A', status: 'approved' },
-        secondary: { name: 'Secondary Navy', value: '#1E293B', status: 'approved' },
-        accent: { name: 'Electric Accent', value: '#0284C7', status: 'approved' },
-        background: { name: 'Light Canvas', value: '#F8FAFC', status: 'approved' },
-        surface: { name: 'White Surface', value: '#FFFFFF', status: 'approved' },
-        textPrimary: { name: 'Dark Ink', value: '#0F172A', status: 'approved' },
-        textMuted: { name: 'Muted Ink', value: '#64748B', status: 'approved' },
-        hairline: { name: 'Hairline Divider', value: '#E2E8F0', status: 'approved' }
-      },
-      typography: input.brandKit.typography || {
-        headingFont: input.collectionId === 'editorial' ? 'Playfair Display' : 'Plus Jakarta Sans',
-        bodyFont: 'Inter',
-        headingWeight: '700',
-        scaleRatio: 1.25,
-        status: 'approved'
-      },
-      componentRules: input.brandKit.componentRules || {
-        radius: 'md',
-        buttonStyle: 'solid',
-        shadows: 'crisp',
-        imageryDirection: 'Clean corporate photography with high-contrast framing'
-      },
-      voiceAndMessaging: input.brandKit.voiceAndMessaging || {
-        toneOfVoice: 'Authoritative, decisive, and customer-aligned.',
-        approvedFacts: ['Established organization delivering specialist capabilities.']
-      },
-      lockedAttributes: ['logos.primary', 'colors.primary']
-    };
-
-    await db.execute({
-      sql: `INSERT OR REPLACE INTO brand_kits (id, site_id, version, status, logos_json, colors_json, typography_json, component_rules_json, voice_and_messaging_json, locked_attributes_json, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        brandKitId,
-        siteId,
-        1,
-        'approved',
-        JSON.stringify(fullBrandKit.logos),
-        JSON.stringify(fullBrandKit.colors),
-        JSON.stringify(fullBrandKit.typography),
-        JSON.stringify(fullBrandKit.componentRules),
-        JSON.stringify(fullBrandKit.voiceAndMessaging),
-        JSON.stringify(fullBrandKit.lockedAttributes),
-        now,
-        now
-      ]
-    });
-
-    // 4. Assemble Composed Pages
-    const compositions: PageComposition[] = [];
+    const siteId = `site_${input.websiteSlug.replace(/-/g, '_')}`;
+    const link = (slug: string) => `/sites/${input.websiteSlug}${slug === 'home' ? '' : '/' + slug}`;
+    const pages = [{ slug: 'home', title: 'Home' }, { slug: 'about', title: 'About' }, { slug: 'services', title: 'Services' }, { slug: 'contact', title: 'Contact' }];
+    const mainNav = pages.map(p => ({ label: p.title, href: link(p.slug) }));
     const gaps: ContentGapItem[] = [];
-
-    // Analyze gaps
-    if (!input.extractedContent.contactInfo?.phone) {
-      gaps.push({
-        id: 'gap_missing_phone',
-        severity: 'warning',
-        pageSlug: 'contact',
-        field: 'phone',
-        message: 'No direct telephone number was detected in website extraction.',
-        suggestedAction: 'Add direct corporate telephone number in Brand & Settings.'
+    const gap = (pageSlug: string, field: string, message: string) => gaps.push({ id: `gap_${pageSlug}_${field}`, pageSlug, field, message, severity: 'warning', suggestedAction: 'Complete and verify this content in the visual editor before submitting it for review.' });
+    if (!content.businessSummary) gap('about', 'summary', 'Company introduction is missing. An editorial placeholder is included.');
+    if (!content.services?.length) gap('services', 'services', 'No service descriptions were provided. Add the client’s real capabilities.');
+    if (!content.contactInfo?.email && !content.contactInfo?.phone) gap('contact', 'contact', 'No contact details were provided. No email address or phone number has been invented.');
+    if (!system.logoUrl) gap('home', 'logo', 'No approved logo selected. The website uses the client name.');
+    if (!safeAssetUrl(input.heroImage)) gap('home', 'imagery', 'No source image selected. Review imagery and usage rights before publication.');
+    gap('contact', 'legal', 'Add client-specific privacy and legal policy links before publication.');
+    gap('home', 'source_review', 'Extracted copy and assets are source candidates, not independently verified facts. Review claims, image rights and font licences.');
+    const settings = { designSystem: system, sourceUrl: system.sourceUrl, contentGaps: gaps,
+      enabledModules: { publicAssistant: false }, navigation: { mainNav, allNav: mainNav, primaryCta: { label: 'Contact us', href: link('contact') } } };
+    const compositions = pages.map(({ slug, title }) => {
+      let count = 0;
+      const section = (componentId: string, variant: string, props: Record<string, unknown>, surface = false): SectionInstance => ({
+        id: `sec_${siteId}_${slug}_${++count}`, componentId, variant, visible: true, props,
+        styles: sectionDesignStyles(system, surface),
       });
-    }
-
-    if (!input.extractedContent.services || input.extractedContent.services.length < 3) {
-      gaps.push({
-        id: 'gap_services_count',
-        severity: 'info',
-        pageSlug: 'services',
-        field: 'services',
-        message: 'Fewer than 3 services detected. Recommended to have at least 3 practice areas for balanced grid visual rhythm.',
-        suggestedAction: 'Add supporting practice areas in Content management.'
-      });
-    }
-
-    // Build Homepage Sections
-    const homeSections: SectionInstance[] = [
-      {
-        id: `sec_${siteId}_hdr`,
-        componentId: 'header',
-        variant: input.collectionId === 'immersive' ? 'bold_solid' : 'standard_glass',
-        visible: true,
-        props: {
-          brandName: input.clientName,
-          logoUrl: fullBrandKit.logos.primary?.url,
-          links: settings.navigation.mainNav,
-          allLinks: settings.navigation.allNav,
-          ctaText: settings.navigation.primaryCta.label,
-          ctaHref: settings.navigation.primaryCta.href
-        }
-      },
-      {
-        id: `sec_${siteId}_hero`,
-        componentId: 'hero',
-        variant: input.collectionId === 'immersive' ? 'immersive_full' : input.collectionId === 'editorial' ? 'editorial_split' : 'contemporary_bold',
-        visible: true,
-        props: {
-          badge: `${input.clientName} Flagship`,
-          title: input.extractedContent.tagline || input.brandKit.voiceAndMessaging?.tagline || (input.extractedContent.businessSummary
-            ? `${input.clientName}: Strategic excellence.`
-            : `Delivering precision capabilities for demanding requirements.`),
-          subtitle: input.extractedContent.businessSummary || input.brandKit.voiceAndMessaging?.missionStatement || 'Providing industry-leading capabilities and strategic advisory with senior partner dedication.',
-          primaryCta: { label: settings.navigation.primaryCta?.label || 'Explore Capabilities', href: settings.navigation.primaryCta?.href || '/services' },
-          secondaryCta: { label: 'Contact Our Team', href: '/contact' },
-          stats: input.extractedContent.stats || [
-            { value: '100%', label: 'Dedicated Execution' },
-            { value: '24h', label: 'Response Guarantee' },
-            { value: 'Tier-1', label: 'Client Quality Standard' }
-          ]
-        }
-      },
-      {
-        id: `sec_${siteId}_services`,
-        componentId: 'services_grid',
-        variant: 'cards_3col',
-        visible: true,
-        props: {
-          eyebrow: input.blueprintId === 'hospitality' ? 'Seasonal Offerings' : (input.blueprintId === 'professional_services' ? 'Practice Areas & Capabilities' : 'Core Capabilities'),
-          title: `Capabilities and solutions by ${input.clientName}.`,
-          description: input.extractedContent.businessSummary || 'Senior partner-led execution across all core disciplines.',
-          services: (input.extractedContent.services && input.extractedContent.services.length > 0)
-            ? input.extractedContent.services
-            : [
-                { title: 'Core Advisory & Consulting', description: 'Comprehensive strategic advisory tailored to institutional clients.' },
-                { title: 'Execution & Delivery', description: 'Rigorous implementation ensuring sustainable performance and efficiency.' },
-                { title: 'Risk Governance & Review', description: 'Continuous compliance and risk assessment protocols.' }
-              ]
-        }
-      }
-    ];
-
-    if (input.extractedContent.caseStudies && input.extractedContent.caseStudies.length > 0) {
-      homeSections.push({
-        id: `sec_${siteId}_cases`,
-        componentId: 'case_studies',
-        variant: 'impact_cards',
-        visible: true,
-        props: {
-          eyebrow: 'Verified Impact',
-          title: 'Decisive outcomes achieved across client engagements.',
-          caseStudies: input.extractedContent.caseStudies
-        }
-      });
-    }
-
-    homeSections.push(
-      {
-        id: `sec_${siteId}_cta`,
-        componentId: 'cta',
-        variant: 'split_card',
-        visible: true,
-        props: {
-          eyebrow: 'Inquire & Connect',
-          title: `Connect with ${input.clientName} for your next initiative.`,
-          description: input.extractedContent.businessSummary || `Engage directly with ${input.clientName} to discuss specifications, architecture, or partnerships.`,
-          ctaText: settings.navigation.primaryCta?.label || 'Get in Touch',
-          ctaHref: settings.navigation.primaryCta?.href || '/contact',
-          contactDetails: {
-            phone: input.extractedContent.contactInfo?.phone,
-            email: input.extractedContent.contactInfo?.email
-          }
-        }
-      },
-      {
-        id: `sec_${siteId}_ftr`,
-        componentId: 'footer',
-        variant: 'multi_column',
-        visible: true,
-        props: {
-          brandName: input.clientName,
-          logoUrl: fullBrandKit.logos.primary?.url,
-          tagline: input.extractedContent.tagline || input.brandKit.voiceAndMessaging?.tagline || `Precision solutions and architecture for ${input.clientName}.`,
-          copyright: settings.footer.copyright,
-          officeAddress: input.extractedContent.contactInfo?.address || settings.footer.officeAddress,
-          contactEmail: input.extractedContent.contactInfo?.email || settings.footer.contactEmail,
-          contactPhone: input.extractedContent.contactInfo?.phone || settings.footer.contactPhone,
-          socialLinks: settings.footer.socialLinks,
-          columns: settings.footer.columns
-        }
-      }
-    );
-
-    const homeComp: PageComposition = {
-      id: `comp_${siteId}_home_v1`,
-      siteId,
-      pageSlug: 'home',
-      title: `${input.clientName} — Home`,
-      layoutCollection: input.collectionId,
-      sections: homeSections,
-      version: 1,
-      status: 'draft',
-      createdAt: now,
-      updatedAt: now
-    };
-
-    await db.execute({
-      sql: `INSERT OR REPLACE INTO page_compositions (id, site_id, page_slug, title, layout_collection, sections_json, version, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        homeComp.id,
-        homeComp.siteId,
-        homeComp.pageSlug,
-        homeComp.title,
-        homeComp.layoutCollection,
-        JSON.stringify(homeComp.sections),
-        homeComp.version,
-        homeComp.status,
-        now,
-        now
-      ]
+      const heroTitle = slug === 'home' ? content.tagline || input.brandKit.voiceAndMessaging?.tagline || input.clientName : slug === 'about' ? `About ${input.clientName}` : slug === 'services' ? 'Our capabilities' : 'Start a conversation';
+      const heroSubtitle = slug === 'contact' ? [content.contactInfo?.email, content.contactInfo?.phone, content.contactInfo?.address].filter(Boolean).join(' · ') || 'Contact information awaiting editorial review.' : content.businessSummary || 'Company introduction awaiting editorial review.';
+      const sections: SectionInstance[] = [
+        section('header', 'standard_glass', { brandName: input.clientName, logoUrl: system.logoUrl || undefined, links: mainNav, allLinks: mainNav, ctaText: 'Contact us', ctaHref: link('contact') }),
+        section('hero', input.collectionId === 'immersive' ? 'immersive_full' : input.collectionId === 'editorial' ? 'editorial_split' : 'contemporary_bold', {
+          badge: slug === 'home' ? input.websiteName : title, title: heroTitle, subtitle: heroSubtitle,
+          bgImage: slug === 'home' ? safeAssetUrl(input.heroImage) || undefined : undefined,
+          primaryCta: { label: slug === 'contact' ? 'Explore our services' : 'Explore our capabilities', href: link('services') },
+          secondaryCta: { label: 'About us', href: link('about') }, stats: slug === 'home' ? content.stats || [] : [],
+        }),
+      ];
+      if (slug === 'home' || slug === 'services') sections.push(section('services_grid', 'cards_3col', {
+        eyebrow: 'Expertise', title: 'Built around your needs', description: content.services?.length ? 'Explore our services and capabilities.' : 'Add approved service descriptions in the visual editor.',
+        services: (content.services || []).map(s => ({ title: s.title, description: s.description, metrics: s.metrics, href: link('contact') })),
+      }, true));
+      if (slug === 'about' && content.teamMembers?.length) sections.push(section('team', 'leadership_grid', { title: 'Our team', members: content.teamMembers.map(m => ({ ...m, image: safeAssetUrl(m.image) || undefined })) }, true));
+      if (slug === 'home' && content.caseStudies?.length) sections.push(section('case_studies', 'impact_cards', { title: 'Selected work', eyebrow: 'Experience', caseStudies: content.caseStudies }, true));
+      if (slug !== 'contact') sections.push(section('cta', 'split_card', { eyebrow: 'Let’s connect', title: `Talk to ${input.clientName}`, description: 'Get in touch to discuss your requirements.', ctaText: 'Contact us', ctaHref: link('contact') }, true));
+      else if (content.contactInfo?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(content.contactInfo.email)) sections.push(section('cta', 'split_card', { title: 'Speak with our team', description: content.contactInfo.address || '', ctaText: 'Email our team', ctaHref: `mailto:${content.contactInfo.email}` }, true));
+      sections.push(section('footer', 'multi_column', { brandName: input.clientName, logoUrl: system.logoUrl || undefined,
+        copyright: `© ${new Date().getFullYear()} ${input.clientName}.`, tagline: content.tagline || '',
+        officeAddress: content.contactInfo?.address || '', contactEmail: content.contactInfo?.email || '', contactPhone: content.contactInfo?.phone || '',
+        socialLinks: (content.socialLinks || []).filter(s => safeAssetUrl(s.url)), columns: [{ title: 'Explore', links: pages.map(p => ({ label: p.title, url: link(p.slug) })) }],
+      }));
+      return { id: `comp_${siteId}_${slug}_v1`, siteId, pageSlug: slug, title: `${input.clientName} — ${title}`, layoutCollection: input.collectionId,
+        sections, version: 1, status: 'draft' as const, createdAt: now, updatedAt: now };
     });
-
-    compositions.push(homeComp);
-
-    return {
-      websiteId: siteId,
-      previewUrl: `/preview/${input.websiteSlug}`,
-      compositions,
-      gaps
-    };
+    const tx = await db.transaction('write');
+    try {
+      const existing = await tx.execute({ sql: 'SELECT id FROM websites WHERE id=? OR slug=? LIMIT 1', args: [siteId, input.websiteSlug] });
+      if (existing.rows.length) throw new AssemblyError('This website already exists. Open it in the visual editor or choose a different slug; creation never replaces an existing website.', 409);
+      const client = await tx.execute({ sql: 'SELECT name FROM clients WHERE id=?', args: [input.clientId] });
+      if (client.rows.length && String(client.rows[0].name) !== input.clientName) throw new AssemblyError('The selected client name does not match its tenant record. Refresh the client selector.', 409);
+      if (!client.rows.length) await tx.execute({ sql: 'INSERT INTO clients (id,name,slug,industry,created_at,updated_at) VALUES (?,?,?,?,?,?)', args: [input.clientId, input.clientName, input.websiteSlug, input.blueprintId, now, now] });
+      await tx.execute({ sql: 'INSERT INTO websites (id,client_id,name,slug,blueprint_id,design_collection_id,status,settings_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)', args: [siteId, input.clientId, input.websiteName, input.websiteSlug, input.blueprintId, input.collectionId, 'draft', JSON.stringify(settings), now, now] });
+      const colors = Object.fromEntries(Object.entries(system.colors).map(([role, value]) => [role, { name: role, value, status: 'approved', evidence: system.evidence[role] || 'Reviewed agency design proposal' }]));
+      await tx.execute({ sql: 'INSERT INTO brand_kits (id,site_id,version,status,logos_json,colors_json,typography_json,component_rules_json,voice_and_messaging_json,locked_attributes_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', args: [
+        `brand_${siteId}_v1`, siteId, 1, 'approved', JSON.stringify({ primary: { url: system.logoUrl, status: system.logoUrl ? 'approved' : 'missing' } }), JSON.stringify(colors), JSON.stringify({ ...system.typography, status: 'approved' }),
+        JSON.stringify({ radius: system.radius, buttonStyle: 'solid', shadows: 'subtle', imageryDirection: 'Reviewed client photography' }),
+        JSON.stringify(input.brandKit.voiceAndMessaging || { toneOfVoice: 'Clear and professional', approvedFacts: [] }), '[]', now, now,
+      ] });
+      for (const comp of compositions) {
+        const sections = JSON.stringify(comp.sections);
+        await tx.execute({ sql: 'INSERT INTO page_compositions (id,site_id,page_slug,title,layout_collection,sections_json,version,status,created_at,updated_at) VALUES (?,?,?,?,?,?,1,\'draft\',?,?)', args: [comp.id, siteId, comp.pageSlug, comp.title, input.collectionId, sections, now, now] });
+        await tx.execute({ sql: 'INSERT INTO page_versions (id,composition_id,site_id,page_slug,version,title,layout_collection,sections_json,status,created_by,created_by_name,change_summary,created_at) VALUES (?,?,?,?,1,?,?,?,\'draft\',?,?,?,?)', args: [`${comp.id}_history_1`, comp.id, siteId, comp.pageSlug, comp.title, input.collectionId, sections, actor.id, actor.name, 'Agency website creation from reviewed design tokens', now] });
+      }
+      await tx.commit();
+    } catch (error) { await tx.rollback(); throw error; } finally { tx.close(); }
+    return { websiteId: siteId, previewUrl: `/admin/editor?siteId=${siteId}&pageSlug=home`, compositions, gaps };
   }
 }

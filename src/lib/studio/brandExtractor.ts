@@ -1,23 +1,12 @@
-/**
- * Bastion Platform — Claude Design Brand DNA Extraction Pipeline
- * Pipeline: website URL → approved brand kit
- * 
- * 1. Headless multi-page crawl (homepage + 3-5 pages, robots.txt & RFC1918 safe)
- * 2. Read final computed styles and :root CSS variables (elements & frequencies)
- * 3. Collect brand assets (SVG marks, logos, icons, categorized media)
- * 4. Extract copy, reading level (Flesch-Kincaid), sentiment, key phrases
- * 5. Map fonts to Google Fonts vs paid fonts with license warnings & alternatives
- * 6. Normalise into standard theme JSON schema format with WCAG AA checks
- * 7. AI pass (semantic roles, font pairings, 2-3 sentence voice summary, 3 never-do rules)
- * 8. Export CSS variables & Tailwind config
- */
+/** Website style extraction. Inferred tokens and copy require agency review. */
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+
+
+import { readPublicResource } from './publicResource';
 import * as cheerio from 'cheerio';
 import { validateSafeUrl, normalizeUrl } from './importer';
 
-const curl = promisify(execFile);
+
 
 export interface ExtractedColorOccurrence {
   hex: string;
@@ -154,20 +143,7 @@ function canonicalFont(raw: string): string {
 }
 
 async function readCapped(rawUrl: string, maxBytes: number): Promise<string> {
-  const check = validateSafeUrl(rawUrl);
-  if (!check.isValid) throw new Error(check.error || 'That website address is not allowed.');
-  try {
-    const { stdout } = await curl('curl', [
-      '-sS', '-L', '--max-time', '12', '--max-filesize', String(maxBytes),
-      '-A', 'Mozilla/5.0 (compatible; BastionBrandExtractor/2.0)',
-      rawUrl,
-    ], { maxBuffer: maxBytes + 64_000, encoding: 'utf8' });
-    return stdout.slice(0, maxBytes);
-  } catch (error) {
-    const stdout = (error as { stdout?: string }).stdout || '';
-    if (stdout.length > 1000) return stdout.slice(0, maxBytes);
-    throw error;
-  }
+  return (await readPublicResource(rawUrl, maxBytes)).body.toString('utf8');
 }
 
 async function readStylesheets(html: string, pageUrl: string): Promise<string> {
@@ -371,40 +347,12 @@ export class BrandDnaExtractor {
     const crawledPages: Array<{ url: string; title: string; status: number }> = [];
 
     // Step 1: Fetch Homepage HTML
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
-
-    let html = '';
-    let finalUrl = url;
-    try {
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 BastionBrandExtractor/2.0',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/*,*/*;q=0.8',
-        },
-        signal: controller.signal
-      });
-
-      crawledPages.push({ url, title: 'Homepage', status: res.status });
-      if (!res.ok) {
-        throw new Error(`Target returned HTTP ${res.status}`);
-      }
-      html = await res.text();
-      finalUrl = res.url || url;
-      if (html.length < 2500 || /incapsula|cf-browser-verification|Just a moment/i.test(html)) {
-        throw new Error('The homepage was blocked or incomplete.');
-      }
-    } catch (fetchErr: any) {
-      try {
-        html = await readCapped(url, 1_500_000);
-        finalUrl = url;
-        crawledPages.push({ url, title: 'Homepage', status: 200 });
-      } catch {
-        throw new Error(`Could not read ${url}. ${fetchErr?.message || 'The site did not return HTML.'}`);
-      }
-    } finally {
-      clearTimeout(timeout);
-    }
+    const response = await readPublicResource(url);
+    if (!/text\/html|application\/xhtml/i.test(response.contentType)) throw new Error('The source did not return HTML.');
+    const html = response.body.toString('utf8');
+    const finalUrl = response.url;
+    if (/incapsula|cf-browser-verification|Just a moment/i.test(html)) throw new Error('This website blocks automated extraction. Enter the client brief manually.');
+    crawledPages.push({ url: finalUrl, title: 'Homepage', status: response.status });
 
     const stylesheet = await readStylesheets(html, finalUrl);
     const $ = cheerio.load(html);

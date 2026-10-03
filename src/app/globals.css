@@ -182,3 +182,12 @@ input, button, select, textarea {
   background: #CBD5E1;
 }
 
+
+/* Brand typography is saved with each composition, including its approval hash. */
+.brand-token-section.has-heading-font h1, .brand-token-section.has-heading-font h2, .brand-token-section.has-heading-font h3, .brand-token-section.has-heading-font h4 {
+  font-family: var(--website-heading-font) !important;
+  font-weight: var(--website-heading-weight) !important;
+}
+.brand-token-section.has-body-font p, .brand-token-section.has-body-font nav, .brand-token-section.has-body-font a, .brand-token-section.has-body-font button {
+  font-family: var(--website-body-font) !important;
+}

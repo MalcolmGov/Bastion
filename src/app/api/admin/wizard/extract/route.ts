@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MoveStudioIngestProvider } from '@/lib/studio/importer';
 import { requireAgencyUser } from '@/lib/auth/guard';
 
+export const maxDuration = 120;
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     const gate = await requireAgencyUser();
@@ -15,8 +18,8 @@ export async function POST(req: NextRequest) {
 
     const provider = new MoveStudioIngestProvider();
     const result = await provider.crawlAndExtract(url, {
-      maxPages: Number(maxPages),
-      excludedPaths
+      maxPages: Math.min(4, Math.max(1, Number(maxPages) || 1)),
+      excludedPaths: Array.isArray(excludedPaths) ? excludedPaths.filter((p: unknown) => typeof p === 'string').slice(0, 30) : []
     });
 
     return NextResponse.json({ success: true, result });

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { MapPin, Mail, Phone, ArrowUp, Globe, Clock, ShieldCheck } from 'lucide-react';
+import { MapPin, Mail, Phone, ArrowUp, Globe,  ShieldCheck } from 'lucide-react';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 import {
   getContainerWidthClass,
@@ -117,7 +117,7 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
   const hasCustomBg = styles?.backgroundType === 'solid' || styles?.backgroundType === 'gradient';
   const paddingClass = styles?.paddingY || 'py-16 md:py-24';
 
-  const columns = props.columns && props.columns.length > 0 ? props.columns : [
+  const columns = props.columns !== undefined ? props.columns : [
     {
       title: 'Capabilities',
       links: [
@@ -144,7 +144,7 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
     }
   ];
 
-  const socialLinks = props.socialLinks && props.socialLinks.length > 0 ? props.socialLinks : [
+  const socialLinks = props.socialLinks !== undefined ? props.socialLinks : [
     { platform: 'linkedin', url: 'https://linkedin.com' },
     { platform: 'twitter', url: 'https://x.com' }
   ];
@@ -197,7 +197,7 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
             </div>
 
             {props.tagline && (
-              <p className="text-xs sm:text-sm text-slate-400 font-light leading-relaxed max-w-lg">
+              <p style={styles?.textColor ? { color: styles.textColor } : undefined} className="text-xs sm:text-sm text-slate-400 font-light leading-relaxed max-w-lg">
                 {props.tagline}
               </p>
             )}
@@ -258,7 +258,7 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
             </div>
 
             {props.officeAddress && (
-              <div className="flex items-start space-x-3 text-xs leading-relaxed text-slate-300">
+              <div style={styles?.textColor ? { color: styles.textColor } : undefined} className="flex items-start space-x-3 text-xs leading-relaxed text-slate-300">
                 <MapPin className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
                 <span>{props.officeAddress}</span>
               </div>
@@ -266,7 +266,7 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
 
             <div className="space-y-2 pt-2 border-t border-white/5 text-xs">
               {props.contactEmail && (
-                <div className="flex items-center space-x-3 text-slate-300">
+                <div style={styles?.textColor ? { color: styles.textColor } : undefined} className="flex items-center space-x-3 text-slate-300">
                   <Mail className="w-4 h-4 text-indigo-400 shrink-0" />
                   <a
                     href={`mailto:${props.contactEmail}`}
@@ -278,7 +278,7 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
               )}
 
               {props.contactPhone && (
-                <div className="flex items-center space-x-3 text-slate-300">
+                <div style={styles?.textColor ? { color: styles.textColor } : undefined} className="flex items-center space-x-3 text-slate-300">
                   <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
                   <a
                     href={`tel:${props.contactPhone}`}
@@ -290,16 +290,12 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
               )}
             </div>
 
-            <div className="pt-2 flex items-center space-x-2 text-[11px] text-slate-400">
-              <Clock className="w-3.5 h-3.5 text-slate-500" />
-              <span>Dedicated Partner Response SLA: &lt; 24h</span>
-            </div>
           </div>
         </div>
 
         {/* Bottom Tier: Copyright, Move Studio Attribution, Back to Top */}
         <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-          <div className="flex flex-wrap items-center gap-3 text-slate-400">
+          <div style={styles?.textColor ? { color: styles.textColor } : undefined} className="flex flex-wrap items-center gap-3 text-slate-400">
             <span>{copyright}</span>
             <span className="hidden sm:inline text-slate-600">•</span>
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-300 font-mono">
@@ -308,12 +304,12 @@ export function StudioFooter({ props, styles, collection = 'contemporary', varia
           </div>
 
           <div className="flex items-center space-x-6">
-            <a href={props.privacyHref || "/privacy"} className="hover:text-white transition opacity-75 hover:opacity-100">
+            {props.privacyHref && <a href={props.privacyHref} className="hover:text-white transition opacity-75 hover:opacity-100">
               Privacy Notice
-            </a>
-            <a href={props.termsHref || "/terms"} className="hover:text-white transition opacity-75 hover:opacity-100">
+            </a>}
+            {props.termsHref && <a href={props.termsHref} className="hover:text-white transition opacity-75 hover:opacity-100">
               Terms
-            </a>
+            </a>}
             <button
               type="button"
               onClick={scrollToTop}

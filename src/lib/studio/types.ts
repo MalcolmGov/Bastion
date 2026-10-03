@@ -216,6 +216,9 @@ export interface SectionStyles {
 
   // High-Leverage Visual Control Tokens
   fontFamily?: 'sans' | 'serif' | 'mono';
+  headingFont?: string;
+  bodyFont?: string;
+  headingWeight?: string;
   headingScale?: 'compact' | 'normal' | 'hero' | 'ultra';
   letterSpacing?: 'tighter' | 'tight' | 'normal' | 'wide' | 'expanded';
   alignment?: 'left' | 'center' | 'split';
