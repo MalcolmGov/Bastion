@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/guard';
+import { isAgencyUser } from '@/lib/auth/roles';
 import {
   getSreHealthAction,
   getIncidentsAction,
@@ -30,7 +31,9 @@ export async function POST(req: NextRequest) {
     } = body;
 
     const clientName = clientContext || 'Payguard';
-    const isClient = portalViewMode === 'client';
+    // Agency mode exposes data from every tenant and can draft invoices, so it is decided by who is signed in.
+    // The request can only ask for less: agency staff may preview the client view, nobody can claim agency mode.
+    const isClient = !isAgencyUser(gate.user) || portalViewMode === 'client';
     const defaultSteps = isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS;
     const trimmed = (message || '').trim();
 
