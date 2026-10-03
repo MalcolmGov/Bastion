@@ -205,6 +205,7 @@ test('release publishing resolves slugs only within its tenant/site and promotes
   await assert.rejects(service.addItemToRelease(release.id, { itemType: 'page', itemId: 'page-b', title: 'Bad' }), /workspace/);
   await service.addItemToRelease(release.id, { itemType: 'report', itemId: 'record-a', title: 'Report' });
   await h.db.execute("INSERT INTO approvals VALUES('release-approval','revision-a','reviewer-a','approved','hash')");
+  await h.approvePage();
   await service.publishRelease(release.id, 'A publisher');
   assert.equal(await status(h, 'page_compositions', 'page-a'), 'published');
   assert.equal(await status(h, 'page_compositions', 'page-b'), 'draft');

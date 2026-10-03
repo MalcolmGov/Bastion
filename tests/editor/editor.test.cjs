@@ -101,6 +101,16 @@ test('draft saving retains the public baseline until explicit publication', asyn
     saveComposition(author, input({ expectedVersion: 2, status: 'published' })),
     (error) => error.status === 403,
   );
+  // Publishing also needs a reviewer other than the author to have approved this exact version.
+  await assert.rejects(
+    saveComposition({ ...author, role: 'publisher' }, input({ expectedVersion: 2, status: 'published' })),
+    (error) => error.status === 409 && error.code === 'approval_required',
+  );
+  const { approvePageVersion } = h.load('lib/studio/editor/pageApproval.ts');
+  await approvePageVersion(
+    { id: 'reviewer-a', name: 'Reviewer', role: 'reviewer', client_id: 'tenant-a' },
+    { siteId: 'site-a', pageSlug: 'home', version: 2 },
+  );
   await saveComposition(
     { ...author, role: 'publisher' },
     input({ expectedVersion: 2, status: 'published' }),

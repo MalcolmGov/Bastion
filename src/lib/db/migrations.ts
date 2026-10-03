@@ -739,6 +739,21 @@ export const migrations: Migration[] = [
         }
       }
     }
+  },
+  {
+    version: 15,
+    name: '015_page_publish_approval',
+    up: async (db: Client) => {
+      // Who approved a saved page version, when, and the hash of the content they approved, so a page can only go
+      // live with a version that someone other than its author signed off. Nullable: existing versions stay as they are.
+      const info = await db.execute(`PRAGMA table_info(page_versions)`);
+      const existing = new Set(info.rows.map(r => String(r.name)));
+      for (const column of ['approved_by', 'approved_by_name', 'approved_at', 'approved_content_hash']) {
+        if (!existing.has(column)) {
+          await db.execute(`ALTER TABLE page_versions ADD COLUMN ${column} TEXT`);
+        }
+      }
+    }
   }
 ];
 

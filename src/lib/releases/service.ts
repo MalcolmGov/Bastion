@@ -2,6 +2,7 @@ import { ensureDbReady } from '@/lib/db/client';
 import crypto from 'crypto';
 import type { Client } from '@libsql/client';
 import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
+import { assertPageApproved, PageApprovalError } from '@/lib/studio/editor/pageApproval';
 
 export interface ContentRelease {
   id: string;
@@ -321,9 +322,17 @@ export async function publishRelease(releaseId: string, publishedBy = 'Malcolm G
   // release in one transaction. A bad item must not leave a partial release.
   const transaction = await db.transaction('write');
   try {
-    for (const item of releaseData.items) {
-      const target = await resolveReleaseItem(transaction, releaseData.release, item);
+    // Resolve every item before checking approvals or writing, so a bundle with a bad item is refused for that reason first.
+    const targets = [];
+    for (const item of releaseData.items) targets.push(await resolveReleaseItem(transaction, releaseData.release, item));
+    for (const target of targets) {
       if (target.kind === 'page') {
+        try {
+          await assertPageApproved(transaction, target.id);
+        } catch (error) {
+          if (error instanceof PageApprovalError) throw new ReleaseValidationError(error.message);
+          throw error;
+        }
         await transaction.execute({
           sql: `UPDATE page_compositions SET status = 'published', updated_at = ?
                 WHERE id = ? AND site_id = ? AND site_id IN (SELECT id FROM websites WHERE client_id = ?)`,
