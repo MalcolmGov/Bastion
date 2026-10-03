@@ -61,7 +61,7 @@ interface TestResult {
 
 const results: TestResult[] = [];
 
-async function test(suite: string, name: string, fn: () => Promise<void>) {
+async function test(suite: string, name: string, fn: () => void | Promise<void>) {
   try {
     await fn();
     results.push({ suite, name, status: 'PASS' });
@@ -128,7 +128,7 @@ async function runAll() {
     assert(offenders.length === 0, `Accounts still accept a published password: ${offenders.join(', ')}`);
   });
 
-  await test('Migrations', 'The password policy refuses every published password in any capitalisation, and accepts an ordinary one', async () => {
+  await test('Migrations', 'The password policy refuses every published password in any capitalisation, and accepts an ordinary one', () => {
     for (const password of PUBLISHED_PASSWORDS) {
       for (const variant of [password, password.toLowerCase(), password.toUpperCase()]) {
         assert(passwordProblem(variant) === 'published', `The policy accepts the published password ${variant}`);
