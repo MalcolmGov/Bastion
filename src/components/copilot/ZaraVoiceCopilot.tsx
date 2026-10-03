@@ -832,6 +832,30 @@ export function ZaraVoiceCopilot() {
         }
       }
 
+      // Real-Time Canvas Manipulation: Auto-dispatch to editor canvas
+      const canvasTool = (data.toolsExecuted || []).find((t: any) => t.toolName === 'canvasManipulate');
+      if (canvasTool && canvasTool.result && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('zara-canvas-action', {
+          detail: canvasTool.result
+        }));
+      }
+
+      // Real-Time Compliance Remediation: Auto-dispatch to editor canvas
+      const remTool = (data.toolsExecuted || []).find((t: any) => t.toolName === 'remediateCanvasCompliance');
+      if (remTool && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('zara-canvas-action', {
+          detail: { action: 'fix-compliance' }
+        }));
+      }
+
+      // Real-Time Compliance Audit: Trigger inspection on live editor
+      const auditTool = (data.toolsExecuted || []).find((t: any) => t.toolName === 'runComplianceAudit');
+      if (auditTool && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('zara-canvas-action', {
+          detail: { action: 'audit-compliance' }
+        }));
+      }
+
       if (data.suggestedNextSteps && Array.isArray(data.suggestedNextSteps) && data.suggestedNextSteps.length > 0) {
         setSuggestedSteps(data.suggestedNextSteps);
       }
@@ -1226,6 +1250,34 @@ export function ZaraVoiceCopilot() {
                               >
                                 <span>⚡ Apply to Canvas</span>
                                 <CheckCircle2 className="w-3 h-3 text-slate-950" />
+                              </button>
+                            )}
+                            {c.type === 'compliance' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  window.dispatchEvent(new CustomEvent('zara-canvas-action', {
+                                    detail: { action: 'fix-compliance' }
+                                  }));
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-xs transition cursor-pointer active:scale-95"
+                              >
+                                <span>🛡️ Auto-Remediate Violations</span>
+                                <ShieldCheck className="w-3 h-3 text-white" />
+                              </button>
+                            )}
+                            {c.type === 'canvas_action' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  window.dispatchEvent(new CustomEvent('zara-canvas-action', {
+                                    detail: { action: 'undo' }
+                                  }));
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs shadow-xs transition cursor-pointer active:scale-95"
+                              >
+                                <span>↩️ Undo Change</span>
+                                <RotateCcw className="w-3 h-3 text-slate-700" />
                               </button>
                             )}
                           </div>

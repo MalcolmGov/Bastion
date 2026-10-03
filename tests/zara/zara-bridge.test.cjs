@@ -181,5 +181,56 @@ test('Zara AI Bridge: fallback returns the comprehensive 8-pillar enterprise sui
   assert.ok(res.suggestedNextSteps.length >= 4);
 });
 
+test('Zara AI Bridge: canvasManipulate executes theme switch and undo actions', async (t) => {
+  const h = await createHarness();
+  t.after(() => h.close());
+
+  const { ZaraBridgeClient } = h.load('lib/zara/bridgeClient.ts');
+  const client = new ZaraBridgeClient();
+
+  const resTheme = await client.processMessage('Zara, change canvas theme to dark mode', [], {
+    portalViewMode: 'agency',
+    userName: 'Malcolm',
+    clientName: 'Gold Fields Limited'
+  });
+
+  assert.equal(resTheme.toolsExecuted.length, 1);
+  assert.equal(resTheme.toolsExecuted[0].toolName, 'canvasManipulate');
+  assert.equal(resTheme.toolsExecuted[0].result.action, 'theme');
+  assert.equal(resTheme.toolsExecuted[0].result.theme, 'dark');
+
+  const resUndo = await client.processMessage('Zara, undo that change', [], {
+    portalViewMode: 'agency',
+    userName: 'Malcolm',
+    clientName: 'Gold Fields Limited'
+  });
+
+  assert.equal(resUndo.toolsExecuted.length, 1);
+  assert.equal(resUndo.toolsExecuted[0].toolName, 'canvasManipulate');
+  assert.equal(resUndo.toolsExecuted[0].result.action, 'undo');
+});
+
+test('Zara AI Bridge: remediateCanvasCompliance executes safe-harbor legal cleanse', async (t) => {
+  const h = await createHarness();
+  t.after(() => h.close());
+
+  const { ZaraBridgeClient } = h.load('lib/zara/bridgeClient.ts');
+  const client = new ZaraBridgeClient();
+
+  const res = await client.processMessage('Zara, fix all compliance violations on this page', [], {
+    portalViewMode: 'agency',
+    userName: 'Malcolm',
+    clientName: 'Gold Fields Limited'
+  });
+
+  assert.equal(res.toolsExecuted.length, 1);
+  assert.equal(res.toolsExecuted[0].toolName, 'remediateCanvasCompliance');
+  assert.equal(res.toolsExecuted[0].result.score, 100);
+  assert.equal(res.toolsExecuted[0].result.grade, 'A+');
+  assert.ok(res.reply.includes('Safe-Harbor Cleanse Complete'));
+  assert.ok(res.actionCards.some(c => c.type === 'compliance_fixed'));
+});
+
+
 
 
