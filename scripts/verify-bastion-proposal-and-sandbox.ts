@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer-core';
+import { loginViaForm } from './lib/devLogin';
 
 const ARTIFACT_DIR = '/Users/malcolmgovender/.gemini/antigravity/brain/8d5736b7-122d-4e9c-95b8-96b414fb7dfa';
 
@@ -13,11 +14,7 @@ async function main() {
   await page.setViewport({ width: 1600, height: 1200, deviceScaleFactor: 2 });
 
   console.log('1. Logging in to admin...');
-  await page.goto('http://localhost:3010/admin/login', { waitUntil: 'networkidle2' });
-  await page.type('input[type="email"]', 'admin@goldfields.com');
-  await page.type('input[type="password"]', 'GoldFields2026!');
-  await page.click('button[type="submit"]');
-  await page.waitForNavigation({ waitUntil: 'networkidle2' });
+  await loginViaForm(page, 'http://localhost:3010', 'client');
 
   // Ensure Agency mode for billing
   await page.evaluate(() => {

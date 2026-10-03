@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-core';
 import path from 'path';
+import { loginViaForm } from './lib/devLogin';
 
 const ARTIFACT_DIR = '/Users/malcolmgovender/.gemini/antigravity/brain/8d5736b7-122d-4e9c-95b8-96b414fb7dfa';
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -18,11 +19,7 @@ async function capture() {
 
   // 1. Login
   console.log('Logging in...');
-  await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
-  await page.type('input[type="email"]', 'admin@goldfields.com');
-  await page.type('input[type="password"]', 'GoldFields2026!');
-  await page.click('button[type="submit"]');
-  await page.waitForNavigation({ waitUntil: 'networkidle2' });
+  await loginViaForm(page, BASE_URL, 'client');
   console.log('Logged in successfully.');
 
   // Set dark mode in localStorage if needed

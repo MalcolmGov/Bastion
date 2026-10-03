@@ -1,5 +1,8 @@
 import { chromium } from 'playwright';
 
+const CORP_PASSWORD = process.env.E2E_CORP_PASSWORD;
+if (!CORP_PASSWORD) throw new Error('Set E2E_CORP_PASSWORD to the password of the test accounts on the instance you are testing (see .env.example).');
+
 async function main() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
@@ -10,7 +13,7 @@ async function main() {
   await page.waitForLoadState('networkidle');
 
   await page.fill('input[type="email"]', 'editor@aurum.local');
-  await page.fill('input[type="password"]', 'Bastion2026!Corp#');
+  await page.fill('input[type="password"]', CORP_PASSWORD);
   await page.click('button[type="submit"]');
 
   await page.waitForURL('**/admin', { timeout: 15000 });

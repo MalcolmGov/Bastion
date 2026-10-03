@@ -4,7 +4,7 @@
  * In-Editor Content Agent transformations, and GitHub integration safety.
  */
 
-export {};
+import { loginViaApi } from './lib/devLogin';
 
 const BASE_URL = 'http://localhost:3010';
 
@@ -50,11 +50,7 @@ async function main() {
   console.log('📦 SUITE 1: Authentication & Session Security');
 
   await runTest('Auth', 'Login as Platform Admin and receive session cookie', async () => {
-    const res = await fetch(`${BASE_URL}/api/admin/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@goldfields.com', password: 'GoldFields2026!' })
-    });
+    const res = await loginViaApi(BASE_URL, 'client');
     assert(res.ok, `HTTP status ${res.status}`);
     const setCookie = res.headers.get('set-cookie');
     assert(!!setCookie && setCookie.includes('gf_studio_session'), 'Missing gf_studio_session cookie');
