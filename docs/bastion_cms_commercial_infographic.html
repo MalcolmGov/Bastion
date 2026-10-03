@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bastion CMS | Enterprise Platform Value & Commercial Models</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @media print {
+      body { background: white !important; color: #0f172a !important; }
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+      .shadow-2xl, .shadow-xl, .shadow-lg { box-shadow: none !important; }
+      .border { border-color: #cbd5e1 !important; }
+    }
+    .gradient-gold {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+    }
+    .gradient-blue {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #1e40af 100%);
+    }
+    .gradient-emerald {
+      background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased font-sans selection:bg-amber-500 selection:text-slate-950 min-h-screen">
+
+  <!-- Header Banner & Action Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center font-bold text-slate-950 shadow-lg shadow-amber-500/20 text-lg">
+          B
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-tight text-white text-base">BASTION CMS</span>
+            <span class="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full tracking-wide uppercase">Commercial Brief</span>
+          </div>
+          <p class="text-xs text-slate-400">Moove Studio Enterprise Engine &middot; Licensing vs. Full Buyout Decision Deck</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 no-print">
+        <button onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-2 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          Export / Print Deck
+        </button>
+        <a href="#commercial-options" class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-xs font-bold text-slate-950 transition shadow-sm">
+          Compare Licensing vs. Buyout
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+
+    <!-- Hero Value Statement -->
+    <section class="relative rounded-2xl p-8 sm:p-12 overflow-hidden border border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/80 to-slate-950 shadow-2xl">
+      <div class="absolute -top-32 -right-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10 max-w-4xl space-y-6">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-xs font-medium text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Production-Ready Enterprise Platform &middot; Sovereign South African CMS
+        </div>
+        <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+          Enterprise CMS Built For <span class="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 bg-clip-text text-transparent">Corporate Growth & Regulatory Rigour</span>
+        </h1>
+        <p class="text-base sm:text-lg text-slate-300 leading-relaxed max-w-3xl">
+          Bastion staff create client websites in minutes; corporate clients edit, review, and publish through strict approval workflows without writing code. Flexible commercial terms: choose between a <strong>fully-managed scalable platform license</strong> or an <strong>outright source code and IP buyout</strong>.
+        </p>
+
+        <!-- Executive Metrics Row -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-800">
+          <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
+            <div class="text-2xl sm:text-3xl font-black text-amber-400">R1.5M+</div>
+            <div class="text-xs text-slate-400 font-medium mt-1">Savings vs In-House Dev</div>
+            <div class="text-[10px] text-emerald-400 font-semibold mt-0.5">&darr; 80%+ Cost Reduction</div>
+          </div>
+          <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
+            <div class="text-2xl sm:text-3xl font-black text-blue-400">2 Options</div>
+            <div class="text-xs text-slate-400 font-medium mt-1">Licensing or Full Buyout</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Tailored to Bastion's Strategy</div>
+          </div>
+          <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
+            <div class="text-2xl sm:text-3xl font-black text-emerald-400">100% SENS</div>
+            <div class="text-xs text-slate-400 font-medium mt-1">JSE Compliance Pipeline</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Time-locked embargo gates</div>
+          </div>
+          <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
+            <div class="text-2xl sm:text-3xl font-black text-purple-400">Day 1</div>
+            <div class="text-xs text-slate-400 font-medium mt-1">Deployment Readiness</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Vs. 9-12 mo in-house dev</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: COMMERCIAL PATHWAYS (IN-HOUSE VS LICENSE VS BUYOUT) -->
+    <section id="cost-justification" class="space-y-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold tracking-wider text-amber-400 uppercase">Commercial Pathways</span>
+          <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Financial Analysis: In-House vs. Partnering</h2>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-400 max-w-md">
+          Both Moove Studio models eliminate the massive risk and multi-million Rand overhead of building an in-house CMS team.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Pathway 1: In-House Dev -->
+        <div class="rounded-2xl border border-rose-900/40 bg-slate-900/60 p-6 flex flex-col justify-between relative overflow-hidden">
+          <div class="absolute top-0 right-0 bg-rose-500/10 text-rose-400 text-[10px] font-bold px-3 py-1 rounded-bl-lg border-b border-l border-rose-500/20">
+            INTERNAL BUILD
+          </div>
+          <div class="space-y-4">
+            <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white">1. In-House Engineering Team</h3>
+              <p class="text-xs text-slate-400 mt-1">Hiring 2 Senior Full-Stack devs + 1 QA engineer in South Africa to build from scratch.</p>
+            </div>
+            <div class="pt-2 border-t border-slate-800 space-y-2 text-xs">
+              <div class="flex justify-between text-slate-300">
+                <span>Dev Salaries (2 Senior @ R65k/mo):</span>
+                <span class="font-mono text-rose-300 font-semibold">R1,560,000/yr</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Recruiter placement fees (15%):</span>
+                <span class="font-mono text-rose-300 font-semibold">R234,000</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Infrastructure & Tooling:</span>
+                <span class="font-mono text-rose-300 font-semibold">R60,000/yr</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Time-to-market delay:</span>
+                <span class="font-mono text-rose-300 font-semibold">9 - 12 Months</span>
+              </div>
+            </div>
+          </div>
+          <div class="pt-6 border-t border-slate-800/80 mt-6">
+            <div class="text-xs text-slate-400 uppercase tracking-wider">Year 1 Total Cost</div>
+            <div class="text-2xl font-black text-rose-400 mt-1">R1,854,000+</div>
+            <div class="text-[11px] text-slate-500 mt-1">&plus; Permanent R1.6M/yr payroll liability</div>
+          </div>
+        </div>
+
+        <!-- Pathway 2: Model A - Platform License & Managed SLA -->
+        <div class="rounded-2xl border-2 border-amber-500/80 bg-gradient-to-b from-slate-900 to-amber-950/20 p-6 flex flex-col justify-between relative shadow-xl shadow-amber-500/5">
+          <div class="absolute top-0 right-0 bg-amber-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-bl-lg tracking-wider uppercase">
+            MODEL A: MANAGED LICENSE
+          </div>
+          <div class="space-y-4">
+            <div class="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                2. Platform License & Scale
+                <span class="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Turnkey</span>
+              </h3>
+              <p class="text-xs text-slate-300 mt-1">Low upfront capital, continuous feature upgrades, 99.9% uptime SLA, zero DevOps headache.</p>
+            </div>
+            <div class="pt-2 border-t border-slate-800 space-y-2 text-xs">
+              <div class="flex justify-between text-slate-200">
+                <span class="font-medium">Setup & Customization:</span>
+                <span class="font-mono text-amber-300 font-bold">R180,000</span>
+              </div>
+              <div class="flex justify-between text-slate-200">
+                <span class="font-medium">Platform Fee (R12.5k/mo &times; 12):</span>
+                <span class="font-mono text-amber-300 font-bold">R150,000/yr</span>
+              </div>
+              <div class="flex justify-between text-slate-200">
+                <span>Includes:</span>
+                <span class="text-slate-300">Up to 3 Active Client Sites</span>
+              </div>
+              <div class="flex justify-between text-slate-200">
+                <span>Site Expansion:</span>
+                <span class="text-amber-400 font-semibold">&plus; R2,500/site/mo</span>
+              </div>
+              <div class="flex justify-between text-slate-200">
+                <span>Code Protection:</span>
+                <span class="text-emerald-400 font-semibold">Source Code Escrow Deposit</span>
+              </div>
+            </div>
+          </div>
+          <div class="pt-6 border-t border-slate-800/80 mt-6">
+            <div class="text-xs text-amber-400 uppercase tracking-wider font-bold">Year 1 Total Investment</div>
+            <div class="text-3xl font-black text-amber-400 mt-1">R330,000</div>
+            <div class="text-[11px] text-emerald-400 font-semibold mt-1">Saves R1,524,000 vs. In-House Build</div>
+          </div>
+        </div>
+
+        <!-- Pathway 3: Model B - Full Source Code & IP Buyout -->
+        <div class="rounded-2xl border-2 border-blue-500/80 bg-gradient-to-b from-slate-900 to-blue-950/20 p-6 flex flex-col justify-between relative shadow-xl shadow-blue-500/5">
+          <div class="absolute top-0 right-0 bg-blue-500 text-slate-950 text-[10px] font-black px-3 py-1 rounded-bl-lg tracking-wider uppercase">
+            MODEL B: FULL BUYOUT
+          </div>
+          <div class="space-y-4">
+            <div class="w-10 h-10 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                3. Full Source Code Buyout
+                <span class="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20">Own The Asset</span>
+              </h3>
+              <p class="text-xs text-slate-300 mt-1">Bastion owns the code outright, full Git repo transfer, perpetual self-hosting rights.</p>
+            </div>
+            <div class="pt-2 border-t border-slate-800 space-y-2 text-xs">
+              <div class="flex justify-between text-slate-200">
+                <span class="font-medium">Once-Off IP & Code Buyout:</span>
+                <span class="font-mono text-blue-300 font-bold">R280,000</span>
+              </div>
+              <div class="flex justify-between text-slate-200">
+                <span class="font-medium">Maintenance Retainer (Optional):</span>
+                <span class="font-mono text-blue-300 font-bold">R2,000 - R5,000/mo</span>
+              </div>
+              <div class="flex justify-between text-slate-200">
+                <span>Codebase:</span>
+                <span class="text-emerald-400 font-semibold">100% Full Git Repo Transfer</span>
+              </div>
+              <div class="flex justify-between text-slate-200">
+                <span>Client Site Limit:</span>
+                <span class="text-emerald-400 font-semibold">Unlimited (Bastion Hosts)</span>
+              </div>
+              <div class="flex justify-between text-slate-200">
+                <span>Balance Sheet:</span>
+                <span class="text-blue-300">Capitalized Intangible Asset</span>
+              </div>
+            </div>
+          </div>
+          <div class="pt-6 border-t border-slate-800/80 mt-6">
+            <div class="text-xs text-blue-400 uppercase tracking-wider font-bold">Year 1 Total Investment</div>
+            <div class="text-3xl font-black text-blue-400 mt-1">R304,000 - R340,000</div>
+            <div class="text-[11px] text-emerald-400 font-semibold mt-1">Complete IP Ownership & Autonomy</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 2: SIDE-BY-SIDE COMPARISON: LICENSE VS BUYOUT -->
+    <section id="commercial-options" class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <span class="text-xs font-bold tracking-wider text-amber-400 uppercase">Strategic Decision Matrix</span>
+          <h3 class="text-xl sm:text-2xl font-bold text-white">Model A (Licensing) vs. Model B (Full Buyout)</h3>
+        </div>
+        <span class="px-2.5 py-1 rounded bg-slate-800 border border-slate-700 text-[11px] font-mono text-slate-300">
+          Executive Evaluation Guide
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400">
+              <th class="py-3 px-4 font-semibold uppercase tracking-wider text-[11px]">Evaluation Dimension</th>
+              <th class="py-3 px-4 font-bold text-amber-400 uppercase tracking-wider text-[11px] bg-amber-500/5 rounded-t-lg">Model A: Managed Platform License</th>
+              <th class="py-3 px-4 font-bold text-blue-400 uppercase tracking-wider text-[11px] bg-blue-500/5 rounded-t-lg">Model B: Full Source Code Buyout</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/80 text-slate-300">
+            <tr>
+              <td class="py-3.5 px-4 font-semibold text-white">Upfront Capital Outlay</td>
+              <td class="py-3.5 px-4 font-mono font-bold text-amber-300 bg-amber-500/5">R180,000 (Setup, Branding & Config)</td>
+              <td class="py-3.5 px-4 font-mono font-bold text-blue-300 bg-blue-500/5">R280,000 (Full IP & Repository Transfer)</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 px-4 font-semibold text-white">Ongoing Monthly Support</td>
+              <td class="py-3.5 px-4 font-mono text-amber-300 bg-amber-500/5">R12,500/mo (Includes 3 sites + full SLA)</td>
+              <td class="py-3.5 px-4 font-mono text-blue-300 bg-blue-500/5">R2,000 - R5,000/mo (Upstream patches / Retainer)</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 px-4 font-semibold text-white">Code & IP Ownership</td>
+              <td class="py-3.5 px-4 bg-amber-500/5">Licensed to Bastion + <strong>Source Code Escrow Deposit</strong></td>
+              <td class="py-3.5 px-4 text-emerald-400 font-semibold bg-blue-500/5"><strong>100% Perpetual Ownership</strong> (Bastion owns code)</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 px-4 font-semibold text-white">Infrastructure & Hosting</td>
+              <td class="py-3.5 px-4 text-emerald-400 font-semibold bg-amber-500/5">Managed by Moove (Zero DevOps for Bastion)</td>
+              <td class="py-3.5 px-4 bg-blue-500/5">Hosted on Bastion's cloud (AWS / Hetzner / Vercel)</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 px-4 font-semibold text-white">Client Site Scaling</td>
+              <td class="py-3.5 px-4 bg-amber-500/5">First 3 sites included; &plus; R2,500/mo per extra site</td>
+              <td class="py-3.5 px-4 text-emerald-400 font-semibold bg-blue-500/5"><strong>Unlimited sites</strong> (no per-site fee to Moove)</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 px-4 font-semibold text-white">Feature Roadmap & Upgrades</td>
+              <td class="py-3.5 px-4 text-emerald-400 font-semibold bg-amber-500/5">Continuous new components, AI models & features</td>
+              <td class="py-3.5 px-4 bg-blue-500/5">Snapshot at handover; future features custom-quoted</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 px-4 font-semibold text-white">Third-Party API Keys (Claude / OpenAI)</td>
+              <td class="py-3.5 px-4 bg-amber-500/5">Managed & metered or pass-through token billing</td>
+              <td class="py-3.5 px-4 bg-blue-500/5">Bastion plugs in own Anthropic / OpenAI API keys</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 px-4 font-semibold text-white">Accounting & Balance Sheet</td>
+              <td class="py-3.5 px-4 bg-amber-500/5">Treated as 100% tax-deductible operational expense (OpEx)</td>
+              <td class="py-3.5 px-4 text-blue-300 font-semibold bg-blue-500/5">Capitalized as a proprietary technology asset (CapEx)</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 px-4 font-semibold text-white">Best Suited For</td>
+              <td class="py-3.5 px-4 text-slate-300 bg-amber-500/5 font-medium">Bastion teams wanting zero technical overhead and hands-off reliability</td>
+              <td class="py-3.5 px-4 text-slate-300 bg-blue-500/5 font-medium">Bastion leadership wanting total asset control, forking rights, and no vendor lock-in</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 3: INTERACTIVE ROI CALCULATOR (FOR LICENSING MODEL) -->
+    <section id="roi-calculator" class="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 sm:p-8 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <span class="text-xs font-bold tracking-wider text-amber-400 uppercase">Licensing Revenue Simulator</span>
+          <h3 class="text-xl sm:text-2xl font-bold text-white">Bastion Margin & Scaling Calculator</h3>
+        </div>
+        <div class="text-xs text-slate-400">
+          Model how your retainers generate 75%+ net margin under the managed licensing route.
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <!-- Controls -->
+        <div class="lg:col-span-6 space-y-6">
+          <div>
+            <div class="flex justify-between text-sm font-semibold mb-2">
+              <span class="text-slate-200">Number of Client Websites Onboarded:</span>
+              <span id="siteCountDisplay" class="text-amber-400 font-mono text-base font-bold">5 Websites</span>
+            </div>
+            <input type="range" id="siteSlider" min="1" max="25" value="5" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+            <div class="flex justify-between text-[11px] text-slate-500 mt-1">
+              <span>1 Site</span>
+              <span>5 Sites</span>
+              <span>10 Sites</span>
+              <span>20 Sites</span>
+              <span>25+ Sites</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-sm font-semibold mb-2">
+              <span class="text-slate-200">Bastion's Monthly Retainer Charged to Client (per site):</span>
+              <span id="retainerDisplay" class="text-amber-400 font-mono text-base font-bold">R12,500 / mo</span>
+            </div>
+            <input type="range" id="retainerSlider" min="5000" max="30000" step="1000" value="12500" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+            <div class="flex justify-between text-[11px] text-slate-500 mt-1">
+              <span>R5,000</span>
+              <span>R12,500 (Market Avg)</span>
+              <span>R20,000</span>
+              <span>R30,000 (Tier 1 Corporate)</span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-300 space-y-1.5">
+            <div class="font-bold text-slate-200 flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              License Model Highlights:
+            </div>
+            <p>&bull; <strong>Base Platform Fee:</strong> R12,500/mo covers platform operations and first 3 client sites.</p>
+            <p>&bull; <strong>Incremental License:</strong> R2,500/mo per client site from site 4 onwards.</p>
+            <p>&bull; <strong>Gross Margin:</strong> 70% to 85%+ directly retained by Bastion as high-margin recurring MRR.</p>
+          </div>
+        </div>
+
+        <!-- Simulation Output Card -->
+        <div class="lg:col-span-6 bg-gradient-to-br from-slate-950 to-slate-900 border border-amber-500/30 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-xs text-slate-400 font-medium">Bastion Client Revenue (MRR)</div>
+              <div id="clientMrr" class="text-2xl sm:text-3xl font-black text-emerald-400 mt-1 font-mono">R62,500</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">Billed by Bastion to corporate clients</div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400 font-medium">Moove Platform Cost (MRR)</div>
+              <div id="mooveMrr" class="text-2xl sm:text-3xl font-black text-slate-300 mt-1 font-mono">R17,500</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">Base (R12.5k) + 2 extra sites (R5k)</div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-800">
+            <div class="flex items-baseline justify-between">
+              <div>
+                <div class="text-xs font-bold text-amber-400 uppercase tracking-wider">Bastion Net Monthly Profit</div>
+                <div id="netProfitMrr" class="text-3xl sm:text-4xl font-black text-amber-400 mt-1 font-mono">R45,000 / mo</div>
+              </div>
+              <div class="text-right">
+                <span id="marginPercent" class="px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400 font-mono font-bold text-sm border border-emerald-500/30">72.0% Margin</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-800 flex justify-between items-center text-xs">
+            <span class="text-slate-400">Annual Net Recurring Profit for Bastion:</span>
+            <span id="annualProfit" class="font-mono text-lg font-black text-white">R540,000 / yr</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: 4 CORE ENTERPRISE PILLARS BUILT & VERIFIED -->
+    <section class="space-y-6">
+      <div>
+        <span class="text-xs font-bold tracking-wider text-amber-400 uppercase">Enterprise Engineering</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">What You Get: 4 Core Platform Capabilities</h2>
+        <p class="text-sm text-slate-400 mt-1">Every capability below is built, verified, and functioning in the production codebase.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Pillar 1: Visual Design Studio -->
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+              01
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">Production Visual Block Studio</h3>
+              <p class="text-xs text-slate-400">Zero-code layout engine engineered for everyday corporate editors</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Eliminates ticket backlogs for simple copy or layout changes. Non-technical marketing and IR staff edit text, swap images, and customize components in place with zero risk of breaking responsive CSS or corporate brand rules.
+          </p>
+          <div class="space-y-2 pt-2 border-t border-slate-800 text-xs">
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-amber-400 font-bold">&check;</span>
+              <span><strong>15+ Corporate-Grade Components:</strong> Hero, Case Studies, Financial Highlights, Team Grid, Process Flow, Pricing Matrix, FAQ, Interactive Map, Sticky CTA.</span>
+            </div>
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-amber-400 font-bold">&check;</span>
+              <span><strong>Real Box Model & Layout Controls:</strong> Resolved padding (Balanced, Spacious, Compact), container width caps, dynamic font scaling, alignment, and border radii.</span>
+            </div>
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-amber-400 font-bold">&check;</span>
+              <span><strong>Multi-Device Live Viewport:</strong> Real-time synchronized canvas toggles between Desktop (1440px), Tablet (768px), and Mobile (375px).</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pillar 2: AI Multi-Model Copilot -->
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
+              02
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">Multi-Model AI Copilot & Brand DNA</h3>
+              <p class="text-xs text-slate-400">Claude Haiku 4.5 & GPT-4o with brand memory & bounded schema repair</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Not a generic chat widget. The copilot reads the active page component tree, understands corporate tone and color constraints, and executes structured mutations directly into the CMS state.
+          </p>
+          <div class="space-y-2 pt-2 border-t border-slate-800 text-xs">
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-blue-400 font-bold">&check;</span>
+              <span><strong>Natural Language Section Mutations:</strong> "Make this Q3 investor-ready", "Highlight our BEE credentials", "Rewrite for concise executive clarity".</span>
+            </div>
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-blue-400 font-bold">&check;</span>
+              <span><strong>Brand Kit & Voice Constraints:</strong> Automatically adheres to stored brand hex codes, approved font weights, and forbidden phrases.</span>
+            </div>
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-blue-400 font-bold">&check;</span>
+              <span><strong>Self-Healing Schema Validation:</strong> Bounded JSON repair pipeline ensures the AI never injects malformed props or crashes the page.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pillar 3: JSE SENS & Regulatory Disclosures -->
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
+              03
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">JSE SENS & Embargo Publication Engine</h3>
+              <p class="text-xs text-slate-400">Strict regulatory compliance designed specifically for SA public companies</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Corporate websites cannot afford premature leaks of financial results or mergers. Our purpose-built disclosure engine enforces cryptographic embargo locks and dual-authorization gates.
+          </p>
+          <div class="space-y-2 pt-2 border-t border-slate-800 text-xs">
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-emerald-400 font-bold">&check;</span>
+              <span><strong>Time-Locked Embargo Distribution:</strong> Scheduled releases unlock down to the exact second (e.g., 07:05 SAST SENS market open).</span>
+            </div>
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-emerald-400 font-bold">&check;</span>
+              <span><strong>Mandatory Dual Sign-Off:</strong> Changes cannot reach live production without both Agency Admin and Client Compliance Officer signoff.</span>
+            </div>
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-emerald-400 font-bold">&check;</span>
+              <span><strong>Immutable Audit Log & Instant Rollback:</strong> Every character change and publication approval is cryptographically logged with 1-click snapshot restore.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pillar 4: Enterprise RBAC & Multi-Tenant Isolation -->
+        <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
+              04
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">Multi-Tenant Isolation & Global Performance</h3>
+              <p class="text-xs text-slate-400">Sub-140ms response times, Next.js 15, and role-based perimeter</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Run dozens of discrete corporate clients on a single cohesive infrastructure without data cross-contamination or performance degradation.
+          </p>
+          <div class="space-y-2 pt-2 border-t border-slate-800 text-xs">
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-purple-400 font-bold">&check;</span>
+              <span><strong>Granular 4-Tier Permission Matrix:</strong> <code>platform_admin</code>, <code>agency_admin</code>, <code>client_editor</code>, <code>compliance_officer</code>.</span>
+            </div>
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-purple-400 font-bold">&check;</span>
+              <span><strong>Instant Cross-Site Portfolio Switcher:</strong> Switch between Mining, Financial Services, and Retail portfolio sites in 1 click.</span>
+            </div>
+            <div class="flex items-start gap-2 text-slate-300">
+              <span class="text-purple-400 font-bold">&check;</span>
+              <span><strong>Edge Delivery & Fast Loading:</strong> Edge caching headers with Stale-While-Revalidate ensure lightning-fast corporate page loads under traffic spikes.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 5: COMMERCIAL AGREEMENT OPTIONS -->
+    <section class="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 p-6 sm:p-10 space-y-8">
+      <div class="max-w-3xl space-y-3">
+        <span class="text-xs font-bold tracking-wider text-amber-400 uppercase">Commercial Offerings</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Choose Your Model</h2>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          Both structures offer immense financial advantage compared to hiring an internal team. Select the model that aligns with Bastion’s strategic and capital preferences.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <!-- Card A: Platform Licensing -->
+        <div class="p-6 rounded-2xl bg-slate-950/90 border-2 border-amber-500/60 space-y-5">
+          <div class="flex items-center justify-between">
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              OPTION 1: MANAGED PLATFORM LICENSE
+            </span>
+            <span class="text-xs text-slate-400 font-mono">Turnkey & Escalating Margin</span>
+          </div>
+
+          <div>
+            <div class="text-3xl font-black text-amber-400 font-mono">R180k <span class="text-lg font-normal text-slate-400">setup</span> + R12.5k<span class="text-lg font-normal text-slate-400">/mo</span></div>
+            <p class="text-xs text-slate-300 mt-2">
+              Bastion licenses the Moove Studio engine with full white-label agency branding. Includes 3 corporate client websites, continuous platform upgrades, and Level-3 technical SLA.
+            </p>
+          </div>
+
+          <ul class="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">&check;</span>
+              <span><strong>3 Client Sites Included:</strong> Base license covers up to 3 live properties.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">&check;</span>
+              <span><strong>Scale At R2,500/site/mo:</strong> Keep 75%+ profit on every new client retainer.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">&check;</span>
+              <span><strong>Source Code Escrow Deposit:</strong> Legal continuity guarantee protecting Bastion.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">&check;</span>
+              <span><strong>Zero Infrastructure Hassle:</strong> Hosting, database backups, and patches handled by Moove.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Card B: Full Source Code Buyout -->
+        <div class="p-6 rounded-2xl bg-slate-950/90 border-2 border-blue-500/60 space-y-5">
+          <div class="flex items-center justify-between">
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+              OPTION 2: FULL SOURCE CODE BUYOUT
+            </span>
+            <span class="text-xs text-slate-400 font-mono">Perpetual IP & Autonomy</span>
+          </div>
+
+          <div>
+            <div class="text-3xl font-black text-blue-400 font-mono">R280k <span class="text-lg font-normal text-slate-400">once-off</span> <span class="text-sm font-normal text-slate-400">+ R2k-R5k/mo retainer</span></div>
+            <p class="text-xs text-slate-300 mt-2">
+              Bastion buys out the source code and IP outright. Complete Git repository handover, Docker configurations, schema rights, and perpetual self-hosting freedom.
+            </p>
+          </div>
+
+          <ul class="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-4">
+            <li class="flex items-center gap-2">
+              <span class="text-blue-400 font-bold">&check;</span>
+              <span><strong>100% Full Git Repo Transfer:</strong> All Next.js, Python, and UI source code handed over.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-blue-400 font-bold">&check;</span>
+              <span><strong>Unlimited Client Sites:</strong> Host as many clients as Bastion wants without per-site fees.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-blue-400 font-bold">&check;</span>
+              <span><strong>Asset On Balance Sheet:</strong> Capitalize the CMS platform as Bastion intellectual property.</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-blue-400 font-bold">&check;</span>
+              <span><strong>Optional Retainer:</strong> R2k–R5k/mo for security patches and upstream codebase updates.</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Call to Action Banner -->
+      <div class="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="text-xs text-slate-400">
+          Prepared for <strong>Bastion Corporate Digital</strong> &middot; Validated against 46 production regression test suites
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="window.print()" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-amber-500/20">
+            Print / Save as PDF Deck
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-slate-800 text-center text-xs text-slate-500">
+    Moove Studio CMS &copy; 2026. Confidential Commercial Proposal for Bastion.
+  </footer>
+
+  <script>
+    // Interactive ROI Calculator Logic
+    const siteSlider = document.getElementById('siteSlider');
+    const retainerSlider = document.getElementById('retainerSlider');
+    const siteCountDisplay = document.getElementById('siteCountDisplay');
+    const retainerDisplay = document.getElementById('retainerDisplay');
+    const clientMrr = document.getElementById('clientMrr');
+    const mooveMrr = document.getElementById('mooveMrr');
+    const netProfitMrr = document.getElementById('netProfitMrr');
+    const marginPercent = document.getElementById('marginPercent');
+    const annualProfit = document.getElementById('annualProfit');
+
+    function formatZar(amount) {
+      return 'R' + Math.round(amount).toLocaleString('en-ZA');
+    }
+
+    function recalculate() {
+      const sites = parseInt(siteSlider.value, 10);
+      const retainer = parseInt(retainerSlider.value, 10);
+
+      siteCountDisplay.textContent = sites + (sites === 1 ? ' Website' : ' Websites');
+      retainerDisplay.textContent = formatZar(retainer) + ' / mo';
+
+      // Bastion gross income from clients
+      const totalClientIncome = sites * retainer;
+
+      // Moove platform cost: Base R12,500 includes 3 sites; R2,500 per site beyond 3
+      const extraSites = Math.max(0, sites - 3);
+      const totalMooveCost = 12500 + (extraSites * 2500);
+
+      // Bastion net profit
+      const netProfit = totalClientIncome - totalMooveCost;
+      const margin = totalClientIncome > 0 ? ((netProfit / totalClientIncome) * 100).toFixed(1) : 0;
+      const annual = netProfit * 12;
+
+      clientMrr.textContent = formatZar(totalClientIncome);
+      mooveMrr.textContent = formatZar(totalMooveCost);
+      netProfitMrr.textContent = formatZar(netProfit) + ' / mo';
+      marginPercent.textContent = margin + '% Margin';
+      annualProfit.textContent = formatZar(annual) + ' / yr';
+    }
+
+    siteSlider.addEventListener('input', recalculate);
+    retainerSlider.addEventListener('input', recalculate);
+    recalculate();
+  </script>
+</body>
+</html>

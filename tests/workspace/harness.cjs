@@ -42,6 +42,12 @@ async function createHarness() {
     }).outputText;
     const req = (id) => {
       if (mocks[id]) return mocks[id];
+      if (id.endsWith('.json')) {
+        const jsonPath = id.startsWith('@/')
+          ? path.join(root, 'src', id.slice(2))
+          : path.resolve(path.dirname(file), id);
+        return nativeRequire(jsonPath);
+      }
       if (id.startsWith("@/"))
         return load(path.join(root, "src", id.slice(2)) + ".ts");
       if (id.startsWith("."))

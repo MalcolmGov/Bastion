@@ -45,6 +45,18 @@ interface CopilotMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  toolsExecuted?: Array<{
+    toolName: string;
+    summaryText: string;
+    result?: any;
+  }>;
+  actionCards?: Array<{
+    type: string;
+    title: string;
+    description: string;
+    linkUrl: string;
+    linkText: string;
+  }>;
   action?: {
     type: string;
     navigationUrl?: string;
@@ -60,8 +72,9 @@ export function ZaraVoiceCopilot() {
   const { primaryColor, accentColor } = useDashboardCustomizer();
 
   const isClient = portalViewMode === 'client';
-  const clientName = activeClient?.name || 'Corporate';
-  const userFirstName = user?.name ? user.name.trim().split(' ')[0] : 'there';
+  const clientName = activeClient?.name || 'Gold Fields Limited';
+  const rawFirstName = user?.name ? user.name.trim().split(' ')[0] : 'Malcolm';
+  const userFirstName = (rawFirstName === 'M' || rawFirstName === 'M.' || !rawFirstName) ? 'Malcolm' : rawFirstName;
 
   const [isOpen, setIsOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
@@ -78,14 +91,19 @@ export function ZaraVoiceCopilot() {
       id: 'welcome',
       role: 'assistant',
       content: isClient
-        ? `Hello ${userFirstName}! I'm Ask AI, your platform assistant for ${clientName}. I'm here to guide you through editing pages, using the Visual Live Editor, uploading media, inviting team members, or reviewing publication drafts. How can I help you today?`
-        : `Hello ${userFirstName}! Ask AI is active. I can guide you through managing client properties, visual editing, releases, team governance, or platform operations.`,
+        ? `Hello ${userFirstName}! I'm **Zara**, your autonomous AI copilot for **${clientName}**. I can guide you through editing corporate pages, checking statutory compliance, reviewing draft releases, and coordinating approvals. What would you like to work on?`
+        : `Hello ${userFirstName}! **Zara AI Executive Copilot** is active for **Bastion CMS & ${clientName}**.\n\nI can execute real-time statutory compliance audits (JSE Listings § 8.2 and King IV Principle 5), monitor multi-tenant SRE fleet telemetry, query price-sensitive SENS announcements, or extract client Brand DNA design systems.\n\nWhat command would you like me to run?`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
 
   const [suggestedSteps, setSuggestedSteps] = useState<SuggestedNextStep[]>(
-    isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS
+    isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : [
+      { label: 'Run Compliance Audit', query: 'Zara, run a compliance audit on page copy.', icon: 'shield' },
+      { label: 'Edge Fleet Health', query: 'Zara, check multi-tenant SRE uptime and edge latency.', icon: 'check' },
+      { label: 'JSE SENS Announcements', query: 'Zara, query recent JSE SENS regulatory announcements.', icon: 'file' },
+      { label: 'Brand DNA Extraction', query: 'Zara, extract the brand design tokens for Gold Fields.', icon: 'sparkles' }
+    ]
   );
 
   // Keep welcome message & suggested steps updated if client changes
@@ -97,15 +115,20 @@ export function ZaraVoiceCopilot() {
             id: 'welcome',
             role: 'assistant',
             content: isClient
-              ? `Hello ${userFirstName}! I'm Ask AI, your platform assistant for ${clientName}. I'm here to guide you through editing pages, using the Visual Live Editor, uploading media, inviting team members, or reviewing publication drafts. How can I help you today?`
-              : `Hello ${userFirstName}! Ask AI is active. I can guide you through managing client properties, visual editing, releases, team governance, or platform operations.`,
+              ? `Hello ${userFirstName}! I'm **Zara**, your autonomous AI copilot for **${clientName}**. I can guide you through editing corporate pages, checking statutory compliance, reviewing draft releases, and coordinating approvals. What would you like to work on?`
+              : `Hello ${userFirstName}! **Zara AI Executive Copilot** is active for **Bastion CMS & ${clientName}**.\n\nI can execute real-time statutory compliance audits (JSE Listings § 8.2 and King IV Principle 5), monitor multi-tenant SRE fleet telemetry, query price-sensitive SENS announcements, or extract client Brand DNA design systems.\n\nWhat command would you like me to run?`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           }
         ];
       }
       return prev;
     });
-    setSuggestedSteps(isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : DEFAULT_AGENCY_SUGGESTED_STEPS);
+    setSuggestedSteps(isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : [
+      { label: 'Run Compliance Audit', query: 'Zara, run a compliance audit on page copy.', icon: 'shield' },
+      { label: 'Edge Fleet Health', query: 'Zara, check multi-tenant SRE uptime and edge latency.', icon: 'check' },
+      { label: 'JSE SENS Announcements', query: 'Zara, query recent JSE SENS regulatory announcements.', icon: 'file' },
+      { label: 'Brand DNA Extraction', query: 'Zara, extract the brand design tokens for Gold Fields.', icon: 'sparkles' }
+    ]);
   }, [clientName, userFirstName, isClient]);
 
   // Audio & Speech References
@@ -391,20 +414,21 @@ export function ZaraVoiceCopilot() {
     setVoiceStatus('processing');
 
     try {
-      const res = await fetch('/api/admin/voice-copilot', {
+      const res = await fetch('/api/admin/zara/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
           clientContext: clientName,
+          clientId: activeClient?.id || 'client_goldfields',
           portalViewMode,
-          userName: user?.name || 'Malcolm',
-          userRole: user?.role || 'admin',
+          userName: user?.name ? user.name.split(' ')[0] : 'Malcolm',
+          userRole: user?.role || 'platform_admin',
           history: messages.slice(-6).map(m => ({ role: m.role, content: m.content }))
         })
       });
 
-      if (!res.ok) throw new Error('Copilot response error');
+      if (!res.ok) throw new Error('Zara Agent response error');
 
       const data = await res.json();
       const reply = data.reply || data.speechText || 'Action acknowledged in platform.';
@@ -414,7 +438,9 @@ export function ZaraVoiceCopilot() {
         role: 'assistant',
         content: reply,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        action: data.action
+        action: data.action,
+        toolsExecuted: data.toolsExecuted || [],
+        actionCards: data.actionCards || []
       };
 
       setMessages(prev => [...prev, assistantMsg]);
@@ -433,7 +459,7 @@ export function ZaraVoiceCopilot() {
         }, 1400);
       }
 
-      // Voice playback
+      // Voice playback using latest quality ElevenLabs audio stream
       if (isVoiceActive) {
         playSpeechQueue(data.speechText || reply);
       } else {
@@ -441,23 +467,51 @@ export function ZaraVoiceCopilot() {
       }
 
     } catch (err) {
-      console.error('Copilot send error:', err);
+      console.warn('Zara Agent API error, trying fallback:', err);
+      try {
+        const fbRes = await fetch('/api/admin/voice-copilot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            clientContext: clientName,
+            portalViewMode,
+            userName: user?.name ? user.name.split(' ')[0] : 'Malcolm',
+            userRole: user?.role || 'platform_admin',
+            history: messages.slice(-6).map(m => ({ role: m.role, content: m.content }))
+          })
+        });
+        if (fbRes.ok) {
+          const fbData = await fbRes.json();
+          const assistantMsg: CopilotMessage = {
+            id: `msg_a_${Date.now()}`,
+            role: 'assistant',
+            content: fbData.reply || fbData.speechText,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            action: fbData.action
+          };
+          setMessages(prev => [...prev, assistantMsg]);
+          setIsProcessing(false);
+          if (isVoiceActive) playSpeechQueue(fbData.speechText || fbData.reply);
+          return;
+        }
+      } catch {}
       const fallbackMsg: CopilotMessage = {
         id: `msg_a_${Date.now()}`,
         role: 'assistant',
-        content: `I'm standing by to help with ${clientName}. You can explore the Visual Live Editor (/admin/editor), manage Pages (/admin/pages), or open the Platform Learning Hub (/admin/learn).`,
+        content: `I'm standing by to help with ${clientName}. You can explore the Visual Live Editor (/admin/editor), check statutory compliance, or open the Platform Learning Hub (/admin/learn).`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         action: {
           type: 'navigate',
-          navigationUrl: '/admin/learn',
-          label: 'Open Platform Learning Hub'
+          navigationUrl: '/admin/editor',
+          label: 'Open Visual Live Editor'
         }
       };
       setMessages(prev => [...prev, fallbackMsg]);
       setIsProcessing(false);
       setVoiceStatus(isVoiceActive ? 'listening' : 'idle');
     }
-  }, [textInput, isProcessing, interruptSpeaking, clientName, portalViewMode, user, messages, isVoiceActive, playSpeechQueue, router]);
+  }, [textInput, isProcessing, interruptSpeaking, clientName, activeClient?.id, portalViewMode, user, messages, isVoiceActive, playSpeechQueue, router]);
 
   // ─────────────────────────────────────────────────────────
   // 4. CLEAR CHAT CONVERSATION
@@ -623,29 +677,27 @@ export function ZaraVoiceCopilot() {
       {/* ───────────────────────────────────────────────────────── */}
       {/* FLOATING TRIGGER BUTTON (Hidden in client CMS mode for clean canvas) */}
       {/* ───────────────────────────────────────────────────────── */}
-      {!isClient && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="fixed bottom-6 right-6 z-40 h-12 px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/60 shadow-xl flex items-center gap-2.5 transition-all duration-200 hover:scale-105 active:scale-95 group cursor-pointer"
-          title="Ask AI Assistant"
-          aria-label="Ask AI Assistant"
-        >
-          <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300/30 group-hover:rotate-12 transition-transform" />
-          <span className="text-xs font-bold tracking-wide">Ask AI</span>
-          
-          {/* Pulsing Status Dot */}
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isSpeaking
-                ? 'bg-purple-400 animate-ping'
-                : isListening
-                ? 'bg-emerald-400 animate-pulse'
-                : 'bg-emerald-400'
-            }`}
-          />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-6 right-6 z-40 h-12 px-4 rounded-full bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 hover:from-slate-800 hover:to-indigo-900 text-white border border-indigo-500/40 shadow-xl flex items-center gap-2.5 transition-all duration-200 hover:scale-105 active:scale-95 group cursor-pointer"
+        title="Zara AI Executive Copilot"
+        aria-label="Zara AI Executive Copilot"
+      >
+        <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300/30 group-hover:rotate-12 transition-transform" />
+        <span className="text-xs font-bold tracking-wide">Zara AI</span>
+        
+        {/* Pulsing Status Dot */}
+        <span
+          className={`w-2 h-2 rounded-full ${
+            isSpeaking
+              ? 'bg-purple-400 animate-ping'
+              : isListening
+              ? 'bg-emerald-400 animate-pulse'
+              : 'bg-emerald-400'
+          }`}
+        />
+      </button>
 
       {/* ───────────────────────────────────────────────────────── */}
       {/* CLEAN, WHITE, PREMIUM ASK AI DRAWER                       */}
@@ -656,7 +708,7 @@ export function ZaraVoiceCopilot() {
           {/* Header (Clean, White with Clear Chat Action) */}
           <div className="px-4 py-3 border-b border-slate-100 bg-white flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-xs relative shrink-0">
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-600 via-blue-600 to-indigo-900 text-white flex items-center justify-center shadow-md relative shrink-0">
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 {isSpeaking && (
                   <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-purple-500 ring-2 ring-white animate-pulse" />
@@ -664,9 +716,9 @@ export function ZaraVoiceCopilot() {
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5 truncate">
-                  <span>Ask AI</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-700 border border-slate-200/70 truncate">
-                    {clientName} Assistant
+                  <span>Zara AI</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/70 truncate">
+                    Executive Copilot
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 flex items-center gap-1.5 font-medium">
@@ -677,20 +729,20 @@ export function ZaraVoiceCopilot() {
                         : voiceStatus === 'listening'
                         ? 'bg-emerald-500 animate-ping'
                         : voiceStatus === 'processing'
-                        ? 'bg-amber-500 animate-bounce'
+                        ? 'bg-indigo-500 animate-bounce'
                         : 'bg-emerald-500'
                     }`}
                   />
                   <span className="truncate">
                     {voiceStatus === 'speaking'
-                      ? 'AI Speaking…'
+                      ? 'Zara Speaking (ElevenLabs)…'
                       : voiceStatus === 'listening'
                       ? 'Listening with Echo Guard…'
                       : voiceStatus === 'processing'
-                      ? 'Analyzing CMS knowledge…'
+                      ? 'Executing CMS Tools…'
                       : isVoiceActive
-                      ? 'Voice Engine Ready'
-                      : 'Platform Assistant Ready'}
+                      ? 'ElevenLabs Neural Ready'
+                      : 'Autonomous Agent Ready'}
                   </span>
                 </div>
               </div>
@@ -745,14 +797,14 @@ export function ZaraVoiceCopilot() {
                   width: `${audioLevel}%`,
                   background: isSpeaking
                     ? 'linear-gradient(90deg, #A855F7, #EC4899)'
-                    : 'linear-gradient(90deg, #10B981, #06B6D4)'
+                    : 'linear-gradient(90deg, #6366F1, #06B6D4)'
                 }}
                 className="h-full transition-all duration-75"
               />
             </div>
           )}
 
-          {/* Messages Scroll Area (Crisp, High-Readability Light Background with Custom Scrollbar) */}
+          {/* Messages Scroll Area */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3.5 text-xs bg-[#FBFBFC] custom-scrollbar">
             {messages.map((m) => (
               <div
@@ -768,7 +820,41 @@ export function ZaraVoiceCopilot() {
                 >
                   <p className="whitespace-pre-line">{m.content}</p>
 
-                  {/* Render Execution Action Card */}
+                  {/* Render Executed CMS Tools Badges */}
+                  {m.toolsExecuted && m.toolsExecuted.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1.5">
+                      {m.toolsExecuted.map((t, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50/90 text-indigo-900 border border-indigo-100 text-[11px] font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" />
+                          <span className="font-mono text-[10px] text-indigo-700">⚡ {t.toolName}</span>
+                          <span className="text-slate-400">•</span>
+                          <span className="truncate">{t.summaryText}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Render Action Cards */}
+                  {m.actionCards && m.actionCards.length > 0 && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-2">
+                      {m.actionCards.map((c, idx) => (
+                        <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                          <div className="font-bold text-xs text-slate-900">{c.title}</div>
+                          <div className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">{c.description}</div>
+                          <Link
+                            href={c.linkUrl}
+                            onClick={() => setIsOpen(false)}
+                            className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer"
+                          >
+                            <span>{c.linkText || 'Open'}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Render Execution Action Quick Link */}
                   {m.action && (
                     <div className="mt-3 pt-2.5 border-t border-slate-100">
                       {m.action.navigationUrl && (

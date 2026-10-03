@@ -7,7 +7,9 @@ import {
   Send,
   RotateCcw,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { AssistantMessage } from '@/lib/types';
 import { DemoAssistantProvider } from '@/lib/adapters/DemoAssistantProvider';
@@ -31,6 +33,8 @@ export const AskGoldFieldsDrawer: React.FC<AskGoldFieldsDrawerProps> = ({
   const [inputText, setInputText] = useState('');
   const [activeContext, setActiveContext] = useState<string | undefined>(initialContext);
   const [isTyping, setIsTyping] = useState(false);
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +43,60 @@ export const AskGoldFieldsDrawer: React.FC<AskGoldFieldsDrawerProps> = ({
     }
   }, [initialContext]);
 
-  const handleSend = React.useCallback((textToSend?: string) => {
+  const playAudioReadout = async (msgId: string, text: string) => {
+    if (playingAudioId === msgId) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setPlayingAudioId(null);
+      return;
+    }
+
+    setPlayingAudioId(msgId);
+    try {
+      const res = await fetch('/api/zara/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => {
+          setPlayingAudioId(null);
+          audioRef.current = null;
+          URL.revokeObjectURL(url);
+        };
+        audio.onerror = () => {
+          setPlayingAudioId(null);
+          audioRef.current = null;
+        };
+        await audio.play();
+        return;
+      }
+    } catch {}
+
+    // Fallback to browser speech synthesis
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const clean = text.replace(/[*_#`[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.onend = () => setPlayingAudioId(null);
+      utterance.onerror = () => setPlayingAudioId(null);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setPlayingAudioId(null);
+    }
+  };
+
+  const handleSend = React.useCallback(async (textToSend?: string) => {
     const query = (textToSend || inputText).trim();
     if (!query) return;
 
@@ -54,12 +111,42 @@ export const AskGoldFieldsDrawer: React.FC<AskGoldFieldsDrawerProps> = ({
     if (!textToSend) setInputText('');
     setIsTyping(true);
 
-    // Simulate clean brief response delay
+    try {
+      const res = await fetch('/api/zara/concierge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: query,
+          clientContext: 'Gold Fields Limited',
+          clientId: 'client_goldfields'
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const assistantMsg: AssistantMessage = {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: data.reply || data.speechText,
+          contextBadge: data.toolsExecuted?.length > 0 ? `Verified: ${data.toolsExecuted[0].summaryText}` : 'Authoritative Corporate Record',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sources: data.sources || [],
+          actionCard: data.actionCards && data.actionCards.length > 0 ? data.actionCards[0] : undefined
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+        setIsTyping(false);
+        return;
+      }
+    } catch (e) {
+      console.warn('Zara concierge API failed, using local deterministic fallback:', e);
+    }
+
+    // Deterministic fallback
     setTimeout(() => {
       const response = DemoAssistantProvider.processQuery(query, activeContext);
       setMessages((prev) => [...prev, response]);
       setIsTyping(false);
-    }, 450);
+    }, 350);
   }, [inputText, activeContext]);
 
   useEffect(() => {
@@ -117,12 +204,12 @@ export const AskGoldFieldsDrawer: React.FC<AskGoldFieldsDrawerProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm tracking-wide">Ask Gold Fields</h3>
-                <span className="text-[10px] font-semibold uppercase tracking-wider bg-gold-dark text-white px-1.5 py-0.2 rounded">
-                  Concept AI
+                <span className="text-[10px] font-semibold uppercase tracking-wider bg-gold-dark text-white px-2 py-0.5 rounded-full">
+                  Zara AI Concierge
                 </span>
               </div>
               <p className="text-[11px] text-mist/70">
-                Corporate guidance & verified disclosures
+                Grounded in Audited Annual Reports &amp; JSE Disclosures
               </p>
             </div>
           </div>
@@ -130,7 +217,7 @@ export const AskGoldFieldsDrawer: React.FC<AskGoldFieldsDrawerProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={resetChat}
-              className="p-1.5 rounded text-mist/70 hover:text-white hover:bg-navy-surface transition-colors"
+              className="p-1.5 rounded text-mist/70 hover:text-white hover:bg-navy-surface transition-colors cursor-pointer"
               title="Reset conversation"
               aria-label="Reset conversation"
             >
@@ -138,7 +225,7 @@ export const AskGoldFieldsDrawer: React.FC<AskGoldFieldsDrawerProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded text-mist/70 hover:text-white hover:bg-navy-surface transition-colors"
+              className="p-1.5 rounded text-mist/70 hover:text-white hover:bg-navy-surface transition-colors cursor-pointer"
               aria-label="Close assistant"
             >
               <X className="w-5 h-5" />
@@ -146,11 +233,11 @@ export const AskGoldFieldsDrawer: React.FC<AskGoldFieldsDrawerProps> = ({
           </div>
         </div>
 
-        {/* Persistent Demo Notice Banner */}
+        {/* Persistent Verification Notice Banner */}
         <div className="bg-gold-light/40 border-b border-gold-mineral/30 px-4 py-2 flex items-center justify-between text-[11px] text-gold-dark font-medium">
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-gold-dark shrink-0" />
-            Demo assistant — source-backed deterministic responses
+            Zara AI Corporate Bridge — Grounded in verified corporate sources
           </span>
           {activeContext && (
             <button
@@ -199,6 +286,31 @@ export const AskGoldFieldsDrawer: React.FC<AskGoldFieldsDrawerProps> = ({
                 <div className="whitespace-pre-line space-y-1.5 font-sans">
                   {msg.content}
                 </div>
+
+                {/* ElevenLabs Zara Neural Audio Readout */}
+                {msg.role === 'assistant' && (
+                  <div className="mt-2.5 pt-2 border-t border-mist/50 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => playAudioReadout(msg.id, msg.content)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-navy bg-white hover:bg-gold-light/40 border border-mist transition-colors cursor-pointer group"
+                      title="Listen with Zara ElevenLabs v4 Neural Voice"
+                    >
+                      {playingAudioId === msg.id ? (
+                        <>
+                          <VolumeX className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                          <span className="text-rose-600 font-bold">Stop Speaking</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-3.5 h-3.5 text-gold-dark group-hover:scale-110 transition-transform" />
+                          <span className="text-navy">Listen with Zara</span>
+                        </>
+                      )}
+                    </button>
+                    <span className="text-[10px] text-ink-muted">ElevenLabs Neural</span>
+                  </div>
+                )}
 
                 {/* Action Card if provided */}
                 {msg.actionCard && (

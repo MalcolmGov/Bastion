@@ -433,17 +433,17 @@ export function AdminHeader() {
             )}
           </div>
 
-          {/* Ask AI Pill Button */}
+          {/* Zara AI Pill Button */}
           <button
             type="button"
             onClick={() => {
               window.dispatchEvent(new CustomEvent('open-bastion-copilot'));
             }}
-            className="h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition text-[#2563EB] border border-[#2563EB]/40 bg-white hover:bg-blue-50/70 shadow-2xs cursor-pointer"
-            title="Ask AI Assistant"
+            className="h-8 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 transition text-indigo-600 dark:text-indigo-400 border border-indigo-500/40 bg-indigo-50/60 dark:bg-indigo-950/40 hover:bg-indigo-100/70 shadow-2xs cursor-pointer"
+            title="Zara AI Executive Copilot"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
-            <span>Ask AI</span>
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Zara AI</span>
           </button>
 
           {/* Integrated Utility Dock (Agency Operations Only) */}
