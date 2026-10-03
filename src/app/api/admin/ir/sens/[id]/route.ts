@@ -85,10 +85,19 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     if (!isAgencyUser(user) && announcement.clientId !== user.client_id) {
       return NextResponse.json({ error: 'Access denied: Announcement belongs to another tenant' }, { status: 403 });
     }
+    // Discarding a draft is an editing action. Whether it may be deleted at all is decided by its status.
+    if (!hasPermission(user.role, 'content:edit')) {
+      return NextResponse.json({ error: 'Forbidden: your role cannot delete SENS announcements' }, { status: 403 });
+    }
 
-    await deleteSensAnnouncement(id, announcement.clientId);
+    const removed = await deleteSensAnnouncement(id, announcement.clientId);
+    await recordWorkflowAudit(user, 'delete', removed);
     return NextResponse.json({ success: true, deleted: true });
   } catch (err: any) {
+    if (err instanceof SensApprovalError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    console.error('[API SENS DELETE Error]:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
