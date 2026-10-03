@@ -410,14 +410,18 @@ test('website assistant reads authorized website context without selecting a pag
   });
   global.fetch = async (url, options) => {
     const payload = JSON.parse(options.body);
-    assert.match(payload.messages[0].content, /Pages and sections/);
+    assert.match(payload.messages[0].content, /Allowed pages and sections/);
+    assert.equal(payload.response_format.type, 'json_object');
     assert.match(payload.messages[0].content, /home/);
     return new Response(
       JSON.stringify({
         choices: [
           {
             message: {
-              content: '```json\n{"summary":"Dark theme","theme":"dark"}\n```',
+              content: JSON.stringify({
+                message: 'Review this dark theme',
+                plan: { summary: 'Dark theme', theme: 'dark' },
+              }),
             },
           },
         ],
@@ -442,18 +446,386 @@ test('website assistant reads authorized website context without selecting a pag
   assert.equal(data.parsedChanges.pages[0].sections[0].styles.theme, 'dark');
 });
 
-
 test('multi-page saves preserve existing history when a page version counter was reset', async (t) => {
   const { h } = await setup(t);
   const { saveWebsiteDrafts } = h.load('lib/studio/editor/saveComposition.ts');
-  await h.db.execute("INSERT INTO page_compositions VALUES('page-about','site-a','about','About','editorial','[]',NULL,1,'draft','2026-10-01','2026-10-01')");
-  await h.db.execute("INSERT INTO page_versions(id,composition_id,site_id,page_slug,version,sections_json,status) VALUES('pver_site-a_home_v2','page-a','site-a','home',2,'[]','draft')");
+  await h.db.execute(
+    "INSERT INTO page_compositions VALUES('page-about','site-a','about','About','editorial','[]',NULL,1,'draft','2026-10-01','2026-10-01')",
+  );
+  await h.db.execute(
+    "INSERT INTO page_versions(id,composition_id,site_id,page_slug,version,sections_json,status) VALUES('pver_site-a_home_v2','page-a','site-a','home',2,'[]','draft')",
+  );
   const results = await saveWebsiteDrafts(author, 'site-a', [
     { pageSlug: 'home', expectedVersion: 1, sections },
     { pageSlug: 'about', expectedVersion: 1, sections },
   ]);
-  assert.deepEqual(results.map(page => page.version), [3, 2]);
-  const old = (await h.db.execute("SELECT sections_json FROM page_versions WHERE id='pver_site-a_home_v2'")).rows[0];
+  assert.deepEqual(
+    results.map((page) => page.version),
+    [3, 2],
+  );
+  const old = (
+    await h.db.execute(
+      "SELECT sections_json FROM page_versions WHERE id='pver_site-a_home_v2'",
+    )
+  ).rows[0];
   assert.equal(old.sections_json, '[]');
-  assert.equal((await h.db.execute("SELECT COUNT(*) AS total FROM page_versions WHERE page_slug='home'")).rows[0].total, 2);
+  assert.equal(
+    (
+      await h.db.execute(
+        "SELECT COUNT(*) AS total FROM page_versions WHERE page_slug='home'",
+      )
+    ).rows[0].total,
+    2,
+  );
+});
+
+async function assistantSetup(t) {
+  const { h } = await setup(t);
+  return h.load('lib/studio/editor/assistantContext.ts');
+}
+const assistantPages = [
+  {
+    pageSlug: 'home',
+    title: 'Home',
+    version: 1,
+    sections: [
+      {
+        id: 'home-hero',
+        componentId: 'hero',
+        visible: true,
+        props: {
+          title: 'Welcome',
+          bgImage: 'https://images.example/building.jpg',
+        },
+        styles: {},
+      },
+    ],
+  },
+  {
+    pageSlug: 'about',
+    title: 'About us',
+    version: 1,
+    sections: [
+      {
+        id: 'about-hero',
+        componentId: 'hero',
+        visible: true,
+        props: {
+          title: 'Our team',
+          subtitle: 'Consulting and collaboration',
+          bgImage: 'https://images.example/meeting.jpg',
+        },
+        styles: {},
+      },
+    ],
+  },
+];
+test('relative hero requests use the current page; named and whole-site requests override it', async (t) => {
+  const a = await assistantSetup(t);
+  assert.deepEqual(
+    a
+      .resolveAssistantPages(assistantPages, 'home', 'replace the hero image')
+      .map((p) => p.pageSlug),
+    ['home'],
+  );
+  assert.deepEqual(
+    a
+      .resolveAssistantPages(
+        assistantPages,
+        'home',
+        'replace the hero image on about',
+      )
+      .map((p) => p.pageSlug),
+    ['about'],
+  );
+  assert.equal(
+    a.resolveAssistantPages(
+      assistantPages,
+      'home',
+      'replace hero images across all pages',
+    ).length,
+    2,
+  );
+  assert.deepEqual(
+    a
+      .resolveAssistantPages(
+        assistantPages,
+        'home',
+        'What can you do about the hero image?',
+      )
+      .map((page) => page.pageSlug),
+    ['home'],
+  );
+  assert.equal(
+    a.resolveAssistantPages(assistantPages, 'home', 'review the website')
+      .length,
+    2,
+  );
+  assert.deepEqual(
+    a
+      .resolveAssistantPages(
+        assistantPages,
+        'home',
+        'change about image',
+        'page',
+      )
+      .map((p) => p.pageSlug),
+    ['home'],
+  );
+});
+test('image requests create an exact current-page plan using available consulting imagery', async (t) => {
+  const a = await assistantSetup(t);
+  const images = a.imageCatalogue(assistantPages, []);
+  const pages = a.resolveAssistantPages(
+    assistantPages,
+    'home',
+    'Can you replace the hero image with another image that is relevant to consulting',
+  );
+  const plan = a.heroImageProposal(
+    pages,
+    images,
+    'Can you replace the hero image with another image that is relevant to consulting',
+  );
+  const validated = a.validateAssistantResponse(
+    JSON.stringify(plan),
+    pages,
+    images,
+  );
+  assert.equal(validated.proposal.pages.length, 1);
+  assert.equal(
+    validated.proposal.pages[0].sections[0].props.bgImage,
+    'https://images.example/meeting.jpg',
+  );
+  assert.equal(validated.proposal.pages[0].sections[0].props.title, 'Welcome');
+  assert.equal(
+    assistantPages[0].sections[0].props.bgImage,
+    'https://images.example/building.jpg',
+  );
+});
+test('image catalogue retains semantic context when a photo appears on several pages', async (t) => {
+  const a = await assistantSetup(t);
+  const pages = [
+    ...assistantPages,
+    {
+      ...assistantPages[1],
+      title: 'Contact',
+      pageSlug: 'contact',
+      sections: [
+        {
+          ...assistantPages[1].sections[0],
+          props: { bgImage: 'https://images.example/meeting.jpg' },
+        },
+      ],
+    },
+  ];
+  const images = a.imageCatalogue(pages, []);
+  assert.equal(images.length, 2);
+  assert.ok(
+    a.heroImageProposal(
+      [pages[0]],
+      images,
+      'replace hero image with consulting image',
+    ),
+  );
+});
+test('multi-part requests and missing suitable imagery are left to the planner rather than partially executed', async (t) => {
+  const a = await assistantSetup(t);
+  const images = a.imageCatalogue(assistantPages, []);
+  assert.equal(
+    a.heroImageProposal(
+      [assistantPages[0]],
+      images,
+      'replace hero image and rewrite the title for consulting',
+    ),
+    null,
+  );
+  assert.equal(
+    a.heroImageProposal(
+      [assistantPages[0]],
+      [],
+      'replace hero image for consulting',
+    ),
+    null,
+  );
+});
+test('structured responses reject fabricated images, foreign pages and unstructured prose', async (t) => {
+  const a = await assistantSetup(t);
+  const images = a.imageCatalogue(assistantPages, []);
+  const response = (extra = {}) =>
+    JSON.stringify({
+      message: 'Review this change',
+      plan: {
+        changes: [
+          {
+            pageSlug: 'home',
+            targetSectionId: 'home-hero',
+            props: { bgImage: 'https://invented.example/photo.jpg' },
+            ...extra,
+          },
+        ],
+      },
+    });
+  assert.throws(
+    () => a.validateAssistantResponse(response(), assistantPages, images),
+    /image catalogue/,
+  );
+  assert.throws(
+    () =>
+      a.validateAssistantResponse(
+        response({ pageSlug: 'foreign' }),
+        assistantPages,
+        images,
+      ),
+    /outside/,
+  );
+  assert.throws(
+    () => a.validateAssistantResponse('Which page?', assistantPages, images),
+    /structured/,
+  );
+  assert.equal(
+    a.validateAssistantResponse(
+      JSON.stringify({
+        message: 'Please upload a suitable photo.',
+        plan: null,
+      }),
+      assistantPages,
+      images,
+    ).proposal,
+    null,
+  );
+});
+test('the planner receives current page, editable field definitions and approved layout variants', async (t) => {
+  const a = await assistantSetup(t);
+  const prompt = a.assistantSystemPrompt(assistantPages, 'home', []);
+  assert.match(prompt, /CURRENT PAGE IN VIEW: home/);
+  assert.match(prompt, /bgImage/);
+  assert.match(prompt, /editorial_split/);
+});
+
+test('website image endpoint targets the current hero and only exposes tenant media without an LLM call', async (t) => {
+  const { h } = await setup(t);
+  h.user(author);
+  await h.db.execute({
+    sql: "UPDATE page_compositions SET sections_json=? WHERE id='page-a'",
+    args: [JSON.stringify(assistantPages[0].sections)],
+  });
+  await h.db.executeMultiple(
+    "INSERT INTO media_assets VALUES('own-photo','tenant-a','https://images.example/meeting.jpg','meeting.jpg','Consulting team meeting','image/jpeg','2026-10-03'),('foreign-photo','tenant-b','https://private.example/secret.jpg','secret.jpg','Consulting confidential','image/jpeg','2026-10-03');",
+  );
+  const originalFetch = global.fetch;
+  t.after(() => (global.fetch = originalFetch));
+  global.fetch = async () => {
+    throw new Error('Image selection must not call an LLM');
+  };
+  const route = h.route('api/admin/editor/ai-polish');
+  const body = {
+    assistantMode: true,
+    websiteMode: true,
+    provider: 'openai',
+    prompt:
+      'Can you replace the hero image with another image that is relevant to consulting',
+    pageContext: { siteId: 'site-a', pageSlug: 'home' },
+    expectedVersion: 1,
+  };
+  const response = await route.POST(
+    h.request('/api/admin/editor/ai-polish', body),
+  );
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.provider, 'workspace-images');
+  assert.equal(
+    data.parsedChanges.pages[0].sections[0].props.bgImage,
+    'https://images.example/meeting.jpg',
+  );
+  assert.ok(!JSON.stringify(data).includes('private.example'));
+  const { saveWebsiteDrafts } = h.load('lib/studio/editor/saveComposition.ts');
+  await saveWebsiteDrafts(
+    author,
+    'site-a',
+    data.parsedChanges.pages.map((page) => ({
+      pageSlug: page.pageSlug,
+      expectedVersion: page.version,
+      sections: page.sections,
+    })),
+  );
+  assert.equal(
+    JSON.parse(
+      (
+        await h.db.execute(
+          "SELECT sections_json FROM page_compositions WHERE id='page-a'",
+        )
+      ).rows[0].sections_json,
+    )[0].props.bgImage,
+    'https://images.example/meeting.jpg',
+  );
+  const denied = await route.POST(
+    h.request('/api/admin/editor/ai-polish', {
+      ...body,
+      pageContext: { siteId: 'site-b', pageSlug: 'home' },
+    }),
+  );
+  assert.equal(denied.status, 403);
+});
+test('invalid structured model plans get one bounded correction and preserve page context', async (t) => {
+  const { h } = await setup(t);
+  h.user(author);
+  await h.db.execute({
+    sql: "UPDATE page_compositions SET sections_json=? WHERE id='page-a'",
+    args: [JSON.stringify(assistantPages[0].sections)],
+  });
+  let calls = 0;
+  const originalFetch = global.fetch;
+  t.after(() => (global.fetch = originalFetch));
+  global.fetch = async (url, options) => {
+    calls++;
+    const body = JSON.parse(options.body);
+    assert.match(body.messages[0].content, /CURRENT PAGE IN VIEW: home/);
+    if (calls > 1)
+      assert.match(body.messages.at(-1).content, /failed validation/);
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content:
+                calls === 1
+                  ? 'Which page?'
+                  : JSON.stringify({
+                      message: 'Review the updated heading',
+                      plan: {
+                        changes: [
+                          {
+                            pageSlug: 'home',
+                            targetSectionId: 'home-hero',
+                            props: { title: 'Clear consulting advice' },
+                          },
+                        ],
+                      },
+                    }),
+            },
+          },
+        ],
+      }),
+      { status: 200 },
+    );
+  };
+  const route = h.route('api/admin/editor/ai-polish');
+  const response = await route.POST(
+    h.request('/api/admin/editor/ai-polish', {
+      assistantMode: true,
+      websiteMode: true,
+      provider: 'openai',
+      modelId: 'gpt-4o',
+      userApiKey: 'fixture-key',
+      prompt: 'Improve this heading',
+      expectedVersion: 1,
+      pageContext: { siteId: 'site-a', pageSlug: 'home' },
+    }),
+  );
+  assert.equal(response.status, 200);
+  assert.equal(calls, 2);
+  assert.equal(
+    (await response.json()).parsedChanges.pages[0].sections[0].props.title,
+    'Clear consulting advice',
+  );
 });

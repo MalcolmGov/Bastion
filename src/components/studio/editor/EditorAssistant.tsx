@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { Sparkles, Send, Check, ArrowRight, RotateCcw } from 'lucide-react';
 import {
   ApiKeysTab,
@@ -172,6 +173,7 @@ export function EditorAssistant({
         },
       ]);
     } catch (error: any) {
+      setPrompt(text);
       if (controller.signal.aborted)
         setError(
           'The request was interrupted. Your page has not changed. Please try again.',
@@ -284,6 +286,11 @@ export function EditorAssistant({
           </option>
         </select>
       </label>
+      <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+        Viewing {pageSlug === 'home' ? 'Home' : pageSlug}. Section requests use
+        this page automatically; name another page or ask for website-wide
+        changes to work elsewhere.
+      </p>
       {scope === 'section' && (
         <label className="mt-3 text-xs text-slate-500">
           Section
@@ -356,6 +363,59 @@ export function EditorAssistant({
                           <li key={index}>{change}</li>
                         ))}
                       </ul>
+                      {page.sections
+                        .filter(
+                          (section) =>
+                            typeof section.props.bgImage === 'string' &&
+                            section.props.bgImage !==
+                              page.baseSections.find(
+                                (base) => base.id === section.id,
+                              )?.props.bgImage,
+                        )
+                        .map((section) => {
+                          const previous = page.baseSections.find(
+                            (base) => base.id === section.id,
+                          )?.props.bgImage;
+                          return (
+                            <div
+                              key={section.id}
+                              className="mt-3 grid grid-cols-2 gap-2"
+                            >
+                              <div>
+                                <p className="mb-1 text-[10px] font-medium">
+                                  Current image
+                                </p>
+                                {typeof previous === 'string' && previous ? (
+                                  <Image
+                                    unoptimized
+                                    src={previous}
+                                    alt="Current hero image"
+                                    width={240}
+                                    height={140}
+                                    className="h-24 w-full rounded-lg object-cover"
+                                  />
+                                ) : (
+                                  <p className="rounded-lg bg-slate-100 p-4 text-xs">
+                                    No image
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <p className="mb-1 text-[10px] font-medium">
+                                  Proposed image
+                                </p>
+                                <Image
+                                  unoptimized
+                                  src={String(section.props.bgImage)}
+                                  alt="Proposed hero image"
+                                  width={240}
+                                  height={140}
+                                  className="h-24 w-full rounded-lg object-cover"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
                       <details className="mt-2">
                         <summary className="cursor-pointer text-indigo-600">
                           Review exact changes
