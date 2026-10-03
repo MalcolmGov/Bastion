@@ -39,7 +39,7 @@ export async function dispatchContentWebhook(
     });
 
     let webhookUrl = process.env.BASTION_WEBHOOK_URL || '';
-    let webhookSecret = process.env.BASTION_WEBHOOK_SECRET || 'whsec_bastion_goldfields_2026';
+    let webhookSecret = process.env.BASTION_WEBHOOK_SECRET || '';
 
     if (siteRes.rows.length > 0) {
       try {
@@ -61,6 +61,17 @@ export async function dispatchContentWebhook(
       return {
         success: true,
         latencyMs: 0,
+        deliveryId,
+      };
+    }
+
+    // Never sign with a built-in default: that value is public in the source, so anyone could forge it.
+    if (!webhookSecret) {
+      console.warn(`[Webhook] No signing secret configured for site: ${siteId}. Delivery refused; set one in Settings or BASTION_WEBHOOK_SECRET.`);
+      return {
+        success: false,
+        latencyMs: 0,
+        error: 'Webhook signing secret is not configured for this site. Delivery was not sent.',
         deliveryId,
       };
     }
