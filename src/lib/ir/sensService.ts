@@ -1,5 +1,6 @@
 import { ensureDbReady } from '@/lib/db/client';
 import crypto from 'crypto';
+import { sanitizeHtmlFragment } from '@/lib/security/sanitizeHtmlFragment';
 import type { SensAnnouncement, SensType } from './types';
 import { SENS_TYPE_LABELS, SENS_TYPE_COLORS } from './types';
 
@@ -88,7 +89,7 @@ export async function createSensAnnouncement(data: {
     jseCode: data.jseCode || 'JSE: GFI',
     isinCode: data.isinCode || 'ZAE000018123',
     releasedAt: data.releasedAt || now,
-    bodyHtml: data.bodyHtml,
+    bodyHtml: sanitizeHtmlFragment(data.bodyHtml),
     summary: data.summary || data.headline,
     pdfUrl: data.pdfUrl,
     isPriceSensitive: data.isPriceSensitive !== undefined ? data.isPriceSensitive : true,
@@ -150,7 +151,8 @@ function mapSensRow(row: any): SensAnnouncement {
     jseCode: String(row.jse_code || 'JSE: GFI'),
     isinCode: row.isin_code ? String(row.isin_code) : undefined,
     releasedAt: String(row.released_at),
-    bodyHtml: String(row.body_html || ''),
+    // Sanitised on read as well: rows written before this check, or inserted by feed sync, may hold raw HTML.
+    bodyHtml: sanitizeHtmlFragment(String(row.body_html || '')),
     summary: row.summary ? String(row.summary) : undefined,
     pdfUrl: row.pdf_url ? String(row.pdf_url) : undefined,
     isPriceSensitive: Number(row.is_price_sensitive) === 1,
