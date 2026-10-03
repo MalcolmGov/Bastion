@@ -17,3 +17,22 @@ export async function assertDisclosureApproval(
     throw new Error('Independent approval of the current disclosure revision is required');
   }
 }
+
+/**
+ * assertDisclosureApproval for callers that only hold a record id, such as the scheduled-publish code
+ * paths. Without an explicit revision it checks the one publishing would promote: the current draft,
+ * else the current published revision. A record that does not exist has nothing to publish and passes.
+ */
+export async function assertRecordApproval(
+  db: Pick<Client, 'execute'>,
+  recordId: string,
+  revisionId?: string
+): Promise<void> {
+  const record = await db.execute({
+    sql: `SELECT collection, COALESCE(current_draft_revision_id, current_published_revision_id) AS revision_id
+          FROM content_records WHERE id = ? LIMIT 1`,
+    args: [recordId]
+  });
+  if (record.rows.length === 0) return;
+  await assertDisclosureApproval(db, String(record.rows[0].collection), revisionId ?? String(record.rows[0].revision_id ?? ''));
+}

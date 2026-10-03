@@ -1,4 +1,5 @@
 import { getDb } from '@/lib/db/client';
+import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
 import crypto from 'crypto';
 
 export interface WorkerRunResult {
@@ -34,6 +35,10 @@ export async function executeScheduledWorker(): Promise<WorkerRunResult> {
       const revisionId = String(job.revision_id);
       const recordId = String(job.record_id);
       const collection = String(job.collection);
+
+      // Scheduling must not be a way around the two-person rule: re-check at the moment of publishing.
+      // A refused job is marked failed below with the reason, and the rest of the run carries on.
+      await assertDisclosureApproval(db, collection, revisionId);
 
       // Promote draft revision to published
       await db.execute({

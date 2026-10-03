@@ -2,9 +2,42 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
 import { publishRelease } from '@/lib/releases/service';
+import { assertRecordApproval } from '@/lib/auth/contentApproval';
 import crypto from 'crypto';
 
 const DEV_DEFAULT_CRON_SECRET = 'bastion_cron_worker_production_key_2026';
+
+/**
+ * Scheduling must not be a way around the two-person rule for disclosures, so the branches below
+ * re-check approval at the moment of publishing, the same rule publishRelease applies.
+ * Why a legacy release must not publish yet: the first record item without an independent approval.
+ */
+async function legacyReleaseRefusal(db: ReturnType<typeof getDb>, items: readonly Record<string, unknown>[]): Promise<string | null> {
+  for (const item of items) {
+    const itemType = String(item.item_type);
+    if (itemType === 'page' || itemType === 'page_composition') continue;
+    try {
+      await assertRecordApproval(db, String(item.item_id));
+    } catch (error) {
+      return (error as Error).message;
+    }
+  }
+  return null;
+}
+
+/** Marks a scheduled job failed when its disclosure lacks an independent approval. True if it was refused. */
+async function refuseUnapprovedJob(db: ReturnType<typeof getDb>, jobId: string, recordId: string, revisionId: string): Promise<boolean> {
+  try {
+    await assertRecordApproval(db, recordId, revisionId);
+    return false;
+  } catch (error) {
+    await db.execute({
+      sql: `UPDATE scheduled_jobs SET status = 'failed', error_message = ? WHERE id = ?`,
+      args: [(error as Error).message, jobId]
+    });
+    return true;
+  }
+}
 
 /**
  * Scheduled Releases Worker:
@@ -42,6 +75,13 @@ export async function POST(req: NextRequest) {
           sql: `SELECT item_type, item_id, action FROM release_items WHERE release_id = ?`,
           args: [releaseId]
         });
+
+        // All-or-nothing: one unapproved disclosure holds the whole release back, and the next release still runs.
+        const refusal = await legacyReleaseRefusal(db, itemsRes.rows);
+        if (refusal) {
+          console.warn(`[Cron Releases] Release ${releaseId} not published: ${refusal}`);
+          continue;
+        }
 
         for (const item of itemsRes.rows) {
           const itemType = String(item.item_type);
@@ -118,6 +158,8 @@ export async function POST(req: NextRequest) {
         const jobId = String(job.id);
         const recordId = String(job.record_id);
         const revisionId = String(job.revision_id);
+
+        if (await refuseUnapprovedJob(db, jobId, recordId, revisionId)) continue;
 
         await db.execute({
           sql: `UPDATE content_records SET current_published_revision_id = ?, status = 'published', updated_at = ? WHERE id = ?`,
