@@ -317,7 +317,6 @@ test('the scheduled-release cron holds back a release whose page is not independ
   await f.h.db.execute('ALTER TABLE audit_log ADD COLUMN ip_address TEXT');
   await f.h.db.execute('CREATE TABLE releases(id TEXT PRIMARY KEY, name TEXT, client_id TEXT, scheduled_at TEXT, status TEXT, published_at TEXT)');
   await f.h.db.execute('CREATE TABLE release_items(release_id TEXT, item_type TEXT, item_id TEXT, action TEXT)');
-  await f.h.db.execute("CREATE TABLE scheduled_jobs(id TEXT PRIMARY KEY, record_id TEXT, revision_id TEXT, scheduled_for TEXT, status TEXT, executed_at TEXT, error_message TEXT, created_at TEXT)");
   await f.save(USERS.author);
   await f.h.db.execute("INSERT INTO releases VALUES('rel-1','Scheduled','tenant-a','2020-01-01T00:00:00.000Z','scheduled',NULL)");
   await f.h.db.execute("INSERT INTO release_items VALUES('rel-1','page','page-a','publish')");

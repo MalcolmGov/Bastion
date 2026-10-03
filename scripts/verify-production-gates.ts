@@ -27,6 +27,7 @@ import { checkLoginRateLimit, checkApiRateLimit, resetRateLimit } from '../src/l
 import { createSensAnnouncement, listSensAnnouncements, deleteSensAnnouncement } from '../src/lib/ir/sensService';
 import { saveComposition } from '../src/lib/studio/editor/saveComposition';
 import { approvePageVersion } from '../src/lib/studio/editor/pageApproval';
+import { runDueScheduledJobs } from '../src/lib/worker/scheduledJobs';
 import { createCalendarEvent, listCalendarEvents, generateIcsContent, calculateDividendTax, deleteCalendarEvent } from '../src/lib/ir/calendarService';
 import { runGovernanceAudit, getLatestGovernanceAudit, getGovernanceAuditHistory } from '../src/lib/governance/governanceEngine';
 import { computeLineDiff, computeWordDiff, computeRecordDiff, generateContentHash } from '../src/lib/diff/diffEngine';
@@ -499,6 +500,50 @@ async function runAll() {
       await db.execute({ sql: `DELETE FROM page_versions WHERE site_id = ? AND page_slug = ?`, args: [siteId, pageSlug] });
       await db.execute({ sql: `DELETE FROM page_compositions WHERE site_id = ? AND page_slug = ?`, args: [siteId, pageSlug] });
       await db.execute({ sql: `DELETE FROM audit_log WHERE actor_id IN ('gate-author','gate-reviewer')` });
+    }
+  });
+
+  await test('Scheduled Publishing', 'The scheduler publishes a due job on a database created from schema.sql, which has a single scheduled_jobs shape', async () => {
+    const stamp = Date.now();
+    const recordId = `rec_gate_sched_${stamp}`;
+    const revisionId = `rev_gate_sched_${stamp}`;
+    const jobId = `job_gate_sched_${stamp}`;
+    const now = new Date().toISOString();
+    try {
+      const columns = (await db.execute(`PRAGMA table_info(scheduled_jobs)`)).rows.map(r => String(r.name));
+      assert(columns.includes('publish_at_utc') && columns.includes('executed_at_utc') && columns.includes('error_log'), 'scheduled_jobs does not have the shared columns');
+      assert(!columns.includes('scheduled_for') && !columns.includes('record_id'), 'scheduled_jobs still has the old cron-shaped columns');
+
+      await db.execute({
+        sql: `INSERT INTO content_records (id, collection, slug, title, status, current_draft_revision_id, client_id, created_at, updated_at)
+              VALUES (?, 'operations', ?, 'Scheduled gate record', 'scheduled', ?, 'client_goldfields', ?, ?)`,
+        args: [recordId, `gate-sched-${stamp}`, revisionId, now, now]
+      });
+      await db.execute({
+        sql: `INSERT INTO revisions (id, record_id, revision_number, data_json, content_hash, created_at, status)
+              VALUES (?, ?, 1, '{}', 'gate-hash', ?, 'approved')`,
+        args: [revisionId, recordId, now]
+      });
+      // The same statement the scheduling endpoint runs.
+      await db.execute({
+        sql: `INSERT INTO scheduled_jobs (id, revision_id, publish_at_utc, target_environment, status, scheduled_by_id)
+              VALUES (?, ?, '2020-01-01T00:00:00.000Z', 'production', 'pending', NULL)`,
+        args: [jobId, revisionId]
+      });
+
+      const run = await runDueScheduledJobs(db, { id: 'system_cron', name: 'Production gate' });
+      assert(run.executed === 1 && run.failed === 0, `Expected one executed job, got ${JSON.stringify(run)}`);
+      const record = await db.execute({ sql: `SELECT status, current_published_revision_id FROM content_records WHERE id = ?`, args: [recordId] });
+      assert(String(record.rows[0].status) === 'published' && String(record.rows[0].current_published_revision_id) === revisionId, 'The scheduled record was not published');
+      const job = await db.execute({ sql: `SELECT status, executed_at_utc FROM scheduled_jobs WHERE id = ?`, args: [jobId] });
+      assert(String(job.rows[0].status) === 'executed' && !!job.rows[0].executed_at_utc, 'The job was not marked executed');
+      const again = await runDueScheduledJobs(db, { id: 'system_cron', name: 'Production gate' });
+      assert(again.executed === 0, 'An executed job ran a second time');
+    } finally {
+      await db.execute({ sql: `DELETE FROM scheduled_jobs WHERE id = ?`, args: [jobId] });
+      await db.execute({ sql: `DELETE FROM revisions WHERE id = ?`, args: [revisionId] });
+      await db.execute({ sql: `DELETE FROM content_records WHERE id = ?`, args: [recordId] });
+      await db.execute({ sql: `DELETE FROM audit_log WHERE record_id = ? AND action = 'SCHEDULED_PUBLISH'`, args: [recordId] });
     }
   });
 
