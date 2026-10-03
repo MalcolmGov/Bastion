@@ -653,8 +653,8 @@ Target Block [${targetSection?.componentId || 'page'}]: Please polish, style, an
         candidateModels.push(
           activeModel,
           'claude-sonnet-5',
-          'claude-3-5-sonnet-20241022',
-          'claude-3-5-haiku-20241022',
+          'claude-sonnet-5-5',
+          'claude-haiku-4-5',
         );
 
         const uniqueModels = candidateModels.filter(
