@@ -60,41 +60,52 @@ function isSafeStyle(value: string): boolean {
   return !/(url\s*\(|expression\s*\(|@import|javascript:|vbscript:|behavior\s*:|-moz-binding|position\s*:\s*(fixed|absolute))/.test(css);
 }
 
-export function sanitizeHtmlFragment(html: string): string {
-  if (!html) return '';
-  const $ = cheerio.load(html, null, false);
+/** Whether an attribute may stay on an allowlisted tag. Event handlers and unknown attributes never do. */
+function isAttributeKept(tag: string, name: string, value: string): boolean {
+  const lower = name.toLowerCase();
+  if (lower.startsWith('on')) return false;
+  if (!GLOBAL_ATTRS.has(lower) && !TAG_ATTRS[tag]?.has(lower)) return false;
+  if (tag === 'a' && lower === 'href') return isSafeLink(value);
+  if (tag === 'img' && lower === 'src') return isSafeImageSrc(value);
+  if (lower === 'style') return isSafeStyle(value);
+  if (tag === 'a' && lower === 'target') return value === '_blank' || value === '_self';
+  return true;
+}
 
+function stripComments($: cheerio.CheerioAPI): void {
   $.root().find('*').addBack().contents().each((_, node) => {
     if (node.type === 'comment' || node.type === 'directive') $(node).remove();
   });
+}
 
-  for (const element of $('*').toArray()) {
-    const node = $(element);
-    const tag = (element as { tagName?: string }).tagName?.toLowerCase() || '';
+const selectAllElements = ($: cheerio.CheerioAPI) => $('*').toArray();
+type ElementNode = ReturnType<typeof selectAllElements>[number];
 
-    if (REMOVE_WITH_CONTENT.has(tag)) {
-      node.remove();
-      continue;
-    }
-    if (!ALLOWED_TAGS.has(tag)) {
-      node.replaceWith(node.contents());
-      continue;
-    }
+function sanitizeElement($: cheerio.CheerioAPI, element: ElementNode): void {
+  const node = $(element);
+  const { tagName, attribs } = element as { tagName?: string; attribs?: Record<string, string> };
+  const tag = tagName?.toLowerCase() || '';
 
-    const attribs = { ...((element as { attribs?: Record<string, string> }).attribs || {}) };
-    for (const [name, value] of Object.entries(attribs)) {
-      const lower = name.toLowerCase();
-      const allowed = GLOBAL_ATTRS.has(lower) || TAG_ATTRS[tag]?.has(lower);
-      let keep = !!allowed && !lower.startsWith('on');
-      if (keep && tag === 'a' && lower === 'href') keep = isSafeLink(value);
-      if (keep && tag === 'img' && lower === 'src') keep = isSafeImageSrc(value);
-      if (keep && lower === 'style') keep = isSafeStyle(value);
-      if (keep && tag === 'a' && lower === 'target') keep = value === '_blank' || value === '_self';
-      if (!keep) node.removeAttr(name);
-    }
-    if (tag === 'a' && node.attr('target') === '_blank') node.attr('rel', 'noopener noreferrer');
-    if (tag === 'img' && !node.attr('src')) node.remove();
+  if (REMOVE_WITH_CONTENT.has(tag)) {
+    node.remove();
+    return;
+  }
+  if (!ALLOWED_TAGS.has(tag)) {
+    node.replaceWith(node.contents());
+    return;
   }
 
+  for (const [name, value] of Object.entries(attribs ?? {})) {
+    if (!isAttributeKept(tag, name, value)) node.removeAttr(name);
+  }
+  if (tag === 'a' && node.attr('target') === '_blank') node.attr('rel', 'noopener noreferrer');
+  if (tag === 'img' && !node.attr('src')) node.remove();
+}
+
+export function sanitizeHtmlFragment(html: string): string {
+  if (!html) return '';
+  const $ = cheerio.load(html, null, false);
+  stripComments($);
+  for (const element of selectAllElements($)) sanitizeElement($, element);
   return $.html();
 }
