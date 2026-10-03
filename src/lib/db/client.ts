@@ -211,13 +211,13 @@ async function runInitSchema(db: Client): Promise<void> {
       );
       CREATE TABLE IF NOT EXISTS scheduled_jobs (
         id TEXT PRIMARY KEY,
-        record_id TEXT NOT NULL REFERENCES content_records(id) ON DELETE CASCADE,
         revision_id TEXT NOT NULL REFERENCES revisions(id) ON DELETE CASCADE,
-        scheduled_for TEXT NOT NULL,
+        publish_at_utc TEXT NOT NULL,
+        target_environment TEXT DEFAULT 'production',
         status TEXT NOT NULL DEFAULT 'pending',
-        executed_at TEXT,
-        error_message TEXT,
-        created_at TEXT NOT NULL
+        scheduled_by_id TEXT REFERENCES users(id),
+        executed_at_utc TEXT,
+        error_log TEXT
       );
       CREATE TABLE IF NOT EXISTS media_assets (
         id TEXT PRIMARY KEY,

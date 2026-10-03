@@ -1,40 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createHarness } = require('./harness.cjs');
+const { DUE, fixture, runWorker, runCron } = require('./scheduling-fixture.cjs');
 
-const DUE = '2020-01-01T00:00:00.000Z';
-const CRON_SECRET = 'scheduled-approval-test-secret-0001';
 const APPROVAL_ERROR = /independent approval/i;
 let seq = 0;
-
-// scheduled_jobs exists with two different column sets in this codebase (schema.sql vs the embedded and
-// migration schema), and the worker and the cron route each read a different one, so both are covered.
-const JOBS = {
-  worker: 'CREATE TABLE scheduled_jobs(id TEXT PRIMARY KEY, revision_id TEXT, publish_at_utc TEXT, target_environment TEXT, status TEXT, scheduled_by_id TEXT, executed_at_utc TEXT, error_log TEXT)',
-  cron: 'CREATE TABLE scheduled_jobs(id TEXT PRIMARY KEY, record_id TEXT, revision_id TEXT, scheduled_for TEXT, status TEXT, executed_at TEXT, error_message TEXT, created_at TEXT)',
-};
-
-async function fixture(t, { jobs, legacyReleases = false } = {}) {
-  const h = await createHarness();
-  const realEnv = process.env.CRON_SECRET, realWarn = console.warn, realError = console.error;
-  process.env.CRON_SECRET = CRON_SECRET;
-  console.warn = () => {};
-  console.error = () => {};
-  t.after(() => {
-    if (realEnv === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = realEnv;
-    console.warn = realWarn;
-    console.error = realError;
-    h.close();
-  });
-  await h.db.execute('ALTER TABLE audit_log ADD COLUMN correlation_id TEXT');
-  await h.db.execute('ALTER TABLE audit_log ADD COLUMN ip_address TEXT');
-  if (jobs) await h.db.execute(JOBS[jobs]);
-  if (legacyReleases) {
-    await h.db.execute('CREATE TABLE releases(id TEXT PRIMARY KEY, name TEXT, client_id TEXT, scheduled_at TEXT, status TEXT, published_at TEXT)');
-    await h.db.execute('CREATE TABLE release_items(release_id TEXT, item_type TEXT, item_id TEXT, action TEXT)');
-  }
-  return h;
-}
 
 async function addRecord(h, { collection = 'reports', author = 'author-a' } = {}) {
   const n = ++seq, rec = `rec-${n}`, rev = `rev-${n}`, hash = `hash-${n}`;
@@ -46,31 +15,21 @@ async function addRecord(h, { collection = 'reports', author = 'author-a' } = {}
 const approve = (h, { rev, hash }, reviewer = 'reviewer-a', contentHash = hash) =>
   h.db.execute({ sql: 'INSERT INTO approvals VALUES(?,?,?,?,?)', args: [`appr-${++seq}`, rev, reviewer, 'approved', contentHash] });
 
-const scheduleWorkerJob = (h, { rev }, id = `job-${++seq}`) =>
-  h.db.execute({ sql: "INSERT INTO scheduled_jobs VALUES(?,?,?,'production','pending','author-a',NULL,NULL)", args: [id, rev, DUE] }).then(() => id);
-
-const scheduleCronJob = (h, { rec, rev }, id = `job-${++seq}`) =>
-  h.db.execute({ sql: "INSERT INTO scheduled_jobs VALUES(?,?,?,?,'pending',NULL,NULL,'2026-10-01')", args: [id, rec, rev, DUE] }).then(() => id);
+const scheduleJob = (h, { rev }, id = `job-${++seq}`) =>
+  h.db.execute({ sql: "INSERT INTO scheduled_jobs(id, revision_id, publish_at_utc, target_environment, status, scheduled_by_id) VALUES(?,?,?,'production','pending','author-a')", args: [id, rev, DUE] }).then(() => id);
 
 const job = async (h, id) => (await h.db.execute({ sql: 'SELECT * FROM scheduled_jobs WHERE id = ?', args: [id] })).rows[0];
 const record = async (h, rec) => (await h.db.execute({ sql: 'SELECT * FROM content_records WHERE id = ?', args: [rec] })).rows[0];
 const revision = async (h, rev) => (await h.db.execute({ sql: 'SELECT * FROM revisions WHERE id = ?', args: [rev] })).rows[0];
 const isLive = async (h, { rec, rev }) => (await record(h, rec)).current_published_revision_id === rev;
 
-const runWorker = h => h.load('lib/worker/worker.ts').executeScheduledWorker();
-const runCron = async h => {
-  const res = await h.route('api/cron/releases').POST(h.request('/api/cron/releases', {}, CRON_SECRET));
-  assert.equal(res.status, 200);
-  return res.json();
-};
-
 // ---- the scheduled-job worker (the executor behind the "run worker" button) ----
 
 for (const collection of ['reports', 'news']) {
   test(`worker does not publish a scheduled ${collection} revision that has no approval`, async t => {
-    const h = await fixture(t, { jobs: 'worker' });
+    const h = await fixture(t);
     const r = await addRecord(h, { collection });
-    const id = await scheduleWorkerJob(h, r);
+    const id = await scheduleJob(h, r);
     const result = await runWorker(h);
     assert.equal(result.publishedJobsCount, 0);
     assert.equal(await isLive(h, r), false, 'unapproved disclosure went live');
@@ -83,7 +42,7 @@ for (const collection of ['reports', 'news']) {
 }
 
 test('worker rejects an approval given by the revision author and an approval of different content', async t => {
-  const h = await fixture(t, { jobs: 'worker' });
+  const h = await fixture(t);
   const selfApproved = await addRecord(h);
   await approve(h, selfApproved, 'author-a');
   const stale = await addRecord(h);
@@ -91,7 +50,7 @@ test('worker rejects an approval given by the revision author and an approval of
   const rejected = await addRecord(h);
   await h.db.execute({ sql: 'INSERT INTO approvals VALUES(?,?,?,?,?)', args: ['appr-rejected', rejected.rev, 'reviewer-a', 'rejected', rejected.hash] });
   const ids = [];
-  for (const r of [selfApproved, stale, rejected]) ids.push(await scheduleWorkerJob(h, r));
+  for (const r of [selfApproved, stale, rejected]) ids.push(await scheduleJob(h, r));
   const result = await runWorker(h);
   assert.equal(result.publishedJobsCount, 0);
   for (const r of [selfApproved, stale, rejected]) assert.equal(await isLive(h, r), false);
@@ -99,10 +58,10 @@ test('worker rejects an approval given by the revision author and an approval of
 });
 
 test('worker publishes a scheduled disclosure that has an independent approval of its current content', async t => {
-  const h = await fixture(t, { jobs: 'worker' });
+  const h = await fixture(t);
   const r = await addRecord(h);
   await approve(h, r);
-  const id = await scheduleWorkerJob(h, r);
+  const id = await scheduleJob(h, r);
   const result = await runWorker(h);
   assert.equal(result.publishedJobsCount, 1);
   assert.equal(await isLive(h, r), true);
@@ -112,9 +71,9 @@ test('worker publishes a scheduled disclosure that has an independent approval o
 });
 
 test('worker still publishes scheduled content outside the disclosure collections without an approval', async t => {
-  const h = await fixture(t, { jobs: 'worker' });
+  const h = await fixture(t);
   const r = await addRecord(h, { collection: 'operations' });
-  const id = await scheduleWorkerJob(h, r);
+  const id = await scheduleJob(h, r);
   const result = await runWorker(h);
   assert.equal(result.publishedJobsCount, 1);
   assert.equal(await isLive(h, r), true);
@@ -122,12 +81,12 @@ test('worker still publishes scheduled content outside the disclosure collection
 });
 
 test('worker keeps going after a refused job: an approved job later in the same run is published', async t => {
-  const h = await fixture(t, { jobs: 'worker' });
+  const h = await fixture(t);
   const blocked = await addRecord(h);
   const allowed = await addRecord(h);
   await approve(h, allowed);
-  const blockedJob = await scheduleWorkerJob(h, blocked);
-  const allowedJob = await scheduleWorkerJob(h, allowed);
+  const blockedJob = await scheduleJob(h, blocked);
+  const allowedJob = await scheduleJob(h, allowed);
   const result = await runWorker(h);
   assert.equal(result.publishedJobsCount, 1);
   assert.equal((await job(h, blockedJob)).status, 'failed');
@@ -179,17 +138,17 @@ test('cron legacy releases: a release with a refused disclosure publishes none o
 });
 
 test('cron scheduled jobs: unapproved disclosures are refused and approved ones are published', async t => {
-  const h = await fixture(t, { jobs: 'cron' });
+  const h = await fixture(t);
   const blocked = await addRecord(h);
   const allowed = await addRecord(h);
   await approve(h, allowed);
-  const blockedJob = await scheduleCronJob(h, blocked);
-  const allowedJob = await scheduleCronJob(h, allowed);
+  const blockedJob = await scheduleJob(h, blocked);
+  const allowedJob = await scheduleJob(h, allowed);
   await runCron(h);
   assert.equal(await isLive(h, blocked), false, 'unapproved disclosure went live');
   const refused = await job(h, blockedJob);
   assert.equal(refused.status, 'failed');
-  assert.match(String(refused.error_message), APPROVAL_ERROR);
+  assert.match(String(refused.error_log), APPROVAL_ERROR);
   assert.equal(await isLive(h, allowed), true);
   assert.equal((await job(h, allowedJob)).status, 'executed');
 });

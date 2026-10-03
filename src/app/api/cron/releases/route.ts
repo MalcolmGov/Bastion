@@ -4,6 +4,7 @@ import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken'
 import { publishRelease } from '@/lib/releases/service';
 import { assertRecordApproval } from '@/lib/auth/contentApproval';
 import { assertPageApproved } from '@/lib/studio/editor/pageApproval';
+import { runDueScheduledJobs } from '@/lib/worker/scheduledJobs';
 import crypto from 'crypto';
 
 const DEV_DEFAULT_CRON_SECRET = 'bastion_cron_worker_production_key_2026';
@@ -24,20 +25,6 @@ async function legacyReleaseRefusal(db: ReturnType<typeof getDb>, items: readonl
     }
   }
   return null;
-}
-
-/** Marks a scheduled job failed when its disclosure lacks an independent approval. True if it was refused. */
-async function refuseUnapprovedJob(db: ReturnType<typeof getDb>, jobId: string, recordId: string, revisionId: string): Promise<boolean> {
-  try {
-    await assertRecordApproval(db, recordId, revisionId);
-    return false;
-  } catch (error) {
-    await db.execute({
-      sql: `UPDATE scheduled_jobs SET status = 'failed', error_message = ? WHERE id = ?`,
-      args: [(error as Error).message, jobId]
-    });
-    return true;
-  }
 }
 
 /**
@@ -148,39 +135,12 @@ export async function POST(req: NextRequest) {
       console.warn('[Cron Content Releases] Inspection note:', cRelErr);
     }
 
-    // 2. Process Scheduled Jobs from scheduled_jobs table
+    // 2. Process scheduled jobs (the same executor the manual worker uses)
     try {
-      const jobsRes = await db.execute({
-        sql: `SELECT id, record_id, revision_id FROM scheduled_jobs WHERE status = 'pending' AND scheduled_for <= ?`,
-        args: [now]
-      });
-
-      for (const job of jobsRes.rows) {
-        const jobId = String(job.id);
-        const recordId = String(job.record_id);
-        const revisionId = String(job.revision_id);
-
-        if (await refuseUnapprovedJob(db, jobId, recordId, revisionId)) continue;
-
-        await db.execute({
-          sql: `UPDATE content_records SET current_published_revision_id = ?, status = 'published', updated_at = ? WHERE id = ?`,
-          args: [revisionId, now, recordId]
-        });
-
-        await db.execute({
-          sql: `UPDATE revisions SET status = 'published' WHERE id = ?`,
-          args: [revisionId]
-        });
-
-        await db.execute({
-          sql: `UPDATE scheduled_jobs SET status = 'executed', executed_at = ? WHERE id = ?`,
-          args: [now, jobId]
-        });
-
-        executedJobsCount++;
-      }
+      const run = await runDueScheduledJobs(db, { id: 'system_cron', name: 'Scheduled Releases Worker' }, now);
+      executedJobsCount = run.executed;
     } catch (jobErr) {
-      console.warn('[Cron Jobs] Table inspection note:', jobErr);
+      console.warn('[Cron Jobs] Could not process scheduled jobs:', jobErr);
     }
 
     return NextResponse.json({

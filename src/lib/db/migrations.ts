@@ -769,6 +769,53 @@ export const migrations: Migration[] = [
         }
       }
     }
+  },
+  {
+    version: 16,
+    name: '016_scheduled_jobs_single_schema',
+    up: async (db: Client) => {
+      // scheduled_jobs was defined two ways. schema.sql (which creates fresh databases), the scheduling endpoint, the worker and
+      // the status page use publish_at_utc / executed_at_utc / error_log; migration 001 and the embedded schema used record_id /
+      // scheduled_for / executed_at / error_message, which is what the cron route read. On a database with the first shape the cron
+      // could never run a job, and on one with the second shape nothing could schedule one. Leave one shape: the first.
+      const columnsOf = async () => new Set((await db.execute(`PRAGMA table_info(scheduled_jobs)`)).rows.map(r => String(r.name)));
+      const existing = await columnsOf();
+      const shared = `
+        id TEXT PRIMARY KEY,
+        revision_id TEXT NOT NULL REFERENCES revisions(id) ON DELETE CASCADE,
+        publish_at_utc TEXT NOT NULL,
+        target_environment TEXT DEFAULT 'production',
+        status TEXT NOT NULL DEFAULT 'pending',
+        scheduled_by_id TEXT REFERENCES users(id),
+        executed_at_utc TEXT,
+        error_log TEXT,
+        client_id TEXT,
+        site_id TEXT`;
+
+      if (existing.size === 0) {
+        await db.execute(`CREATE TABLE scheduled_jobs (${shared})`);
+      } else if (existing.has('publish_at_utc')) {
+        // Already the shared shape: only fill in columns an older copy of it lacks.
+        for (const column of ['target_environment TEXT DEFAULT \'production\'', 'scheduled_by_id TEXT', 'executed_at_utc TEXT', 'error_log TEXT']) {
+          if (!existing.has(column.split(' ')[0])) await db.execute(`ALTER TABLE scheduled_jobs ADD COLUMN ${column}`);
+        }
+      } else {
+        // The other shape has NOT NULL columns the shared inserts do not supply, so rebuild it, keeping every job whose
+        // revision still exists (a job for a deleted revision could never run). One transaction: all of it or none.
+        const optional = ['client_id', 'site_id'].filter(column => existing.has(column));
+        const target = ['id', 'revision_id', 'publish_at_utc', 'target_environment', 'status', 'scheduled_by_id', 'executed_at_utc', 'error_log', ...optional];
+        const source = ['id', 'revision_id', 'scheduled_for', `'production'`, 'status', 'NULL', 'executed_at', 'error_message', ...optional];
+        await db.batch([
+          `DROP TABLE IF EXISTS scheduled_jobs_rebuild`,
+          `CREATE TABLE scheduled_jobs_rebuild (${shared})`,
+          `INSERT INTO scheduled_jobs_rebuild (${target.join(', ')})
+             SELECT ${source.join(', ')} FROM scheduled_jobs WHERE revision_id IN (SELECT id FROM revisions)`,
+          `DROP TABLE scheduled_jobs`,
+          `ALTER TABLE scheduled_jobs_rebuild RENAME TO scheduled_jobs`,
+        ], 'write');
+      }
+      await db.execute(`CREATE INDEX IF NOT EXISTS idx_jobs_status_publish ON scheduled_jobs(status, publish_at_utc)`);
+    }
   }
 ];
 
