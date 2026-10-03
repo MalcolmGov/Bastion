@@ -17,6 +17,11 @@ export function mayViewDraftsOf(user: StudioUser | null, ownerClientId: string |
 /** A website row. The preview checks read its id, client_id and settings_json. */
 export type PreviewSite = Record<string, unknown>;
 
+/** Id columns are text; a value that is neither text nor a number is not an id. */
+function idText(value: unknown): string | null {
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
+}
+
 /**
  * Draft mode is a cookie: it says a browser asked for drafts, not that it may have them. A site shows its drafts only
  * when the cookie is set and either the person signed in may see that client's work, or the browser holds a valid grant
@@ -26,8 +31,7 @@ export type PreviewSite = Record<string, unknown>;
  */
 export async function draftPreviewActive(site: PreviewSite): Promise<boolean> {
   if (!(await draftMode()).isEnabled) return false;
-  const owner = site.client_id == null ? null : String(site.client_id);
-  if (mayViewDraftsOf(await getCurrentUser(), owner)) return true;
+  if (mayViewDraftsOf(await getCurrentUser(), idText(site.client_id))) return true;
   const name = siteGrantCookieName(site.id);
   if (!name) return false;
   return verifySiteGrant(site, (await cookies()).get(name)?.value);
@@ -101,8 +105,8 @@ export function sitePreviewSecret(site: PreviewSite): string | null {
 
 /** One cookie per site, named after it, so a browser can hold passes for several sites at once. Null for an id that is not a safe cookie name. */
 export function siteGrantCookieName(siteId: unknown): string | null {
-  const id = String(siteId ?? '');
-  return SITE_ID.test(id) ? `${SITE_GRANT_COOKIE_PREFIX}${id}` : null;
+  const id = idText(siteId);
+  return id !== null && SITE_ID.test(id) ? `${SITE_GRANT_COOKIE_PREFIX}${id}` : null;
 }
 
 function siteGrantMac(siteId: string, expires: string, key: string): string {

@@ -36,6 +36,11 @@ function SecretNote({ unsafe, warning, hint }: Readonly<{ unsafe: boolean; warni
   return hint ? <p className="text-[11px] text-slate-500">{hint}</p> : null;
 }
 
+function previewTokenHint(siteSlug: string | undefined) {
+  const link = `/api/preview?site=${siteSlug ?? '<site>'}&secret=<token>&slug=<page>`;
+  return `Opens this site's drafts for 12 hours: ${link}. Changing or clearing the token ends every pass already issued. At least 16 characters.`;
+}
+
 export default function WorkspaceSettingsAndExportPage() {
   const { activeClient, activeSite, refreshClients } = useStudioWorkspace();
   const isGoldFields = activeClient?.id === 'client_goldfields';
@@ -484,11 +489,7 @@ export default function WorkspaceSettingsAndExportPage() {
                   <SecretNote
                     unsafe={unsafeSecrets.includes('previewSecret')}
                     warning="The token saved for this site was a public demo value. Generate a new one and save."
-                    hint={
-                      activeSite?.slug
-                        ? `Opens this site's drafts for 12 hours: /api/preview?site=${activeSite.slug}&secret=<token>&slug=<page>. Changing or clearing the token ends every pass already issued. At least 16 characters.`
-                        : 'Opens this site\'s drafts for 12 hours through /api/preview?site=<site>&secret=<token>. Changing or clearing the token ends every pass already issued. At least 16 characters.'
-                    }
+                    hint={previewTokenHint(activeSite?.slug)}
                   />
                 </div>
               </div>
