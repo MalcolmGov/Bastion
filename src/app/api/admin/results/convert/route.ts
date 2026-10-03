@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       clientId,
       document,
       status: 'draft',
+      actor: { id: user.id, name: user.name },
     });
     return NextResponse.json(saved);
   } catch (error) {

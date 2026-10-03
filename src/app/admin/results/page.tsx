@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
+import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
+import { ResultsHistory } from '@/components/results/ResultsHistory';
 import { ResultsCodingChat } from '@/components/results/ResultsCodingChat';
 import { InteractiveResultsViewer } from '@/components/results/InteractiveResultsViewer';
 import { validateFinancials } from '@/lib/results/validateFinancials';
@@ -14,6 +16,8 @@ const STEPS = ['Converter', 'Brand', 'PDF', 'Review and publish'];
 
 export default function ResultsStudioPage() {
   const { activeClient } = useStudioWorkspace();
+  const { hasPerm } = useAdminAuth();
+  const canEdit = hasPerm('content:edit');
   const [documents, setDocuments] = useState<ResultsDocumentSummary[]>([]);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const workspaceEpoch = useRef(0);
@@ -27,6 +31,8 @@ export default function ResultsStudioPage() {
   const [htmlStale, setHtmlStale] = useState(false);
   const [validationReviewed, setValidationReviewed] = useState(false);
   const [sourceReviewed, setSourceReviewed] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [publishReady, setPublishReady] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [comparisonPage, setComparisonPage] = useState(1);
   const [previewMode, setPreviewMode] = useState<'analytics' | 'document' | 'compare'>('document');
@@ -50,6 +56,8 @@ export default function ResultsStudioPage() {
     workspaceEpoch.current += 1;
     setBusy(null);
     setCurrent(null);
+    setDirty(false);
+    setPublishReady(false);
     setSourceReviewed(false);
     setValidationReviewed(false);
     setBrand(null);
@@ -114,6 +122,8 @@ export default function ResultsStudioPage() {
       if (epoch !== workspaceEpoch.current) return;
       if (!response.ok) throw new Error(body.error || 'PDF conversion failed');
       setCurrent(body);
+      setDirty(false);
+      setPublishReady(false);
       setSourceReviewed(false);
     setValidationReviewed(false);
       setNotice(null);
@@ -141,12 +151,14 @@ export default function ResultsStudioPage() {
     setSourceReviewed(false);
     setValidationReviewed(false);
     setNotice(null);
+    setDirty(true);
     setCurrent({ ...current, document });
     setHtmlStale(true);
     setError(placed ? null : 'That row is not in the published tables, so this figure stays in the grid.');
   }
 
   function applyHtml(nextHtml: string) {
+    setDirty(true);
     setSourceReviewed(false);
     setValidationReviewed(false);
     setNotice(null);
@@ -180,6 +192,8 @@ export default function ResultsStudioPage() {
       if (epoch !== workspaceEpoch.current) return;
       if (!response.ok) throw new Error(body.error || 'Save failed');
       setCurrent(body);
+      setDirty(false);
+      setPublishReady(false);
       setHtmlStale(false);
       setNotice(status === 'published' ? 'Publication saved and published.' : 'Draft saved.');
       await refresh();
@@ -207,6 +221,8 @@ export default function ResultsStudioPage() {
       const document = saved.document.presentationHtml ? saved.document : { ...saved.document, presentationHtml: renderResultsHtml(saved.document) };
       setComparisonPage(1);
       setCurrent({ ...saved, document });
+      setDirty(false);
+      setPublishReady(false);
       setBrand(document.brand || null);
       setHtmlStale(false);
       setStep(3);
@@ -379,14 +395,14 @@ export default function ResultsStudioPage() {
                   </button>
                 </div>
                 <button type="button" onClick={() => setPreviewMode('compare')} className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700">Compare with PDF</button>
-                <button type="button" onClick={() => setShowAssistant(!showAssistant)} aria-expanded={showAssistant} className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700">{showAssistant ? 'Close assistant' : 'Polish with AI'}</button>
-                <button type="button" onClick={() => save('draft')} disabled={busy !== null} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold">
+                <button type="button" onClick={() => setShowAssistant(!showAssistant)} disabled={!canEdit} aria-expanded={showAssistant} className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700">{showAssistant ? 'Close assistant' : 'Polish with AI'}</button>
+                <button type="button" onClick={() => save('draft')} disabled={busy !== null || !canEdit} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold">
                   {busy === 'draft' ? 'Saving…' : 'Save draft'}
                 </button>
-                <button type="button" onClick={() => save('published')} disabled={busy !== null || !sourceReviewed || htmlStale || Boolean(validation?.issues.length && !validationReviewed)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
+                <button type="button" onClick={() => save('published')} disabled={busy !== null || !publishReady || dirty || !sourceReviewed || htmlStale || Boolean(validation?.issues.length && !validationReviewed)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
                   {busy === 'published' ? 'Publishing…' : 'Publish HTML'}
                 </button>
-                {current.status === 'published' && (
+                {current.publishedAt && (
                   <Link href={`/results/${current.slug}`} target="_blank" className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-50">
                     Open live page
                   </Link>
@@ -404,6 +420,7 @@ export default function ResultsStudioPage() {
               <input type="checkbox" checked={sourceReviewed} onChange={event => setSourceReviewed(event.target.checked)} disabled={htmlStale} className="mt-1" />
               I have checked the complete publication against the original PDF, including figures, units, restatements, notes and extraction warnings.
             </label>
+            <ResultsHistory key={`${activeClient?.id}:${current.id}`} current={current} dirty={dirty || htmlStale} sourceReviewed={sourceReviewed} validationReviewed={validationReviewed} hasIssues={Boolean(validation?.issues.length)} onPublishReady={setPublishReady} onRestore={saved => { setCurrent(saved); setDirty(false); setHtmlStale(false); setSourceReviewed(false); setValidationReviewed(false); setPublishReady(false); setNotice('Earlier version restored as a new draft. Your live page is unchanged.'); refresh().catch(() => setError('Could not refresh saved reports.')); }} />
             <details open={current.document.warnings.length > 0} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
               <summary className="cursor-pointer font-semibold">Source review · {current.document.warnings.length ? `${current.document.warnings.length} extraction warnings` : 'Compare figures before publishing'}</summary>
               <p className="mt-2">Check periods, units, totals, restatements, footnotes and charts against the original PDF. Source visuals preserve the artwork; they are not editable charts.</p>
@@ -449,6 +466,7 @@ export default function ResultsStudioPage() {
                                 <td key={`${row.id}-${cellIndex}`} className="py-1 pl-1">
                                   <input
                                     value={cell || ''}
+                                    readOnly={!canEdit}
                                     onChange={(event) => updateCell(statement.id, row.id, cellIndex, event.target.value)}
                                     className="w-full rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-right font-mono text-[11px] dark:border-slate-700 dark:bg-slate-900"
                                   />
