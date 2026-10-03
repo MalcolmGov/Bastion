@@ -229,6 +229,18 @@ const PADDING_OPTIONS = [
   { id: 'py-36', label: '144px', name: 'Epic' },
 ];
 
+type PageApprovalState = { version: number; status: string; approved: boolean; canApprove: boolean; approvedByName: string | null };
+
+/** What the approval banner says about the version being edited. */
+function approvalBannerText(approval: PageApprovalState, version: number, dirty: boolean): string {
+  if (approval.approved) {
+    const by = approval.approvedByName ? ` by ${approval.approvedByName}` : '';
+    return `Version ${approval.version} was approved${by} and is ready to publish.`;
+  }
+  if (dirty) return 'Save your changes as a draft to submit them for approval.';
+  return `Version ${version} needs approval from a reviewer who did not write it before it can be published.`;
+}
+
 function VisualWebsiteEditorContent() {
   const searchParams = useSearchParams();
   const siteSlugParam = searchParams.get('siteSlug') || searchParams.get('siteId');
@@ -286,7 +298,7 @@ function VisualWebsiteEditorContent() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploySuccess, setDeploySuccess] = useState(false);
   // Two-person rule for pages: a version is published only after someone who did not write it has approved it.
-  const [approval, setApproval] = useState<{ version: number; status: string; approved: boolean; canApprove: boolean; approvedByName: string | null } | null>(null);
+  const [approval, setApproval] = useState<PageApprovalState | null>(null);
   const [approvalNotice, setApprovalNotice] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
   const [savedTime, setSavedTime] = useState<string | null>(null);
@@ -1057,6 +1069,10 @@ function VisualWebsiteEditorContent() {
       setIsApproving(false);
     }
   };
+  const approvalPending = approval?.status === 'draft' && approval.version === currentVersionNumber;
+  const approvalMessage = approvalNotice || (approvalPending && approval ? approvalBannerText(approval, currentVersionNumber, hasUnsavedChanges) : null);
+  const approvalTone = !approvalNotice && approval?.approved ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-900';
+  const canApproveNow = approvalPending && approval?.approved === false && approval.canApprove && !hasUnsavedChanges;
   const handleSaveDraft = () => saveDocument('draft');
   const handleDeployPublish = () => setPublishOpen(true);
 
@@ -1307,7 +1323,7 @@ function VisualWebsiteEditorContent() {
         if (action === 'theme') setCanvasTheme(isCanvasDark ? 'light' : 'dark');
       }} />
       {deploySuccess && !hasUnsavedChanges && <div role="status" className="flex items-center justify-between border-b border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-800"><span>Your page has been published.</span><a href={`/sites/${siteData?.slug}${activePageSlug === 'home' ? '' : `/${activePageSlug}`}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold underline">View published page</a></div>}
-      {(approvalNotice || (approval && approval.status === 'draft' && approval.version === currentVersionNumber)) && !isLoadingPage && <div role="status" className={`flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3 text-sm ${approval?.approved && !approvalNotice ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-900'}`}><span>{approvalNotice || (approval?.approved ? `Version ${approval.version} was approved${approval.approvedByName ? ` by ${approval.approvedByName}` : ''} and is ready to publish.` : hasUnsavedChanges ? 'Save your changes as a draft to submit them for approval.' : `Version ${currentVersionNumber} needs approval from a reviewer who did not write it before it can be published.`)}</span>{approval && !approval.approved && approval.canApprove && !hasUnsavedChanges && <button type="button" disabled={isApproving} onClick={() => void handleApprove()} className="shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900">{isApproving ? 'Approving…' : 'Approve this version'}</button>}</div>}
+      {approvalMessage && !isLoadingPage && <output className={`flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3 text-sm ${approvalTone}`}><span>{approvalMessage}</span>{canApproveNow && <button type="button" disabled={isApproving} onClick={() => void handleApprove()} className="shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900">{isApproving ? 'Approving…' : 'Approve this version'}</button>}</output>}
       {editorError && <div role="alert" className="flex items-center justify-between gap-4 border-b border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-700"><p>{editorError}</p><button type="button" onClick={() => { if (!hasUnsavedChanges || window.confirm('Reload the saved page and discard your unsaved changes?')) setReload(value => value + 1); }} className="shrink-0 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold">Reload page</button></div>}
 
       {/* 3-Panel Main Area */}

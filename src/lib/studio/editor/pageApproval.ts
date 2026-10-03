@@ -31,11 +31,17 @@ export interface PageContent {
   metaJson: string | null;
 }
 
+// Code-unit order, not localeCompare: the same content must hash the same on every host and locale.
+function byCodeUnit(a: string, b: string): number {
+  if (a < b) return -1;
+  return a > b ? 1 : 0;
+}
+
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
     const source = value as Record<string, unknown>;
-    return Object.fromEntries(Object.keys(source).sort().map((key) => [key, canonical(source[key])]));
+    return Object.fromEntries(Object.keys(source).sort(byCodeUnit).map((key) => [key, canonical(source[key])]));
   }
   return value;
 }
