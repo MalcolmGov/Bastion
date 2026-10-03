@@ -3,7 +3,7 @@ import { requireUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import { listCalendarEvents, createCalendarEvent, CalendarEventType } from '@/lib/ir/calendarService';
 import { getDb } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function GET(req: NextRequest) {
   try {

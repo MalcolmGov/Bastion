@@ -6,7 +6,7 @@ import { resolveTargetClientId } from '@/lib/auth/guard';
 import { put } from '@vercel/blob';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 

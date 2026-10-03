@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { createSession, hashPassword, isLegacyPasswordHash, verifyPassword, StudioUser } from '@/lib/auth/auth';
 import { checkLoginRateLimit } from '@/lib/security/rateLimiter';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function POST(req: NextRequest) {
   try {

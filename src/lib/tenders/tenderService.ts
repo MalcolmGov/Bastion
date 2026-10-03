@@ -7,7 +7,7 @@
  * 4. Host-community local supplier empowerment mandates
  */
 
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { getDb, ensureDbReady } from '@/lib/db/client';
 
 export type TenderStatus = 'active' | 'closed' | 'under_evaluation' | 'awarded' | 'cancelled';

@@ -3,7 +3,7 @@ import { requireUser, requirePermission } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import { listSensAnnouncements, createSensAnnouncement, SensApprovalError, SensType } from '@/lib/ir/sensService';
 import { getDb } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function GET(req: NextRequest) {
   try {

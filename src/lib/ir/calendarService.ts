@@ -1,5 +1,5 @@
 import { ensureDbReady } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { CalendarEventType, FinancialCalendarEvent } from './types';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, calculateDividendTax } from './types';
 

@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { getDb } from '@/lib/db/client';
 
 const BANNED_SECRETS = new Set([

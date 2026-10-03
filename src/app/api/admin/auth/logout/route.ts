@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { revokeSession, getCurrentUser } from '@/lib/auth/auth';
 import { getDb } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function POST(req: NextRequest) {
   try {

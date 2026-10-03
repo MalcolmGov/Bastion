@@ -6,7 +6,7 @@
  */
 
 import { getDb } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
 import { apiTenantFilter, assertApiScope, assertApiSiteAccess, type ApiAccess } from '@/lib/auth/apiAccess';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';

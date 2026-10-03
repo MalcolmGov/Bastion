@@ -1,5 +1,5 @@
 import { ensureDbReady } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { Client } from '@libsql/client';
 import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
 import { assertPageApproved } from '@/lib/studio/editor/pageApproval';

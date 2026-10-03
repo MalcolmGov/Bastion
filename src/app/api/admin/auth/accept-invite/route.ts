@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { createSession, hashPassword } from '@/lib/auth/auth';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function GET(req: NextRequest) {
   try {
