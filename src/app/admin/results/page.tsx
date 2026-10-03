@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { ResultsCodingChat } from '@/components/results/ResultsCodingChat';
@@ -22,19 +22,27 @@ export default function ResultsStudioPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [htmlStale, setHtmlStale] = useState(false);
-  const [previewMode, setPreviewMode] = useState<'analytics' | 'document'>('document');
+  const [sourceReviewed, setSourceReviewed] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<'analytics' | 'document' | 'compare'>('document');
 
-  async function refresh() {
+  const refreshSequence = useRef(0);
+  const refresh = useCallback(async () => {
+    const sequence = ++refreshSequence.current;
     const url = '/api/admin/results' + (activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '');
     const response = await fetch(url);
     if (!response.ok) return;
     const body = await response.json();
-    setDocuments(body.documents || []);
-  }
+    if (sequence === refreshSequence.current) setDocuments(body.documents || []);
+  }, [activeClient?.id]);
 
   useEffect(() => {
+    setCurrent(null);
+    setSourceReviewed(false);
+    setDocuments([]);
     refresh().catch(() => setError('Could not load saved results.'));
-  }, [activeClient?.id]);
+    return () => { refreshSequence.current += 1; };
+  }, [refresh]);
 
   async function extractBrand() {
     setBusy('brand');
@@ -83,6 +91,8 @@ export default function ResultsStudioPage() {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'PDF conversion failed');
       setCurrent(body);
+      setSourceReviewed(false);
+      setNotice(null);
       setHtmlStale(false);
       setStep(3);
       await refresh();
@@ -101,14 +111,18 @@ export default function ResultsStudioPage() {
     if (!statement || !row) return;
     const previous = row.cells[cellIndex] ?? null;
     row.cells[cellIndex] = value;
-    row.confidence = row.cells.every((cell) => cell && cell.trim()) ? 1 : 0.6;
+    row.confidence = row.cells.every((cell, index) => row.sourceBlankCells?.includes(index) || (cell && cell.trim())) ? 1 : 0.6;
     const placed = applyFigureEdit(document, statementId, rowId, cellIndex, previous);
+    setSourceReviewed(false);
+    setNotice(null);
     setCurrent({ ...current, document });
     setHtmlStale(true);
     setError(placed ? null : 'That row is not in the published tables, so this figure stays in the grid.');
   }
 
   function applyHtml(nextHtml: string) {
+    setSourceReviewed(false);
+    setNotice(null);
     setCurrent((existing) => existing ? {
       ...existing,
       document: { ...existing.document, presentationHtml: nextHtml },
@@ -132,12 +146,13 @@ export default function ResultsStudioPage() {
       const response = await fetch(`/api/admin/results/${current.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ document, status }),
+        body: JSON.stringify({ document, status, expectedUpdatedAt: current.updatedAt, sourceReviewed }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Save failed');
       setCurrent(body);
       setHtmlStale(false);
+      setNotice(status === 'published' ? 'Publication saved and published.' : 'Draft saved.');
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed');
@@ -147,6 +162,9 @@ export default function ResultsStudioPage() {
   }
 
   function openExisting(item: StoredResultsDocument) {
+    if (busy) return;
+    setSourceReviewed(false);
+    setNotice(null);
     const document = item.document.presentationHtml
       ? item.document
       : { ...item.document, presentationHtml: renderResultsHtml(item.document) };
@@ -164,7 +182,7 @@ export default function ResultsStudioPage() {
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-700">Bastion results centre</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">PDF to HTML</h1>
         <p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
-          Read the client’s website for brand, convert the results booklet, then use the coding assistant to edit the HTML before it is published.
+          Read the client’s website for brand, convert the results booklet, compare the source, then refine the design and publish a reviewed HTML report.
         </p>
       </div>
 
@@ -192,7 +210,7 @@ export default function ResultsStudioPage() {
           <p className="text-xs font-bold uppercase tracking-wider text-violet-700">Selected tool</p>
           <h2 className="mt-2 text-xl font-semibold">PDF to HTML converter</h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
-            Turns a financial results booklet into a branded HTML publication, with a live coding assistant for layout and copy.
+            Turns a financial results booklet into a branded HTML publication, with source comparison and an assistant for typography and layout.
           </p>
           <button type="button" onClick={() => setStep(1)} className="mt-5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
             Continue
@@ -286,7 +304,7 @@ export default function ResultsStudioPage() {
       )}
 
       {step === 3 && current && (
-        <div className={`grid items-start gap-4 ${showAssistant ? 'xl:grid-cols-[minmax(0,1fr)_380px]' : ''}`}>
+        <fieldset disabled={busy !== null} className={`grid min-w-0 items-start gap-4 ${showAssistant ? 'xl:grid-cols-[minmax(0,1fr)_380px]' : ''}`}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -318,11 +336,12 @@ export default function ResultsStudioPage() {
                     Publication HTML
                   </button>
                 </div>
+                <button type="button" onClick={() => setPreviewMode('compare')} className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700">Compare with PDF</button>
                 <button type="button" onClick={() => setShowAssistant(!showAssistant)} aria-expanded={showAssistant} className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700">{showAssistant ? 'Close assistant' : 'Polish with AI'}</button>
                 <button type="button" onClick={() => save('draft')} disabled={busy !== null} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold">
-                  Save draft
+                  {busy === 'draft' ? 'Saving…' : 'Save draft'}
                 </button>
-                <button type="button" onClick={() => save('published')} disabled={busy !== null} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white">
+                <button type="button" onClick={() => save('published')} disabled={busy !== null || !sourceReviewed || htmlStale} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
                   {busy === 'published' ? 'Publishing…' : 'Publish HTML'}
                 </button>
                 {current.status === 'published' && (
@@ -332,6 +351,11 @@ export default function ResultsStudioPage() {
                 )}
               </div>
             </div>
+            {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{notice}</p>}
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+              <input type="checkbox" checked={sourceReviewed} onChange={event => setSourceReviewed(event.target.checked)} disabled={htmlStale} className="mt-1" />
+              I have checked the complete publication against the original PDF, including figures, units, restatements, notes and extraction warnings.
+            </label>
             <details open={current.document.warnings.length > 0} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
               <summary className="cursor-pointer font-semibold">Source review · {current.document.warnings.length ? `${current.document.warnings.length} extraction warnings` : 'Compare figures before publishing'}</summary>
               <p className="mt-2">Check periods, units, totals, restatements, footnotes and charts against the original PDF. Source visuals preserve the artwork; they are not editable charts.</p>
@@ -345,7 +369,7 @@ export default function ResultsStudioPage() {
                 </button>
               </div>
             )}
-            {previewMode === 'analytics' ? (
+            {previewMode === 'compare' ? <SourceComparison key={current.id} document={current.document} html={previewHtml} /> : previewMode === 'analytics' ? (
               <div className="max-h-[850px] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
                 <InteractiveResultsViewer
                   document={current.document}
@@ -393,11 +417,12 @@ export default function ResultsStudioPage() {
             </details>
           </div>
           {showAssistant && <ResultsCodingChat
+            key={current.id}
             html={previewHtml}
             documentId={current.id}
             onApplyHtml={applyHtml}
           />}
-        </div>
+        </fieldset>
       )}
 
       <section>
@@ -416,4 +441,48 @@ export default function ResultsStudioPage() {
       </section>
     </div>
   );
+}
+
+
+function SourceComparison({ document, html }: { document: ResultsDocument; html: string }) {
+  const pages = document.sourcePages || [];
+  const [index, setIndex] = useState(0);
+  const [transcript, setTranscript] = useState('');
+  const page = pages[index];
+  useEffect(() => {
+    if (!page) return;
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    const references = Array.from(parsed.querySelectorAll('.source-reference'));
+    const start = references.find(anchor => anchor.getAttribute('href') === `#source-page-${page.page}`);
+    const wrapper = parsed.createElement('main');
+    wrapper.id = 'results-layout';
+    if (start) {
+      let sibling = start.nextElementSibling;
+      while (sibling && !sibling.matches('.source-reference, #results-source-visuals')) {
+        wrapper.append(sibling.cloneNode(true));
+        sibling = sibling.nextElementSibling;
+      }
+    } else {
+      const message = parsed.createElement('p');
+      message.textContent = 'This page has no separate HTML transcription. Cover artwork and front matter remain in the original source visuals. Check the full publication for any content that needs to be added.';
+      wrapper.append(message);
+    }
+    parsed.body.replaceChildren(wrapper);
+    setTranscript('<!DOCTYPE html>' + parsed.documentElement.outerHTML);
+  }, [html, page]);
+  if (!page) return <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">No original page images are available in this older draft. Convert the PDF again to enable source comparison.</p>;
+  return <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+      <div><h2 className="font-semibold text-slate-900">Source comparison</h2><p className="mt-1 text-xs text-slate-500">Check the original beside the actual publication transcription.</p></div>
+      <div className="flex items-center gap-3">
+        <button disabled={index === 0} onClick={() => setIndex(index - 1)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Previous</button>
+        <select aria-label="Source page" value={index} onChange={event => setIndex(Number(event.target.value))} className="rounded-lg border px-3 py-2 text-xs">{pages.map((item, i) => <option key={item.page} value={i}>Page {item.page} of {document.pageCount}</option>)}</select>
+        <button disabled={index === pages.length - 1} onClick={() => setIndex(index + 1)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Next</button>
+      </div>
+    </div>
+    <div className="grid lg:grid-cols-2">
+      <div className="border-r border-slate-200 bg-slate-100"><p className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Original PDF · page {page.page}</p><div className="h-[700px] overflow-auto p-4"><img src={page.image} alt={`Original PDF page ${page.page}`} width={page.width} height={page.height} className="h-auto w-full bg-white shadow" /></div></div>
+      <div><p className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">HTML transcription</p><iframe title={`HTML transcription page ${page.page}`} srcDoc={transcript} sandbox="" className="h-[700px] w-full border-0" /></div>
+    </div>
+  </section>;
 }

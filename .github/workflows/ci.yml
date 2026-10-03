@@ -52,6 +52,9 @@ jobs:
       - name: Run Workspace and Release Preview Regression Tests
         run: npm run test:workspace
 
+      - name: Run Financial Publication Regression Tests
+        run: npm run test:results
+
       - name: Run Gates 1 & 2 Automated Security Verification Suite
         run: npx tsx scripts/verify-production-gates.ts
 

@@ -1,28 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Plus_Jakarta_Sans, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { AppShell } from '@/components/layout/AppShell';
 import { DraftPreviewBanner } from '@/components/brand/DraftPreviewBanner';
-
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-plus-jakarta',
-  weight: ['300', '400', '500', '600', '700', '800'],
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-  weight: ['300', '400', '500', '600', '700', '800'],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-mono',
-});
 
 export const viewport: Viewport = {
   themeColor: '#082B49',
@@ -106,7 +85,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`scroll-smooth ${plusJakartaSans.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className="scroll-smooth">
       <head>
         <link rel="icon" type="image/svg+xml" href="/icon.svg" />
         <link rel="alternate icon" type="image/png" href="/icon.png" />
