@@ -3,8 +3,6 @@ import { requireUser } from '@/lib/auth/guard';
 
 export async function POST(req: NextRequest) {
   try {
-    const gate = await requireUser();
-    if (!gate.ok) return gate.response;
     const body = await req.json();
     const { text, voice_id, model_id } = body;
 
