@@ -156,10 +156,16 @@ export function EditorAssistant({
         }),
       });
       const data = await response.json();
-      if (!response.ok)
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(
+            'Your Bastion session has expired or requires authentication. Please log in or refresh your browser to continue using the assistant.',
+          );
+        }
         throw new Error(
           data.error || 'The assistant could not complete this request.',
         );
+      }
       const proposal = data.parsedChanges as WebsiteProposal | null;
       const prose = data.replyText.replace(/```json[\s\S]*?```/gi, '').trim();
       setMessages((items) => [

@@ -227,7 +227,7 @@ export function StudioHero({ props, styles, collection = 'contemporary', variant
                 className="w-full h-full object-cover"
               />
               <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white text-xs">
-                <span className="font-serif italic">Verified Practice Profile</span>
+                <span className="font-serif italic">{props.bgImage ? 'Company overview' : 'Illustrative image'}</span>
               </div>
             </div>
           </div>

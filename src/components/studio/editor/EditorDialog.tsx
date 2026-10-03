@@ -7,11 +7,13 @@ export function EditorDialog({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
+  wide?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -24,7 +26,7 @@ export function EditorDialog({
       aria-label={title}
       onCancel={onClose}
       onClose={onClose}
-      className="w-[460px] max-w-[calc(100vw-32px)] rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl backdrop:bg-slate-900/40 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+      className={`${wide ? 'w-[1120px]' : 'w-[460px]'} max-w-[calc(100vw-32px)] rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl backdrop:bg-slate-900/40 dark:border-slate-700 dark:bg-slate-900 dark:text-white`}
     >
       <h2 className="text-lg font-semibold">{title}</h2>
       {children}

@@ -1,3 +1,4 @@
+import { ensureCompositionReviews } from './compositionReview';
 import { ensureDbReady } from '@/lib/db/client';
 import { clientOwns } from '@/lib/auth/guard';
 import { hasPermission, type StudioUser } from '@/lib/auth/auth';
@@ -65,8 +66,8 @@ export async function saveComposition(
       400,
     );
   const status = input.status || 'draft';
-  if (!['draft', 'published'].includes(status))
-    throw new EditorSaveError('Choose draft or published status.', 400);
+  if (!['draft', 'in_review', 'published'].includes(status))
+    throw new EditorSaveError('Choose draft, in_review, or published status.', 400);
   if (
     !hasPermission(
       user.role,
@@ -91,6 +92,7 @@ export async function saveComposition(
     ).rows[0];
   if (!site || !clientOwns(user, String(site.client_id)))
     throw new EditorSaveError('Website not found.', 404);
+  if (!batch) await ensureCompositionReviews();
   const tx = batch?.transaction || (await db.transaction('write'));
   const now = new Date().toISOString();
   let result;
@@ -107,6 +109,10 @@ export async function saveComposition(
         'Someone has updated this page. Your edits are still here. Reload the latest version before saving again.',
         409,
       );
+    if (status === 'published' && existing) {
+      const review = (await tx.execute({sql:'SELECT version FROM composition_reviews WHERE composition_id=? LIMIT 1',args:[existing.id]})).rows[0];
+      if (review) throw new EditorSaveError('Publish the approved saved version from Approvals & Sign-Off. Further edits require a new review.',409);
+    }
     // Imports or older seed routines may have reset the current version counter.
     // Preserve every history entry and allocate above both counters within the write transaction.
     const history = (await tx.execute({
@@ -208,6 +214,10 @@ export async function saveComposition(
         approval?.approved_content_hash ?? null,
       ],
     });
+    if (status === 'in_review') await tx.execute({
+      sql: 'INSERT INTO composition_reviews(composition_id,version,requested_by,requested_by_name,requested_at) VALUES (?,?,?,?,?)',
+      args: [id,version,user.id,user.name,now],
+    });
     await tx.execute({
       sql: `INSERT INTO audit_log (id,actor_id,actor_name,action,collection,record_id,result,created_at) VALUES (?,?,?,'page_composition_save','page_compositions',?,'success',?)`,
       args: [`audit_${crypto.randomUUID()}`, user.id, user.name, id, now],
@@ -237,6 +247,7 @@ export async function saveWebsiteDrafts(
   user: StudioUser,
   siteId: string,
   pages: Omit<CompositionSave, 'siteId'>[],
+  options?: { allowCreate?: boolean; status?: 'draft' | 'in_review' | 'published' },
 ) {
   if (
     typeof siteId !== 'string' ||
@@ -246,7 +257,7 @@ export async function saveWebsiteDrafts(
     pages.length > 30 ||
     new Set(pages.map((page) => page.pageSlug)).size !== pages.length
   )
-    throw new EditorSaveError('Choose up to 30 distinct existing pages.', 400);
+    throw new EditorSaveError('Choose up to 30 distinct pages.', 400);
   const db = await ensureDbReady();
   const site = (
     await db.execute({
@@ -256,25 +267,33 @@ export async function saveWebsiteDrafts(
   ).rows[0];
   if (!site || !clientOwns(user, String(site.client_id)))
     throw new EditorSaveError('Website not found.', 404);
+  await ensureCompositionReviews();
   const transaction = await db.transaction('write');
   try {
     const results = [];
     for (const page of pages) {
       const existing = (
         await transaction.execute({
-          sql: 'SELECT id FROM page_compositions WHERE site_id = ? AND page_slug = ?',
+          sql: 'SELECT id, version FROM page_compositions WHERE site_id = ? AND page_slug = ?',
           args: [site.id, page.pageSlug],
         })
       ).rows[0];
-      if (!existing)
+      if (!existing && !options?.allowCreate)
         throw new EditorSaveError(
           'The assistant can only update existing pages.',
           404,
         );
+
+      if (!Number.isSafeInteger(page.expectedVersion)) throw new EditorSaveError('The proposal has no captured page version. Regenerate it after reloading the website.',400);
       results.push({
         ...(await saveComposition(
           user,
-          { ...page, siteId: String(site.id), status: 'draft' },
+          {
+            ...page,
+            expectedVersion: page.expectedVersion,
+            siteId: String(site.id),
+            status: options?.status || 'draft',
+          },
           { transaction, site },
         )),
         pageSlug: page.pageSlug,

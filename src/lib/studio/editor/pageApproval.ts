@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { Client, Row } from '@libsql/client';
+import type { Client, Row, Transaction } from '@libsql/client';
 import { ensureDbReady } from '@/lib/db/client';
 import { clientOwns } from '@/lib/auth/guard';
 import { hasPermission, type StudioUser } from '@/lib/auth/auth';
@@ -132,7 +132,7 @@ function validRequest(request: PageApprovalRequest): { siteId: string; pageSlug:
 }
 
 /** Records the approval of the page's current saved version by `user`. */
-export async function approvePageVersion(user: StudioUser, request: PageApprovalRequest) {
+export async function approvePageVersion(user: StudioUser, request: PageApprovalRequest, batch?: {transaction:Transaction}) {
   if (!hasPermission(user.role, 'content:approve')) throw new PageApprovalError('You do not have permission to approve pages.', 403);
   const { siteId, pageSlug } = validRequest(request);
   const version = request.version;
@@ -140,7 +140,7 @@ export async function approvePageVersion(user: StudioUser, request: PageApproval
     throw new PageApprovalError('Choose the version to approve.', 400);
 
   const db = await ensureDbReady();
-  const tx = await db.transaction('write');
+  const tx = batch?.transaction || await db.transaction('write');
   try {
     const site = await findOwnedSite(tx, user, siteId);
     const composition = (
@@ -151,6 +151,7 @@ export async function approvePageVersion(user: StudioUser, request: PageApproval
       throw new PageApprovalError('This version is no longer the current one. Reload the page and approve the latest version.');
     if (composition.status === 'published') throw new PageApprovalError('This version is already published, so there is nothing to approve.');
 
+    if(!batch && await hasManagedReview(tx,String(composition.id))) throw new PageApprovalError('Review and publish handed-over pages from Approvals & Sign-Off.');
     const now = new Date().toISOString();
     const hash = pageContentHash(rowContent(composition));
     // Seeded and imported drafts have no history row yet. Record one, with no known author, for the approval to attach to.
@@ -177,14 +178,19 @@ export async function approvePageVersion(user: StudioUser, request: PageApproval
             VALUES (?,?,?,'page_composition_approve','page_compositions',?,'success',?,?)`,
       args: [`audit_${crypto.randomUUID()}`, user.id, user.name, String(composition.id), JSON.stringify({ pageSlug, version, contentHash: hash }), now],
     });
-    await tx.commit();
+    if(!batch) await tx.commit();
     return { success: true, version, approvedBy: user.id, approvedByName: user.name, approvedAt: now, contentHash: hash };
   } catch (error) {
-    await tx.rollback();
+    if(!batch) await tx.rollback();
     throw error;
   } finally {
-    tx.close();
+    if(!batch) tx.close();
   }
+}
+
+async function hasManagedReview(db:Db,id:string):Promise<boolean>{
+  const table=(await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='composition_reviews'")).rows[0];
+  return !!table && !!(await db.execute({sql:'SELECT version FROM composition_reviews WHERE composition_id=? LIMIT 1',args:[id]})).rows[0];
 }
 
 /** What the editor shows about the page's current version. Read only. */
@@ -206,6 +212,7 @@ export async function pageApprovalStatus(user: StudioUser, request: PageApproval
     version: Number(composition.version),
     status: String(composition.status),
     approved,
+    managedReview: await hasManagedReview(db,String(composition.id)),
     canApprove: mayApprove,
     authorName: row?.created_by_name ? String(row.created_by_name) : null,
     approvedByName: approved && row?.approved_by_name ? String(row.approved_by_name) : null,

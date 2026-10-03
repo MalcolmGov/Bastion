@@ -4,16 +4,26 @@ import React from 'react';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 import { Check, X, Sparkles } from 'lucide-react';
 import { StudioBackgroundFx } from './StudioBackgroundFx';
+import {
+  getFontFamilyClass,
+  getHeadingScaleClass,
+  getTrackingClass,
+  getAlignmentClasses,
+  getContainerWidthClass,
+  getBorderRadiusClass,
+  getGlowEffectStyles,
+  getFrostedGlassStyle,
+} from '@/lib/studio/styleResolver';
 
 interface ComparisonPlan {
   name: string;
-  isPopular?: boolean;
   badge?: string;
+  isPopular?: boolean;
 }
 
 interface ComparisonFeature {
   name: string;
-  values: Array<boolean | string>;
+  values: (string | boolean)[];
 }
 
 interface StudioComparisonProps {
@@ -34,22 +44,38 @@ export const StudioComparison: React.FC<StudioComparisonProps> = ({
   props,
   styles,
   collection,
-  variant = 'table_matrix',
+  variant = 'feature_matrix',
   isEditor = false
 }) => {
-  const eyebrow = props.eyebrow || 'Side-by-Side Comparison';
-  const title = props.title || 'Compare Platform Capabilities';
-  const subtitle = props.subtitle || 'Select the exact level of capability, compliance automation, and dedicated engineering support you need.';
+  const eyebrow = props.eyebrow || 'Deep Dive Comparison';
+  const title = props.title || 'Detailed capability breakdown side-by-side.';
+  const subtitle = props.subtitle || 'Compare architecture, SLAs, and dedicated resources across our engagement models.';
   const plans = props.plans || [
-    { name: 'Starter', isPopular: false },
-    { name: 'Professional', isPopular: true, badge: 'Recommended' },
-    { name: 'Enterprise', isPopular: false }
+    { name: 'Core' },
+    { name: 'Enterprise', badge: 'Standard', isPopular: true },
+    { name: 'Sovereign' }
   ];
   const features = props.features || [];
 
+  const defaultFont = collection === 'editorial' ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = getFontFamilyClass(styles?.fontFamily, defaultFont);
+  const headingScaleClass = getHeadingScaleClass(styles?.headingScale, 'text-3xl sm:text-4xl lg:text-5xl');
+  const trackingClass = getTrackingClass(styles?.letterSpacing, 'tracking-tight');
+  const alignClass = getAlignmentClasses(styles?.alignment, 'center');
+  const containerWidthClass = getContainerWidthClass(styles?.containerWidth, 'max-w-6xl');
+  const cardRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-2xl');
+  const glowStyle = getGlowEffectStyles(styles?.glowEffect);
+  const frostedGlassStyle = getFrostedGlassStyle(styles);
+
   // Compute section style wrapper
   const paddingClass = styles?.paddingY || 'py-24';
-  const inlineStyle: React.CSSProperties = {};
+  const inlineStyle: React.CSSProperties = {
+    ...glowStyle,
+    ...frostedGlassStyle,
+    ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+    ...(styles?.borderTop ? { borderTopWidth: '1px', borderTopStyle: 'solid' } : {}),
+    ...(styles?.borderBottom ? { borderBottomWidth: '1px', borderBottomStyle: 'solid' } : {}),
+  };
 
   if (styles?.backgroundType === 'solid' && styles.backgroundColor) {
     inlineStyle.backgroundColor = styles.backgroundColor;
@@ -70,9 +96,9 @@ export const StudioComparison: React.FC<StudioComparisonProps> = ({
         opacity={styles?.patternOpacity}
         accentColor={accentColor}
       />
-      <div className="max-w-6xl mx-auto px-6 sm:px-8 relative z-10">
+      <div className={`${containerWidthClass} mx-auto px-6 sm:px-8 relative z-10`}>
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4 mb-14">
+        <div className={`max-w-3xl space-y-4 mb-14 ${alignClass.container}`}>
           {eyebrow && (
             <div
               className="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-sky-400/30 bg-sky-500/10 text-xs font-semibold tracking-wide uppercase"
@@ -83,20 +109,26 @@ export const StudioComparison: React.FC<StudioComparisonProps> = ({
             </div>
           )}
           <h2
-            className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white"
+            className={`${fontFamilyClass} ${headingScaleClass} font-extrabold ${trackingClass} text-white ${alignClass.text}`}
             style={headingStyle}
           >
             {title}
           </h2>
           {subtitle && (
-            <p className="text-base sm:text-lg text-slate-300 leading-relaxed font-light" style={textStyle}>
+            <p className={`text-base sm:text-lg text-slate-300 leading-relaxed font-light ${alignClass.text}`} style={textStyle}>
               {subtitle}
             </p>
           )}
         </div>
 
         {/* Comparison Table */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/60 shadow-xl">
+        <div
+          className={`overflow-x-auto ${cardRadiusClass} border border-slate-800 bg-slate-950/60 shadow-xl`}
+          style={{
+            ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+            ...frostedGlassStyle,
+          }}
+        >
           <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-slate-800">
@@ -111,7 +143,7 @@ export const StudioComparison: React.FC<StudioComparisonProps> = ({
                     }`}
                   >
                     <div className="flex flex-col items-center space-y-1">
-                      <span>{p.name}</span>
+                      <span className={fontFamilyClass}>{p.name}</span>
                       {p.badge && (
                         <span
                           className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-slate-950"
