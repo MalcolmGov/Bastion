@@ -5,6 +5,7 @@ import {
   CORPORATE_REPORT_SAMPLES,
   type ExtractedReportInsights,
 } from '@/lib/studio/editor/documentIngest';
+import { saveWebsiteDrafts } from '@/lib/studio/editor/saveComposition';
 import { getDb } from '@/lib/db/client';
 
 export async function GET() {
@@ -17,6 +18,8 @@ export async function GET() {
     badge: sample.badge,
     kpiCount: sample.kpis.length,
     pillarCount: sample.strategicPillars.length,
+    tableRowCount: sample.financialTable?.rows.length || 0,
+    hasEsg: Boolean(sample.sustainabilityKpis && sample.sustainabilityKpis.length > 0),
   }));
 
   return NextResponse.json({ samples });
@@ -33,6 +36,7 @@ export async function POST(req: NextRequest) {
     let fileBuffer: Buffer | undefined;
     let siteId: string | undefined;
     let brandKit: any = null;
+    let autoSaveAllPages = false;
 
     // Handle Multipart Form Data (PDF File Upload)
     if (contentType.includes('multipart/form-data')) {
@@ -40,6 +44,7 @@ export async function POST(req: NextRequest) {
       sampleId = formData.get('sampleId') as string | undefined;
       rawText = formData.get('rawText') as string | undefined;
       siteId = formData.get('siteId') as string | undefined;
+      autoSaveAllPages = formData.get('autoSaveAllPages') === 'true';
 
       const file = formData.get('file') as File | null;
       if (file && file.size > 0) {
@@ -54,6 +59,7 @@ export async function POST(req: NextRequest) {
       rawText = body.rawText;
       siteId = body.siteId;
       brandKit = body.brandKit;
+      autoSaveAllPages = Boolean(body.autoSaveAllPages);
     }
 
     // Attempt to load active site Brand Kit from DB if not provided
@@ -83,7 +89,31 @@ export async function POST(req: NextRequest) {
       brandKit,
     });
 
-    return NextResponse.json(result);
+    let savedPages: any[] = [];
+    if (autoSaveAllPages && siteId && result.pages && result.pages.length > 0) {
+      try {
+        savedPages = await saveWebsiteDrafts(
+          gate.user,
+          siteId,
+          result.pages.map((p) => ({
+            pageSlug: p.pageSlug,
+            title: p.title,
+            layoutCollection: p.layoutCollection || 'contemporary',
+            sections: p.sections,
+            expectedVersion: 0,
+            changeSummary: `AI Report Ingestion: ${result.insights.companyName} (${result.insights.reportingPeriod})`,
+          })),
+          { allowCreate: true }
+        );
+      } catch (saveErr) {
+        console.warn('[Ingest Document] Auto-save all pages warning:', saveErr);
+      }
+    }
+
+    return NextResponse.json({
+      ...result,
+      savedPages,
+    });
   } catch (error: any) {
     console.error('[Ingest Document Error]:', error);
     return NextResponse.json(

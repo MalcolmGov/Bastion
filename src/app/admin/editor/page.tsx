@@ -2956,6 +2956,47 @@ function VisualWebsiteEditorContent() {
           }
           setTimeout(() => setIngestSuccessMessage(null), 6000);
         }}
+        onApplyPages={async (pages) => {
+          setIsAssistantApplying(true);
+          try {
+            const res = await fetch('/api/admin/editor/assistant/apply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                siteId: siteData?.id || siteSlug,
+                pages: pages.map((p) => ({
+                  pageSlug: p.slug,
+                  title: p.title,
+                  sections: p.sections,
+                  changeSummary: `AI Report Ingestion (${p.title})`,
+                })),
+                options: { allowCreate: true },
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || 'Failed to save multi-page portal');
+            }
+            const updatedSlugs = Array.from(new Set([...pageSlugs, ...pages.map((p) => p.slug)]));
+            setPageSlugs(updatedSlugs);
+
+            const homePage = pages.find((p) => p.slug === 'home') || pages[0];
+            if (activePageSlug === homePage.slug) {
+              updateSections(homePage.sections);
+              setSavedSections(JSON.stringify(homePage.sections));
+            } else {
+              switchDocument(siteData?.id || siteSlug, homePage.slug);
+            }
+            setIngestSuccessMessage(
+              `🎉 Live Investor Portal Assembled! 4 responsive pages created (${pages.map((p) => '/' + p.slug).join(', ')}). Switch pages in the top toolbar to inspect!`
+            );
+            setTimeout(() => setIngestSuccessMessage(null), 10000);
+          } catch (err: any) {
+            setEditorError(err.message || 'Failed to assemble multi-page portal');
+          } finally {
+            setIsAssistantApplying(false);
+          }
+        }}
       />
     </div>
   );

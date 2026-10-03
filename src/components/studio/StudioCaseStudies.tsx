@@ -113,11 +113,13 @@ export function StudioCaseStudies({ props, styles, collection = 'contemporary', 
             <div
               key={idx}
               className={`p-8 ${borderRadiusClass} flex flex-col justify-between space-y-6 transition ${
-                isImmersive
-                  ? 'bg-[#18181B] border border-[#27272A]'
+                isDarkMode
+                  ? 'bg-[#0B132B]/85 border border-white/10 text-white shadow-xl shadow-black/20'
+                  : isImmersive
+                  ? 'bg-[#18181B] border border-[#27272A] text-white'
                   : isEditorial
-                  ? 'bg-white border border-[#E2E7EA] shadow-sm'
-                  : 'bg-white border border-slate-200 shadow-sm'
+                  ? 'bg-white border border-[#E2E7EA] shadow-sm text-slate-900'
+                  : 'bg-white border border-slate-200 shadow-sm text-slate-900'
               }`}
               style={{
                 ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
@@ -128,9 +130,9 @@ export function StudioCaseStudies({ props, styles, collection = 'contemporary', 
                 <div className="flex items-center justify-between">
                   {cs.tag && (
                     <span
-                      style={styles?.accentColor ? { color: styles.accentColor } : undefined}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-md ${
-                        styles?.accentColor ? 'bg-sky-500/10' : isImmersive ? 'bg-amber-950 text-amber-300' : 'bg-slate-100 text-slate-700'
+                      style={styles?.accentColor ? { color: styles.accentColor, borderColor: `${styles.accentColor}33` } : undefined}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-md border ${
+                        styles?.accentColor ? 'bg-white/5' : isDarkMode ? 'bg-white/5 text-amber-300 border-white/10' : isImmersive ? 'bg-amber-950 text-amber-300' : 'bg-slate-100 text-slate-700'
                       }`}
                     >
                       {cs.tag}
@@ -141,19 +143,23 @@ export function StudioCaseStudies({ props, styles, collection = 'contemporary', 
                 <h3
                   style={styles?.headingColor ? { color: styles.headingColor } : undefined}
                   className={`text-2xl font-bold leading-snug ${fontFamilyClass} ${
-                    isEditorial || isImmersive ? 'font-normal' : 'text-slate-900 dark:text-white'
+                    isEditorial || isImmersive ? 'font-normal' : isDarkMode ? 'text-white' : 'text-slate-900'
                   }`}
                 >
                   {cs.headline}
                 </h3>
-                <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                <div className={`text-xs font-medium uppercase tracking-wide ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                   Client: {cs.client}
                 </div>
               </div>
 
               <div
                 className={`p-4 rounded-xl border text-sm leading-relaxed ${
-                  isImmersive ? 'bg-[#141416] border-zinc-800 text-zinc-300' : 'bg-slate-50 border-slate-100 text-slate-700 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-300'
+                  isDarkMode
+                    ? 'bg-white/5 border-white/10 text-slate-300'
+                    : isImmersive
+                    ? 'bg-[#141416] border-zinc-800 text-zinc-300'
+                    : 'bg-slate-50 border-slate-100 text-slate-700'
                 }`}
               >
                 <div className="font-semibold text-xs mb-1 uppercase tracking-wider text-slate-400">Transaction Outcome</div>

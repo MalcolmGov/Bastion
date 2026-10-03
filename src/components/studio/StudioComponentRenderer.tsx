@@ -34,6 +34,7 @@ import { StudioProcess } from './StudioProcess';
 import { StudioComparison } from './StudioComparison';
 import { StudioTestimonials } from './StudioTestimonials';
 import { StudioMap } from './StudioMap';
+import { StudioFinancialHighlights } from './StudioFinancialHighlights';
 
 interface RendererProps {
   section: SectionInstance;
@@ -122,6 +123,9 @@ export function StudioComponentRenderer({
       break;
     case 'map_hours':
       renderedContent = <StudioMap props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} isEditor={isEditor} />;
+      break;
+    case 'financial_highlights':
+      renderedContent = <StudioFinancialHighlights props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;
       break;
     default:
       renderedContent = (

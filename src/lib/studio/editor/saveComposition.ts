@@ -215,6 +215,7 @@ export async function saveWebsiteDrafts(
   user: StudioUser,
   siteId: string,
   pages: Omit<CompositionSave, 'siteId'>[],
+  options?: { allowCreate?: boolean },
 ) {
   if (
     typeof siteId !== 'string' ||
@@ -224,7 +225,7 @@ export async function saveWebsiteDrafts(
     pages.length > 30 ||
     new Set(pages.map((page) => page.pageSlug)).size !== pages.length
   )
-    throw new EditorSaveError('Choose up to 30 distinct existing pages.', 400);
+    throw new EditorSaveError('Choose up to 30 distinct pages.', 400);
   const db = await ensureDbReady();
   const site = (
     await db.execute({
@@ -240,19 +241,26 @@ export async function saveWebsiteDrafts(
     for (const page of pages) {
       const existing = (
         await transaction.execute({
-          sql: 'SELECT id FROM page_compositions WHERE site_id = ? AND page_slug = ?',
+          sql: 'SELECT id, version FROM page_compositions WHERE site_id = ? AND page_slug = ?',
           args: [site.id, page.pageSlug],
         })
       ).rows[0];
-      if (!existing)
+      if (!existing && !options?.allowCreate)
         throw new EditorSaveError(
           'The assistant can only update existing pages.',
           404,
         );
+
+      const expectedVersion = existing ? Number(existing.version || 0) : 0;
       results.push({
         ...(await saveComposition(
           user,
-          { ...page, siteId: String(site.id), status: 'draft' },
+          {
+            ...page,
+            expectedVersion: page.expectedVersion !== undefined ? page.expectedVersion : expectedVersion,
+            siteId: String(site.id),
+            status: 'draft',
+          },
           { transaction, site },
         )),
         pageSlug: page.pageSlug,

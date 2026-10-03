@@ -113,18 +113,20 @@ export function StudioTeam({ props, styles, collection = 'contemporary', variant
             <div
               key={idx}
               className={`p-6 ${borderRadiusClass} transition ${
-                isImmersive
-                  ? 'bg-[#141416] border border-[#27272A]'
+                isDarkMode
+                  ? 'bg-[#0B132B]/85 border border-white/10 text-white shadow-xl shadow-black/20'
+                  : isImmersive
+                  ? 'bg-[#141416] border border-[#27272A] text-white'
                   : isEditorial
-                  ? 'bg-white border border-[#E2E7EA] shadow-sm'
-                  : 'bg-slate-50 border border-slate-200/80 shadow-xs'
+                  ? 'bg-white border border-[#E2E7EA] shadow-sm text-slate-900'
+                  : 'bg-slate-50 border border-slate-200/80 shadow-xs text-slate-900'
               }`}
               style={{
                 ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
                 ...frostedGlassStyle,
               }}
             >
-              <div className={`aspect-[4/5] bg-slate-200 ${borderRadiusClass} overflow-hidden mb-6 relative`}>
+              <div className={`aspect-[4/5] ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'} ${borderRadiusClass} overflow-hidden mb-6 relative`}>
                 <img
                   src={m.image || `https://images.unsplash.com/photo-${1534528741775 + idx}?auto=format&fit=crop&w=600&q=80`}
                   alt={m.name}
@@ -134,7 +136,7 @@ export function StudioTeam({ props, styles, collection = 'contemporary', variant
               <h3
                 style={styles?.headingColor ? { color: styles.headingColor } : undefined}
                 className={`text-xl font-bold ${fontFamilyClass} ${
-                  isEditorial || isImmersive ? 'font-normal' : 'text-slate-900 dark:text-white'
+                  isEditorial || isImmersive ? 'font-normal' : isDarkMode ? 'text-white' : 'text-slate-900'
                 }`}
               >
                 {m.name}

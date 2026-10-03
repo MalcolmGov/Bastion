@@ -9,7 +9,12 @@ export async function POST(request: NextRequest) {
   if (!gate.ok) return gate.response;
   try {
     const body = await request.json();
-    const results = await saveWebsiteDrafts(gate.user, body.siteId, body.pages);
+    const results = await saveWebsiteDrafts(
+      gate.user,
+      body.siteId,
+      body.pages,
+      body.options || { allowCreate: true },
+    );
     return NextResponse.json({ pages: results });
   } catch (error) {
     if (error instanceof EditorSaveError)
