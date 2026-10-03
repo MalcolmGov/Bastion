@@ -155,9 +155,21 @@ export default function MoveStudioOverviewPage() {
     }
   };
 
-  const displayName = (user?.name && !user.name.toLowerCase().includes('admin') && !user.name.toLowerCase().includes('corporate'))
-    ? user.name.split(' ')[0]
-    : 'Malcolm';
+  const resolveDisplayName = (): string => {
+    if (!user?.name) return 'Malcolm';
+    const email = user.email?.toLowerCase() || '';
+    if (email.includes('malcolm') || email.includes('movedigital')) {
+      return 'Malcolm';
+    }
+    const cleanName = user.name.trim();
+    const firstWord = cleanName.split(/\s+/)[0]?.replace(/[.,]/g, '');
+    if (!firstWord || firstWord.toLowerCase() === 'm' || ['admin', 'bastion', 'corporate', 'client', 'lead', 'agency'].includes(firstWord.toLowerCase())) {
+      return 'Malcolm';
+    }
+    return firstWord;
+  };
+
+  const displayName = resolveDisplayName();
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-200">

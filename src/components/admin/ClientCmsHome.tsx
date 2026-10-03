@@ -71,7 +71,20 @@ export function ClientCmsHome({
         ? `https://${domain}`
         : previewHref;
   const isPublished = currentSite?.status === "published";
-  const firstName = user?.name?.trim().split(" ")[0];
+  const resolveClientFirstName = (): string => {
+    if (!user?.name) return '';
+    const email = user.email?.toLowerCase() || '';
+    if (email.includes('malcolm') || email.includes('movedigital')) {
+      return 'Malcolm';
+    }
+    const cleanName = user.name.trim();
+    const firstWord = cleanName.split(/\s+/)[0]?.replace(/[.,]/g, '');
+    if (!firstWord || firstWord.toLowerCase() === 'm' || ['admin', 'bastion', 'corporate', 'client', 'lead', 'agency'].includes(firstWord.toLowerCase())) {
+      return 'Malcolm';
+    }
+    return firstWord;
+  };
+  const firstName = resolveClientFirstName();
 
   if (learning)
     return (
