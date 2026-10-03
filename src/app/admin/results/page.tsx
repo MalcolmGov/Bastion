@@ -1,19 +1,22 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { ResultsCodingChat } from '@/components/results/ResultsCodingChat';
 import { InteractiveResultsViewer } from '@/components/results/InteractiveResultsViewer';
+import { validateFinancials } from '@/lib/results/validateFinancials';
 import { applyFigureEdit } from '@/lib/results/applyFigureEdit';
 import { renderResultsHtml } from '@/lib/results/renderHtml';
-import type { ResultsBrand, ResultsDocument, StoredResultsDocument } from '@/lib/results/types';
+import type { ResultsBrand, ResultsDocument, StoredResultsDocument, ResultsDocumentSummary } from '@/lib/results/types';
 
 const STEPS = ['Converter', 'Brand', 'PDF', 'Review and publish'];
 
 export default function ResultsStudioPage() {
   const { activeClient } = useStudioWorkspace();
-  const [documents, setDocuments] = useState<StoredResultsDocument[]>([]);
+  const [documents, setDocuments] = useState<ResultsDocumentSummary[]>([]);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
+  const workspaceEpoch = useRef(0);
   const [current, setCurrent] = useState<StoredResultsDocument | null>(null);
   const [step, setStep] = useState(0);
   const [websiteUrl, setWebsiteUrl] = useState('');
@@ -22,29 +25,45 @@ export default function ResultsStudioPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [htmlStale, setHtmlStale] = useState(false);
+  const [validationReviewed, setValidationReviewed] = useState(false);
   const [sourceReviewed, setSourceReviewed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [comparisonPage, setComparisonPage] = useState(1);
   const [previewMode, setPreviewMode] = useState<'analytics' | 'document' | 'compare'>('document');
 
   const refreshSequence = useRef(0);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (offset = 0) => {
     const sequence = ++refreshSequence.current;
-    const url = '/api/admin/results' + (activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '');
+    const params = new URLSearchParams({ offset: String(offset) });
+    if (activeClient?.id) params.set('clientId', activeClient.id);
+    const url = '/api/admin/results?' + params;
     const response = await fetch(url);
-    if (!response.ok) return;
+    if (!response.ok) throw new Error('Could not load saved results.');
     const body = await response.json();
-    if (sequence === refreshSequence.current) setDocuments(body.documents || []);
+    if (sequence === refreshSequence.current) {
+      setDocuments(existing => offset ? [...existing, ...(body.documents || [])].filter((item, index, all) => all.findIndex(other => other.id === item.id) === index) : body.documents || []);
+      setNextOffset(body.nextOffset ?? null);
+    }
   }, [activeClient?.id]);
 
   useEffect(() => {
+    workspaceEpoch.current += 1;
+    setBusy(null);
     setCurrent(null);
     setSourceReviewed(false);
+    setValidationReviewed(false);
+    setBrand(null);
+    setWebsiteUrl('');
+    setShowAssistant(false);
+    setNotice(null);
+    setHtmlStale(false);
     setDocuments([]);
     refresh().catch(() => setError('Could not load saved results.'));
     return () => { refreshSequence.current += 1; };
   }, [refresh]);
 
   async function extractBrand() {
+    const epoch = workspaceEpoch.current;
     setBusy('brand');
     setError(null);
     try {
@@ -55,17 +74,20 @@ export default function ResultsStudioPage() {
         signal: AbortSignal.timeout(25_000),
       });
       const body = await response.json();
+      if (epoch !== workspaceEpoch.current) return;
       if (!response.ok) throw new Error(body.error || 'Could not read that website');
       setBrand(body.brand);
     } catch (err) {
+      if (epoch !== workspaceEpoch.current) return;
       const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
       setError(timedOut ? 'That website took too long to read. Try again, or continue without it.' : (err instanceof Error ? err.message : 'Could not read that website'));
     } finally {
-      setBusy(null);
+      if (epoch === workspaceEpoch.current) setBusy(null);
     }
   }
 
   async function convert(payload: { sample?: boolean; example?: string; file?: File }) {
+    const epoch = workspaceEpoch.current;
     setBusy(payload.file ? 'upload' : payload.example || 'sample');
     setError(null);
     try {
@@ -89,17 +111,20 @@ export default function ResultsStudioPage() {
         });
       }
       const body = await response.json();
+      if (epoch !== workspaceEpoch.current) return;
       if (!response.ok) throw new Error(body.error || 'PDF conversion failed');
       setCurrent(body);
       setSourceReviewed(false);
+    setValidationReviewed(false);
       setNotice(null);
       setHtmlStale(false);
       setStep(3);
       await refresh();
     } catch (err) {
+      if (epoch !== workspaceEpoch.current) return;
       setError(err instanceof Error ? err.message : 'PDF conversion failed');
     } finally {
-      setBusy(null);
+      if (epoch === workspaceEpoch.current) setBusy(null);
     }
   }
 
@@ -114,6 +139,7 @@ export default function ResultsStudioPage() {
     row.confidence = row.cells.every((cell, index) => row.sourceBlankCells?.includes(index) || (cell && cell.trim())) ? 1 : 0.6;
     const placed = applyFigureEdit(document, statementId, rowId, cellIndex, previous);
     setSourceReviewed(false);
+    setValidationReviewed(false);
     setNotice(null);
     setCurrent({ ...current, document });
     setHtmlStale(true);
@@ -122,6 +148,7 @@ export default function ResultsStudioPage() {
 
   function applyHtml(nextHtml: string) {
     setSourceReviewed(false);
+    setValidationReviewed(false);
     setNotice(null);
     setCurrent((existing) => existing ? {
       ...existing,
@@ -137,6 +164,7 @@ export default function ResultsStudioPage() {
 
   async function save(status: 'draft' | 'published') {
     if (!current) return;
+    const epoch = workspaceEpoch.current;
     setBusy(status);
     setError(null);
     try {
@@ -146,34 +174,48 @@ export default function ResultsStudioPage() {
       const response = await fetch(`/api/admin/results/${current.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ document, status, expectedUpdatedAt: current.updatedAt, sourceReviewed }),
+        body: JSON.stringify({ document, status, expectedUpdatedAt: current.updatedAt, sourceReviewed, validationReviewed }),
       });
       const body = await response.json();
+      if (epoch !== workspaceEpoch.current) return;
       if (!response.ok) throw new Error(body.error || 'Save failed');
       setCurrent(body);
       setHtmlStale(false);
       setNotice(status === 'published' ? 'Publication saved and published.' : 'Draft saved.');
       await refresh();
     } catch (err) {
+      if (epoch !== workspaceEpoch.current) return;
       setError(err instanceof Error ? err.message : 'Save failed');
     } finally {
-      setBusy(null);
+      if (epoch === workspaceEpoch.current) setBusy(null);
     }
   }
 
-  function openExisting(item: StoredResultsDocument) {
+  async function openExisting(item: ResultsDocumentSummary) {
     if (busy) return;
-    setSourceReviewed(false);
-    setNotice(null);
-    const document = item.document.presentationHtml
-      ? item.document
-      : { ...item.document, presentationHtml: renderResultsHtml(item.document) };
-    setCurrent({ ...item, document });
-    setBrand(item.document.brand || null);
-    setHtmlStale(false);
-    setStep(3);
+    const epoch = workspaceEpoch.current;
+    setBusy('open');
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/results/${encodeURIComponent(item.id)}`, { signal: AbortSignal.timeout(30_000) });
+      const saved = await response.json() as StoredResultsDocument & { error?: string };
+      if (!response.ok) throw new Error(saved.error || 'Could not open the publication.');
+      if (epoch !== workspaceEpoch.current) return;
+      setSourceReviewed(false);
+    setValidationReviewed(false);
+      setNotice(null);
+      const document = saved.document.presentationHtml ? saved.document : { ...saved.document, presentationHtml: renderResultsHtml(saved.document) };
+      setComparisonPage(1);
+      setCurrent({ ...saved, document });
+      setBrand(document.brand || null);
+      setHtmlStale(false);
+      setStep(3);
+    } catch (err) {
+      if (epoch === workspaceEpoch.current) setError(err instanceof Error ? err.message : 'Could not open the publication.');
+    } finally { if (epoch === workspaceEpoch.current) setBusy(null); }
   }
 
+  const validation = useMemo(() => current ? validateFinancials(current.document) : null, [current]);
   const previewHtml = current?.document.presentationHtml || '';
 
   return (
@@ -341,7 +383,7 @@ export default function ResultsStudioPage() {
                 <button type="button" onClick={() => save('draft')} disabled={busy !== null} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold">
                   {busy === 'draft' ? 'Saving…' : 'Save draft'}
                 </button>
-                <button type="button" onClick={() => save('published')} disabled={busy !== null || !sourceReviewed || htmlStale} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
+                <button type="button" onClick={() => save('published')} disabled={busy !== null || !sourceReviewed || htmlStale || Boolean(validation?.issues.length && !validationReviewed)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
                   {busy === 'published' ? 'Publishing…' : 'Publish HTML'}
                 </button>
                 {current.status === 'published' && (
@@ -352,6 +394,12 @@ export default function ResultsStudioPage() {
               </div>
             </div>
             {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{notice}</p>}
+            {validation && <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-slate-900">Financial validation</h2><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">{validation.issues.length} {validation.issues.length === 1 ? 'item' : 'items'} to review</span></div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{validation.totalsChecked} subtotal calculations checked · {validation.totalsSkipped} totals require manual review. Checks cover recognised breakdowns, missing cells, periods and units. They cannot detect every omitted PDF row or certify the report.</p>
+              {validation.issues.length ? <ul className="mt-4 space-y-3">{validation.issues.map(issue => <li key={issue.id} className="rounded-xl border border-amber-200 bg-amber-50 p-3"><p className="text-sm font-semibold text-amber-950">{issue.title}{issue.sourcePage ? ` · PDF page ${issue.sourcePage}` : ''}</p><p className="mt-1 text-xs leading-5 text-amber-900">{issue.detail}</p>{issue.sourcePage && current.document.sourcePages?.some(page => page.page === issue.sourcePage) && <button type="button" onClick={() => { setComparisonPage(issue.sourcePage!); setPreviewMode('compare'); }} className="mt-2 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950">Compare PDF page {issue.sourcePage}</button>}</li>)}</ul> : <p className="mt-3 text-sm text-emerald-700">No issues found by these checks. Complete the source comparison before publishing.</p>}
+              {validation.issues.length > 0 && <label className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-600"><input type="checkbox" checked={validationReviewed} onChange={event => setValidationReviewed(event.target.checked)} className="mt-1" />I have reviewed these validation items against the PDF and confirmed any source discrepancies with the responsible reviewer.</label>}
+            </section>}
             <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
               <input type="checkbox" checked={sourceReviewed} onChange={event => setSourceReviewed(event.target.checked)} disabled={htmlStale} className="mt-1" />
               I have checked the complete publication against the original PDF, including figures, units, restatements, notes and extraction warnings.
@@ -369,7 +417,7 @@ export default function ResultsStudioPage() {
                 </button>
               </div>
             )}
-            {previewMode === 'compare' ? <SourceComparison key={current.id} document={current.document} html={previewHtml} /> : previewMode === 'analytics' ? (
+            {previewMode === 'compare' ? <SourceComparison key={current.id} document={current.document} html={previewHtml} selectedPage={comparisonPage} onPageChange={setComparisonPage} /> : previewMode === 'analytics' ? (
               <div className="max-h-[850px] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
                 <InteractiveResultsViewer
                   document={current.document}
@@ -431,22 +479,24 @@ export default function ResultsStudioPage() {
           {documents.length === 0 && <li className="px-4 py-3 text-sm text-slate-500">No booklets converted yet.</li>}
           {documents.map((item) => (
             <li key={item.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-              <button type="button" onClick={() => openExisting(item)} className="truncate text-left font-medium">
+              <button type="button" disabled={busy !== null} onClick={() => openExisting(item)} className="truncate text-left font-medium">
                 {item.title}
               </button>
               <span className="shrink-0 text-xs uppercase tracking-wide text-slate-500">{item.status}</span>
             </li>
           ))}
         </ul>
+        {busy === 'open' && <p role="status" className="mt-3 text-sm text-slate-500">Opening publication…</p>}
+        {nextOffset !== null && <button disabled={busy !== null} onClick={async () => { setBusy('list'); try { await refresh(nextOffset); } catch { setError('Could not load more publications.'); } finally { setBusy(null); } }} className="mt-3 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold">Load more publications</button>}
       </section>
     </div>
   );
 }
 
 
-function SourceComparison({ document, html }: { document: ResultsDocument; html: string }) {
+function SourceComparison({ document, html, selectedPage, onPageChange }: { document: ResultsDocument; html: string; selectedPage: number; onPageChange: (page: number) => void }) {
   const pages = document.sourcePages || [];
-  const [index, setIndex] = useState(0);
+  const index = Math.max(0, pages.findIndex(page => page.page === selectedPage));
   const [transcript, setTranscript] = useState('');
   const page = pages[index];
   useEffect(() => {
@@ -468,6 +518,10 @@ function SourceComparison({ document, html }: { document: ResultsDocument; html:
       wrapper.append(message);
     }
     parsed.body.replaceChildren(wrapper);
+    // A compact review density fits all comparative columns beside the source page.
+    const reviewStyle = parsed.createElement('style');
+    reviewStyle.textContent = 'main { width: calc(100% - 24px); margin: 16px auto; } #results-layout h2 { font-size: 22px; line-height: 1.3; } #results-layout p { font-size: 13px; line-height: 1.6; } table { min-width: 0; width: 100%; font-size: 11px; } th, td { padding: 8px 5px; } thead th { font-size: 9px; letter-spacing: 0; } tbody th { font-size: 10px; overflow-wrap: anywhere; } .statement { margin: 18px 0; }';
+    parsed.head.append(reviewStyle);
     setTranscript('<!DOCTYPE html>' + parsed.documentElement.outerHTML);
   }, [html, page]);
   if (!page) return <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">No original page images are available in this older draft. Convert the PDF again to enable source comparison.</p>;
@@ -475,14 +529,14 @@ function SourceComparison({ document, html }: { document: ResultsDocument; html:
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
       <div><h2 className="font-semibold text-slate-900">Source comparison</h2><p className="mt-1 text-xs text-slate-500">Check the original beside the actual publication transcription.</p></div>
       <div className="flex items-center gap-3">
-        <button disabled={index === 0} onClick={() => setIndex(index - 1)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Previous</button>
-        <select aria-label="Source page" value={index} onChange={event => setIndex(Number(event.target.value))} className="rounded-lg border px-3 py-2 text-xs">{pages.map((item, i) => <option key={item.page} value={i}>Page {item.page} of {document.pageCount}</option>)}</select>
-        <button disabled={index === pages.length - 1} onClick={() => setIndex(index + 1)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Next</button>
+        <button disabled={index === 0} onClick={() => onPageChange(pages[index - 1].page)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Previous</button>
+        <select aria-label="Source page" value={index} onChange={event => onPageChange(pages[Number(event.target.value)].page)} className="rounded-lg border px-3 py-2 text-xs">{pages.map((item, i) => <option key={item.page} value={i}>Page {item.page} of {document.pageCount}</option>)}</select>
+        <button disabled={index === pages.length - 1} onClick={() => onPageChange(pages[index + 1].page)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Next</button>
       </div>
     </div>
     <div className="grid lg:grid-cols-2">
       <div className="border-r border-slate-200 bg-slate-100"><p className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Original PDF · page {page.page}</p><div className="h-[700px] overflow-auto p-4"><img src={page.image} alt={`Original PDF page ${page.page}`} width={page.width} height={page.height} className="h-auto w-full bg-white shadow" /></div></div>
-      <div><p className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">HTML transcription</p><iframe title={`HTML transcription page ${page.page}`} srcDoc={transcript} sandbox="" className="h-[700px] w-full border-0" /></div>
+      <div><p className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">HTML transcription · compact comparison</p><iframe title={`HTML transcription page ${page.page}`} srcDoc={transcript} sandbox="" className="h-[700px] w-full border-0" /></div>
     </div>
   </section>;
 }

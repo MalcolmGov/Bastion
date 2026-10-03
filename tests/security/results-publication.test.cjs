@@ -50,3 +50,39 @@ test('results assistant requires edit permission and cannot access another tenan
   h.user({ role: 'content_editor', client_id: 'tenant-b' });
   assert.equal((await route.POST(request())).status, 404);
 });
+
+
+test('report lists return paginated tenant metadata without financial content or artwork', async t => {
+  const { h, saved, document } = await fixture(t);
+  h.user({ role: 'content_editor', client_id: 'tenant-a' });
+  for (let index = 0; index < 52; index++) {
+    await h.db.execute({ sql: 'INSERT INTO results_documents (id, client_id, slug, title, status, source_filename, document_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', args: ['list-' + index, 'tenant-a', 'slug-' + index, 'Report ' + index, 'draft', 'test.pdf', JSON.stringify(document), '2026-10-03', '2026-10-03'] });
+  }
+  await h.db.execute({ sql: 'INSERT INTO results_documents (id, client_id, slug, title, status, source_filename, document_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', args: ['foreign-report', 'tenant-b', 'foreign-slug', 'Foreign report', 'draft', 'private.pdf', JSON.stringify(document), '2026-10-03', '2026-10-03'] });
+  const route = h.route('api/admin/results');
+  const first = await (await route.GET(h.request('/api/admin/results?clientId=tenant-b', {}, null, 'GET'))).json();
+  assert.equal(first.documents.length, 50);
+  assert.equal(first.nextOffset, 50);
+  assert.ok(first.documents.every(item => item.clientId === 'tenant-a' && !('document' in item)));
+  assert.ok(!JSON.stringify(first).includes('Revenue rose'));
+  const last = await (await route.GET(h.request('/api/admin/results?offset=50', {}, null, 'GET'))).json();
+  assert.equal(last.documents.length, 3);
+  assert.equal(last.nextOffset, null);
+  assert.equal(new Set([...first.documents, ...last.documents].map(item => item.id)).size, 53);
+  assert.ok([...first.documents, ...last.documents].some(item => item.id === saved.id));
+  assert.equal((await route.GET(h.request('/api/admin/results?offset=-1', {}, null, 'GET'))).status, 400);
+});
+
+
+test('publication recomputes financial issues on the server and requires review acknowledgement', async t => {
+  const { h, patch, document, saved, store } = await fixture(t);
+  h.user({ role: 'platform_admin', client_id: null });
+  const changed = { ...document, unit: 'R’000', statements: [{ id: 'regional', title: 'Revenue by region', sourcePage: 1, period: '', stubLabel: '', confidence: 1, columns: [{ id: 'amount', label: '2025 R’000', role: 'figure' }], rows: [{ id: 'a', label: 'A', kind: 'data', cells: ['10'], confidence: 1 }, { id: 'b', label: 'B', kind: 'data', cells: ['20'], confidence: 1 }, { id: 'total', label: 'Total', kind: 'total', cells: ['99'], confidence: 1 }] }] };
+  changed.presentationHtml = h.load('lib/results/renderHtml.ts').renderResultsHtml(changed);
+  const rejected = await patch({ document: changed, status: 'published', sourceReviewed: true, validation: { issues: [] } });
+  assert.equal(rejected.status, 400);
+  assert.match((await rejected.json()).error, /financial validation/);
+  assert.equal((await store.getResultsDocument(saved.id)).status, 'draft');
+  assert.equal((await patch({ document: changed, status: 'published', sourceReviewed: true, validationReviewed: true })).status, 200);
+  assert.equal((await store.getResultsDocument(saved.id)).document.statements[0].rows[2].cells[0], '99', 'review must not auto-correct source figures');
+});

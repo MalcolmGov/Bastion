@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser, clientOwns } from '@/lib/auth/guard';
 import { hasPermission } from '@/lib/auth/auth';
+import { validateFinancials } from '@/lib/results/validateFinancials';
 import { renderResultsHtml } from '@/lib/results/renderHtml';
 import { sanitizePublicationHtml, assertPublicationContentPreserved } from '@/lib/results/codeAssistant';
 import { getResultsDocument, saveResultsDocument } from '@/lib/results/store';
@@ -50,6 +51,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   if (body.expectedUpdatedAt !== current.updatedAt) return NextResponse.json({ error: 'This draft changed in another session. Reopen it before saving.' }, { status: 409 });
   try {
     // Original PDF evidence cannot be replaced by a styling or figures request.
+    body.document.sourceFinancialContext = current.document.sourceFinancialContext;
     body.document.sourcePages = current.document.sourcePages;
     body.document.sourceFilename = current.document.sourceFilename;
     body.document.pageCount = current.document.pageCount;
@@ -61,6 +63,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       assertPublicationContentPreserved(sanitizePublicationHtml(renderResultsHtml(body.document)), body.document.presentationHtml);
     }
     if (status === 'published' && body.sourceReviewed !== true) return NextResponse.json({ error: 'Compare the complete publication with the original PDF and confirm the source review before publishing.' }, { status: 400 });
+    if (status === 'published' && validateFinancials(body.document).issues.length && body.validationReviewed !== true) return NextResponse.json({ error: 'Review the financial validation items before publishing. Original source figures have not been changed.' }, { status: 400 });
     const saved = await saveResultsDocument({ id, document: body.document, status, expectedUpdatedAt: body.expectedUpdatedAt });
     return NextResponse.json(saved);
   } catch (error) {

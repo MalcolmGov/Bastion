@@ -229,8 +229,7 @@ export function codePublicationLocally(html: string, prompt: string): { html: st
     changes.push('Switched the page to a sans-serif system.');
   }
   if (/\bhide notes|remove notes|drop notes\b/i.test(ask)) {
-    $('#results-notes').remove();
-    changes.push('Removed the notes section from the HTML.');
+    throw new Error('This design request changed report content. Notes and disclosures cannot be removed through design presets.');
   }
   if (/\blarger logo|bigger logo|enlarge (the )?logo\b/i.test(ask)) {
     nextCss += '\n.logo { height: 72px; max-width: 240px; }';
@@ -249,6 +248,7 @@ export function codePublicationLocally(html: string, prompt: string): { html: st
     changes.push('Added print rules so each statement stays together.');
   }
 
+  if (changes.length === 0 && !/\bpolish|refine|improve|design\b/i.test(ask)) throw new Error('The built-in presets support colours, typography, spacing, mobile layout and print styles. Connect an AI provider for a custom design proposal. No changes were applied.');
   if (changes.length === 0) {
     nextCss += '\n.statement { border-radius: 28px; } h1 { letter-spacing: -0.045em; } .metric strong { font-variant-numeric: tabular-nums; }';
     changes.push('Applied a layout polish pass to type, numerals, and statement cards.');
@@ -265,7 +265,7 @@ export function codePublicationLocally(html: string, prompt: string): { html: st
     '/* Review the proposal, then apply it to the preview. */',
     '```',
     '',
-    'Add a provider API key in this chat if you want a frontier model to rewrite arbitrary sections, components, or copy.',
+    'Connect a provider API key for custom design proposals. Financial content remains protected.',
   ].join('\n');
   return { html: updated, summary, replyText };
 }

@@ -66,7 +66,7 @@ function shadeBands(ops: { fnArray: number[]; argsArray: unknown[] }, opsMap: Re
   return unique;
 }
 
-export async function extractPdfGlyphs(data: Uint8Array): Promise<{ glyphs: PdfGlyph[]; pageCount: number; shades: PdfShade[]; sourcePages: NonNullable<ResultsDocument['sourcePages']>; visualWarnings: string[] }> {
+export async function extractPdfGlyphs(data: Uint8Array): Promise<{ glyphs: PdfGlyph[]; pageCount: number; shades: PdfShade[]; sourcePages: NonNullable<ResultsDocument['sourcePages']>; visualWarnings: string[]; paintedPages: number[] }> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const workerPath = path.join(process.cwd(), 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(workerPath).href;
@@ -87,11 +87,14 @@ export async function extractPdfGlyphs(data: Uint8Array): Promise<{ glyphs: PdfG
   let imageBytes = 0;
   const pageCount = pdf.numPages;
   const opsMap = pdfjs.OPS as Record<string, number>;
+  const paintedPages: number[] = [];
+  const paintOps = new Set(['paintImageXObject', 'paintInlineImageXObject', 'paintImageXObjectRepeat', 'paintImageMaskXObject', 'shadingFill', 'fill', 'eoFill', 'stroke', 'fillStroke', 'eoFillStroke'].map(name => opsMap[name]));
 
   try {
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
       const operators = await page.getOperatorList();
+      if (operators.fnArray.some((operation: number) => paintOps.has(operation))) paintedPages.push(pageNumber);
       shades.push(...shadeBands(operators, opsMap, pageNumber));
       // Preserve source artwork (including vector charts) without guessing chart values.
       // Bound both raster work and stored payload size for large investor booklets.
@@ -134,5 +137,5 @@ export async function extractPdfGlyphs(data: Uint8Array): Promise<{ glyphs: PdfG
     await pdf.destroy();
   }
   if (sourcePages.length < pageCount && !visualWarnings.length) visualWarnings.push('Source visual previews are limited to 40 pages and 8 MB. Compare remaining pages with the original PDF.');
-  return { glyphs, pageCount, shades, sourcePages, visualWarnings };
+  return { glyphs, pageCount, shades, sourcePages, visualWarnings, paintedPages };
 }
