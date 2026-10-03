@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { getDb } from '@/lib/db/client';
+import { recordRevision, unpackRevision, type ResultsActor } from './history';
 import { slugify } from './numbers';
 import type { ResultsDocument, StoredResultsDocument, ResultsDocumentSummary } from './types';
 
@@ -20,6 +21,13 @@ export async function ensureResultsSchema(targetDb?: any): Promise<void> {
       updated_at TEXT NOT NULL,
       published_at TEXT
     );
+  `);
+  await db.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS results_revisions (id TEXT PRIMARY KEY, document_id TEXT NOT NULL, version INTEGER NOT NULL, content_hash TEXT NOT NULL, snapshot_json TEXT NOT NULL, author_id TEXT, author_name TEXT NOT NULL, created_at TEXT NOT NULL, restored_from TEXT, UNIQUE(document_id, version));
+    CREATE TABLE IF NOT EXISTS results_revision_assets (document_id TEXT NOT NULL, asset_key TEXT NOT NULL, asset_value TEXT NOT NULL, PRIMARY KEY(document_id, asset_key));
+    CREATE TABLE IF NOT EXISTS results_reviews (revision_id TEXT PRIMARY KEY, reviewer_id TEXT NOT NULL, reviewer_name TEXT NOT NULL, reviewed_at TEXT NOT NULL, comment TEXT NOT NULL, source_reviewed INTEGER NOT NULL, validation_reviewed INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS results_review_requests (revision_id TEXT PRIMARY KEY, requested_by TEXT NOT NULL, requested_name TEXT NOT NULL, requested_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS results_publications (document_id TEXT PRIMARY KEY, revision_id TEXT NOT NULL, published_at TEXT NOT NULL);
   `);
 }
 
@@ -69,58 +77,40 @@ export async function saveResultsDocument(input: {
   document: ResultsDocument;
   status: 'draft' | 'published';
   expectedUpdatedAt?: string;
+  actor?: ResultsActor;
+  restoredFrom?: string;
 }): Promise<StoredResultsDocument> {
   await ensureSchema();
   const db = getDb();
-  const now = new Date().toISOString();
+  let now = new Date().toISOString();
   const title = `${input.document.issuer} — ${input.document.periodLabel}`;
 
-  if (input.id) {
-    const current = await getResultsDocument(input.id);
-    if (!current) throw new Error('Results document not found');
-    const publishedAt = input.status === 'published' ? current.publishedAt || now : null;
-    const updated = await db.execute({
-      sql: `UPDATE results_documents
-            SET title = ?, status = ?, source_filename = ?, document_json = ?, updated_at = ?, published_at = ?
-            WHERE id = ? AND updated_at = ?`,
-      args: [
-        title,
-        input.status,
-        input.document.sourceFilename,
-        JSON.stringify(input.document),
-        now,
-        publishedAt,
-        input.id,
-        input.expectedUpdatedAt || current.updatedAt,
-      ],
-    });
-    if (!updated.rowsAffected) throw new Error('This draft was changed in another session. Reopen it before saving to avoid overwriting newer work.');
-    const saved = await getResultsDocument(input.id);
-    if (!saved) throw new Error('Results document not found after save');
-    return saved;
-  }
-
-  const id = `res_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-  const slug = await uniqueSlug(`${input.document.issuer} ${input.document.periodLabel}`);
-  await db.execute({
-    sql: `INSERT INTO results_documents
-          (id, client_id, slug, title, status, source_filename, document_json, created_at, updated_at, published_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      id,
-      input.clientId || null,
-      slug,
-      title,
-      input.status,
-      input.document.sourceFilename,
-      JSON.stringify(input.document),
-      now,
-      now,
-      input.status === 'published' ? now : null,
-    ],
-  });
+  const id = input.id || `res_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+  const slug = input.id ? '' : await uniqueSlug(`${input.document.issuer} ${input.document.periodLabel}`);
+  const tx = await db.transaction('write');
+  try {
+    const currentRow = input.id ? (await tx.execute({ sql: 'SELECT * FROM results_documents WHERE id = ?', args: [id] })).rows[0] : null;
+    if (input.id && !currentRow) throw new Error('Results document not found');
+    const current = currentRow ? mapRow(currentRow) : null;
+    if (current) now = new Date(Math.max(Date.now(), Date.parse(current.updatedAt) + 1)).toISOString();
+    if (current && input.expectedUpdatedAt && current.updatedAt !== input.expectedUpdatedAt) throw new Error('This draft was changed in another session. Reopen it before saving to avoid overwriting newer work.');
+    if (current) {
+      const baseline = await recordRevision(tx, id, current.document);
+      if (current.status === 'published') await tx.execute({ sql: 'INSERT OR IGNORE INTO results_publications(document_id, revision_id, published_at) VALUES (?, ?, ?)', args: [id, baseline, current.publishedAt || current.updatedAt] });
+    }
+    const revisionId = await recordRevision(tx, id, input.document, input.actor, input.restoredFrom);
+    if (input.status === 'published') {
+      const review = (await tx.execute({ sql: 'SELECT reviewer_id FROM results_reviews WHERE revision_id = ?', args: [revisionId] })).rows[0];
+      if (!review) throw new Error('This saved version requires independent reviewer approval before publishing.');
+    }
+    const publishedAt = input.status === 'published' ? now : current?.publishedAt || null;
+    if (current) await tx.execute({ sql: 'UPDATE results_documents SET title = ?, status = ?, source_filename = ?, document_json = ?, updated_at = ?, published_at = ? WHERE id = ?', args: [title, input.status, input.document.sourceFilename, JSON.stringify(input.document), now, publishedAt, id] });
+    else await tx.execute({ sql: 'INSERT INTO results_documents(id, client_id, slug, title, status, source_filename, document_json, created_at, updated_at, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', args: [id, input.clientId || null, slug, title, input.status, input.document.sourceFilename, JSON.stringify(input.document), now, now, publishedAt] });
+    if (input.status === 'published') await tx.execute({ sql: 'INSERT INTO results_publications(document_id, revision_id, published_at) VALUES (?, ?, ?) ON CONFLICT(document_id) DO UPDATE SET revision_id = excluded.revision_id, published_at = excluded.published_at', args: [id, revisionId, now] });
+    await tx.commit();
+  } catch (error) { await tx.rollback(); throw error; } finally { tx.close(); }
   const saved = await getResultsDocument(id);
-  if (!saved) throw new Error('Results document not found after insert');
+  if (!saved) throw new Error('Results document not found after save');
   return saved;
 }
 
@@ -152,12 +142,13 @@ export async function getResultsDocument(id: string): Promise<StoredResultsDocum
 export async function getPublishedResultsBySlug(slug: string): Promise<StoredResultsDocument | null> {
   await ensureSchema();
   const db = getDb();
-  const result = await db.execute({
-    sql: `SELECT * FROM results_documents WHERE slug = ? AND status = 'published' LIMIT 1`,
-    args: [slug],
-  });
-  const row = result.rows[0];
-  return row ? mapRow(row as Record<string, unknown>) : null;
+  const row = (await db.execute({ sql: 'SELECT * FROM results_documents WHERE slug = ? LIMIT 1', args: [slug] })).rows[0];
+  if (!row) return null;
+  const stored = mapRow(row);
+  const live = (await db.execute({ sql: 'SELECT revision_id, published_at FROM results_publications WHERE document_id = ?', args: [stored.id] })).rows[0];
+  if (!live) return stored.status === 'published' ? stored : null;
+  const document = await unpackRevision(db, stored.id, String(live.revision_id), stored.document);
+  return document ? { ...stored, title: `${document.issuer} — ${document.periodLabel}`, document, status: 'published', publishedAt: String(live.published_at) } : null;
 }
 
 /** List metadata only: PDF images and full report HTML are loaded on demand. */

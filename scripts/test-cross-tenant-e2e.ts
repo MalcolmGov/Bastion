@@ -138,7 +138,7 @@ async function main() {
     // Create a results document specifically for Vodacom (Client B)
     const docVodacom = await saveResultsDocument({
       clientId: 'client_vodacom_group',
-      status: 'published',
+      status: 'draft',
       document: {
         issuer: 'Vodacom Group Limited',
         title: 'Preliminary Financial Statements',
