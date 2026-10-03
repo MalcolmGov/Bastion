@@ -71,9 +71,9 @@ export const COMPLIANCE_RULESET: ComplianceRuleDefinition[] = [
     statutoryReference: 'JSE Listings Requirements § 8.2 & Cautionary Guidance Note',
     explanation:
       'Unconditional future profit or revenue promises are strictly prohibited without mandatory safe-harbor cautionary framing and auditor qualification notes.',
-    pattern: /\b(?:(?:we )?will guarantee|guaranteed to increase|will surge(?: by)?|will reach \d+% growth|projected dividend of [R$]\d+|profits will expand by \d+%)\b/i,
+    pattern: /\b(?:(?:we )?will guarantee|guaranteed to increase|will surge(?: by)?|will reach \d+%\s*growth|projected dividend of [R$]\d+|profits will expand by \d+%)(?!\w)/i,
     generateRemedy: (match) => {
-      if (/will reach \d+% growth/i.test(match)) {
+      if (/will reach \d+%\s*growth/i.test(match)) {
         return match.replace(/will reach/i, 'targets medium-term');
       }
       if (/guarantee/i.test(match)) {
@@ -81,6 +81,9 @@ export const COMPLIANCE_RULESET: ComplianceRuleDefinition[] = [
       }
       if (/will surge/i.test(match)) {
         return 'is positioned to capture operational upside of';
+      }
+      if (/profits will expand by/i.test(match)) {
+        return 'targets operating profit expansion of';
       }
       return 'is targeted to achieve, subject to prevailing macroeconomic conditions (refer to cautionary statements)';
     },
@@ -129,7 +132,7 @@ export const COMPLIANCE_RULESET: ComplianceRuleDefinition[] = [
     statutoryReference: 'ISSB S2 § 33 & Global Reporting Initiative (GRI 305)',
     explanation:
       'Stating carbon reductions without specifying the base year and assurance standard violates corporate reporting disclosure standards.',
-    pattern: /\b(?:reduced (?:our )?emissions by \d+%(?!\s*(?:against|vs|from)\s*(?:FY\d+|20\d+))|cutting carbon footprint by \d+%(?!\s*(?:against|vs|from)\s*(?:FY\d+|20\d+)))\b/i,
+    pattern: /\b(?:reduced (?:our )?emissions by \d+%(?!\s*(?:against|vs|from)\s*(?:audited\s+)?(?:FY\d+|20\d+))|cutting carbon footprint by \d+%(?!\s*(?:against|vs|from)\s*(?:audited\s+)?(?:FY\d+|20\d+)))(?!\w)/i,
     generateRemedy: (match) => {
       return `${match} against audited FY2019 baseline (Scope 1 and 2)`;
     },
@@ -142,7 +145,7 @@ export const COMPLIANCE_RULESET: ComplianceRuleDefinition[] = [
     statutoryReference: 'King IV Disclosure Code & ISAE 3000 (Revised)',
     explanation:
       'High-impact sustainability indicators should explicitly reference independent third-party assurance.',
-    pattern: /\b(?:Scope 1 & 2 GHG Reduction|Water Recycled in Operations)\b/i,
+    pattern: /\b(?:Scope 1 & 2 GHG Reduction|Water Recycled in Operations)(?!\s*\(Independently Assured)\b/i,
     generateRemedy: (match) => {
       return `${match} (Independently Assured under ISAE 3000)`;
     },
@@ -159,7 +162,7 @@ export const COMPLIANCE_RULESET: ComplianceRuleDefinition[] = [
     statutoryReference: 'Protection of Personal Information Act (POPIA) No. 4 of 2013 § 11 & § 69',
     explanation:
       'Any form or action capturing user contact details for corporate communications must provide statutory POPIA lawful processing and opt-out notice.',
-    pattern: /\b(?:subscribe to investor alerts|submit your contact details|register for results presentation|join our shareholder mailing list)\b/i,
+    pattern: /\b(?:subscribe to investor alerts|submit your contact details|register for results presentation|join our shareholder mailing list)\b(?![^.;\n]*?(?:POPIA|privacy policy|opt-out))/i,
     generateRemedy: (match) => {
       return `${match} (Personal data processed under POPIA; view privacy policy)`;
     },
@@ -237,8 +240,11 @@ export function auditCanvasCompliance(
     for (const field of fields) {
       for (const rule of COMPLIANCE_RULESET) {
         checksRun++;
-        const match = field.text.match(rule.pattern);
-        if (match && match[0]) {
+        const flags = rule.pattern.flags.includes('g') ? rule.pattern.flags : `${rule.pattern.flags}g`;
+        const globalRegex = new RegExp(rule.pattern.source, flags);
+        let match: RegExpExecArray | null;
+
+        while ((match = globalRegex.exec(field.text)) !== null) {
           const flaggedSnippet = match[0];
           const suggestedReplacement = rule.generateRemedy(flaggedSnippet, field.text);
 
@@ -262,6 +268,10 @@ export function auditCanvasCompliance(
               replacementValue: suggestedReplacement,
             },
           });
+
+          if (match[0].length === 0) {
+            globalRegex.lastIndex++;
+          }
         }
       }
     }
