@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHarness } = require('./harness.cjs');
+const { addAuthSchema, isolateEnvironment } = require('./auth-fixture.cjs');
 
 const root = path.resolve(__dirname, '../..');
 // Passwords that were written into this repository's seed and scripts. Anyone who has read the source knows them.
@@ -11,24 +12,9 @@ const STRONG = 'correct-horse-battery-staple-91';
 
 async function fixture(t, env = {}) {
   const h = await createHarness();
-  const saved = {};
-  for (const key of ['BOOTSTRAP_ADMIN_EMAIL', 'BOOTSTRAP_ADMIN_PASSWORD']) { saved[key] = process.env[key]; delete process.env[key]; }
-  Object.assign(process.env, env);
-  const realWarn = console.warn, realError = console.error;
-  console.warn = () => {};
-  console.error = () => {};
-  t.after(() => {
-    for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
-    console.warn = realWarn;
-    console.error = realError;
-    h.close();
-  });
-  await h.db.execute('ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0');
-  await h.db.execute('ALTER TABLE users ADD COLUMN locked_until TEXT');
-  await h.db.execute('ALTER TABLE users ADD COLUMN last_login TEXT');
-  await h.db.execute('ALTER TABLE audit_log ADD COLUMN correlation_id TEXT');
-  await h.db.execute('ALTER TABLE audit_log ADD COLUMN ip_address TEXT');
-  await h.db.execute('CREATE TABLE sessions(id TEXT PRIMARY KEY, user_id TEXT, token_hash TEXT, expires_at TEXT, ip_address TEXT, user_agent TEXT)');
+  isolateEnvironment(t, { clear: ['BOOTSTRAP_ADMIN_EMAIL', 'BOOTSTRAP_ADMIN_PASSWORD'], set: env });
+  t.after(() => h.close());
+  await addAuthSchema(h.db);
   const { hashPassword } = h.load('lib/auth/password.ts');
   const addUser = (id, email, role, password, clientId = null) => h.db.execute({
     sql: 'INSERT INTO users(id,name,email,role,client_id,password_hash,region_scope,created_at) VALUES(?,?,?,?,?,?,?,?)',
