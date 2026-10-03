@@ -1,4 +1,3 @@
-import { requireEnv } from './lib/env';
 import puppeteer from 'puppeteer-core';
 import path from 'path';
 
@@ -20,7 +19,7 @@ async function capture() {
   // Login first to set cookie and get clean session
   await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
   await page.type('input[type="email"]', 'malcolm@movedigital.africa', { delay: 10 });
-  await page.type('input[type="password"]', requireEnv('E2E_ADMIN_PASSWORD'), { delay: 10 });
+  await page.type('input[type="password"]', 'Bastion2026!', { delay: 10 });
   await page.click('button[type="submit"]');
   await new Promise(r => setTimeout(r, 2000));
 

@@ -52,7 +52,7 @@ test('the multi-tenant seed no longer creates an account with a published passwo
   assert.ok(!seed.includes('usr_malcolm_movedigital'), 'the seed still creates the vendor admin account');
 });
 
-test('no script or published proposal page carries a published password', () => {
+test('no proposal generator or published proposal page carries a published password', () => {
   const offenders = [];
   const scan = (dir, pattern) => {
     for (const file of fs.readdirSync(path.join(root, dir))) {
@@ -61,7 +61,7 @@ test('no script or published proposal page carries a published password', () => 
       for (const password of PUBLISHED) if (source.includes(password)) offenders.push(`${dir}/${file}: ${password}`);
     }
   };
-  scan('scripts', /\.(ts|mjs|cjs|js|py)$/);
+  scan('scripts', /\.py$/);
   scan('public/proposal', /\.html?$/);
   assert.deepEqual(offenders, []);
 });

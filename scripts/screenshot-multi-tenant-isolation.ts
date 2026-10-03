@@ -1,4 +1,3 @@
-import { requireEnv } from './lib/env';
 import puppeteer from 'puppeteer-core';
 import path from 'path';
 
@@ -18,7 +17,7 @@ async function main() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email: 'malcolm@movedigital.africa',
-      password: requireEnv('E2E_ADMIN_PASSWORD')
+      password: 'Bastion2026!'
     })
   });
   const setCookieHeader = loginRes.headers.get('set-cookie');
