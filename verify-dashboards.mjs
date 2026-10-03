@@ -1,5 +1,8 @@
 import { chromium } from 'playwright';
 
+const CORP_PASSWORD = process.env.E2E_CORP_PASSWORD;
+if (!CORP_PASSWORD) throw new Error('Set E2E_CORP_PASSWORD to the password of the test accounts on the instance you are testing (see .env.example).');
+
 async function main() {
   const browser = await chromium.launch({ headless: true });
 
@@ -13,7 +16,7 @@ async function main() {
 
   // Fill in Corporate User credentials
   await corpPage.fill('input[type="email"]', 'editor@aurum.local');
-  await corpPage.fill('input[type="password"]', 'Bastion2026!Corp#');
+  await corpPage.fill('input[type="password"]', CORP_PASSWORD);
   await corpPage.click('button[type="submit"]');
 
   // Wait for redirect to /admin

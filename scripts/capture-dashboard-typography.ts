@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-core';
 import path from 'path';
+import { loginViaForm } from './lib/devLogin';
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const BASE_URL = 'http://localhost:3010';
@@ -17,10 +18,7 @@ async function capture() {
   await page.setViewport({ width: 1600, height: 1000, deviceScaleFactor: 2 });
 
   // Login first to set cookie and get clean session
-  await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
-  await page.type('input[type="email"]', 'malcolm@movedigital.africa', { delay: 10 });
-  await page.type('input[type="password"]', 'Bastion2026!', { delay: 10 });
-  await page.click('button[type="submit"]');
+  await loginViaForm(page, BASE_URL, 'agency', { delay: 10, waitForNavigation: false });
   await new Promise(r => setTimeout(r, 2000));
 
   // If still not on /admin, navigate there
