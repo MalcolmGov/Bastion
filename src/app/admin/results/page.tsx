@@ -12,17 +12,22 @@ import { applyFigureEdit } from '@/lib/results/applyFigureEdit';
 import { renderResultsHtml } from '@/lib/results/renderHtml';
 import type { ResultsBrand, ResultsDocument, StoredResultsDocument, ResultsDocumentSummary } from '@/lib/results/types';
 
+import { isAgencyUser } from '@/lib/auth/roles';
+
 const STEPS = ['Converter', 'Brand', 'PDF', 'Review and publish'];
 
 export default function ResultsStudioPage() {
   const { activeClient } = useStudioWorkspace();
-  const { hasPerm } = useAdminAuth();
+  const { hasPerm, user } = useAdminAuth();
+  const agency = isAgencyUser(user);
   const canEdit = hasPerm('content:edit');
   const [documents, setDocuments] = useState<ResultsDocumentSummary[]>([]);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const workspaceEpoch = useRef(0);
   const [current, setCurrent] = useState<StoredResultsDocument | null>(null);
   const [step, setStep] = useState(0);
+  const userId=user?.id;
+  useEffect(()=>{if(userId)setStep(agency?0:3);},[agency,userId]);
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [showAssistant, setShowAssistant] = useState(false);
   const [brand, setBrand] = useState<ResultsBrand | null>(null);
@@ -238,19 +243,19 @@ export default function ResultsStudioPage() {
     <div className="space-y-6">
       <div>
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet-700">Bastion results centre</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">PDF to HTML</h1>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{agency ? 'PDF to HTML' : 'Financial publications'}</h1>
         <p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
-          Read the client’s website for brand, convert the results booklet, compare the source, then refine the design and publish a reviewed HTML report.
+          {agency ? 'Convert source reports into branded drafts, compare the source, and submit reviewed reports for publication.' : 'Open a delivered report below to review its source, request updates, and approve a saved version.'}
         </p>
       </div>
 
-      <ol className="grid gap-2 sm:grid-cols-4">
+      {agency && <ol className="grid gap-2 sm:grid-cols-4">
         {STEPS.map((label, index) => (
           <li key={label}>
             <button
               type="button"
               onClick={() => {
-                if (index < 3 || current) setStep(index);
+                if (agency && (index < 3 || current)) setStep(index);
               }}
               className={`w-full rounded-2xl border px-3 py-3 text-left text-sm ${step === index ? 'border-violet-600 bg-violet-50 text-violet-950 dark:bg-violet-950/40 dark:text-violet-100' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300'}`}
             >
@@ -259,11 +264,11 @@ export default function ResultsStudioPage() {
             </button>
           </li>
         ))}
-      </ol>
+      </ol>}
 
       {error && <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</p>}
 
-      {step === 0 && (
+      {agency && step === 0 && (
         <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
           <p className="text-xs font-bold uppercase tracking-wider text-violet-700">Selected tool</p>
           <h2 className="mt-2 text-xl font-semibold">PDF to HTML converter</h2>
@@ -276,7 +281,7 @@ export default function ResultsStudioPage() {
         </section>
       )}
 
-      {step === 1 && (
+      {agency && step === 1 && (
         <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
           <h2 className="text-xl font-semibold">Client website</h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
@@ -330,7 +335,7 @@ export default function ResultsStudioPage() {
         </section>
       )}
 
-      {step === 2 && (
+      {agency && step === 2 && (
         <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
           <h2 className="text-xl font-semibold">Upload the results PDF</h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">

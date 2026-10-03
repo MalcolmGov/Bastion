@@ -641,5 +641,41 @@ export const COMPONENT_REGISTRY: Record<string, RegisteredComponent> = {
         { day: 'Sunday & Public Holidays', time: 'By Partner Appointment' }
       ]
     }
+  },
+
+  financial_highlights: {
+    id: 'financial_highlights',
+    name: 'Financial Highlights & Audited Tables',
+    category: 'features',
+    description: 'Executive financial scorecard, interactive multi-year statements, and ESG sustainability metrics.',
+    schemaVersion: '1.0.0',
+    variants: [
+      { id: 'scorecard_table', name: 'Scorecard with Comparative Table', description: 'Prominent stat counters with interactive IFRS statement matrix' },
+      { id: 'multi_year_matrix', name: 'Multi-Year Financial Matrix', description: 'Full-width comparative table with variance analysis' },
+      { id: 'esg_scorecard', name: 'Sustainability & ESG Highlights', description: 'Decarbonisation, water recycling, and community impact metrics' }
+    ],
+    fields: {
+      eyebrow: { type: 'text', label: 'Eyebrow Text', defaultValue: 'Audited Financial Results' },
+      title: { type: 'text', label: 'Headline', required: true, defaultValue: 'Delivering disciplined operational execution and robust cash generation' },
+      subtitle: { type: 'textarea', label: 'Supporting Narrative', defaultValue: 'Key audited financial highlights, operational delivery, and capital allocation scorecards.' },
+      reportingPeriod: { type: 'text', label: 'Reporting Period', defaultValue: 'FY 2025 Audited Results' },
+      kpis: { type: 'list', label: 'Financial KPI Metrics' },
+      financialTable: { type: 'select', label: 'Financial Comparison Table' },
+      sustainabilityKpis: { type: 'list', label: 'ESG / Sustainability Indicators' }
+    },
+    defaultProps: {
+      eyebrow: 'Audited Financial Disclosures',
+      title: 'Disciplined Capital Allocation & Resilient Cash Generation',
+      subtitle: 'Key audited performance metrics extracted directly from the published Integrated Annual Report.',
+      reportingPeriod: 'FY 2025 Integrated Annual Report',
+      kpis: [
+        { label: 'Attributable Production', value: '2.30 Moz', change: '+4.2% YoY', trend: 'up', subtext: 'Record operational mine delivery' },
+        { label: 'Headline Earnings', value: 'R22.4 Billion', change: '+12.4% YoY', trend: 'up', subtext: 'Driven by corporate trade finance' },
+        { label: 'Return on Equity (ROE)', value: '18.8%', change: '+80 bps', trend: 'up', subtext: 'Within 17%–20% medium-term target' },
+        { label: 'All-In Sustaining Costs', value: '$1,280 /oz', change: '-3.5% vs budget', trend: 'down', subtext: 'Disciplined capital execution' }
+      ],
+      primaryCta: { label: 'Download Audited Statements (PDF)', href: '#download-pdf' },
+      secondaryCta: { label: 'Explore Segmental Breakdown', href: '#segments' }
+    }
   }
 };

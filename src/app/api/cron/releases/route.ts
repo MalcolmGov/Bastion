@@ -1,3 +1,4 @@
+import { ensureCompositionReviews } from '@/lib/studio/editor/compositionReview';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
@@ -15,7 +16,11 @@ const DEV_DEFAULT_CRON_SECRET = 'bastion_cron_worker_production_key_2026';
 async function legacyReleaseRefusal(db: ReturnType<typeof getDb>, items: readonly Record<string, unknown>[]): Promise<string | null> {
   for (const item of items) {
     const itemType = String(item.item_type);
-    if (itemType === 'page' || itemType === 'page_composition') continue;
+    if (itemType === 'page' || itemType === 'page_composition') {
+      const managed=(await db.execute({sql:'SELECT version FROM composition_reviews WHERE composition_id=? LIMIT 1',args:[String(item.item_id)]})).rows[0];
+      if(managed) return 'Handed-over pages require publication from Approvals & Sign-Off.';
+      continue;
+    }
     try {
       await assertRecordApproval(db, String(item.item_id));
     } catch (error) {
@@ -54,6 +59,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const db = getDb();
+    await ensureCompositionReviews();
     const now = new Date().toISOString();
     let publishedReleasesCount = 0;
     let executedJobsCount = 0;

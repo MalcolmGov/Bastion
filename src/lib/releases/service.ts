@@ -1,3 +1,4 @@
+import { ensureCompositionReviews } from '@/lib/studio/editor/compositionReview';
 import { ensureDbReady } from '@/lib/db/client';
 import crypto from 'crypto';
 import type { Client } from '@libsql/client';
@@ -317,6 +318,7 @@ export async function publishRelease(releaseId: string, publishedBy = 'Malcolm G
 
   const now = new Date().toISOString();
 
+  await ensureCompositionReviews();
   // Validate legacy bundles again at execution time and publish the entire
   // release in one transaction. A bad item must not leave a partial release.
   const transaction = await db.transaction('write');
@@ -324,6 +326,8 @@ export async function publishRelease(releaseId: string, publishedBy = 'Malcolm G
     for (const item of releaseData.items) {
       const target = await resolveReleaseItem(transaction, releaseData.release, item);
       if (target.kind === 'page') {
+        const managed=(await transaction.execute({sql:'SELECT version FROM composition_reviews WHERE composition_id=? LIMIT 1',args:[target.id]})).rows[0];
+        if(managed) throw new ReleaseValidationError('Publish handed-over pages from Approvals & Sign-Off after exact-version approval.');
         await transaction.execute({
           sql: `UPDATE page_compositions SET status = 'published', updated_at = ?
                 WHERE id = ? AND site_id = ? AND site_id IN (SELECT id FROM websites WHERE client_id = ?)`,

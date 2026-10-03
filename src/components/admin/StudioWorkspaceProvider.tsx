@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useAdminAuth } from './AdminAuthProvider';
 import { isAgencyUser } from '@/lib/auth/roles';
 
@@ -56,6 +56,8 @@ const StudioWorkspaceContext = createContext<StudioWorkspaceContextType>({
 export function StudioWorkspaceProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAdminAuth();
   const agency = isAgencyUser(user);
+  const userId=user?.id;
+  const clientRequest=useRef(0);
   const [clients, setClients] = useState<WorkspaceClient[]>([]);
   const [activeClientId, setActiveClientIdState] = useState<string>('client_goldfields');
   const [activeSiteId, setActiveSiteIdState] = useState<string>('site_goldfields_flagship');
@@ -63,11 +65,15 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
   const [isLoading, setIsLoading] = useState(true);
   const prevUserIdRef = useRef<string | null>(null);
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
+    const sequence=++clientRequest.current;
+    if(!userId){setClients([]);setIsLoading(false);return;}
+    setIsLoading(true);
     try {
       const res = await fetch('/api/admin/clients');
       if (res.ok) {
         const data = await res.json();
+        if(sequence!==clientRequest.current)return;
         setClients(data.clients || []);
 
         // Check cookie first, then localStorage
@@ -114,18 +120,20 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     } catch (err) {
       console.warn('Failed to load clients:', err);
     } finally {
-      setIsLoading(false);
+      if(sequence===clientRequest.current)setIsLoading(false);
     }
-  };
+  },[userId]);
 
   useEffect(() => {
-    fetchClients();
-  }, []);
+    const requestRef=clientRequest;
+    void fetchClients();
+    return ()=>{requestRef.current++;};
+  }, [fetchClients]);
 
   useEffect(() => {
     if (!user) return;
 
-    const userSwitched = prevUserIdRef.current !== user.id;
+    const userSwitched = prevUserIdRef.current !== null && prevUserIdRef.current !== user.id;
     prevUserIdRef.current = user.id;
 
     if (agency) {
@@ -168,6 +176,7 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     setActiveClientIdState(id);
     if (typeof window !== 'undefined') {
       localStorage.setItem('move_studio_active_client', id);
+      localStorage.setItem('bastion_active_client_id', id);
       document.cookie = `bastion_active_client_id=${encodeURIComponent(id)}; path=/; max-age=31536000; SameSite=Lax`;
       window.dispatchEvent(new CustomEvent('studio-active-client-changed', { detail: { clientId: id } }));
     }
@@ -181,6 +190,7 @@ export function StudioWorkspaceProvider({ children }: { children: React.ReactNod
     setActiveSiteIdState(id);
     if (typeof window !== 'undefined') {
       localStorage.setItem('move_studio_active_site', id);
+      localStorage.setItem('bastion_active_site_id', id);
       document.cookie = `bastion_active_site_id=${encodeURIComponent(id)}; path=/; max-age=31536000; SameSite=Lax`;
       window.dispatchEvent(new CustomEvent('studio-active-site-changed', { detail: { siteId: id } }));
     }

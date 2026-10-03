@@ -5,6 +5,8 @@ async function createHarness() {
   try {
     // Editor tests need draft history and audit columns in addition to the shared tenant fixtures.
     await harness.db.executeMultiple(`
+      ALTER TABLE websites ADD COLUMN name TEXT;
+      UPDATE websites SET name=slug;
       ALTER TABLE page_versions ADD COLUMN created_by TEXT;
       ALTER TABLE page_versions ADD COLUMN created_by_name TEXT;
       ALTER TABLE page_versions ADD COLUMN change_summary TEXT;

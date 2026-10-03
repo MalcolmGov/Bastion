@@ -2,10 +2,20 @@
 
 import React from 'react';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
-import { MapPin, Phone, Mail, Clock, Calendar, Navigation } from 'lucide-react';
+import { MapPin, Clock, Phone, Mail, Navigation, Calendar } from 'lucide-react';
 import { StudioBackgroundFx } from './StudioBackgroundFx';
+import {
+  getFontFamilyClass,
+  getHeadingScaleClass,
+  getTrackingClass,
+  getAlignmentClasses,
+  getContainerWidthClass,
+  getBorderRadiusClass,
+  getGlowEffectStyles,
+  getFrostedGlassStyle,
+} from '@/lib/studio/styleResolver';
 
-interface BusinessHour {
+interface ScheduleHour {
   day: string;
   time: string;
 }
@@ -19,7 +29,7 @@ interface StudioMapProps {
     address?: string;
     phone?: string;
     email?: string;
-    hours?: BusinessHour[];
+    hours?: ScheduleHour[];
   };
   styles?: SectionStyles;
   collection: DesignCollectionId;
@@ -31,12 +41,12 @@ export const StudioMap: React.FC<StudioMapProps> = ({
   props,
   styles,
   collection,
-  variant = 'split_map_card',
+  variant = 'split_interactive_card',
   isEditor = false
 }) => {
-  const eyebrow = props.eyebrow || 'Visit Our Offices';
-  const title = props.title || 'Global Presence & Client Access';
-  const subtitle = props.subtitle || 'Schedule an in-person working session or connect directly with our partner desks.';
+  const eyebrow = props.eyebrow || 'Global Presence';
+  const title = props.title || 'Institutional Presence & Global Advisory Desks';
+  const subtitle = props.subtitle || 'Visit our physical advisory desk or coordinate with our partners across international financial hubs.';
   const city = props.city || 'Johannesburg, South Africa';
   const address = props.address || 'Sandton City Executive Tower, 5th Street, Sandton, 2196';
   const phone = props.phone || '+27 11 946 8820';
@@ -47,9 +57,26 @@ export const StudioMap: React.FC<StudioMapProps> = ({
     { day: 'Sunday & Public Holidays', time: 'By Partner Appointment' }
   ];
 
+  const defaultFont = collection === 'editorial' ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = getFontFamilyClass(styles?.fontFamily, defaultFont);
+  const headingScaleClass = getHeadingScaleClass(styles?.headingScale, 'text-3xl sm:text-4xl lg:text-5xl');
+  const trackingClass = getTrackingClass(styles?.letterSpacing, 'tracking-tight');
+  const alignClass = getAlignmentClasses(styles?.alignment, 'center');
+  const containerWidthClass = getContainerWidthClass(styles?.containerWidth, 'max-w-7xl');
+  const cardRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-3xl');
+  const subRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-xl');
+  const glowStyle = getGlowEffectStyles(styles?.glowEffect);
+  const frostedGlassStyle = getFrostedGlassStyle(styles);
+
   // Compute section style wrapper
   const paddingClass = styles?.paddingY || 'py-24';
-  const inlineStyle: React.CSSProperties = {};
+  const inlineStyle: React.CSSProperties = {
+    ...glowStyle,
+    ...frostedGlassStyle,
+    ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+    ...(styles?.borderTop ? { borderTopWidth: '1px', borderTopStyle: 'solid' } : {}),
+    ...(styles?.borderBottom ? { borderBottomWidth: '1px', borderBottomStyle: 'solid' } : {}),
+  };
 
   if (styles?.backgroundType === 'solid' && styles.backgroundColor) {
     inlineStyle.backgroundColor = styles.backgroundColor;
@@ -70,9 +97,9 @@ export const StudioMap: React.FC<StudioMapProps> = ({
         opacity={styles?.patternOpacity}
         accentColor={accentColor}
       />
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
+      <div className={`${containerWidthClass} mx-auto px-6 sm:px-8 lg:px-12 relative z-10`}>
         {/* Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
+        <div className={`max-w-3xl space-y-4 mb-16 ${alignClass.container}`}>
           {eyebrow && (
             <div
               className="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-sky-400/30 bg-sky-500/10 text-xs font-semibold tracking-wide uppercase"
@@ -82,13 +109,13 @@ export const StudioMap: React.FC<StudioMapProps> = ({
             </div>
           )}
           <h2
-            className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white"
+            className={`${fontFamilyClass} ${headingScaleClass} font-extrabold ${trackingClass} text-white ${alignClass.text}`}
             style={headingStyle}
           >
             {title}
           </h2>
           {subtitle && (
-            <p className="text-base sm:text-lg text-slate-300 leading-relaxed font-light" style={textStyle}>
+            <p className={`text-base sm:text-lg text-slate-300 leading-relaxed font-light ${alignClass.text}`} style={textStyle}>
               {subtitle}
             </p>
           )}
@@ -97,7 +124,13 @@ export const StudioMap: React.FC<StudioMapProps> = ({
         {/* Split Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
           {/* Left: Stylized Map Card */}
-          <div className="lg:col-span-6 rounded-3xl bg-slate-900/80 border border-slate-800 p-8 flex flex-col justify-between relative overflow-hidden min-h-[380px] shadow-2xl">
+          <div
+            className={`lg:col-span-6 ${cardRadiusClass} bg-slate-900/80 border border-slate-800 p-8 flex flex-col justify-between relative overflow-hidden min-h-[380px] shadow-2xl`}
+            style={{
+              ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+              ...frostedGlassStyle,
+            }}
+          >
             {/* Visual Grid Backdrop */}
             <div
               className="absolute inset-0 opacity-20 pointer-events-none"
@@ -118,7 +151,7 @@ export const StudioMap: React.FC<StudioMapProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Headquarters & Advisory Desk</span>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-2">{city}</h3>
+              <h3 className={`text-2xl font-bold text-white mb-2 ${fontFamilyClass}`}>{city}</h3>
               <p className="text-sm text-slate-400 font-light flex items-start space-x-2">
                 <MapPin className="w-4 h-4 shrink-0 mt-0.5" style={{ color: accentColor }} />
                 <span>{address}</span>
@@ -128,7 +161,7 @@ export const StudioMap: React.FC<StudioMapProps> = ({
             {/* Location Pin Badge Center */}
             <div className="relative z-10 my-8 py-10 flex flex-col items-center justify-center">
               <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl border border-white/20 animate-bounce duration-1000"
+                className={`w-16 h-16 ${subRadiusClass} flex items-center justify-center shadow-xl border border-white/20 animate-bounce duration-1000`}
                 style={{ backgroundColor: accentColor, color: '#090D16' }}
               >
                 <Navigation className="w-8 h-8 rotate-45" />
@@ -154,7 +187,13 @@ export const StudioMap: React.FC<StudioMapProps> = ({
           </div>
 
           {/* Right: Hours & Contact Information */}
-          <div className="lg:col-span-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 p-8 flex flex-col justify-between">
+          <div
+            className={`lg:col-span-6 ${cardRadiusClass} bg-slate-900/60 border border-slate-800/80 p-8 flex flex-col justify-between`}
+            style={{
+              ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+              ...frostedGlassStyle,
+            }}
+          >
             <div>
               {/* Working Hours */}
               <div className="flex items-center space-x-2 text-sm font-bold text-white mb-6 uppercase tracking-wider text-xs">
@@ -166,7 +205,7 @@ export const StudioMap: React.FC<StudioMapProps> = ({
                 {hours.map((h, idx) => (
                   <div
                     key={idx}
-                    className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs"
+                    className={`p-3.5 ${subRadiusClass} bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs`}
                   >
                     <span className="font-medium text-slate-300">{h.day}</span>
                     <span className="font-semibold text-white font-mono" style={{ color: accentColor }}>
@@ -178,7 +217,7 @@ export const StudioMap: React.FC<StudioMapProps> = ({
 
               {/* Direct Communications */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800">
-                <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800">
+                <div className={`p-4 ${subRadiusClass} bg-slate-950/40 border border-slate-800`}>
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1 flex items-center space-x-1.5">
                     <Phone className="w-3.5 h-3.5" style={{ color: accentColor }} />
                     <span>Telephone</span>
@@ -188,7 +227,7 @@ export const StudioMap: React.FC<StudioMapProps> = ({
                   </a>
                 </div>
 
-                <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800">
+                <div className={`p-4 ${subRadiusClass} bg-slate-950/40 border border-slate-800`}>
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1 flex items-center space-x-1.5">
                     <Mail className="w-3.5 h-3.5" style={{ color: accentColor }} />
                     <span>Direct Email</span>
@@ -204,7 +243,7 @@ export const StudioMap: React.FC<StudioMapProps> = ({
             <div className="pt-8 mt-6">
               <a
                 href="/contact"
-                className="w-full py-3 px-4 rounded-xl text-xs font-bold text-slate-950 tracking-wide transition flex items-center justify-center space-x-2 shadow-lg hover:brightness-110"
+                className={`w-full py-3 px-4 ${subRadiusClass} text-xs font-bold text-slate-950 tracking-wide transition flex items-center justify-center space-x-2 shadow-lg hover:brightness-110`}
                 style={{ backgroundColor: accentColor }}
               >
                 <Calendar className="w-4 h-4" />

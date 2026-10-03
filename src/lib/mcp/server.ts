@@ -1,3 +1,4 @@
+import { ensureCompositionReviews } from '@/lib/studio/editor/compositionReview';
 /**
  * Bastion Studio — Model Context Protocol (MCP) Server Engine
  * Implements the official Anthropic Model Context Protocol (JSON-RPC 2.0)
@@ -458,6 +459,9 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>,
       const { siteId, pageSlug, title = 'Page', sections, status = 'draft' } = args;
       await assertApiSiteAccess(db, access, siteId);
       if (status === 'published') assertApiScope(access, 'content:publish');
+      await ensureCompositionReviews();
+      const managed=(await db.execute({sql:'SELECT r.version FROM composition_reviews r JOIN page_compositions c ON c.id=r.composition_id WHERE c.site_id=? AND c.page_slug=? LIMIT 1',args:[siteId,pageSlug]})).rows[0];
+      if(managed) throw new Error('Use the versioned visual editor and approval workflow for this page.');
       const compId = `comp_${siteId}_${pageSlug}_v1`;
       const now = new Date().toISOString();
 

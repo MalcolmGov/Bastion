@@ -1,5 +1,6 @@
 'use client';
 
+import { CompositionReviewQueue } from '@/components/studio/editor/CompositionReviewQueue';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
@@ -221,6 +222,7 @@ export default function AdminTasksPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-200 p-4 md:p-8">
+      <CompositionReviewQueue clientId={activeClient?.id} />
       {/* Top Banner & Header */}
       <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
         <div>
@@ -235,7 +237,7 @@ export default function AdminTasksPage() {
             Strict 3-stage corporate workflow: <strong>Author (Draft)</strong> &rarr;{' '}
             <strong>Legal/IR Officer (Compliance Review)</strong> &rarr;{' '}
             <strong>Executive Director (Cryptographic Sign-Off &amp; Live Rollout)</strong>.
-            Enforces the Two-Person Governance Rule to eliminate corporate and regulatory liability.
+            Independent review helps protect the integrity of corporate disclosures.
           </p>
         </div>
 
