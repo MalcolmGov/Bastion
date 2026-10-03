@@ -21,7 +21,9 @@ import {
   Users,
   FolderOpen,
   RotateCcw,
-  CalendarCheck
+  CalendarCheck,
+  Copy,
+  Code
 } from 'lucide-react';
 import { useAdminAuth } from '@/components/admin/AdminAuthProvider';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
@@ -70,6 +72,156 @@ function cleanMarkdownForSpeech(text: string): string {
     .trim();
 }
 
+function FormattedInlineText({ text }: { text: string }) {
+  const tokens: React.ReactNode[] = [];
+  const tokenRegex = /(\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\))/g;
+  let lastIdx = 0;
+  let match;
+  let key = 0;
+
+  while ((match = tokenRegex.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      tokens.push(<span key={key++}>{text.slice(lastIdx, match.index)}</span>);
+    }
+    if (match[2]) {
+      tokens.push(<strong key={key++} className="font-semibold text-slate-900">{match[2]}</strong>);
+    } else if (match[3]) {
+      tokens.push(
+        <code key={key++} className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-[11px] text-amber-700 font-medium">
+          {match[3]}
+        </code>
+      );
+    } else if (match[4] && match[5]) {
+      tokens.push(
+        <a key={key++} href={match[5]} target="_blank" rel="noreferrer" className="text-indigo-600 underline font-medium hover:text-indigo-700">
+          {match[4]}
+        </a>
+      );
+    }
+    lastIdx = match.index + match[0].length;
+  }
+
+  if (lastIdx < text.length) {
+    tokens.push(<span key={key++}>{text.slice(lastIdx)}</span>);
+  }
+
+  return <>{tokens}</>;
+}
+
+function MessageContent({ content }: { content: string }) {
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const handleCopy = (code: string, idx: number) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+      setCopiedIndex(idx);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    }
+  };
+
+  const codeBlockRegex = /```([a-zA-Z0-9_\-]*)\n([\s\S]*?)```/g;
+  const parts: Array<{ type: 'text' | 'code'; language?: string; code?: string; text?: string }> = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', text: content.slice(lastIndex, match.index) });
+    }
+    parts.push({
+      type: 'code',
+      language: match[1] || 'code',
+      code: match[2].trim()
+    });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push({ type: 'text', text: content.slice(lastIndex) });
+  }
+
+  return (
+    <div className="space-y-2 text-xs leading-relaxed">
+      {parts.map((part, idx) => {
+        if (part.type === 'code' && part.code) {
+          const isCopied = copiedIndex === idx;
+          const langDisplay = part.language ? part.language.toUpperCase() : 'CODE';
+          return (
+            <div key={idx} className="my-2.5 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 text-slate-100 shadow-md">
+              <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/90 px-3 py-1.5 text-[11px] font-mono">
+                <span className="inline-flex items-center gap-1.5 font-bold uppercase tracking-wider text-amber-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  ⚡ {langDisplay} COMPONENT
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(part.code!, idx)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-200 transition hover:bg-slate-700 active:scale-95 cursor-pointer shadow-xs"
+                >
+                  {isCopied ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-300" />
+                      <span>Copy Code</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <pre className="max-h-80 overflow-x-auto p-3 text-[11px] font-mono leading-relaxed text-emerald-300/90 selection:bg-amber-500/30">
+                <code>{part.code}</code>
+              </pre>
+            </div>
+          );
+        }
+
+        const lines = (part.text || '').split('\n');
+        return (
+          <div key={idx} className="space-y-1">
+            {lines.map((line, lIdx) => {
+              if (line.startsWith('### ')) {
+                return (
+                  <div key={lIdx} className="font-bold text-slate-950 text-sm mt-2 mb-0.5">
+                    <FormattedInlineText text={line.slice(4)} />
+                  </div>
+                );
+              }
+              if (line.startsWith('• ') || line.startsWith('- ')) {
+                return (
+                  <div key={lIdx} className="flex items-start gap-1.5 text-slate-700 pl-1">
+                    <span className="text-indigo-600 font-bold select-none">•</span>
+                    <div><FormattedInlineText text={line.slice(2)} /></div>
+                  </div>
+                );
+              }
+              if (/^[0-9]+\.\s/.test(line)) {
+                const numMatch = line.match(/^([0-9]+\.)\s(.*)/);
+                return (
+                  <div key={lIdx} className="flex items-start gap-1.5 text-slate-700 pl-1">
+                    <span className="text-indigo-600 font-bold select-none">{numMatch?.[1]}</span>
+                    <div><FormattedInlineText text={numMatch?.[2] || ''} /></div>
+                  </div>
+                );
+              }
+              if (line.trim() === '') {
+                return <div key={lIdx} className="h-1" />;
+              }
+              return (
+                <div key={lIdx} className="text-slate-700">
+                  <FormattedInlineText text={line} />
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ZaraVoiceCopilot() {
   const router = useRouter();
   const { user } = useAdminAuth();
@@ -116,12 +268,12 @@ export function ZaraVoiceCopilot() {
   useEffect(() => { isListeningRef.current = isListening; }, [isListening]);
 
   const initialWelcomeText = isClient
-    ? `Hello ${userFirstName}! I'm **Zara**, your autonomous AI copilot for **${clientName}**. I can guide you through editing corporate pages, checking statutory compliance, reviewing draft releases, and coordinating approvals. What would you like to work on?`
-    : `Hello ${userFirstName}! **Zara AI Executive Copilot** is active for **Bastion CMS & ${clientName}**.\n\nI can execute real-time statutory compliance audits (JSE Listings § 8.2 and King IV Principle 5), monitor multi-tenant SRE fleet telemetry, query price-sensitive SENS announcements, or extract client Brand DNA design systems.\n\nWhat command would you like me to run?`;
+    ? `Hello ${userFirstName}! I'm **Zara**, your autonomous AI copilot for **${clientName}**.\n\nI can assist you across our full enterprise suite:\n• **AI Website & Component Code Generation** (HTML5, Tailwind, React)\n• **PDF-to-HTML Portal Ingestion** (Annual Reports & ESG documents)\n• **Statutory Compliance Audits** (JSE Listings § 8.2 & King IV)\n• **Live SRE Edge Health** (Multi-PoP latency & 99.98% SLA)\n• **SENS Regulatory Disclosures** & **Corporate Mining Intelligence**\n\nWhat would you like to work on?`
+    : `Hello ${userFirstName}! **Zara AI Executive Copilot** is active for **Bastion CMS & ${clientName}**.\n\nI provide autonomous enterprise intelligence across 8 core pillars:\n• ⚡ **AI Website Copilot & Code Generation** (HTML5, Tailwind, React)\n• 📄 **Comprehensive PDF-to-HTML Ingestion** (Annual Reports to interactive portals)\n• 🛡️ **Statutory Compliance Guardian** (JSE Listings § 8.2 & King IV)\n• 🌐 **Live SRE Fleet Health & Telemetry** (Edge PoP latency & 99.98% SLA)\n• 📊 **Price-Sensitive SENS Announcements** (JSE filings & dividend declarations)\n• 🏛️ **Corporate Disclosures & Mining Intelligence** (Mines, AISC, carbon targets)\n• 🎨 **Brand DNA & Token Extraction** (Live URL palettes & typography)\n• 🚀 **Multi-Tenant Release & Publishing** (Approvals queue & edge deployment)\n\nWhat command would you like me to run?`;
 
   const initialSpeechGreeting = isClient
-    ? `Hello ${userFirstName}. I am Zara, your autonomous AI copilot for ${clientName}. What would you like to work on?`
-    : `Hello ${userFirstName}! Zara AI Executive Copilot is active for Bastion CMS and ${clientName}. I can execute real-time compliance audits, monitor edge fleet health, query SENS announcements, or extract brand design tokens. What command would you like me to run?`;
+    ? `Hello ${userFirstName}. I am Zara, your autonomous AI copilot for ${clientName}. I can generate page code, convert PDF reports, run statutory audits, or check edge health. What would you like to work on?`
+    : `Hello ${userFirstName}! Zara AI Executive Copilot is active for Bastion CMS and ${clientName}. I can generate website code, convert PDF annual reports, audit statutory compliance, or monitor edge fleet health. What command would you like me to run?`;
 
   const [messages, setMessages] = useState<CopilotMessage[]>([
     {
@@ -134,11 +286,19 @@ export function ZaraVoiceCopilot() {
   ]);
 
   const [suggestedSteps, setSuggestedSteps] = useState<SuggestedNextStep[]>(
-    isClient ? DEFAULT_CLIENT_SUGGESTED_STEPS : [
+    isClient ? [
+      { label: 'Code Hero Section', query: 'Zara, generate an executive hero section with Tailwind CSS.', icon: 'sparkles' },
+      { label: 'Convert PDF Report', query: 'Zara, convert the annual report PDF into an HTML portal.', icon: 'file' },
+      { label: 'Run Compliance Audit', query: 'Zara, run a compliance audit on page copy.', icon: 'shield' },
+      { label: 'Check Fleet Telemetry', query: 'Zara, check multi-tenant SRE uptime and edge latency.', icon: 'check' }
+    ] : [
+      { label: 'Code Hero Section', query: 'Zara, generate an executive hero section with Tailwind CSS.', icon: 'sparkles' },
+      { label: 'Convert PDF Report', query: 'Zara, convert the annual report PDF into an HTML portal.', icon: 'file' },
       { label: 'Run Compliance Audit', query: 'Zara, run a compliance audit on page copy.', icon: 'shield' },
       { label: 'Edge Fleet Health', query: 'Zara, check multi-tenant SRE uptime and edge latency.', icon: 'check' },
       { label: 'JSE SENS Announcements', query: 'Zara, query recent JSE SENS regulatory announcements.', icon: 'file' },
-      { label: 'Brand DNA Extraction', query: 'Zara, extract the brand design tokens for Gold Fields.', icon: 'sparkles' }
+      { label: 'Brand DNA Extraction', query: 'Zara, extract the brand design tokens for Gold Fields.', icon: 'sparkles' },
+      { label: 'Publishing Queue', query: 'Zara, check staged releases and deployment readiness.', icon: 'check' }
     ]
   );
 
@@ -942,7 +1102,7 @@ export function ZaraVoiceCopilot() {
                     </div>
                   )}
 
-                  <p className="whitespace-pre-line">{m.content}</p>
+                  <MessageContent content={m.content} />
 
                   {/* Welcome Message Callout for Spoken Greeting */}
                   {m.id === 'welcome' && (

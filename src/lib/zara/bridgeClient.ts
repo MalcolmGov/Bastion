@@ -122,14 +122,15 @@ export class ZaraBridgeClient {
     }
 
     return {
-      reply: `Hello ${name}! **Zara AI Executive Copilot** is active for **${client}**.\n\nI can execute real-time statutory compliance audits (JSE Listings § 8.2 and King IV Principle 5), monitor multi-tenant SRE fleet telemetry, query price-sensitive SENS announcements, or extract client Brand DNA design systems.\n\nWhat command would you like me to run?`,
-      speechText: `Hello ${name}. Zara AI Executive Copilot is online for ${client}. I am ready to audit compliance, check edge fleet health, query SENS announcements, or manage client workspaces. What would you like me to do?`,
+      reply: `Hello ${name}! **Zara AI Executive Copilot** is active for **${client}**.\n\nI provide autonomous enterprise intelligence across 8 core pillars:\n• ⚡ **AI Website Copilot & Code Generation** (HTML5, Tailwind, React)\n• 📄 **Comprehensive PDF-to-HTML Ingestion** (Annual Reports to interactive portals)\n• 🛡️ **Statutory Compliance Guardian** (JSE Listings § 8.2 & King IV)\n• 🌐 **Live SRE Fleet Health & Telemetry** (Edge PoP latency & 99.98% SLA)\n• 📊 **Price-Sensitive SENS Announcements** (JSE filings & dividend declarations)\n• 🏛️ **Corporate Disclosures & Mining Intelligence** (Mines, AISC, carbon targets)\n• 🎨 **Brand DNA & Token Extraction** (Live URL palettes & typography)\n• 🚀 **Multi-Tenant Release & Publishing** (Approvals queue & edge deployment)\n\nWhat command would you like me to run?`,
+      speechText: `Hello ${name}. Zara AI Executive Copilot is online for ${client}. I can generate website code, convert PDF annual reports, audit statutory compliance, or monitor edge fleet health. What command would you like me to run?`,
       toolsExecuted: [],
       suggestedNextSteps: [
+        { label: 'Code Hero Section', query: 'Zara, generate an executive hero section with Tailwind CSS.' },
+        { label: 'Convert PDF Report', query: 'Zara, convert the annual report PDF into an HTML portal.' },
         { label: 'Run Compliance Audit', query: 'Zara, run a compliance audit on our active page copy.' },
         { label: 'Edge Fleet Health', query: 'Zara, check our multi-tenant SRE uptime and edge latency.' },
-        { label: 'JSE SENS Announcements', query: 'Zara, query recent JSE SENS regulatory announcements.' },
-        { label: 'Brand DNA Extraction', query: 'Zara, extract the brand design system tokens for Gold Fields.' }
+        { label: 'JSE SENS Announcements', query: 'Zara, query recent JSE SENS regulatory announcements.' }
       ]
     };
   }
@@ -387,7 +388,188 @@ export class ZaraBridgeClient {
     }
 
     // ─────────────────────────────────────────────────────────
-    // 5. TOOL CALL: SEARCH CORPORATE DISCLOSURES (PUBLIC / INVESTOR CONCIERGE)
+    // 5. TOOL CALL: COMPREHENSIVE PDF-TO-HTML INGESTION & SYNTHESIS
+    // ─────────────────────────────────────────────────────────
+    if (
+      lower.includes('pdf') ||
+      lower.includes('convert') ||
+      lower.includes('ingest') ||
+      lower.includes('report conversion') ||
+      lower.includes('pdf to html') ||
+      lower.includes('annual report') ||
+      lower.includes('document synthesis') ||
+      lower.includes('extract report')
+    ) {
+      const toolRes = await executeZaraTool('convertPdfToHtmlPortal', {
+        documentName: 'Gold Fields Integrated Annual Report 2025.pdf',
+        clientName: context.clientName || 'Gold Fields Limited',
+        targetQueue: 'in_review'
+      });
+      toolsExecuted.push(toolRes);
+
+      const r = toolRes.result;
+      const reply = `### 📄 Comprehensive PDF-to-HTML Portal Ingestion\n\n` +
+        `• **Source Document:** **${r.documentName}**\n` +
+        `• **Throughput & Scope:** Processed **${r.totalPagesIngested} pages** | Extracted **${r.tableCount} tables** | Mapped **${r.kpiCount} corporate KPIs**\n` +
+        `• **Zero Artificial Page Limits:** 100% full-document extraction fidelity with institutional styling\n\n` +
+        `**Synthesized 4-Page Corporate Portal:**\n` +
+        r.synthesizedPages.map((p: any, idx: number) =>
+          `${idx + 1}. **${p.title}** (\`${p.slug}\`)\n   ↳ *Status:* Staged for review in Client Approvals Queue`
+        ).join('\n') +
+        `\n\n**Extracted Financial & ESG Benchmarks:**\n` +
+        `• **Group Revenue:** ${r.extractedHighlights.revenue}\n` +
+        `• **Adjusted EBITDA:** ${r.extractedHighlights.ebitda}\n` +
+        `• **Interim Dividend:** ${r.extractedHighlights.dividend}\n` +
+        `• **2030 Climate Commitment:** ${r.extractedHighlights.decarbonisation}\n\n` +
+        `*All pages and interactive tables have been staged into the Client Approvals Queue (${r.stagedLocation}).*`;
+
+      const speechText = toolRes.summaryText;
+
+      return {
+        reply,
+        speechText,
+        toolsExecuted,
+        actionCards: [
+          {
+            type: 'document',
+            title: 'Client Review & Approvals Queue',
+            description: 'Inspect the 4 synthesized pages, verify financial tables, and sign off for production staging.',
+            linkText: 'Open Approvals Queue',
+            linkUrl: '/admin/tasks'
+          },
+          {
+            type: 'editor',
+            title: 'Visual Live Page Editor',
+            description: 'Customize layout, typography tokens, and section order on synthesized pages.',
+            linkText: 'Inspect in Visual Editor',
+            linkUrl: '/admin/editor'
+          }
+        ],
+        suggestedNextSteps: [
+          { label: 'Open Approvals Queue', query: 'Open the Client Approvals Queue' },
+          { label: 'Audit Ingested Pages', query: 'Zara, run a compliance audit on page copy.' },
+          { label: 'Open Visual Editor', query: 'Open the Visual Live Page Editor' }
+        ]
+      };
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 6. TOOL CALL: AI WEBSITE COPILOT & CODE GENERATION
+    // ─────────────────────────────────────────────────────────
+    if (
+      !lower.includes('pdf') &&
+      !lower.includes('convert') &&
+      (
+        lower.includes('code') ||
+        lower.includes('generate website') ||
+        lower.includes('build website') ||
+        lower.includes('component') ||
+        lower.includes('html') ||
+        lower.includes('tailwind') ||
+        lower.includes('react') ||
+        lower.includes('hero section') ||
+        lower.includes('landing page') ||
+        lower.includes('financial grid') ||
+        lower.includes('esg dashboard') ||
+        lower.includes('create a page') ||
+        lower.includes('create page') ||
+        lower.includes('template')
+      )
+    ) {
+      const toolRes = await executeZaraTool('generateWebsiteCode', {
+        prompt: message,
+        clientName: context.clientName || 'Gold Fields Limited'
+      });
+      toolsExecuted.push(toolRes);
+
+      const r = toolRes.result;
+      const reply = `### ⚡ AI Website Copilot & Code Generation: ${r.title}\n\n` +
+        `${r.description}\n\n` +
+        `**Generated Production Code (HTML5 + Tailwind CSS):**\n` +
+        `\`\`\`html\n${r.code}\n\`\`\`\n\n` +
+        `**Enterprise Features & Safeguards:**\n` +
+        (r.features || []).map((f: string) => `• ${f}`).join('\n') +
+        `\n\n*This component is ready to copy or insert directly into the Visual Live Page Editor.*`;
+
+      const speechText = toolRes.summaryText;
+
+      return {
+        reply,
+        speechText,
+        toolsExecuted,
+        actionCards: [
+          {
+            type: 'code',
+            title: `Visual Live Page Editor: ${r.title}`,
+            description: 'Open the canvas to paste, preview, and test this responsive component in real-time.',
+            linkText: 'Open Visual Live Editor',
+            linkUrl: '/admin/editor'
+          }
+        ],
+        suggestedNextSteps: [
+          { label: 'Open Live Page Editor', query: 'Open the Visual Live Page Editor' },
+          { label: 'Generate Financial Grid', query: 'Zara, generate a responsive financial performance grid.' },
+          { label: 'Generate ESG Tracker', query: 'Zara, generate an ESG decarbonisation dashboard component.' }
+        ]
+      };
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 7. TOOL CALL: MULTI-TENANT RELEASES & PUBLISHING PIPELINE
+    // ─────────────────────────────────────────────────────────
+    if (
+      lower.includes('release') ||
+      lower.includes('publish') ||
+      lower.includes('deployment') ||
+      lower.includes('deploy') ||
+      lower.includes('staged') ||
+      lower.includes('queue')
+    ) {
+      const toolRes = await executeZaraTool('manageReleasesAndPublishing', {
+        clientId: context.clientId || 'client_goldfields'
+      });
+      toolsExecuted.push(toolRes);
+
+      const r = toolRes.result;
+      const count = r.count || 0;
+      const releases = r.releases || [];
+
+      const reply = `### 🚀 Multi-Tenant Release & Publishing Pipeline\n\n` +
+        `• **Active Staged Releases:** **${count} package(s)**\n` +
+        `• **Publishing Target:** Edge CDN Distribution (CPT-1, JNB-1, LHR-1)\n\n` +
+        (releases.length > 0
+          ? `**Latest Release Bundles:**\n` +
+            releases.map((rel: any, idx: number) =>
+              `${idx + 1}. **${rel.name}**\n   ↳ *Type:* ${rel.type} | *Status:* \`${rel.status}\`${rel.scheduledAt ? ` | *Scheduled:* ${new Date(rel.scheduledAt).toLocaleString()}` : ''}`
+            ).join('\n')
+          : `✅ All changes are deployed and synchronized across all edge nodes.`) +
+        `\n\n*All deployments require cryptographic signing and dual-stakeholder regulatory sign-off.*`;
+
+      const speechText = toolRes.summaryText;
+
+      return {
+        reply,
+        speechText,
+        toolsExecuted,
+        actionCards: [
+          {
+            type: 'releases',
+            title: 'Client Tasks & Approvals Queue',
+            description: 'Inspect staged release packages, audit trails, and approve items for edge propagation.',
+            linkText: 'Open Approvals Queue',
+            linkUrl: '/admin/tasks'
+          }
+        ],
+        suggestedNextSteps: [
+          { label: 'Inspect Approvals Queue', query: 'Open the Client Approvals Queue' },
+          { label: 'Check Edge Telemetry', query: 'Zara, check multi-tenant SRE uptime and edge latency.' },
+          { label: 'Run Compliance Audit', query: 'Zara, run a compliance audit on page copy.' }
+        ]
+      };
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 8. TOOL CALL: SEARCH CORPORATE DISCLOSURES (PUBLIC / INVESTOR CONCIERGE)
     // ─────────────────────────────────────────────────────────
     if (
       context.portalViewMode === 'public' ||
@@ -450,15 +632,32 @@ export class ZaraBridgeClient {
       }
     }
 
-    // Default conversational response
+    // Default conversational response: Comprehensive 8-Pillar Executive Suite
     return {
-      reply: `I have processed your query regarding **"${message}"**.\n\nAs the **Zara AI Copilot**, I can assist with:\n• **Statutory Compliance Audits** (JSE Listings § 8.2, King IV)\n• **Live SRE Edge Health** (edge latency, uptime, synthetic probes)\n• **SENS Announcements** (price-sensitive releases and dividends)\n• **Corporate Disclosures** (mining operations, financial reports, ESG)\n\nTry asking: *"Zara, run a compliance check on our draft page"* or *"Zara, what is our average edge latency?"*`,
-      speechText: `I understand your request. As the Zara AI Copilot, I can run compliance audits, check edge fleet health, query SENS releases, or search corporate disclosures. How may I assist you further?`,
+      reply: `I have processed your query regarding **"${message}"**.\n\n` +
+        `As the **Zara AI Executive Copilot for Bastion & Move Digital**, I provide end-to-end enterprise intelligence across 8 core pillars:\n\n` +
+        `1. ⚡ **AI Website Copilot & Code Generation**\n   ↳ Autonomous generation of responsive HTML5, Tailwind CSS, and React components (corporate heroes, financial grids, ESG matrices).\n` +
+        `2. 📄 **Comprehensive PDF-to-HTML Ingestion**\n   ↳ High-fidelity conversion of 100+ page Annual Integrated Reports and ESG PDFs into interactive 4-page portals staged directly to your Approvals Queue.\n` +
+        `3. 🛡️ **Statutory Compliance Guardian**\n   ↳ Automated auditing and 1-click remediation against JSE Listings Requirements (§ 8.2), King IV Principle 5, and POPIA § 11/69.\n` +
+        `4. 🌐 **Live SRE Fleet Health & Telemetry**\n   ↳ Real-time latency (CPT-1, JNB-1, LHR-1), 99.98% SLA monitoring, edge synthetic probes, and automated incident diagnosis.\n` +
+        `5. 📊 **Price-Sensitive SENS & IR Disclosures**\n   ↳ Instant querying and analysis of JSE SENS announcements, dividend declarations, operational updates, and investor booklets.\n` +
+        `6. 🏛️ **Corporate Disclosures & Mining Intelligence**\n   ↳ Direct retrieval of verified operational metrics, attributable production (South Deep, Tarkwa, Gruyere), and AISC cost baselines.\n` +
+        `7. 🎨 **Brand DNA & Design Token Extraction**\n   ↳ Autonomous color palette sampling, typography scales, spacing tokens, and corporate theme synchronization from live URLs.\n` +
+        `8. 🚀 **Multi-Tenant Release & Publishing Pipeline**\n   ↳ Multi-stakeholder approval staging, audit trail provenance, and sub-50ms edge CDN bundle distribution.\n\n` +
+        `**Try asking:**\n` +
+        `• *"Zara, generate a responsive hero section for Gold Fields"*\n` +
+        `• *"Zara, ingest and convert the 2025 Annual Report PDF into an HTML portal"*\n` +
+        `• *"Zara, run a statutory compliance check on our draft page"*\n` +
+        `• *"Zara, what is our multi-region edge latency across Cape Town and London?"*\n` +
+        `• *"Zara, query recent JSE SENS price-sensitive announcements"*`,
+      speechText: `I understand your request. As the Zara AI Executive Copilot, I can generate website code, ingest PDF annual reports into HTML portals, audit statutory compliance, monitor edge fleet health, query SENS releases, or extract brand design tokens. Which would you like me to run?`,
       toolsExecuted: [],
       suggestedNextSteps: [
-        { label: 'Compliance Audit', query: 'Zara, run a compliance audit on page copy.' },
-        { label: 'Fleet Health', query: 'Zara, check multi-tenant SRE uptime and edge latency.' },
-        { label: 'SENS Announcements', query: 'Zara, query recent JSE SENS regulatory announcements.' }
+        { label: 'Code Hero Section', query: 'Zara, generate an executive hero section with Tailwind CSS.' },
+        { label: 'Convert PDF Report', query: 'Zara, convert the annual report PDF into an HTML portal.' },
+        { label: 'Run Compliance Audit', query: 'Zara, run a compliance audit on page copy.' },
+        { label: 'Edge Fleet Health', query: 'Zara, check multi-tenant SRE uptime and edge latency.' },
+        { label: 'JSE SENS Releases', query: 'Zara, query recent JSE SENS regulatory announcements.' }
       ]
     };
   }
