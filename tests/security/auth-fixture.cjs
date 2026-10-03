@@ -10,8 +10,8 @@ const AUTH_SCHEMA = [
   'CREATE TABLE sessions(id TEXT PRIMARY KEY, user_id TEXT, token_hash TEXT, expires_at TEXT, ip_address TEXT, user_agent TEXT)',
 ];
 
-async function addAuthSchema(db) {
-  for (const sql of AUTH_SCHEMA) await db.execute(sql);
+function addAuthSchema(db) {
+  return db.batch(AUTH_SCHEMA);
 }
 
 /**
