@@ -455,10 +455,6 @@ export function AdminSidebar() {
 
               <div className="my-3.5 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent mx-2" />
 
-              {resultsSection}
-
-              <div className="my-3.5 h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent mx-2" />
-
               {/* Authoring & Media Tools */}
               <div>
                 {!isCollapsed && (
