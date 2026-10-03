@@ -14,6 +14,7 @@ import {
   PanelLeft,
   SlidersHorizontal,
   ShieldCheck,
+  Mic,
 } from 'lucide-react';
 
 export function EditorToolbar({
@@ -204,6 +205,20 @@ export function EditorToolbar({
             >
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" />
               <span className="hidden sm:inline">Compliance</span>
+            </button>
+          )}
+          {canEdit && (
+            <button
+              type="button"
+              disabled={busy || loading}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-zara-copilot', { detail: { openVoice: true } }));
+              }}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-gradient-to-r from-indigo-500/10 to-purple-500/15 hover:from-indigo-500/20 hover:to-purple-500/25 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center gap-1.5 transition shadow-xs cursor-pointer active:scale-95"
+              title="Zara AI Voice Coding: Speak your design and see it applied live"
+            >
+              <Mic className="h-3.5 w-3.5 text-indigo-500 animate-pulse" />
+              <span className="hidden sm:inline">Voice Coding</span>
             </button>
           )}
           <details className="relative">

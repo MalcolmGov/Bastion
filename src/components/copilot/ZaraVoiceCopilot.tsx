@@ -315,16 +315,7 @@ export function ZaraVoiceCopilot() {
     }
   }, []);
 
-  // External trigger listeners
-  useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
-    window.addEventListener('open-bastion-copilot', handleOpen);
-    window.addEventListener('open-ask-ai', handleOpen);
-    return () => {
-      window.removeEventListener('open-bastion-copilot', handleOpen);
-      window.removeEventListener('open-ask-ai', handleOpen);
-    };
-  }, []);
+
 
 
   // Forward declaration refs to break cyclic dependencies
@@ -719,6 +710,43 @@ export function ZaraVoiceCopilot() {
     }
   }, [isOpen, stopListening, stopAudio]);
 
+  // External trigger listeners (Toolbar, Header, and Voice Coding triggers)
+  useEffect(() => {
+    const handleOpen = async (e?: any) => {
+      setIsOpen(true);
+      if (e?.detail?.openVoice) {
+        setIsVoiceActive(true);
+        wantsToListenRef.current = true;
+        setMicError(null);
+        await speakText(
+          `Hello ${userFirstName}! Voice coding active. What component would you like me to build and apply to your page?`,
+          'editor_voice_prompt'
+        );
+      }
+    };
+
+    const handleClose = () => {
+      setIsOpen(false);
+      setIsVoiceActive(false);
+      wantsToListenRef.current = false;
+      stopListening();
+      stopAudio();
+      setVoiceStatus('idle');
+    };
+
+    window.addEventListener('open-bastion-copilot', handleOpen);
+    window.addEventListener('open-ask-ai', handleOpen);
+    window.addEventListener('open-zara-copilot', handleOpen);
+    window.addEventListener('close-zara-copilot', handleClose);
+
+    return () => {
+      window.removeEventListener('open-bastion-copilot', handleOpen);
+      window.removeEventListener('open-ask-ai', handleOpen);
+      window.removeEventListener('open-zara-copilot', handleOpen);
+      window.removeEventListener('close-zara-copilot', handleClose);
+    };
+  }, [userFirstName, speakText, stopListening, stopAudio]);
+
   // ─────────────────────────────────────────────────────────
   // 3. SEND MESSAGE & DISPATCH CMS TOOLS
   // ─────────────────────────────────────────────────────────
@@ -785,6 +813,24 @@ export function ZaraVoiceCopilot() {
       setMessages(prev => [...prev, assistantMsg]);
       setIsProcessing(false);
       isProcessingRef.current = false;
+
+      // Real-Time Voice Coding: Auto-dispatch to canvas if code generated and on editor or requested
+      const codeTool = (data.toolsExecuted || []).find((t: any) => t.toolName === 'generateWebsiteCode');
+      if (codeTool && codeTool.result && typeof window !== 'undefined') {
+        const lowerText = text.toLowerCase();
+        const isOnEditor = window.location.pathname.includes('/admin/editor');
+        const wantsApply = lowerText.includes('canvas') || lowerText.includes('page') || lowerText.includes('apply') || lowerText.includes('add') || lowerText.includes('insert');
+        if (isOnEditor || wantsApply) {
+          window.dispatchEvent(new CustomEvent('zara-apply-section-to-canvas', {
+            detail: {
+              componentType: codeTool.result.componentType || 'hero',
+              title: codeTool.result.title,
+              code: codeTool.result.code,
+              html: codeTool.result.code
+            }
+          }));
+        }
+      }
 
       if (data.suggestedNextSteps && Array.isArray(data.suggestedNextSteps) && data.suggestedNextSteps.length > 0) {
         setSuggestedSteps(data.suggestedNextSteps);
@@ -1153,14 +1199,36 @@ export function ZaraVoiceCopilot() {
                         <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
                           <div className="font-bold text-xs text-slate-900">{c.title}</div>
                           <div className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">{c.description}</div>
-                          <Link
-                            href={c.linkUrl}
-                            onClick={() => setIsOpen(false)}
-                            className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer"
-                          >
-                            <span>{c.linkText || 'Open'}</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </Link>
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <Link
+                              href={c.linkUrl}
+                              onClick={() => setIsOpen(false)}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer"
+                            >
+                              <span>{c.linkText || 'Open'}</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </Link>
+                            {c.type === 'code' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const codeTool = m.toolsExecuted?.find((t: any) => t.toolName === 'generateWebsiteCode');
+                                  window.dispatchEvent(new CustomEvent('zara-apply-section-to-canvas', {
+                                    detail: {
+                                      componentType: codeTool?.result?.componentType || 'hero',
+                                      title: codeTool?.result?.title || c.title,
+                                      code: codeTool?.result?.code,
+                                      html: codeTool?.result?.code
+                                    }
+                                  }));
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-xs transition cursor-pointer active:scale-95"
+                              >
+                                <span>⚡ Apply to Canvas</span>
+                                <CheckCircle2 className="w-3 h-3 text-slate-950" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

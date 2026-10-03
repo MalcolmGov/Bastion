@@ -127,6 +127,18 @@ export function StudioComponentRenderer({
     case 'financial_highlights':
       renderedContent = <StudioFinancialHighlights props={section.props as any} styles={section.styles} collection={collection} variant={section.variant} />;
       break;
+    case 'custom_code':
+    case 'html_tailwind':
+      renderedContent = (
+        <div
+          className="relative w-full overflow-hidden"
+          dangerouslySetInnerHTML={{
+            __html: (section.props?.html || section.props?.code || '')
+              .replace(/className=/g, 'class=')
+          }}
+        />
+      );
+      break;
     default:
       renderedContent = (
         <div className="p-8 text-center bg-slate-100 border border-dashed border-slate-300 text-slate-500 text-xs font-mono">

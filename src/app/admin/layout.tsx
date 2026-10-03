@@ -30,7 +30,20 @@ export default function AdminRootLayout({
   if (pathname === '/admin/editor/preview' || /^\/admin\/releases\/[^/]+\/preview\/[^/]+$/.test(pathname)) return <>{children}</>;
 
   if (pathname === '/admin/editor') {
-    return <ThemeProvider><AdminAuthProvider><StudioWorkspaceProvider><DashboardCustomizerProvider><div className="h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">{children}</div></DashboardCustomizerProvider></StudioWorkspaceProvider></AdminAuthProvider></ThemeProvider>;
+    return (
+      <ThemeProvider>
+        <AdminAuthProvider>
+          <StudioWorkspaceProvider>
+            <DashboardCustomizerProvider>
+              <div className="h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 relative">
+                {children}
+                <FloatingCopilotButton />
+              </div>
+            </DashboardCustomizerProvider>
+          </StudioWorkspaceProvider>
+        </AdminAuthProvider>
+      </ThemeProvider>
+    );
   }
 
   if (isLoginPage) {
