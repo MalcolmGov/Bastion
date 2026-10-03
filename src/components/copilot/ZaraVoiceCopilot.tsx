@@ -93,6 +93,28 @@ export function ZaraVoiceCopilot() {
   const [micError, setMicError] = useState<string | null>(null);
   const [isSpeechSupported, setIsSpeechSupported] = useState(true);
 
+  // Synchronized Mutable Refs for race-condition prevention & turn-taking
+  const wantsToListenRef = useRef<boolean>(false);
+  const isSpeakingRef = useRef<boolean>(false);
+  const isProcessingRef = useRef<boolean>(false);
+  const isListeningRef = useRef<boolean>(false);
+  const isStartingRef = useRef<boolean>(false);
+  const isAbortingRef = useRef<boolean>(false);
+  const speechSessionRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const restartTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const safetyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingTranscriptRef = useRef<string>('');
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Keep refs in sync with state
+  useEffect(() => { wantsToListenRef.current = isVoiceActive; }, [isVoiceActive]);
+  useEffect(() => { isSpeakingRef.current = isSpeaking; }, [isSpeaking]);
+  useEffect(() => { isProcessingRef.current = isProcessing; }, [isProcessing]);
+  useEffect(() => { isListeningRef.current = isListening; }, [isListening]);
+
   const initialWelcomeText = isClient
     ? `Hello ${userFirstName}! I'm **Zara**, your autonomous AI copilot for **${clientName}**. I can guide you through editing corporate pages, checking statutory compliance, reviewing draft releases, and coordinating approvals. What would you like to work on?`
     : `Hello ${userFirstName}! **Zara AI Executive Copilot** is active for **Bastion CMS & ${clientName}**.\n\nI can execute real-time statutory compliance audits (JSE Listings § 8.2 and King IV Principle 5), monitor multi-tenant SRE fleet telemetry, query price-sensitive SENS announcements, or extract client Brand DNA design systems.\n\nWhat command would you like me to run?`;
@@ -120,15 +142,6 @@ export function ZaraVoiceCopilot() {
     ]
   );
 
-  // References
-  const recognitionRef = useRef<any>(null);
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const pendingTranscriptRef = useRef<string>('');
-  const wantsToListenRef = useRef<boolean>(false);
-  const speechSessionRef = useRef<number>(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
   // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -142,7 +155,7 @@ export function ZaraVoiceCopilot() {
     }
   }, []);
 
-  // Listen to external trigger events ('open-bastion-copilot' or 'open-ask-ai')
+  // External trigger listeners
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
     window.addEventListener('open-bastion-copilot', handleOpen);
@@ -153,11 +166,49 @@ export function ZaraVoiceCopilot() {
     };
   }, []);
 
+
+  // Forward declaration refs to break cyclic dependencies
+  const startListeningRef = useRef<() => void>(() => {});
+  const handleSendMessageRef = useRef<(text?: string) => Promise<void>>(() => Promise.resolve());
+
   // ─────────────────────────────────────────────────────────
-  // 1. ELEVENLABS v4 STUDIO AUDIO PLAYBACK ENGINE
+  // 1. ELEVENLABS v4 STUDIO AUDIO ENGINE (PROMISE-DRIVEN)
   // ─────────────────────────────────────────────────────────
+  const cleanupRecognition = useCallback(() => {
+    isAbortingRef.current = true;
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    if (recognitionRef.current) {
+      try {
+        const r = recognitionRef.current;
+        r.onstart = null;
+        r.onaudiostart = null;
+        r.onsoundstart = null;
+        r.onspeechstart = null;
+        r.onresult = null;
+        r.onerror = null;
+        r.onend = null;
+        r.abort();
+      } catch {}
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    isListeningRef.current = false;
+    isStartingRef.current = false;
+  }, []);
+
   const stopAudio = useCallback(() => {
     speechSessionRef.current++;
+    if (safetyTimeoutRef.current) {
+      clearTimeout(safetyTimeoutRef.current);
+      safetyTimeoutRef.current = null;
+    }
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = '';
@@ -168,28 +219,65 @@ export function ZaraVoiceCopilot() {
     }
     setPlayingAudioId(null);
     setIsSpeaking(false);
+    isSpeakingRef.current = false;
     setVoiceStatus(wantsToListenRef.current ? 'listening' : 'idle');
   }, []);
 
   const speakText = useCallback(async (rawText: string, msgId: string = 'general'): Promise<boolean> => {
     if (!rawText.trim()) return false;
 
-    // Toggle off if clicking the currently playing message
+    // Toggle off if currently playing
     if (playingAudioId === msgId) {
       stopAudio();
+      if (wantsToListenRef.current) {
+        startListeningRef.current();
+      }
       return true;
     }
 
     stopAudio();
 
+    // Cleanly pause STT during Zara's turn to prevent speaker acoustic loop
+    cleanupRecognition();
+
     const session = ++speechSessionRef.current;
     setPlayingAudioId(msgId);
     setIsSpeaking(true);
+    isSpeakingRef.current = true;
     setVoiceStatus('speaking');
 
     const cleanSpeech = cleanMarkdownForSpeech(rawText);
 
-    // 1. Try ElevenLabs Neural Studio Streaming (/api/zara/speak)
+    const onPlaybackComplete = () => {
+      if (speechSessionRef.current !== session) return;
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
+      setPlayingAudioId(null);
+      setIsSpeaking(false);
+      isSpeakingRef.current = false;
+      setVoiceStatus(wantsToListenRef.current ? 'listening' : 'idle');
+
+      // Seamlessly restart STT for the next conversational turn
+      if (wantsToListenRef.current && !isProcessingRef.current) {
+        setTimeout(() => {
+          if (wantsToListenRef.current && !isSpeakingRef.current && !isProcessingRef.current) {
+            startListeningRef.current();
+          }
+        }, 200);
+      }
+    };
+
+    // Safety timeout: calculated duration + 2s buffer to guarantee STT resume even if browser onended stalls
+    const words = cleanSpeech.split(/\s+/).length;
+    const estDurationMs = Math.max(2500, (words / 2.6) * 1000 + 2000);
+    safetyTimeoutRef.current = setTimeout(() => {
+      console.log('[Zara Voice] Safety timeout reached, triggering playback completion.');
+      onPlaybackComplete();
+    }, estDurationMs);
+
+    // 1. ElevenLabs Neural Studio Streaming (/api/zara/speak)
     try {
       const res = await fetch('/api/zara/speak', {
         method: 'POST',
@@ -213,35 +301,33 @@ export function ZaraVoiceCopilot() {
               return;
             }
             setIsSpeaking(true);
+            isSpeakingRef.current = true;
             setVoiceStatus('speaking');
           };
 
           audio.onended = () => {
             URL.revokeObjectURL(url);
             if (audioRef.current === audio) audioRef.current = null;
-            setPlayingAudioId(null);
-            setIsSpeaking(false);
-            setVoiceStatus(wantsToListenRef.current ? 'listening' : 'idle');
+            onPlaybackComplete();
             resolve(true);
           };
 
           audio.onerror = () => {
             URL.revokeObjectURL(url);
             if (audioRef.current === audio) audioRef.current = null;
-            setPlayingAudioId(null);
-            setIsSpeaking(false);
-            setVoiceStatus(wantsToListenRef.current ? 'listening' : 'idle');
+            onPlaybackComplete();
             resolve(false);
           };
 
           audio.play().catch((err) => {
-            console.warn('[Zara Voice] Audio play autoplay restricted:', err);
+            console.warn('[Zara Voice] Audio play restriction:', err);
+            onPlaybackComplete();
             resolve(false);
           });
         });
       }
     } catch (err) {
-      console.warn('[Zara Voice] ElevenLabs request failed, attempting browser fallback:', err);
+      console.warn('[Zara Voice] ElevenLabs fetch failed, trying browser TTS:', err);
     }
 
     // 2. Browser SpeechSynthesis Fallback
@@ -253,35 +339,36 @@ export function ZaraVoiceCopilot() {
         utter.pitch = 1.0;
         utter.onstart = () => {
           setIsSpeaking(true);
+          isSpeakingRef.current = true;
           setVoiceStatus('speaking');
         };
         utter.onend = () => {
-          setPlayingAudioId(null);
-          setIsSpeaking(false);
-          setVoiceStatus(wantsToListenRef.current ? 'listening' : 'idle');
+          onPlaybackComplete();
           resolve(true);
         };
         utter.onerror = () => {
-          setPlayingAudioId(null);
-          setIsSpeaking(false);
-          setVoiceStatus(wantsToListenRef.current ? 'listening' : 'idle');
+          onPlaybackComplete();
           resolve(false);
         };
         window.speechSynthesis.speak(utter);
       });
     }
 
-    setPlayingAudioId(null);
-    setIsSpeaking(false);
-    setVoiceStatus(wantsToListenRef.current ? 'listening' : 'idle');
+    onPlaybackComplete();
     return false;
-  }, [playingAudioId, stopAudio]);
+  }, [playingAudioId, stopAudio, cleanupRecognition]);
 
   // ─────────────────────────────────────────────────────────
-  // 2. STT (SPEECH RECOGNITION ENGINE)
+  // 2. STT (SPEECH-TO-TEXT ENGINE WITH WATCHDOG & AUTO-RETRY)
   // ─────────────────────────────────────────────────────────
   const startListening = useCallback(() => {
     if (typeof window === 'undefined') return;
+
+    // Do NOT listen while Zara is actively speaking, executing tools, or already starting
+    if (isSpeakingRef.current || isProcessingRef.current || isStartingRef.current) {
+      console.debug('[Zara STT] Deferred: system currently speaking, processing, or starting.');
+      return;
+    }
 
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
@@ -290,12 +377,11 @@ export function ZaraVoiceCopilot() {
       return;
     }
 
+    cleanupRecognition();
+    isAbortingRef.current = false;
+    isStartingRef.current = true;
     wantsToListenRef.current = true;
     setMicError(null);
-
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
-    }
 
     try {
       const recog = new SR();
@@ -305,115 +391,165 @@ export function ZaraVoiceCopilot() {
       recog.lang = 'en-US';
 
       recog.onstart = () => {
+        isStartingRef.current = false;
         setIsListening(true);
+        isListeningRef.current = true;
         pendingTranscriptRef.current = '';
-        if (!isSpeaking) setVoiceStatus('listening');
+        if (!isSpeakingRef.current) setVoiceStatus('listening');
+      };
+
+      recog.onaudiostart = () => {
+        setIsListening(true);
+        isListeningRef.current = true;
       };
 
       recog.onresult = (e: any) => {
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          if (e.results[i].isFinal) {
-            pendingTranscriptRef.current += e.results[i][0].transcript + ' ';
-          }
-        }
+        if (isSpeakingRef.current || isProcessingRef.current) return;
 
+        let fullFinal = '';
         let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          if (!e.results[i].isFinal) {
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) {
+            fullFinal += e.results[i][0].transcript + ' ';
+          } else {
             interim += e.results[i][0].transcript;
           }
         }
 
-        const preview = (pendingTranscriptRef.current + interim).trim();
-        if (!preview) return;
-        setHeardPreview(preview);
+        const transcript = (fullFinal + interim).trim();
+        if (!transcript) return;
 
-        // Auto submit when speaker pauses (1200ms silence)
+        pendingTranscriptRef.current = transcript;
+        setHeardPreview(transcript);
+        setTextInput(transcript); // Live synchronization into input box
+
+        // Auto submit when speaker pauses (1100ms silence)
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           silenceTimerRef.current = null;
-          const fullQuery = pendingTranscriptRef.current.trim() || preview;
-          if (fullQuery.length > 2) {
-            handleSendMessage(fullQuery);
+          const query = pendingTranscriptRef.current.trim();
+          if (query.length > 1 && !isSpeakingRef.current && !isProcessingRef.current) {
+            handleSendMessageRef.current(query);
           }
-        }, 1200);
+        }, 1100);
       };
 
       recog.onerror = (e: any) => {
-        if (e.error === 'aborted' || e.error === 'no-speech') return;
+        isStartingRef.current = false;
+        if (isAbortingRef.current || e.error === 'aborted' || e.error === 'no-speech') return;
         console.warn('[Zara STT] Recognition error:', e.error);
 
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-          setMicError('Microphone blocked. Please click the lock or settings icon in your browser address bar to allow microphone access.');
+          setMicError('Microphone access is blocked in your browser. Click the lock/settings icon in the address bar and set Microphone to "Allow".');
           wantsToListenRef.current = false;
           setIsVoiceActive(false);
           setIsListening(false);
+          isListeningRef.current = false;
           setVoiceStatus('idle');
         } else if (e.error === 'network') {
-          setMicError('Speech recognition network glitch. Retrying connection...');
+          setMicError('Speech recognition network glitch. Retrying...');
         }
       };
 
       recog.onend = () => {
-        setIsListening(false);
-        const pending = pendingTranscriptRef.current.trim();
-        if (pending && !isSpeaking && !isProcessing) {
-          handleSendMessage(pending);
+        isStartingRef.current = false;
+        if (isAbortingRef.current || recognitionRef.current !== recog) {
           return;
         }
 
-        // Restart listener if voice mode is still enabled
-        if (wantsToListenRef.current && !isSpeaking && !isProcessing) {
-          setTimeout(() => {
-            if (wantsToListenRef.current) {
-              try { recog.start(); } catch {}
+        setIsListening(false);
+        isListeningRef.current = false;
+
+        const pending = pendingTranscriptRef.current.trim();
+        if (pending && !isSpeakingRef.current && !isProcessingRef.current) {
+          handleSendMessageRef.current(pending);
+          return;
+        }
+
+        // Auto restart after natural browser timeout
+        if (wantsToListenRef.current && !isSpeakingRef.current && !isProcessingRef.current) {
+          restartTimerRef.current = setTimeout(() => {
+            if (wantsToListenRef.current && !isSpeakingRef.current && !isProcessingRef.current) {
+              startListeningRef.current();
             }
-          }, 250);
-        } else if (!isSpeaking) {
+          }, 350);
+        } else if (!isSpeakingRef.current) {
           setVoiceStatus('idle');
         }
       };
 
       recog.start();
-    } catch (err) {
-      console.warn('[Zara STT] Could not start speech recognition:', err);
+    } catch (err: any) {
+      isStartingRef.current = false;
+      console.warn('[Zara STT] Failed to start:', err);
     }
-  }, [isSpeaking, isProcessing]);
+  }, [cleanupRecognition]);
+
+  startListeningRef.current = startListening;
 
   const stopListening = useCallback(() => {
     wantsToListenRef.current = false;
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
-      recognitionRef.current = null;
-    }
+    cleanupRecognition();
     pendingTranscriptRef.current = '';
     setHeardPreview('');
-    setIsListening(false);
-    if (!isSpeaking) setVoiceStatus('idle');
-  }, [isSpeaking]);
+    if (!isSpeakingRef.current) setVoiceStatus('idle');
+  }, [cleanupRecognition]);
 
-  // Voice Mode Toggle (with spoken greeting prompt)
-  const toggleVoiceMode = useCallback(() => {
+  // Continuous watchdog: ensure listening stays alive when voice mode is on and Zara is idle
+  useEffect(() => {
+    if (!isVoiceActive) return;
+    const interval = setInterval(() => {
+      if (
+        wantsToListenRef.current &&
+        !isSpeakingRef.current &&
+        !isProcessingRef.current &&
+        !isListeningRef.current &&
+        !isStartingRef.current
+      ) {
+        console.debug('[Zara Voice Watchdog] Restarting idle listening session...');
+        startListeningRef.current();
+      }
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isVoiceActive]);
+
+  // Voice Mode Toggle (with crisp greeting and seamless turn transition)
+  const toggleVoiceMode = useCallback(async () => {
     if (isVoiceActive) {
       setIsVoiceActive(false);
+      wantsToListenRef.current = false;
       stopListening();
       stopAudio();
       setVoiceStatus('idle');
     } else {
       setIsVoiceActive(true);
+      wantsToListenRef.current = true;
       setMicError(null);
-      // Play vocal greeting prompt on enabling voice
-      speakText(
-        `Hello ${userFirstName}! Zara AI Executive Copilot is listening. What command would you like me to run?`,
+
+      // Pre-check microphone access via getUserMedia to trigger native browser prompt if needed
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        try {
+          const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          testStream.getTracks().forEach(t => t.stop()); // Free hardware immediately
+        } catch (err: any) {
+          console.warn('[Zara Voice] Mic permission probe failed:', err);
+          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            setMicError('Microphone blocked. Please click the lock or settings icon in your browser address bar and set Microphone to "Allow".');
+            setIsVoiceActive(false);
+            wantsToListenRef.current = false;
+            return;
+          }
+        }
+      }
+
+      // 1. Play crisp, natural greeting prompt.
+      // onPlaybackComplete inside speakText will automatically & seamlessly invoke startListeningRef.current()!
+      await speakText(
+        `Hello ${userFirstName}! I'm listening.`,
         'greeting_prompt'
       );
-      startListening();
     }
-  }, [isVoiceActive, stopListening, stopAudio, speakText, userFirstName, startListening]);
+  }, [isVoiceActive, stopListening, stopAudio, speakText, userFirstName]);
 
   // Cleanup on unmount or drawer close
   useEffect(() => {
@@ -428,7 +564,7 @@ export function ZaraVoiceCopilot() {
   // ─────────────────────────────────────────────────────────
   const handleSendMessage = useCallback(async (contentToSend?: string) => {
     const text = (contentToSend || textInput).trim();
-    if (!text || isProcessing) return;
+    if (!text || isProcessingRef.current) return;
 
     setTextInput('');
     setHeardPreview('');
@@ -437,6 +573,9 @@ export function ZaraVoiceCopilot() {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
+
+    // Cleanly stop STT while processing tool execution
+    cleanupRecognition();
     stopAudio();
 
     const userMsg: CopilotMessage = {
@@ -448,6 +587,7 @@ export function ZaraVoiceCopilot() {
 
     setMessages(prev => [...prev, userMsg]);
     setIsProcessing(true);
+    isProcessingRef.current = true;
     setVoiceStatus('processing');
 
     try {
@@ -484,6 +624,7 @@ export function ZaraVoiceCopilot() {
 
       setMessages(prev => [...prev, assistantMsg]);
       setIsProcessing(false);
+      isProcessingRef.current = false;
 
       if (data.suggestedNextSteps && Array.isArray(data.suggestedNextSteps) && data.suggestedNextSteps.length > 0) {
         setSuggestedSteps(data.suggestedNextSteps);
@@ -497,8 +638,9 @@ export function ZaraVoiceCopilot() {
       }
 
       // Automatically speak the response if voice mode is on
-      if (isVoiceActive) {
-        speakText(speechToPlay, assistantMsg.id);
+      if (wantsToListenRef.current) {
+        await speakText(speechToPlay, assistantMsg.id);
+        // speakText will auto-start listening when done
       } else {
         setVoiceStatus('idle');
       }
@@ -531,8 +673,10 @@ export function ZaraVoiceCopilot() {
           };
           setMessages(prev => [...prev, assistantMsg]);
           setIsProcessing(false);
-          if (isVoiceActive) {
-            speakText(assistantMsg.speechText || assistantMsg.content, assistantMsg.id);
+          isProcessingRef.current = false;
+
+          if (wantsToListenRef.current) {
+            await speakText(assistantMsg.speechText || assistantMsg.content, assistantMsg.id);
           } else {
             setVoiceStatus('idle');
           }
@@ -549,13 +693,17 @@ export function ZaraVoiceCopilot() {
       };
       setMessages(prev => [...prev, fallbackMsg]);
       setIsProcessing(false);
-      if (isVoiceActive) {
-        speakText(fallbackMsg.speechText || fallbackMsg.content, fallbackMsg.id);
+      isProcessingRef.current = false;
+
+      if (wantsToListenRef.current) {
+        await speakText(fallbackMsg.speechText || fallbackMsg.content, fallbackMsg.id);
       } else {
         setVoiceStatus('idle');
       }
     }
-  }, [textInput, isProcessing, stopAudio, clientName, activeClient?.id, portalViewMode, userFirstName, user?.role, messages, isVoiceActive, speakText, router]);
+  }, [textInput, stopAudio, cleanupRecognition, clientName, activeClient?.id, portalViewMode, userFirstName, user?.role, messages, speakText, router]);
+
+  handleSendMessageRef.current = handleSendMessage;
 
   // Clear chat conversation
   const handleClearChat = useCallback(() => {
@@ -644,22 +792,29 @@ export function ZaraVoiceCopilot() {
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 flex items-center gap-1.5 font-medium">
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      voiceStatus === 'speaking'
-                        ? 'bg-purple-500 animate-pulse'
-                        : voiceStatus === 'listening'
-                        ? 'bg-emerald-500 animate-ping'
-                        : voiceStatus === 'processing'
-                        ? 'bg-indigo-500 animate-bounce'
-                        : 'bg-emerald-500'
-                    }`}
-                  />
+                  {/* Dynamic Voice Status Icon */}
+                  {voiceStatus === 'listening' ? (
+                    <div className="flex items-center gap-0.5 mr-0.5">
+                      <span className="w-1 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="w-1 h-3.5 rounded-full bg-emerald-500 animate-pulse delay-75" />
+                      <span className="w-1 h-2 rounded-full bg-emerald-500 animate-pulse delay-150" />
+                    </div>
+                  ) : (
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        voiceStatus === 'speaking'
+                          ? 'bg-purple-500 animate-pulse'
+                          : voiceStatus === 'processing'
+                          ? 'bg-indigo-500 animate-bounce'
+                          : 'bg-emerald-500'
+                      }`}
+                    />
+                  )}
                   <span className="truncate">
                     {voiceStatus === 'speaking'
                       ? 'Zara Speaking (ElevenLabs v4)…'
                       : voiceStatus === 'listening'
-                      ? 'Listening with Echo Guard…'
+                      ? 'Listening for your command…'
                       : voiceStatus === 'processing'
                       ? 'Executing CMS Tools…'
                       : isVoiceActive
@@ -688,15 +843,24 @@ export function ZaraVoiceCopilot() {
               <button
                 type="button"
                 onClick={toggleVoiceMode}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
                   isVoiceActive
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-xs ring-1 ring-emerald-400/40'
+                    ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-400/40'
                     : 'bg-slate-100 text-slate-600 border-slate-200/80 hover:bg-slate-200/80 hover:text-slate-800'
                 }`}
                 title={isVoiceActive ? 'Voice mode active — click to mute' : 'Click to enable voice conversation'}
               >
-                {isVoiceActive ? <Mic className="w-3.5 h-3.5 text-emerald-600 animate-pulse" /> : <MicOff className="w-3.5 h-3.5 text-slate-400" />}
-                <span>{isVoiceActive ? 'Voice ON' : 'Voice OFF'}</span>
+                {isVoiceActive ? (
+                  <>
+                    <Mic className="w-3.5 h-3.5 text-white animate-pulse" />
+                    <span>Voice ON</span>
+                  </>
+                ) : (
+                  <>
+                    <MicOff className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Voice OFF</span>
+                  </>
+                )}
               </button>
 
               {/* Close Button */}
@@ -868,10 +1032,11 @@ export function ZaraVoiceCopilot() {
               </div>
             ))}
 
-            {/* Live Hearing Voice Preview */}
+            {/* Live Real-time Hearing Indicator */}
             {heardPreview && (
               <div className="flex flex-col items-end animate-in fade-in">
-                <div className="max-w-[85%] rounded-2xl rounded-br-xs px-3.5 py-2.5 bg-indigo-50 text-indigo-900 border border-indigo-200/80 italic animate-pulse text-xs">
+                <div className="max-w-[85%] rounded-2xl rounded-br-xs px-3.5 py-2.5 bg-emerald-50 text-emerald-900 border border-emerald-300 italic animate-pulse text-xs shadow-xs flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
                   <span>🎙️ Zara is hearing: &quot;{heardPreview}&quot;…</span>
                 </div>
               </div>
@@ -914,6 +1079,56 @@ export function ZaraVoiceCopilot() {
             </div>
           )}
 
+          {/* Live Speaking / Listening Status Banners */}
+          {isSpeaking && (
+            <div className="mx-4 my-2 px-3.5 py-2 rounded-2xl bg-purple-50 border border-purple-200 text-purple-900 flex items-center justify-between text-xs animate-in fade-in shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-purple-600 animate-pulse shrink-0" />
+                <span className="font-semibold text-purple-950">Zara is speaking (ElevenLabs v4)…</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  stopAudio();
+                  if (wantsToListenRef.current) startListeningRef.current();
+                }}
+                className="px-2.5 py-1 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-[11px] transition shadow-xs cursor-pointer active:scale-95"
+              >
+                Interrupt & Speak
+              </button>
+            </div>
+          )}
+
+          {isListening && (
+            <div className="mx-4 my-2 px-3.5 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between text-xs animate-in fade-in shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-1">
+                  <span className="w-1 h-3.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="w-1 h-5 rounded-full bg-emerald-600 animate-pulse delay-75" />
+                  <span className="w-1 h-3 rounded-full bg-emerald-500 animate-pulse delay-150" />
+                </div>
+                <div>
+                  <div className="font-bold text-[12px] text-emerald-950">Listening for your command…</div>
+                  <div className="text-[10px] text-emerald-700">Speak now, or tap Send when done</div>
+                </div>
+              </div>
+              {heardPreview ? (
+                <button
+                  type="button"
+                  onClick={() => handleSendMessage(heardPreview)}
+                  className="px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-xs cursor-pointer active:scale-95 flex items-center gap-1"
+                >
+                  <span>Send</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              ) : (
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200">
+                  Mic Live
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Input Bar */}
           <form
             onSubmit={(e) => {
@@ -922,28 +1137,50 @@ export function ZaraVoiceCopilot() {
             }}
             className="p-3 bg-white border-t border-slate-100 flex items-center gap-2"
           >
-            {/* Mic Button */}
+            {/* Mic Button: Toggles Voice or interrupts Zara */}
             <button
               type="button"
-              onClick={toggleVoiceMode}
-              className={`p-2.5 rounded-xl border transition cursor-pointer ${
+              onClick={() => {
+                if (isSpeaking) {
+                  stopAudio();
+                  if (wantsToListenRef.current) startListeningRef.current();
+                } else {
+                  toggleVoiceMode();
+                }
+              }}
+              className={`p-2.5 rounded-xl border transition cursor-pointer relative ${
                 isVoiceActive
-                  ? 'bg-emerald-500 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-300'
+                  ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-300'
                   : 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-200/70'
               }`}
-              title={isVoiceActive ? 'Voice mode on — click to mute' : 'Click to enable voice input'}
+              title={
+                isSpeaking
+                  ? 'Zara is speaking — click to interrupt and speak'
+                  : isVoiceActive
+                  ? 'Voice mode active (click to mute)'
+                  : 'Click to enable voice conversation'
+              }
             >
-              {isVoiceActive ? <Mic className="w-4 h-4 animate-pulse" /> : <MicOff className="w-4 h-4" />}
+              {isVoiceActive ? (
+                <>
+                  <Mic className="w-4 h-4 animate-pulse" />
+                  {isListening && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-white ring-2 ring-emerald-500 animate-ping" />
+                  )}
+                </>
+              ) : (
+                <MicOff className="w-4 h-4" />
+              )}
             </button>
 
-            {/* Text Input with Real-time Speech Hint */}
+            {/* Text Input with Real-time Speech Sync */}
             <input
               type="text"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               placeholder={
                 isVoiceActive
-                  ? (heardPreview ? `Hearing: "${heardPreview}"` : 'Listening… speak your command')
+                  ? (isListening ? (heardPreview ? `Hearing: "${heardPreview}"` : 'Listening… speak your command now') : 'Zara is ready…')
                   : `Ask Zara AI anything about ${clientName} CMS…`
               }
               className="flex-1 px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200/90 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-400 focus:ring-2 focus:ring-slate-900/5 font-medium transition-all"
