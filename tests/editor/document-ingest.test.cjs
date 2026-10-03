@@ -99,3 +99,42 @@ test('Document Ingestion: API returns samples catalogue on GET', async (t) => {
   assert.equal(data.samples[0].id, 'goldfields-annual-2025');
   assert.equal(data.samples[0].companyName, 'Gold Fields Limited');
 });
+
+test('Document Ingestion: extracts text and financial metrics from genuine PDF buffer', async (t) => {
+  const fs = require('fs');
+  const path = require('path');
+  const h = await createHarness();
+  t.after(() => h.close());
+
+  const { extractTextFromPdfBuffer, ingestCorporateDocument, toCleanUint8Array } = h.load('lib/studio/editor/documentIngest.ts');
+
+  const pdfPath = path.resolve(process.cwd(), 'fixtures/merafe-summarised-results-2025.pdf');
+  assert.ok(fs.existsSync(pdfPath), 'Merafe fixtures PDF exists');
+
+  const fileBuffer = fs.readFileSync(pdfPath);
+  assert.ok(Buffer.isBuffer(fileBuffer));
+
+  // Test toCleanUint8Array
+  const cleanUint8 = toCleanUint8Array(fileBuffer);
+  assert.equal(cleanUint8.constructor.name, 'Uint8Array');
+  assert.equal(Buffer.isBuffer(cleanUint8), false);
+
+  // Test PDF text extraction from Node Buffer directly
+  const extractedText = await extractTextFromPdfBuffer(fileBuffer);
+  assert.ok(extractedText.length > 500, 'Extracted rich text from PDF');
+  assert.ok(extractedText.includes('MERAFE RESOURCES LIMITED'), 'Extracted company title');
+  assert.ok(extractedText.includes('SUMMARISED CONSOLIDATED FINANCIAL STATEMENTS'), 'Extracted reporting title');
+
+  // Test full ingestion pipeline with PDF Buffer
+  const result = await ingestCorporateDocument({
+    buffer: fileBuffer,
+    brandKit: { colors: { accent: { hex: '#0EA5E9' } } }
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.insights.companyName, 'Merafe Resources Limited');
+  assert.ok(result.insights.kpis.length >= 4, 'Extracted at least 4 corporate KPIs');
+  assert.equal(result.sections.length, 5, 'Synthesizes 5 production sections');
+  assert.equal(result.sections[0].styles.accentColor, '#0EA5E9');
+});
+
