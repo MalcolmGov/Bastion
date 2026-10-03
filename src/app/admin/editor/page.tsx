@@ -81,6 +81,8 @@ import { ApiKeysTab } from '@/components/studio/ApiKeysTab';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, getLocaleMeta } from '@/lib/i18n/locales';
 import { DocumentIngestionModal } from '@/components/studio/editor/DocumentIngestionModal';
+import { ComplianceGuardianPanel } from '@/components/studio/editor/ComplianceGuardianPanel';
+import { auditCanvasCompliance } from '@/lib/studio/editor/complianceGuardian';
 import type { SectionInstance, DesignCollectionId, BackgroundPatternType } from '@/lib/studio/types';
 
 const SOLID_SWATCHES = [
@@ -318,9 +320,9 @@ function VisualWebsiteEditorContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
 
-  // Inspector Active Tab: 'content' | 'design' | 'ai' | 'keys'
+  // Inspector Active Tab: 'content' | 'design' | 'ai' | 'compliance' | 'keys'
   const openAssistant = searchParams.get('panel') === 'ai';
-  const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai' | 'keys'>(() => openAssistant ? 'ai' : 'content');
+  const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai' | 'compliance' | 'keys'>(() => openAssistant ? 'ai' : 'content');
   const [isLocaleMenuOpen, setIsLocaleMenuOpen] = useState(false);
 
   // Dynamic Zones Builder Left Panel Mode: 'dynamic_zones' | 'outline' | 'brand_vault'
@@ -1268,8 +1270,46 @@ function VisualWebsiteEditorContent() {
 
   return (
     <div className="h-dvh flex flex-col bg-slate-50 dark:bg-slate-950">
-      <EditorDialog open={publishOpen} title="Publish this page?" onClose={() => setPublishOpen(false)}><p className="mt-3 text-sm leading-relaxed text-slate-500">Your current changes to <strong className="text-slate-900 dark:text-white">{pageTitle}</strong> will become visible on <strong className="text-slate-900 dark:text-white">{siteData?.name}</strong>.</p><p className="mt-2 text-xs text-slate-400">{sections.filter(section => section.visible).length} visible sections · Version {currentVersionNumber + 1}</p><div className="mt-6 flex justify-end gap-3"><button type="button" autoFocus disabled={isDeploying} onClick={() => setPublishOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm">Keep editing</button><button type="button" disabled={isDeploying} onClick={async () => { await saveDocument('published'); setPublishOpen(false); }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">{isDeploying ? 'Publishing…' : 'Publish page'}</button></div></EditorDialog>
+      <EditorDialog open={publishOpen} title="Publish this page?" onClose={() => setPublishOpen(false)}>
+        <p className="mt-3 text-sm leading-relaxed text-slate-500">Your current changes to <strong className="text-slate-900 dark:text-white">{pageTitle}</strong> will become visible on <strong className="text-slate-900 dark:text-white">{siteData?.name}</strong>.</p>
+        <p className="mt-2 text-xs text-slate-400">{sections.filter(section => section.visible).length} visible sections · Version {currentVersionNumber + 1}</p>
+        {(() => {
+          const preflight = auditCanvasCompliance(sections, { siteId: siteSlug, pageSlug: activePageSlug });
+          if (preflight.criticalCount > 0) {
+            return (
+              <div className="mt-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 space-y-1">
+                <div className="font-bold flex items-center gap-1.5 text-rose-400">
+                  <ShieldCheck className="w-4 h-4" />
+                  JSE / ESG Compliance Risk Detected ({preflight.criticalCount} Critical)
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  Unverified forward-looking statements or absolute greenwashing claims were flagged.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublishOpen(false);
+                    setInspectorTab('compliance');
+                    setIsRightPanelOpen(true);
+                  }}
+                  className="mt-1 text-[11px] font-bold text-amber-400 underline cursor-pointer"
+                >
+                  Review &amp; Auto-Fix with Compliance Guardian &rarr;
+                </button>
+              </div>
+            );
+          }
+          return (
+            <div className="mt-3 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Pre-Flight Check: Grade {preflight.grade} &bull; 100% Statutory Compliant</span>
+            </div>
+          );
+        })()}
+        <div className="mt-6 flex justify-end gap-3"><button type="button" autoFocus disabled={isDeploying} onClick={() => setPublishOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm">Keep editing</button><button type="button" disabled={isDeploying} onClick={async () => { await saveDocument('published'); setPublishOpen(false); }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">{isDeploying ? 'Publishing…' : 'Publish page'}</button></div>
+      </EditorDialog>
       <EditorToolbar siteName={siteData?.name || 'Choose a website'} siteId={siteData?.id || siteSlug} sites={activeClient?.websites || []} page={activePageSlug} pages={pageSlugs} busy={isSaving || isDeploying || isRollingBack || isAddingToRelease || isAssistantApplying} dirty={hasUnsavedChanges} savedTime={savedTime} loading={isLoadingPage} isNew={currentVersionNumber === 0} advancedTools={isAgencyUser(user)} canEdit={hasPerm('content:edit')} canPublish={hasPerm('content:publish')} viewport={viewport} preview={isPreview} leftOpen={isLeftPanelOpen} rightOpen={isRightPanelOpen} canUndo={historyIndex > 0} canRedo={historyIndex < history.length - 1} onSite={id => switchDocument(id,'home')} onPage={slug => switchDocument(siteSlug,slug)} onSave={() => void handleSaveDraft()} onPublish={handleDeployPublish} onViewport={setViewport} onPreview={() => setIsPreview(value => !value)} onLeft={() => { if (compactEditor) setIsRightPanelOpen(false); setIsLeftPanelOpen(value => !value); }} onRight={() => { if (compactEditor) setIsLeftPanelOpen(false); setIsRightPanelOpen(value => !value); }} onUndo={handleUndo} onRedo={handleRedo} onMore={action => {
+        if (action === 'compliance') { if (compactEditor) setIsLeftPanelOpen(false); setInspectorTab('compliance'); setIsRightPanelOpen(true); setIsPreview(false); }
         if (action === 'ingest') setIsIngestModalOpen(true);
         if (action === 'history') void handleOpenVersionModal();
         if (action === 'release') void handleOpenReleaseModal();
@@ -1710,6 +1750,19 @@ function VisualWebsiteEditorContent() {
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                 <span>AI Polish</span>
+              </button>
+              <button
+                id="tab-btn-compliance"
+                type="button"
+                onClick={() => setInspectorTab('compliance')}
+                className={`flex-1 py-1.5 rounded-lg font-semibold flex items-center justify-center space-x-1 transition cursor-pointer ${
+                  inspectorTab === 'compliance'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Guardian</span>
               </button>
               <button
                 id="tab-btn-keys"
@@ -2616,6 +2669,20 @@ function VisualWebsiteEditorContent() {
             <div className={inspectorTab === 'keys' ? 'block animate-in fade-in duration-150' : 'hidden'}>
               <ApiKeysTab />
             </div>
+
+            {/* TAB 5: JSE & ESG COMPLIANCE GUARDIAN (Kept mounted) */}
+            <div className={inspectorTab === 'compliance' ? 'block animate-in fade-in duration-150 h-[calc(100dvh-130px)]' : 'hidden'}>
+              <ComplianceGuardianPanel
+                sections={sections}
+                siteId={siteData?.id || siteSlug}
+                pageSlug={activePageSlug}
+                onRemediate={(updatedSections, message) => {
+                  updateSections(updatedSections);
+                  setIngestSuccessMessage(message);
+                  setTimeout(() => setIngestSuccessMessage(null), 5000);
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -2956,9 +3023,10 @@ function VisualWebsiteEditorContent() {
           }
           setTimeout(() => setIngestSuccessMessage(null), 6000);
         }}
-        onApplyPages={async (pages) => {
+        onApplyPages={async (pages, options) => {
           setIsAssistantApplying(true);
           try {
+            const targetStatus = options?.status || 'in_review';
             const res = await fetch('/api/admin/editor/assistant/apply', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -2968,9 +3036,11 @@ function VisualWebsiteEditorContent() {
                   pageSlug: p.slug,
                   title: p.title,
                   sections: p.sections,
-                  changeSummary: `AI Report Ingestion (${p.title})`,
+                  changeSummary:
+                    options?.changeSummary ||
+                    `Bastion Agency Ingestion: ${p.title} (${targetStatus === 'in_review' ? 'Staged for client review & approvals' : 'Studio Draft'})`,
                 })),
-                options: { allowCreate: true },
+                options: { allowCreate: true, status: targetStatus },
               }),
             });
             if (!res.ok) {
@@ -2987,10 +3057,17 @@ function VisualWebsiteEditorContent() {
             } else {
               switchDocument(siteData?.id || siteSlug, homePage.slug);
             }
-            setIngestSuccessMessage(
-              `🎉 Live Investor Portal Assembled! 4 responsive pages created (${pages.map((p) => '/' + p.slug).join(', ')}). Switch pages in the top toolbar to inspect!`
-            );
-            setTimeout(() => setIngestSuccessMessage(null), 10000);
+
+            if (targetStatus === 'in_review') {
+              setIngestSuccessMessage(
+                `🚀 Pushed to Client Portal! 4 pages (${pages.map((p) => '/' + p.slug).join(', ')}) are now staged under 'In Review' in the client's Tasks & Approvals queue. Client executives can inspect, edit copy with no-code tools, and formally approve!`
+              );
+            } else {
+              setIngestSuccessMessage(
+                `🎉 Live Investor Portal Assembled! 4 responsive pages created as Studio Drafts (${pages.map((p) => '/' + p.slug).join(', ')}). Switch pages in the top toolbar to inspect!`
+              );
+            }
+            setTimeout(() => setIngestSuccessMessage(null), 12000);
           } catch (err: any) {
             setEditorError(err.message || 'Failed to assemble multi-page portal');
           } finally {

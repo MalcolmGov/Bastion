@@ -63,8 +63,8 @@ export async function saveComposition(
       400,
     );
   const status = input.status || 'draft';
-  if (!['draft', 'published'].includes(status))
-    throw new EditorSaveError('Choose draft or published status.', 400);
+  if (!['draft', 'in_review', 'published'].includes(status))
+    throw new EditorSaveError('Choose draft, in_review, or published status.', 400);
   if (
     !hasPermission(
       user.role,
@@ -215,7 +215,7 @@ export async function saveWebsiteDrafts(
   user: StudioUser,
   siteId: string,
   pages: Omit<CompositionSave, 'siteId'>[],
-  options?: { allowCreate?: boolean },
+  options?: { allowCreate?: boolean; status?: 'draft' | 'in_review' | 'published' },
 ) {
   if (
     typeof siteId !== 'string' ||
@@ -259,7 +259,7 @@ export async function saveWebsiteDrafts(
             ...page,
             expectedVersion: page.expectedVersion !== undefined ? page.expectedVersion : expectedVersion,
             siteId: String(site.id),
-            status: 'draft',
+            status: page.status || options?.status || 'draft',
           },
           { transaction, site },
         )),

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/guard';
+import { isAgencyUser } from '@/lib/auth/roles';
 import {
   ingestCorporateDocument,
   CORPORATE_REPORT_SAMPLES,
@@ -29,6 +30,17 @@ export async function POST(req: NextRequest) {
   try {
     const gate = await requireUser();
     if (!gate.ok) return gate.response;
+
+    // Monetization Gate: Only Bastion Agency staff can run the document-to-web ingestion engine
+    if (!isAgencyUser(gate.user)) {
+      return NextResponse.json(
+        {
+          error:
+            'The AI Document & Annual Report Ingestion engine is an exclusive Bastion Agency monetization service. Please contact your Bastion account director to convert your PDF reports into interactive web portals.',
+        },
+        { status: 403 }
+      );
+    }
 
     const contentType = req.headers.get('content-type') || '';
     let sampleId: string | undefined;

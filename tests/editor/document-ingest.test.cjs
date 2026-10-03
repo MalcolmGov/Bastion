@@ -164,3 +164,36 @@ test('Document Ingestion: extracts text and financial metrics from genuine PDF b
   assert.equal(result.pages.length, 4, 'Synthesizes 4 multi-page drafts');
   assert.equal(result.sections[0].styles.accentColor, '#0EA5E9');
 });
+
+test('Document Ingestion: API route enforces Bastion Agency monetization gate (403 for client users, 200 for agency staff)', async (t) => {
+  const h = await createHarness();
+  t.after(() => h.close());
+
+  const { POST } = h.load('app/api/admin/editor/ingest-document/route.ts');
+
+  // 1. Client User Request -> Should be blocked with 403 Forbidden
+  h.user({ role: 'content_editor', client_id: 'tenant-a' });
+  const clientReq = h.request('/api/admin/editor/ingest-document', {
+    sampleId: 'goldfields-annual-2025'
+  });
+  const clientRes = await POST(clientReq);
+  const clientData = await clientRes.json();
+
+  assert.equal(clientRes.status, 403, 'Non-agency client user is blocked with 403');
+  assert.ok(clientData.error.includes('exclusive Bastion Agency monetization service'));
+  assert.ok(clientData.error.includes('contact your Bastion account director'));
+
+  // 2. Bastion Agency Staff Request (platform_admin, client_id: null) -> Allowed with 200 OK
+  h.user({ role: 'platform_admin', client_id: null });
+  const agencyReq = h.request('/api/admin/editor/ingest-document', {
+    sampleId: 'goldfields-annual-2025'
+  });
+  const agencyRes = await POST(agencyReq);
+  const agencyData = await agencyRes.json();
+
+  assert.equal(agencyRes.status, 200, 'Bastion Agency user succeeds with 200');
+  assert.equal(agencyData.success, true);
+  assert.equal(agencyData.insights.companyName, 'Gold Fields Limited');
+  assert.equal(agencyData.pages.length, 4, 'Returns 4 synthesized investor suite pages');
+});
+

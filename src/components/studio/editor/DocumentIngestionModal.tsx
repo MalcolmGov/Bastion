@@ -35,7 +35,10 @@ interface DocumentIngestionModalProps {
   siteId: string;
   brandKit?: any;
   onApplySections: (sections: SectionInstance[], mode: 'replace' | 'append') => void;
-  onApplyPages?: (pages: GeneratedPageDraft[]) => Promise<void> | void;
+  onApplyPages?: (
+    pages: GeneratedPageDraft[],
+    options?: { status?: 'draft' | 'in_review'; changeSummary?: string }
+  ) => Promise<void> | void;
 }
 
 export function DocumentIngestionModal({
@@ -51,7 +54,7 @@ export function DocumentIngestionModal({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState<string>('');
   const [applyMode, setApplyMode] = useState<'replace' | 'append'>('replace');
-  const [targetPortalMode, setTargetPortalMode] = useState<'multipage' | 'single'>('multipage');
+  const [targetPortalMode, setTargetPortalMode] = useState<'client_review' | 'agency_draft' | 'single'>('client_review');
   const [activePreviewTab, setActivePreviewTab] = useState<'multipage' | 'table' | 'executive'>('multipage');
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -149,12 +152,18 @@ export function DocumentIngestionModal({
     setIsApplying(true);
     try {
       if (
-        targetPortalMode === 'multipage' &&
+        (targetPortalMode === 'client_review' || targetPortalMode === 'agency_draft') &&
         extractionResult.pages &&
         extractionResult.pages.length > 0 &&
         onApplyPages
       ) {
-        await onApplyPages(extractionResult.pages);
+        const isClientHandover = targetPortalMode === 'client_review';
+        await onApplyPages(extractionResult.pages, {
+          status: isClientHandover ? 'in_review' : 'draft',
+          changeSummary: isClientHandover
+            ? `Bastion Agency Ingestion: ${extractionResult.insights.companyName} (${extractionResult.insights.reportingPeriod}) — Staged for client review & approvals`
+            : `Bastion Studio Draft: ${extractionResult.insights.companyName} (${extractionResult.insights.reportingPeriod})`,
+        });
       } else {
         onApplySections(extractionResult.sections, applyMode);
       }
@@ -179,14 +188,17 @@ export function DocumentIngestionModal({
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-white">AI Document & Annual Report Ingestion</h2>
                 <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full uppercase tracking-wider">
-                  Instant Web Generator
+                  Bastion Agency Suite
+                </span>
+                <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-full">
+                  Commercial Handover Engine · R45,000 / $2,500
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Transform 120-page Annual Reports, ESG disclosures, and SENS PDFs into interactive, multi-page investor portals in 60 seconds.
+                Synthesize 120-page Annual Reports, ESG disclosures, and SENS PDFs into interactive investor suites and push directly to the client CMS portal for review and approvals.
               </p>
             </div>
           </div>
@@ -704,88 +716,134 @@ export function DocumentIngestionModal({
 
               {/* Assembly Strategy Selector */}
               <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-                <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-amber-400" />
-                  Target Assembly Architecture
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <Compass className="w-4 h-4 text-amber-400" />
+                    Target Assembly Architecture & Handover Pipeline
+                  </div>
+                  <span className="text-[11px] text-slate-400">
+                    Choose client handover or internal studio staging
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Option 1: Multi-Page Flagship */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Option 1: Client Review Handover */}
                   <div
-                    onClick={() => setTargetPortalMode('multipage')}
+                    onClick={() => setTargetPortalMode('client_review')}
                     className={`p-3.5 rounded-xl border cursor-pointer transition relative flex flex-col justify-between ${
-                      targetPortalMode === 'multipage'
-                        ? 'border-emerald-500 bg-emerald-500/10 shadow-lg shadow-emerald-500/10'
+                      targetPortalMode === 'client_review'
+                        ? 'border-emerald-500 bg-emerald-500/10 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/30'
                         : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
                     }`}
                   >
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                          Multi-Page Investor Suite (4 Pages)
+                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          Push to Client Portal
                         </span>
-                        {targetPortalMode === 'multipage' && (
+                        {targetPortalMode === 'client_review' && (
                           <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-slate-950">
                             <Check className="w-2.5 h-2.5 stroke-[3]" />
                           </div>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-400">
-                        Automatically assembles and saves /home, /financials, /sustainability, and /leadership in a single action.
+                      <p className="text-[11px] text-slate-300 leading-relaxed">
+                        Stages all 4 pages (<code className="text-emerald-400 text-[10px]">/home</code>, <code className="text-emerald-400 text-[10px]">/financials</code>, <code className="text-emerald-400 text-[10px]">/sustainability</code>, <code className="text-emerald-400 text-[10px]">/leadership</code>) into the client's <strong className="text-white">Tasks & Approvals queue</strong> with <span className="text-emerald-400 font-mono font-bold">status: 'in_review'</span>.
                       </p>
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mt-2">
-                      Recommended for Sales & Investor Meetings
-                    </span>
+                    <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                      <span className="font-bold text-emerald-400 uppercase tracking-wider">
+                        ⭐ Commercial Handover
+                      </span>
+                      <span className="text-slate-400 font-mono">Client In-Review</span>
+                    </div>
                   </div>
 
-                  {/* Option 2: Current Page Only */}
+                  {/* Option 2: Studio Internal Drafts */}
                   <div
-                    onClick={() => setTargetPortalMode('single')}
+                    onClick={() => setTargetPortalMode('agency_draft')}
                     className={`p-3.5 rounded-xl border cursor-pointer transition relative flex flex-col justify-between ${
-                      targetPortalMode === 'single'
-                        ? 'border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/10'
+                      targetPortalMode === 'agency_draft'
+                        ? 'border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/30'
                         : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
                     }`}
                   >
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <Layers className="w-3.5 h-3.5 text-amber-400" />
-                          Current Canvas Only (7 Sections)
+                        <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Assemble Studio Drafts
                         </span>
-                        {targetPortalMode === 'single' && (
+                        {targetPortalMode === 'agency_draft' && (
                           <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-slate-950">
                             <Check className="w-2.5 h-2.5 stroke-[3]" />
                           </div>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-400">
-                        Inserts the synthesized blocks into the current page you are actively editing.
+                      <p className="text-[11px] text-slate-300 leading-relaxed">
+                        Saves all 4 pages as internal agency drafts with <span className="text-amber-400 font-mono font-bold">status: 'draft'</span>. Bastion designers can polish layouts before client handoff.
+                      </p>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                      <span className="font-bold text-amber-400 uppercase tracking-wider">
+                        Internal Staging
+                      </span>
+                      <span className="text-slate-400 font-mono">Agency Draft</span>
+                    </div>
+                  </div>
+
+                  {/* Option 3: Current Canvas Only */}
+                  <div
+                    onClick={() => setTargetPortalMode('single')}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition relative flex flex-col justify-between ${
+                      targetPortalMode === 'single'
+                        ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500/30'
+                        : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5" />
+                          Current Canvas Only
+                        </span>
+                        {targetPortalMode === 'single' && (
+                          <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center text-white">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-300 leading-relaxed">
+                        Inserts the 7 synthesized blocks into the single page you are actively editing without affecting other portal routes.
                       </p>
                     </div>
 
-                    {targetPortalMode === 'single' && (
+                    {targetPortalMode === 'single' ? (
                       <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-800">
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setApplyMode('replace'); }}
                           className={`px-2 py-1 rounded text-[10px] font-bold transition ${
-                            applyMode === 'replace' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'
+                            applyMode === 'replace' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-300'
                           }`}
                         >
-                          Replace Page
+                          Replace Canvas
                         </button>
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setApplyMode('append'); }}
                           className={`px-2 py-1 rounded text-[10px] font-bold transition ${
-                            applyMode === 'append' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'
+                            applyMode === 'append' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-300'
                           }`}
                         >
                           Append to Bottom
                         </button>
+                      </div>
+                    ) : (
+                      <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-slate-400 uppercase tracking-wider">Single Page</span>
+                        <span className="text-slate-400 font-mono">Canvas Insert</span>
                       </div>
                     )}
                   </div>
@@ -800,11 +858,21 @@ export function DocumentIngestionModal({
         {/* Footer Actions */}
         <div className="px-6 py-4 border-t border-slate-800 bg-[#0A0F1D]/90 flex items-center justify-between">
           <div className="text-xs text-slate-400">
-            {!extractionResult
-              ? 'Ready to parse report into structured sections'
-              : targetPortalMode === 'multipage'
-              ? '4 responsive pages & 19 interactive modular blocks synthesized'
-              : `${extractionResult.sections.length} modular blocks prepared for canvas`}
+            {!extractionResult ? (
+              'Ready to parse report into structured sections'
+            ) : targetPortalMode === 'client_review' ? (
+              <span className="text-emerald-400 flex items-center gap-1.5 font-medium">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Handover package: 4 pages will be staged in the client Tasks & Approvals queue (In Review)
+              </span>
+            ) : targetPortalMode === 'agency_draft' ? (
+              <span className="text-amber-400 flex items-center gap-1.5 font-medium">
+                <Sparkles className="w-3.5 h-3.5" />
+                Internal staging: 4 pages will be saved as Studio Drafts
+              </span>
+            ) : (
+              `${extractionResult.sections.length} modular blocks prepared for canvas`
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -841,20 +909,31 @@ export function DocumentIngestionModal({
                 onClick={handleConfirmAssemble}
                 disabled={isApplying}
                 className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg transition flex items-center gap-2 cursor-pointer ${
-                  targetPortalMode === 'multipage'
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/20'
-                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
+                  targetPortalMode === 'client_review'
+                    ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/25'
+                    : targetPortalMode === 'agency_draft'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-amber-500/25'
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/25'
                 }`}
               >
                 {isApplying ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    Assembling Live Portal...
+                    {targetPortalMode === 'client_review'
+                      ? 'Pushing to Client Portal...'
+                      : targetPortalMode === 'agency_draft'
+                      ? 'Saving Studio Drafts...'
+                      : 'Assembling Page...'}
                   </>
-                ) : targetPortalMode === 'multipage' ? (
+                ) : targetPortalMode === 'client_review' ? (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    Push 4 Pages to Client Portal (In Review)
+                  </>
+                ) : targetPortalMode === 'agency_draft' ? (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    Assemble Live Investor Portal (4 Pages)
+                    Assemble 4 Pages as Studio Draft
                   </>
                 ) : (
                   <>
