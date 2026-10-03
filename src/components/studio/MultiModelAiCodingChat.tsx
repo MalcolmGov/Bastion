@@ -148,17 +148,9 @@ const MODEL_OPTIONS = [
     color: 'text-purple-400 border-purple-500/30 bg-purple-500/10'
   },
   {
-    id: 'claude-3-5-sonnet-20241022',
+    id: 'claude-haiku-4-5',
     provider: 'anthropic' as const,
-    name: 'Claude 3.5 Sonnet v2',
-    tag: 'Elite UI/UX & Creative Polish',
-    badge: 'Anthropic',
-    color: 'text-purple-400 border-purple-500/30 bg-purple-500/10'
-  },
-  {
-    id: 'claude-3-5-haiku-20241022',
-    provider: 'anthropic' as const,
-    name: 'Claude 3.5 Haiku',
+    name: 'Claude Haiku 4.5',
     tag: 'Ultra-Fast Responsive Polish',
     badge: 'Anthropic',
     color: 'text-purple-400 border-purple-500/30 bg-purple-500/10'
