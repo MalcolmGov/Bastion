@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { Client, Row } from '@libsql/client';
 import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
 

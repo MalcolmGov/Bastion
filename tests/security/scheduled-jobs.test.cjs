@@ -1,10 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createHarness } = require('./harness.cjs');
+const { DUE, fixture: schedulingFixture, runWorker, runCron } = require('./scheduling-fixture.cjs');
 
-const DUE = '2020-01-01T00:00:00.000Z';
 const FUTURE = '2999-01-01T00:00:00.000Z';
-const CRON_SECRET = 'scheduled-jobs-test-secret-0001';
 const PUBLISHER = { id: 'publisher-a', name: 'Publisher A', role: 'publisher', client_id: 'tenant-a' };
 const AGENCY = { id: 'agency-1', name: 'Agency One', role: 'platform_admin', client_id: null };
 let seq = 0;
@@ -16,19 +14,7 @@ const CRON_SHAPE = `CREATE TABLE scheduled_jobs(id TEXT PRIMARY KEY, record_id T
   executed_at TEXT, error_message TEXT, created_at TEXT NOT NULL, client_id TEXT)`;
 
 async function fixture(t) {
-  const h = await createHarness();
-  const realEnv = process.env.CRON_SECRET, realWarn = console.warn, realError = console.error;
-  process.env.CRON_SECRET = CRON_SECRET;
-  console.warn = () => {};
-  console.error = () => {};
-  t.after(() => {
-    if (realEnv === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = realEnv;
-    console.warn = realWarn;
-    console.error = realError;
-    h.close();
-  });
-  await h.db.execute('ALTER TABLE audit_log ADD COLUMN correlation_id TEXT');
-  await h.db.execute('ALTER TABLE audit_log ADD COLUMN ip_address TEXT');
+  const h = await schedulingFixture(t);
   await h.db.execute('ALTER TABLE audit_log ADD COLUMN client_id TEXT');
   await h.db.execute("INSERT INTO users(id,name,email,role,client_id) VALUES('publisher-a','Publisher A','publisher-a@test.local','publisher','tenant-a')");
   return h;
@@ -50,13 +36,6 @@ const revision = async (h, rev) => (await h.db.execute({ sql: 'SELECT * FROM rev
 const isLive = async (h, { rec, rev }) => (await record(h, rec)).current_published_revision_id === rev;
 const publishAudit = async h => (await h.db.execute("SELECT * FROM audit_log WHERE action = 'SCHEDULED_PUBLISH'")).rows;
 const columns = async (h, table = 'scheduled_jobs') => (await h.db.execute(`PRAGMA table_info(${table})`)).rows.map(r => String(r.name));
-
-const runWorker = h => h.load('lib/worker/worker.ts').executeScheduledWorker();
-const runCron = async h => {
-  const res = await h.route('api/cron/releases').POST(h.request('/api/cron/releases', {}, CRON_SECRET));
-  assert.equal(res.status, 200);
-  return res.json();
-};
 
 // ---- the migration that leaves one shape ----
 

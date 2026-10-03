@@ -1,32 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createHarness } = require('./harness.cjs');
+const { DUE, fixture, runWorker, runCron } = require('./scheduling-fixture.cjs');
 
-const DUE = '2020-01-01T00:00:00.000Z';
-const CRON_SECRET = 'scheduled-approval-test-secret-0001';
 const APPROVAL_ERROR = /independent approval/i;
 let seq = 0;
-
-async function fixture(t, { legacyReleases = false } = {}) {
-  const h = await createHarness();
-  const realEnv = process.env.CRON_SECRET, realWarn = console.warn, realError = console.error;
-  process.env.CRON_SECRET = CRON_SECRET;
-  console.warn = () => {};
-  console.error = () => {};
-  t.after(() => {
-    if (realEnv === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = realEnv;
-    console.warn = realWarn;
-    console.error = realError;
-    h.close();
-  });
-  await h.db.execute('ALTER TABLE audit_log ADD COLUMN correlation_id TEXT');
-  await h.db.execute('ALTER TABLE audit_log ADD COLUMN ip_address TEXT');
-  if (legacyReleases) {
-    await h.db.execute('CREATE TABLE releases(id TEXT PRIMARY KEY, name TEXT, client_id TEXT, scheduled_at TEXT, status TEXT, published_at TEXT)');
-    await h.db.execute('CREATE TABLE release_items(release_id TEXT, item_type TEXT, item_id TEXT, action TEXT)');
-  }
-  return h;
-}
 
 async function addRecord(h, { collection = 'reports', author = 'author-a' } = {}) {
   const n = ++seq, rec = `rec-${n}`, rev = `rev-${n}`, hash = `hash-${n}`;
@@ -45,13 +22,6 @@ const job = async (h, id) => (await h.db.execute({ sql: 'SELECT * FROM scheduled
 const record = async (h, rec) => (await h.db.execute({ sql: 'SELECT * FROM content_records WHERE id = ?', args: [rec] })).rows[0];
 const revision = async (h, rev) => (await h.db.execute({ sql: 'SELECT * FROM revisions WHERE id = ?', args: [rev] })).rows[0];
 const isLive = async (h, { rec, rev }) => (await record(h, rec)).current_published_revision_id === rev;
-
-const runWorker = h => h.load('lib/worker/worker.ts').executeScheduledWorker();
-const runCron = async h => {
-  const res = await h.route('api/cron/releases').POST(h.request('/api/cron/releases', {}, CRON_SECRET));
-  assert.equal(res.status, 200);
-  return res.json();
-};
 
 // ---- the scheduled-job worker (the executor behind the "run worker" button) ----
 

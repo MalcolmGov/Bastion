@@ -510,9 +510,9 @@ async function runAll() {
     const jobId = `job_gate_sched_${stamp}`;
     const now = new Date().toISOString();
     try {
-      const columns = (await db.execute(`PRAGMA table_info(scheduled_jobs)`)).rows.map(r => String(r.name));
-      assert(columns.includes('publish_at_utc') && columns.includes('executed_at_utc') && columns.includes('error_log'), 'scheduled_jobs does not have the shared columns');
-      assert(!columns.includes('scheduled_for') && !columns.includes('record_id'), 'scheduled_jobs still has the old cron-shaped columns');
+      const columns = new Set((await db.execute(`PRAGMA table_info(scheduled_jobs)`)).rows.map(r => String(r.name)));
+      assert(columns.has('publish_at_utc') && columns.has('executed_at_utc') && columns.has('error_log'), 'scheduled_jobs does not have the shared columns');
+      assert(!columns.has('scheduled_for') && !columns.has('record_id'), 'scheduled_jobs still has the old cron-shaped columns');
 
       await db.execute({
         sql: `INSERT INTO content_records (id, collection, slug, title, status, current_draft_revision_id, client_id, created_at, updated_at)
