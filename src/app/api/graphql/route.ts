@@ -4,6 +4,7 @@ import { getDb, ensureDbReady } from '@/lib/db/client';
 import { BLUEPRINTS } from '@/lib/studio/blueprints';
 import { verifyApiToken } from '@/lib/auth/apiToken';
 import { apiTenantFilter, type ApiAccess } from '@/lib/auth/apiAccess';
+import { selectApiPages } from '@/lib/studio/publishedPages';
 
 // GraphQL Schema Definition (SDL)
 const typeDefs = `
@@ -195,49 +196,30 @@ async function resolveMediaAsset(db: any, access: ApiAccess, assetIdOrUrl: strin
   return null;
 }
 
+// GraphQL serves what the public site serves and nothing else. Pages come from selectApiPages (live row, or the
+// last published version while a new draft is being written). A record is live when it has a published revision and
+// has not been archived; its data always comes from that revision, never from a draft one.
+const LIVE_RECORD_JOIN = 'JOIN revisions rev ON r.current_published_revision_id = rev.id';
+const NOT_ARCHIVED = "AND r.status <> 'archived'";
+const PUBLISHED_ONLY = 'published';
+
 // Resolver Root
 function createRootResolvers(db: any, access: ApiAccess) {
-  const pagesFilter = apiTenantFilter(access, 'page');
   const recordsFilter = apiTenantFilter(access, 'record', 'r');
   const releasesFilter = apiTenantFilter(access, 'release');
   const mediaFilter = apiTenantFilter(access, 'media');
   return {
     // 1. Pages Query with deep relations population
-    pages: async ({ locale, status, siteId, limit = 50 }: any) => {
-      let sql = `SELECT * FROM page_compositions WHERE 1=1${pagesFilter.sql}`;
-      const args: any[] = [...pagesFilter.args];
-
-      if (siteId) {
-        sql += ` AND site_id = ?`;
-        args.push(siteId);
-      }
-      if (status) {
-        sql += ` AND status = ?`;
-        args.push(status);
-      }
-
-      sql += ` ORDER BY page_slug ASC LIMIT ?`;
-      args.push(limit);
-
-      const res = await db.execute({ sql, args });
-
-      return res.rows.map((row: any) => formatPageRow(db, access, row));
+    pages: async ({ status, siteId, limit = 50 }: any) => {
+      // Only published pages are served, so asking for any other status finds nothing.
+      if (status && status !== PUBLISHED_ONLY) return [];
+      const rows = await selectApiPages(db, { access, siteId, limit });
+      return rows.map((row: any) => formatPageRow(db, access, row));
     },
 
     page: async ({ slug, siteId }: any) => {
-      let sql = `SELECT * FROM page_compositions WHERE page_slug = ?${pagesFilter.sql}`;
-      const args: any[] = [slug, ...pagesFilter.args];
-
-      if (siteId) {
-        sql += ` AND site_id = ?`;
-        args.push(siteId);
-      }
-
-      sql += ` LIMIT 1`;
-      const res = await db.execute({ sql, args });
-      if (res.rows.length === 0) return null;
-
-      return formatPageRow(db, access, res.rows[0]);
+      const rows = await selectApiPages(db, { access, siteId, slug, limit: 1 });
+      return rows.length === 0 ? null : formatPageRow(db, access, rows[0]);
     },
 
     // 2. Operations Query
@@ -245,8 +227,8 @@ function createRootResolvers(db: any, access: ApiAccess) {
       let sql = `
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'operations'${recordsFilter.sql}
+        ${LIVE_RECORD_JOIN}
+        WHERE r.collection = 'operations' ${NOT_ARCHIVED}${recordsFilter.sql}
       `;
       const args: any[] = [...recordsFilter.args];
 
@@ -272,7 +254,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
           slug: String(row.slug),
           title: String(row.title),
           country: data.country || 'Global',
-          status: String(row.status || 'published'),
+          status: PUBLISHED_ONLY,
           metrics: data.metrics || null,
           infrastructure: data.infrastructure || null,
           updatedAt: String(row.updated_at || new Date().toISOString()),
@@ -285,8 +267,8 @@ function createRootResolvers(db: any, access: ApiAccess) {
       const sql = `
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'operations' AND r.slug = ?${recordsFilter.sql}
+        ${LIVE_RECORD_JOIN}
+        WHERE r.collection = 'operations' AND r.slug = ? ${NOT_ARCHIVED}${recordsFilter.sql}
         LIMIT 1
       `;
       const res = await db.execute({ sql, args: [slug, ...recordsFilter.args] });
@@ -305,7 +287,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
         slug: String(row.slug),
         title: String(row.title),
         country: data.country || 'Global',
-        status: String(row.status || 'published'),
+        status: PUBLISHED_ONLY,
         metrics: data.metrics || null,
         infrastructure: data.infrastructure || null,
         updatedAt: String(row.updated_at || new Date().toISOString()),
@@ -318,8 +300,8 @@ function createRootResolvers(db: any, access: ApiAccess) {
       let sql = `
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'reports'${recordsFilter.sql}
+        ${LIVE_RECORD_JOIN}
+        WHERE r.collection = 'reports' ${NOT_ARCHIVED}${recordsFilter.sql}
       `;
       const args: any[] = [...recordsFilter.args];
 
@@ -351,7 +333,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
           category: data.category || 'Integrated Annual Report',
           fileUrl: data.fileUrl || `/reports/${row.slug}.pdf`,
           fileSize: data.fileSize || '14.2 MB',
-          status: String(row.status || 'published'),
+          status: PUBLISHED_ONLY,
           updatedAt: String(row.updated_at || new Date().toISOString())
         };
       });
@@ -362,8 +344,8 @@ function createRootResolvers(db: any, access: ApiAccess) {
       let sql = `
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'news'${recordsFilter.sql}
+        ${LIVE_RECORD_JOIN}
+        WHERE r.collection = 'news' ${NOT_ARCHIVED}${recordsFilter.sql}
       `;
       const args: any[] = [...recordsFilter.args];
       if (category) {
@@ -389,7 +371,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
           category: data.category || 'SENS Regulatory',
           summary: data.summary || data.teaser || '',
           publishedAt: data.publishedAt || String(row.updated_at),
-          status: String(row.status || 'published'),
+          status: PUBLISHED_ONLY,
           featuredMedia: async () => resolveMediaAsset(db, access, data.featuredImage || data.imageUrl)
         };
       });
@@ -399,8 +381,8 @@ function createRootResolvers(db: any, access: ApiAccess) {
       const sql = `
         SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
         FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'news' AND r.slug = ?${recordsFilter.sql}
+        ${LIVE_RECORD_JOIN}
+        WHERE r.collection = 'news' AND r.slug = ? ${NOT_ARCHIVED}${recordsFilter.sql}
         LIMIT 1
       `;
       const res = await db.execute({ sql, args: [slug, ...recordsFilter.args] });
@@ -419,20 +401,17 @@ function createRootResolvers(db: any, access: ApiAccess) {
         category: data.category || 'SENS Regulatory',
         summary: data.summary || data.teaser || '',
         publishedAt: data.publishedAt || String(row.updated_at),
-        status: String(row.status || 'published'),
+        status: PUBLISHED_ONLY,
         featuredMedia: async () => resolveMediaAsset(db, access, data.featuredImage || data.imageUrl)
       };
     },
 
     // 5. Content Releases
     releases: async ({ status }: any) => {
-      let sql = `SELECT * FROM content_releases WHERE 1=1${releasesFilter.sql}`;
-      const args: any[] = [...releasesFilter.args];
-      if (status) {
-        sql += ` AND status = ?`;
-        args.push(status);
-      }
-      sql += ` ORDER BY created_at DESC`;
+      // Draft and scheduled releases are unpublished work, so only published ones are served.
+      if (status && status !== PUBLISHED_ONLY) return [];
+      const sql = `SELECT * FROM content_releases WHERE status = ?${releasesFilter.sql} ORDER BY created_at DESC`;
+      const args: any[] = [PUBLISHED_ONLY, ...releasesFilter.args];
 
       const res = await db.execute({ sql, args });
       return res.rows.map((row: any) => formatReleaseRow(db, row));
@@ -440,8 +419,8 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
     release: async ({ id }: any) => {
       const res = await db.execute({
-        sql: `SELECT * FROM content_releases WHERE id = ?${releasesFilter.sql} LIMIT 1`,
-        args: [id, ...releasesFilter.args]
+        sql: `SELECT * FROM content_releases WHERE id = ? AND status = ?${releasesFilter.sql} LIMIT 1`,
+        args: [id, PUBLISHED_ONLY, ...releasesFilter.args]
       });
       if (res.rows.length === 0) return null;
       return formatReleaseRow(db, res.rows[0]);
@@ -553,8 +532,8 @@ function formatPageRow(db: any, access: ApiAccess, row: any) {
       try {
         const filter = apiTenantFilter(access, 'release', 'r');
         const relItemRes = await db.execute({
-          sql: `SELECT i.release_id FROM content_release_items i JOIN content_releases r ON r.id = i.release_id WHERE (i.item_id = ? OR i.item_id = ?) AND r.site_id = ?${filter.sql} LIMIT 1`,
-          args: [String(row.id), String(row.page_slug), String(row.site_id), ...filter.args]
+          sql: `SELECT i.release_id FROM content_release_items i JOIN content_releases r ON r.id = i.release_id WHERE (i.item_id = ? OR i.item_id = ?) AND r.site_id = ? AND r.status = ?${filter.sql} LIMIT 1`,
+          args: [String(row.id), String(row.page_slug), String(row.site_id), PUBLISHED_ONLY, ...filter.args]
         });
         if (relItemRes.rows.length > 0) {
           const relId = relItemRes.rows[0].release_id;

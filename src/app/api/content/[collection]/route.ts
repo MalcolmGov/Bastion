@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { verifyApiToken } from '@/lib/auth/apiToken';
 import { apiTenantFilter } from '@/lib/auth/apiAccess';
+import { canPreviewDrafts, selectApiPages } from '@/lib/studio/publishedPages';
 
 export async function GET(
   req: NextRequest,
@@ -16,6 +17,12 @@ export async function GET(
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
     const isPreview = searchParams.get('preview') === 'true';
+    if (isPreview && !canPreviewDrafts(auth)) {
+      return NextResponse.json(
+        { error: "Forbidden: previewing unpublished content needs an API token with the 'content:edit' or 'content:publish' scope" },
+        { status: 403 }
+      );
+    }
 
     const effectiveClientId = auth.isAgencyAdmin
       ? (searchParams.get('clientId') || 'client_goldfields')
@@ -31,28 +38,9 @@ export async function GET(
 
     // SPECIAL CASE: 'pages' collection maps to page_compositions
     if (collection === 'pages') {
-      const filter = apiTenantFilter(auth.isAgencyAdmin ? { ...auth, isAgencyAdmin: false, clientId: effectiveClientId } : auth, 'page');
-      let pageSql = `SELECT * FROM page_compositions WHERE 1 = 1${filter.sql}`;
-      const pageArgs: any[] = [...filter.args];
-      if (siteId) {
-        pageSql += ' AND site_id = ?';
-        pageArgs.push(siteId);
-      }
-
-      if (slug) {
-        pageSql += ` AND page_slug = ?`;
-        pageArgs.push(slug);
-      }
-
-      if (!isPreview) {
-        pageSql += ` AND status = 'published'`;
-      }
-
-      pageSql += ` ORDER BY page_slug ASC LIMIT ? OFFSET ?`;
-      pageArgs.push(limit, offset);
-
-      const pageRes = await db.execute({ sql: pageSql, args: pageArgs });
-      const pages = pageRes.rows.map((row: any) => ({
+      const tenant = auth.isAgencyAdmin ? { ...auth, isAgencyAdmin: false, clientId: effectiveClientId } : auth;
+      const pageRows = await selectApiPages(db, { access: tenant, siteId, slug, limit, offset, drafts: isPreview });
+      const pages = pageRows.map((row: any) => ({
         id: String(row.id),
         siteId: String(row.site_id),
         slug: String(row.page_slug),
