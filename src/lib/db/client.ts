@@ -114,6 +114,10 @@ export async function ensureDbReady(): Promise<Client> {
         // Run Phase 2 migrations (Content Releases, Media Folders, Translations)
         const { runPhase2Migrations } = await import('@/lib/db/phase2Migrations');
         await runPhase2Migrations(raw);
+
+        // A deployment with no platform admin who can sign in gets one from BOOTSTRAP_ADMIN_* (never from a built-in password).
+        const { bootstrapPlatformAdmin } = await import('@/lib/auth/bootstrapAdmin');
+        await bootstrapPlatformAdmin(raw);
       } catch (err) {
         console.error('[DB] Error inspecting database tables:', err);
         try {

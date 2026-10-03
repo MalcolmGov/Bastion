@@ -1,3 +1,4 @@
+import { requireEnv } from './lib/env';
 import puppeteer from 'puppeteer-core';
 import path from 'path';
 
@@ -19,7 +20,7 @@ async function testApply() {
   // Login
   await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
   await page.type('input[type="email"]', 'admin@goldfields.com');
-  await page.type('input[type="password"]', 'GoldFields2026!');
+  await page.type('input[type="password"]', requireEnv('E2E_CLIENT_PASSWORD'));
   await page.click('button[type="submit"]');
   await page.waitForNavigation({ waitUntil: 'networkidle2' });
 

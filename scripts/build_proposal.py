@@ -1026,7 +1026,7 @@ html_content = f"""<!DOCTYPE html>
             Public Flagship: https://goldfields-bay.vercel.app<br>
             Studio OS Portal: https://goldfields-bay.vercel.app/admin/login<br>
             Login Email: admin@goldfields.com<br>
-            Temporary Access Key: GoldFields2026!
+            Access: credentials are issued separately by your account manager
           </div>
         </div>
       </div>

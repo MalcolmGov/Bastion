@@ -8,6 +8,7 @@ import { getDb, ensureDbReady, getDatabaseInfo, validateProductionEnvironment } 
 import { runMigrations } from '../src/lib/db/migrations';
 import { createApiToken, verifyApiToken, revokeApiToken } from '../src/lib/auth/apiToken';
 import { hashPassword, verifyPassword } from '../src/lib/auth/password';
+import { PUBLISHED_PASSWORDS } from '../src/lib/auth/bootstrapAdmin';
 import { sendTransactionalEmail } from '../src/lib/email/delivery';
 import { hasPermission } from '../src/lib/auth/auth';
 import { resolveDomain } from '../src/lib/domains/registry';
@@ -116,6 +117,14 @@ async function runAll() {
 
     // Cleanup
     await db.execute({ sql: `DELETE FROM users WHERE id = ?`, args: [testAdminId] });
+  });
+
+  await test('Migrations', 'No account accepts a password that is published in the repository', async () => {
+    const users = await db.execute(`SELECT email, password_hash FROM users WHERE password_hash IS NOT NULL`);
+    const offenders = users.rows
+      .filter(row => PUBLISHED_PASSWORDS.some(password => verifyPassword(password, String(row.password_hash))))
+      .map(row => String(row.email));
+    assert(offenders.length === 0, `Accounts still accept a published password: ${offenders.join(', ')}`);
   });
 
   // ─────────────────────────────────────────────────────────────

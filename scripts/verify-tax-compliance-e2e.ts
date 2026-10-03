@@ -1,3 +1,4 @@
+import { requireEnv } from './lib/env';
 import puppeteer from 'puppeteer-core';
 
 async function main() {
@@ -13,7 +14,7 @@ async function main() {
   console.log('1. Logging in to Bastion Admin...');
   await page.goto('http://localhost:3010/admin/login', { waitUntil: 'networkidle2' });
   await page.type('input[type="email"]', 'admin@goldfields.com');
-  await page.type('input[type="password"]', 'GoldFields2026!');
+  await page.type('input[type="password"]', requireEnv('E2E_CLIENT_PASSWORD'));
   await page.click('button[type="submit"]');
 
   await page.waitForNavigation({ waitUntil: 'networkidle2' });

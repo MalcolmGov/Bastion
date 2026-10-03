@@ -1,3 +1,4 @@
+import { requireEnv } from './lib/env';
 import puppeteer from 'puppeteer-core';
 import path from 'path';
 
@@ -40,7 +41,7 @@ async function runE2ETests() {
     console.log('\x1b[36m▶ [E2E STEP 0] Authentication & User Session\x1b[0m');
     await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
     await page.type('input[type="email"]', 'malcolm@movedigital.africa');
-    await page.type('input[type="password"]', 'Bastion2026!');
+    await page.type('input[type="password"]', requireEnv('E2E_ADMIN_PASSWORD'));
     await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle2' });
 

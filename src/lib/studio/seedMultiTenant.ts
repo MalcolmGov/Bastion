@@ -1103,30 +1103,6 @@ export async function seedMoveStudioTenants(db: DbClient): Promise<void> {
     ]
   });
 
-  // Ensure default agency platform admin exists
-  const adminEmail = 'malcolm@movedigital.africa';
-  const existingAdmin = await db.execute({
-    sql: `SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1`,
-    args: [adminEmail]
-  });
-  if (existingAdmin.rows.length === 0) {
-    const adminHash = hashPassword('Bastion2026!');
-    await db.execute({
-      sql: `INSERT INTO users (id, name, email, password_hash, role, region_scope, client_id, failed_login_attempts, locked_until, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL, ?)`,
-      args: [
-        'usr_malcolm_movedigital',
-        'Malcolm Govender',
-        adminEmail,
-        adminHash,
-        'platform_admin',
-        'All',
-        null,
-        now
-      ]
-    });
-  }
-
   // 12. Seed JSE SENS Announcements & Financial Calendar Events
   try {
     const gfSensCount = await db.execute(`SELECT COUNT(*) as c FROM sens_announcements WHERE client_id = 'client_goldfields'`);

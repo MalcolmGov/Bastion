@@ -1,3 +1,4 @@
+import { requireEnv } from './lib/env';
 /**
  * Bastion Enterprise CMS — Phase 1 Automated Verification Suite
  * Tests MCP JSON-RPC 2.0 endpoints, Dynamic Zones schema persistence,
@@ -53,7 +54,7 @@ async function main() {
     const res = await fetch(`${BASE_URL}/api/admin/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@goldfields.com', password: 'GoldFields2026!' })
+      body: JSON.stringify({ email: 'admin@goldfields.com', password: requireEnv('E2E_CLIENT_PASSWORD') })
     });
     assert(res.ok, `HTTP status ${res.status}`);
     const setCookie = res.headers.get('set-cookie');
