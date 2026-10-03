@@ -80,6 +80,7 @@ export interface ResultsDocument {
   notes: string[];
   warnings: string[];
   sourceFilename: string;
+  sourceFinancialContext?: { periodLabel: string; unit: string };
   pageCount: number;
   brand?: ResultsBrand | null;
   presentationHtml?: string | null;

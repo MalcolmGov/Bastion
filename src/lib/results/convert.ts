@@ -9,6 +9,7 @@ export async function convertPdfBytes(data: Uint8Array, sourceFilename: string):
   const extracted = await extractPdfGlyphs(data);
   if (!extracted.glyphs.some(glyph => /[\p{L}\p{N}]/u.test(glyph.text))) throw new Error('This PDF has no selectable text. Run OCR on the original PDF, then upload the searchable version. No financial figures have been inferred.');
   const document = composeResultsDocument(extracted.glyphs, extracted.pageCount, sourceFilename, extracted.shades);
+  document.sourceFinancialContext = { periodLabel: document.periodLabel, unit: document.unit };
   document.sourcePages = extracted.sourcePages;
   document.warnings.push(...extracted.visualWarnings);
   const textPages = new Set(extracted.glyphs.filter(glyph => /[\p{L}\p{N}]/u.test(glyph.text)).map(glyph => glyph.page));

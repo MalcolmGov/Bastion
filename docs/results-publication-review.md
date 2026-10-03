@@ -43,3 +43,11 @@ The recent-conversions endpoint now reads only report metadata with 50-item pagi
 The source comparison uses compact review typography and table spacing, retaining the report's actual cell content while fitting more comparative columns beside the original. The full publication keeps its presentation typography.
 
 Fully image-only PDFs stop with a searchable-PDF/OCR instruction instead of producing an empty transcription. Mixed PDFs warn about painted pages without extractable text; genuinely blank pages are retained as artwork without an OCR warning. This detects absent text, not imperfect OCR or text partly embedded in diagrams, which still require source review. No provider-based OCR or invented financial figures are introduced. Built-in styling rejects unsupported requests rather than silently applying unrelated polish.
+
+## Financial validation
+
+The review workspace evaluates missing figure cells, primary comparative periods, explicit monetary scales and recognised geographic/category breakdown totals. Decimal and large integer amounts use exact BigInt arithmetic. Note columns, percentage columns and intentional restatement blanks are excluded appropriately. Explicit Asia/country breakdowns avoid counting both the regional amount and its components; unrecognised accounting equations, roll-forwards and hierarchies are left for manual review, with skipped-total coverage shown.
+
+Each issue identifies the source page and offers direct comparison when artwork is available. Report figures are never repaired by validation. The known Merafe page-18 discrepancy is reproduced by the real fixture test, with only one subtotal discrepancy flagged. Source period/unit context is retained for newly converted PDFs and protected on updates; older drafts without that context still require manual confirmation.
+
+Publishing recomputes the issues on the server and requires a separate acknowledgement when issues exist, in addition to source review and publishing permission. Figure or design edits reset acknowledgement in the UI. These checks cannot certify a financial report, detect every omitted source row, or replace issuer review.

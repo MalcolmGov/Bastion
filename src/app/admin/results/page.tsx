@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import { ResultsCodingChat } from '@/components/results/ResultsCodingChat';
 import { InteractiveResultsViewer } from '@/components/results/InteractiveResultsViewer';
+import { validateFinancials } from '@/lib/results/validateFinancials';
 import { applyFigureEdit } from '@/lib/results/applyFigureEdit';
 import { renderResultsHtml } from '@/lib/results/renderHtml';
 import type { ResultsBrand, ResultsDocument, StoredResultsDocument, ResultsDocumentSummary } from '@/lib/results/types';
@@ -24,8 +25,10 @@ export default function ResultsStudioPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [htmlStale, setHtmlStale] = useState(false);
+  const [validationReviewed, setValidationReviewed] = useState(false);
   const [sourceReviewed, setSourceReviewed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [comparisonPage, setComparisonPage] = useState(1);
   const [previewMode, setPreviewMode] = useState<'analytics' | 'document' | 'compare'>('document');
 
   const refreshSequence = useRef(0);
@@ -48,6 +51,7 @@ export default function ResultsStudioPage() {
     setBusy(null);
     setCurrent(null);
     setSourceReviewed(false);
+    setValidationReviewed(false);
     setBrand(null);
     setWebsiteUrl('');
     setShowAssistant(false);
@@ -111,6 +115,7 @@ export default function ResultsStudioPage() {
       if (!response.ok) throw new Error(body.error || 'PDF conversion failed');
       setCurrent(body);
       setSourceReviewed(false);
+    setValidationReviewed(false);
       setNotice(null);
       setHtmlStale(false);
       setStep(3);
@@ -134,6 +139,7 @@ export default function ResultsStudioPage() {
     row.confidence = row.cells.every((cell, index) => row.sourceBlankCells?.includes(index) || (cell && cell.trim())) ? 1 : 0.6;
     const placed = applyFigureEdit(document, statementId, rowId, cellIndex, previous);
     setSourceReviewed(false);
+    setValidationReviewed(false);
     setNotice(null);
     setCurrent({ ...current, document });
     setHtmlStale(true);
@@ -142,6 +148,7 @@ export default function ResultsStudioPage() {
 
   function applyHtml(nextHtml: string) {
     setSourceReviewed(false);
+    setValidationReviewed(false);
     setNotice(null);
     setCurrent((existing) => existing ? {
       ...existing,
@@ -167,7 +174,7 @@ export default function ResultsStudioPage() {
       const response = await fetch(`/api/admin/results/${current.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ document, status, expectedUpdatedAt: current.updatedAt, sourceReviewed }),
+        body: JSON.stringify({ document, status, expectedUpdatedAt: current.updatedAt, sourceReviewed, validationReviewed }),
       });
       const body = await response.json();
       if (epoch !== workspaceEpoch.current) return;
@@ -195,8 +202,10 @@ export default function ResultsStudioPage() {
       if (!response.ok) throw new Error(saved.error || 'Could not open the publication.');
       if (epoch !== workspaceEpoch.current) return;
       setSourceReviewed(false);
+    setValidationReviewed(false);
       setNotice(null);
       const document = saved.document.presentationHtml ? saved.document : { ...saved.document, presentationHtml: renderResultsHtml(saved.document) };
+      setComparisonPage(1);
       setCurrent({ ...saved, document });
       setBrand(document.brand || null);
       setHtmlStale(false);
@@ -206,6 +215,7 @@ export default function ResultsStudioPage() {
     } finally { if (epoch === workspaceEpoch.current) setBusy(null); }
   }
 
+  const validation = useMemo(() => current ? validateFinancials(current.document) : null, [current]);
   const previewHtml = current?.document.presentationHtml || '';
 
   return (
@@ -373,7 +383,7 @@ export default function ResultsStudioPage() {
                 <button type="button" onClick={() => save('draft')} disabled={busy !== null} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold">
                   {busy === 'draft' ? 'Saving…' : 'Save draft'}
                 </button>
-                <button type="button" onClick={() => save('published')} disabled={busy !== null || !sourceReviewed || htmlStale} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
+                <button type="button" onClick={() => save('published')} disabled={busy !== null || !sourceReviewed || htmlStale || Boolean(validation?.issues.length && !validationReviewed)} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">
                   {busy === 'published' ? 'Publishing…' : 'Publish HTML'}
                 </button>
                 {current.status === 'published' && (
@@ -384,6 +394,12 @@ export default function ResultsStudioPage() {
               </div>
             </div>
             {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{notice}</p>}
+            {validation && <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-slate-900">Financial validation</h2><span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">{validation.issues.length} {validation.issues.length === 1 ? 'item' : 'items'} to review</span></div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{validation.totalsChecked} subtotal calculations checked · {validation.totalsSkipped} totals require manual review. Checks cover recognised breakdowns, missing cells, periods and units. They cannot detect every omitted PDF row or certify the report.</p>
+              {validation.issues.length ? <ul className="mt-4 space-y-3">{validation.issues.map(issue => <li key={issue.id} className="rounded-xl border border-amber-200 bg-amber-50 p-3"><p className="text-sm font-semibold text-amber-950">{issue.title}{issue.sourcePage ? ` · PDF page ${issue.sourcePage}` : ''}</p><p className="mt-1 text-xs leading-5 text-amber-900">{issue.detail}</p>{issue.sourcePage && current.document.sourcePages?.some(page => page.page === issue.sourcePage) && <button type="button" onClick={() => { setComparisonPage(issue.sourcePage!); setPreviewMode('compare'); }} className="mt-2 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950">Compare PDF page {issue.sourcePage}</button>}</li>)}</ul> : <p className="mt-3 text-sm text-emerald-700">No issues found by these checks. Complete the source comparison before publishing.</p>}
+              {validation.issues.length > 0 && <label className="mt-4 flex items-start gap-2 text-xs leading-5 text-slate-600"><input type="checkbox" checked={validationReviewed} onChange={event => setValidationReviewed(event.target.checked)} className="mt-1" />I have reviewed these validation items against the PDF and confirmed any source discrepancies with the responsible reviewer.</label>}
+            </section>}
             <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
               <input type="checkbox" checked={sourceReviewed} onChange={event => setSourceReviewed(event.target.checked)} disabled={htmlStale} className="mt-1" />
               I have checked the complete publication against the original PDF, including figures, units, restatements, notes and extraction warnings.
@@ -401,7 +417,7 @@ export default function ResultsStudioPage() {
                 </button>
               </div>
             )}
-            {previewMode === 'compare' ? <SourceComparison key={current.id} document={current.document} html={previewHtml} /> : previewMode === 'analytics' ? (
+            {previewMode === 'compare' ? <SourceComparison key={current.id} document={current.document} html={previewHtml} selectedPage={comparisonPage} onPageChange={setComparisonPage} /> : previewMode === 'analytics' ? (
               <div className="max-h-[850px] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
                 <InteractiveResultsViewer
                   document={current.document}
@@ -478,9 +494,9 @@ export default function ResultsStudioPage() {
 }
 
 
-function SourceComparison({ document, html }: { document: ResultsDocument; html: string }) {
+function SourceComparison({ document, html, selectedPage, onPageChange }: { document: ResultsDocument; html: string; selectedPage: number; onPageChange: (page: number) => void }) {
   const pages = document.sourcePages || [];
-  const [index, setIndex] = useState(0);
+  const index = Math.max(0, pages.findIndex(page => page.page === selectedPage));
   const [transcript, setTranscript] = useState('');
   const page = pages[index];
   useEffect(() => {
@@ -513,9 +529,9 @@ function SourceComparison({ document, html }: { document: ResultsDocument; html:
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
       <div><h2 className="font-semibold text-slate-900">Source comparison</h2><p className="mt-1 text-xs text-slate-500">Check the original beside the actual publication transcription.</p></div>
       <div className="flex items-center gap-3">
-        <button disabled={index === 0} onClick={() => setIndex(index - 1)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Previous</button>
-        <select aria-label="Source page" value={index} onChange={event => setIndex(Number(event.target.value))} className="rounded-lg border px-3 py-2 text-xs">{pages.map((item, i) => <option key={item.page} value={i}>Page {item.page} of {document.pageCount}</option>)}</select>
-        <button disabled={index === pages.length - 1} onClick={() => setIndex(index + 1)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Next</button>
+        <button disabled={index === 0} onClick={() => onPageChange(pages[index - 1].page)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Previous</button>
+        <select aria-label="Source page" value={index} onChange={event => onPageChange(pages[Number(event.target.value)].page)} className="rounded-lg border px-3 py-2 text-xs">{pages.map((item, i) => <option key={item.page} value={i}>Page {item.page} of {document.pageCount}</option>)}</select>
+        <button disabled={index === pages.length - 1} onClick={() => onPageChange(pages[index + 1].page)} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-40">Next</button>
       </div>
     </div>
     <div className="grid lg:grid-cols-2">

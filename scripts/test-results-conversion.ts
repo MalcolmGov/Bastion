@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import * as cheerio from 'cheerio';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { sanitizePublicationHtml, maskPublicationAssets, codeResultsPublication, assertPublicationContentPreserved } from '../src/lib/results/codeAssistant';
+import { validateFinancials, parseReportAmount } from '../src/lib/results/validateFinancials';
 import { rasterizeLogoDataUrl } from '../src/lib/results/logoRaster';
 import { BrandDnaExtractor } from '../src/lib/studio/brandExtractor';
 import { applyFigureEdit } from '../src/lib/results/applyFigureEdit';
@@ -241,7 +242,34 @@ function testMissingFiguresRemainVisible() {
   assert.ok(result.warnings.some((warning) => /Cost of sales.*missing a figure/.test(warning)));
 }
 
+function testFinancialValidation() {
+  assert.deepEqual(parseReportAmount('(1 234.50)'), { value: -BigInt('123450'), decimals: 2 });
+  assert.deepEqual(parseReportAmount('9 007 199 254 740 993'), { value: BigInt('9007199254740993'), decimals: 0 });
+  assert.equal(parseReportAmount('12%'), null);
+  assert.equal(parseReportAmount('1,23'), null);
+  assert.equal(parseReportAmount('(-12)'), null);
+  const document: ResultsDocument = { issuer: 'Example', title: 'Results', periodLabel: '2025', unit: 'R’000', sourceFilename: 'test.pdf', pageCount: 1, narrative: [], highlights: [], notes: [], warnings: [], statements: [{ id: 'regions', title: 'Revenue by region', sourcePage: 1, period: '', stubLabel: '', confidence: 1, columns: [{ id: 'value', label: '2025 R’000', role: 'figure' }, { id: 'note', label: 'Notes', role: 'note' }], rows: [{ id: 'a', label: 'A', kind: 'data', cells: ['0.1', null], confidence: 1 }, { id: 'b', label: 'B', kind: 'data', cells: ['0.2', null], confidence: 1 }, { id: 'total', label: 'Total', kind: 'total', cells: ['0.3', null], confidence: 1 }] }] };
+  const before = JSON.stringify(document);
+  assert.equal(validateFinancials(document).issues.length, 0);
+  assert.equal(JSON.stringify(document), before, 'validation must not change financial data');
+  document.statements[0].rows[2].cells[0] = '0.31';
+  assert.equal(validateFinancials(document).issues[0].kind, 'subtotal');
+  document.statements[0].rows[0].cells[0] = null;
+  assert.ok(validateFinancials(document).issues.some(issue => issue.kind === 'missing'));
+  document.statements[0].rows[0].sourceBlankCells = [0];
+  assert.ok(!validateFinancials(document).issues.some(issue => issue.kind === 'missing'));
+  document.statements[0].title = 'Statement of financial position';
+  document.statements[0].columns[0].label = '2024 R’000';
+  assert.ok(validateFinancials(document).issues.some(issue => issue.kind === 'period'));
+  assert.equal(validateFinancials(document).totalsChecked, 0, 'complex accounting totals must not be blindly summed');
+  document.statements[0].columns.push({ id: 'other', label: '2023 US$ million', role: 'figure' });
+  assert.ok(validateFinancials(document).issues.some(issue => issue.kind === 'unit'));
+  document.sourceFinancialContext = { periodLabel: '2024', unit: 'US$ million' };
+  assert.ok(validateFinancials(document).issues.some(issue => issue.id.endsWith('source-unit')));
+}
+
 async function main() {
+  testFinancialValidation();
   const blankPdf = await PDFDocument.create();
   blankPdf.addPage([300, 400]).drawRectangle({ x: 30, y: 30, width: 100, height: 100 });
   const blankBytes = await blankPdf.save();
@@ -363,6 +391,14 @@ async function main() {
     assert.match(merafeHtml, /scope="col"/);
     const regionIds = [...merafeHtml.matchAll(/id="(results-(?:narrative|notes|statements|highlights))"/g)].map((match) => match[1]);
     assert.equal(new Set(regionIds).size, regionIds.length, 'publication region IDs must be unique');
+    const validation = validateFinancials(merafe);
+    const mismatches = validation.issues.filter(issue => issue.kind === 'subtotal');
+    assert.equal(mismatches.length, 1, JSON.stringify(mismatches));
+    assert.equal(mismatches[0].sourcePage, 18);
+    assert.match(mismatches[0].detail, /2 262 211/);
+    assert.match(mismatches[0].detail, /2 262 221/);
+    assert.match(mismatches[0].detail, /difference 10/);
+    assert.ok(validation.totalsChecked >= 4);
     assert.equal(merafe.warnings.length, 0, merafe.warnings.join('\n'));
     const restatement = merafe.statements.find((statement) => statement.sourcePage === 17 && /financial position/i.test(statement.title));
     assert.ok(restatement);

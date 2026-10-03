@@ -72,3 +72,17 @@ test('report lists return paginated tenant metadata without financial content or
   assert.ok([...first.documents, ...last.documents].some(item => item.id === saved.id));
   assert.equal((await route.GET(h.request('/api/admin/results?offset=-1', {}, null, 'GET'))).status, 400);
 });
+
+
+test('publication recomputes financial issues on the server and requires review acknowledgement', async t => {
+  const { h, patch, document, saved, store } = await fixture(t);
+  h.user({ role: 'platform_admin', client_id: null });
+  const changed = { ...document, unit: 'R’000', statements: [{ id: 'regional', title: 'Revenue by region', sourcePage: 1, period: '', stubLabel: '', confidence: 1, columns: [{ id: 'amount', label: '2025 R’000', role: 'figure' }], rows: [{ id: 'a', label: 'A', kind: 'data', cells: ['10'], confidence: 1 }, { id: 'b', label: 'B', kind: 'data', cells: ['20'], confidence: 1 }, { id: 'total', label: 'Total', kind: 'total', cells: ['99'], confidence: 1 }] }] };
+  changed.presentationHtml = h.load('lib/results/renderHtml.ts').renderResultsHtml(changed);
+  const rejected = await patch({ document: changed, status: 'published', sourceReviewed: true, validation: { issues: [] } });
+  assert.equal(rejected.status, 400);
+  assert.match((await rejected.json()).error, /financial validation/);
+  assert.equal((await store.getResultsDocument(saved.id)).status, 'draft');
+  assert.equal((await patch({ document: changed, status: 'published', sourceReviewed: true, validationReviewed: true })).status, 200);
+  assert.equal((await store.getResultsDocument(saved.id)).document.statements[0].rows[2].cells[0], '99', 'review must not auto-correct source figures');
+});
