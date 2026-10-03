@@ -40,6 +40,12 @@ import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 import type { SensAnnouncement, SensType, FinancialCalendarEvent, CalendarEventType, InvestorReport, ReportType } from '@/lib/ir/types';
 import { SENS_TYPE_LABELS, SENS_TYPE_COLORS, EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, REPORT_TYPE_LABELS, calculateDividendTax } from '@/lib/ir/types';
 
+/** What the list shows for a studio-created announcement, from its place in the approval workflow. */
+function sensWorkflowLabel(item: SensAnnouncement): string {
+  if (item.status === 'published') return 'Published';
+  return item.approvedBy ? 'Approved · ready to publish' : 'Draft · awaiting approval';
+}
+
 export default function SensAndIrHubPage() {
   const { user } = useAdminAuth();
   const isAgency = isAgencyUser(user);
@@ -741,7 +747,7 @@ export default function SensAndIrHubPage() {
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-300 dark:border-sky-800/60">
-                                {item.status === 'published' ? 'Published' : item.approvedBy ? 'Approved · ready to publish' : 'Draft · awaiting approval'}
+                                {sensWorkflowLabel(item)}
                               </span>
                             )}
 

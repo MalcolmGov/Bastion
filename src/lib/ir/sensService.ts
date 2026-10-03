@@ -15,7 +15,7 @@ export class SensApprovalError extends Error {
 }
 
 /** Statuses an announcement can be in before it is published. */
-const PRE_PUBLICATION = ['draft', 'embargoed'];
+const PRE_PUBLICATION = new Set(['draft', 'embargoed']);
 
 /** Hash of everything a reader would see, so a sign-off stops counting if any of it changes. */
 export function sensContentHash(
@@ -164,7 +164,7 @@ export async function approveSensAnnouncement(id: string, reviewerId: string, cl
   const db = await ensureDbReady();
   const current = await getSensAnnouncement(id, clientId);
   if (!current) throw new SensApprovalError('SENS announcement not found', 404);
-  if (!PRE_PUBLICATION.includes(current.status)) {
+  if (!PRE_PUBLICATION.has(current.status)) {
     throw new SensApprovalError('Only announcements that are not yet published can be approved', 409);
   }
   if (current.createdBy && current.createdBy === reviewerId) {
@@ -185,7 +185,7 @@ export async function publishSensAnnouncement(id: string, clientId?: string): Pr
   const db = await ensureDbReady();
   const current = await getSensAnnouncement(id, clientId);
   if (!current) throw new SensApprovalError('SENS announcement not found', 404);
-  if (!PRE_PUBLICATION.includes(current.status)) {
+  if (!PRE_PUBLICATION.has(current.status)) {
     throw new SensApprovalError('This announcement is already published', 409);
   }
   const currentHash = sensContentHash(current);
