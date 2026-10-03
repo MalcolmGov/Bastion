@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       webhookSecret: '',
       previewUrlPattern: '',
       previewSecret: '',
-      ...(settings.headlessIntegration || {}),
+      ...settings.headlessIntegration,
     };
     // A demo secret saved by an earlier version of this page is not a real setting: report it, never hand it back as a value.
     const unsafeSecrets = SECRET_FIELDS.filter((field) => isPublicDemoSecret(headless[field]));

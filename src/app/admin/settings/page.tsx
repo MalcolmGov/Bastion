@@ -30,6 +30,12 @@ function generateSecret(prefix: string): string {
   return prefix + Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+/** The line under a secret field: a warning when the stored value was a public demo secret, otherwise an optional hint. */
+function SecretNote({ unsafe, warning, hint }: { unsafe: boolean; warning: string; hint?: string }) {
+  if (unsafe) return <p className="text-[11px] text-rose-400">{warning}</p>;
+  return hint ? <p className="text-[11px] text-slate-500">{hint}</p> : null;
+}
+
 export default function WorkspaceSettingsAndExportPage() {
   const { activeClient, activeSite, refreshClients } = useStudioWorkspace();
   const isGoldFields = activeClient?.id === 'client_goldfields';
@@ -425,15 +431,11 @@ export default function WorkspaceSettingsAndExportPage() {
                   placeholder="Not set: deliveries are paused until you add a secret"
                   className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono"
                 />
-                {unsafeSecrets.includes('webhookSecret') ? (
-                  <p className="text-[11px] text-rose-400">
-                    The secret saved for this site was a public demo value, so webhook deliveries are paused. Generate a new secret and save.
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-slate-500">
-                    Your receiving site checks each delivery against this secret, so paste the same value into its environment.
-                  </p>
-                )}
+                <SecretNote
+                  unsafe={unsafeSecrets.includes('webhookSecret')}
+                  warning="The secret saved for this site was a public demo value, so webhook deliveries are paused. Generate a new secret and save."
+                  hint="Your receiving site checks each delivery against this secret, so paste the same value into its environment."
+                />
               </div>
             </div>
 
@@ -479,11 +481,10 @@ export default function WorkspaceSettingsAndExportPage() {
                     placeholder="Not set"
                     className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono"
                   />
-                  {unsafeSecrets.includes('previewSecret') && (
-                    <p className="text-[11px] text-rose-400">
-                      The token saved for this site was a public demo value. Generate a new one and save.
-                    </p>
-                  )}
+                  <SecretNote
+                    unsafe={unsafeSecrets.includes('previewSecret')}
+                    warning="The token saved for this site was a public demo value. Generate a new one and save."
+                  />
                 </div>
               </div>
             </div>
