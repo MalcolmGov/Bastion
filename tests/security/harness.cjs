@@ -14,6 +14,7 @@ async function createHarness() {
     id: 'reader-a', name: 'Reader A', email: 'reader-a@test.local',
     role: 'read_only_stakeholder', client_id: 'tenant-a'
   };
+  const draft = { enabled: false };
   const cache = new Map();
   const mocks = {
     '@/lib/db/client': { getDb: () => db, ensureDbReady: async () => db },
@@ -25,7 +26,21 @@ async function createHarness() {
     },
     '@/lib/notifications/notifier': { sendReviewNotification: async () => {} },
     '@/lib/webhooks/dispatcher': { dispatchContentWebhook: async () => {} },
-    'next/cache': { revalidatePath: () => {} }
+    'next/cache': { revalidatePath: () => {} },
+    // Draft mode and redirects are request-scoped in Next; here they are a switch tests can read, and a redirect that throws
+    // an error carrying its target, as Next's own redirect does.
+    'next/headers': {
+      ...nativeRequire('next/headers'),
+      draftMode: async () => ({
+        get isEnabled() { return draft.enabled; },
+        enable: () => { draft.enabled = true; },
+        disable: () => { draft.enabled = false; }
+      })
+    },
+    'next/navigation': {
+      ...nativeRequire('next/navigation'),
+      redirect: (to) => { throw Object.assign(new Error('NEXT_REDIRECT'), { redirectTo: to }); }
+    }
   };
   function load(file) {
     file = path.resolve(file);
@@ -93,7 +108,7 @@ async function createHarness() {
  `);
 
   return {
-    db, load: (name) => load(path.join(root, 'src', name)), route, request,
+    db, draft, load: (name) => load(path.join(root, 'src', name)), route, request,
     user: (user) => { currentUser = user ? { ...currentUser, ...user } : null; },
     emailCalls: () => emailCalls,
     // Records a reviewer's approval of a seeded page's current version, as the editor's approve endpoint does.
