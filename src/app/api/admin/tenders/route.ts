@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { requireUser, requirePermission } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import type { StudioUser } from '@/lib/auth/auth';
