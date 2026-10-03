@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/guard';
+import { requireUser, requirePermission } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
-import { listSensAnnouncements, createSensAnnouncement, SensType } from '@/lib/ir/sensService';
+import { listSensAnnouncements, createSensAnnouncement, SensApprovalError, SensType } from '@/lib/ir/sensService';
 import { getDb } from '@/lib/db/client';
 import crypto from 'crypto';
 
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const gate = await requireUser();
+    const gate = await requirePermission('content:create');
     if (!gate.ok) return gate.response;
     const user = gate.user;
 
@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
       isPriceSensitive,
       status,
       sponsor,
+      createdBy: user.id,
     });
 
     // Write to audit log
@@ -115,6 +116,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, announcement });
   } catch (err: any) {
+    if (err instanceof SensApprovalError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error('[API SENS POST Error]:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
