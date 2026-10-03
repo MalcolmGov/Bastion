@@ -23,6 +23,13 @@ import {
 } from 'lucide-react';
 import { useStudioWorkspace } from '@/components/admin/StudioWorkspaceProvider';
 
+/** A random secret from the browser's crypto source. The receiving site has to be given the same value. */
+function generateSecret(prefix: string): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return prefix + Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export default function WorkspaceSettingsAndExportPage() {
   const { activeClient, activeSite, refreshClients } = useStudioWorkspace();
   const isGoldFields = activeClient?.id === 'client_goldfields';
@@ -32,15 +39,18 @@ export default function WorkspaceSettingsAndExportPage() {
   // Headless Integration State
   const [loadingHeadless, setLoadingHeadless] = useState(true);
   const [apiKey, setApiKey] = useState('');
-  const [webhookUrl, setWebhookUrl] = useState('https://goldfields.com/api/webhooks/cms-update');
-  const [webhookSecret, setWebhookSecret] = useState('whsec_bastion_goldfields_2026');
-  const [previewUrlPattern, setPreviewUrlPattern] = useState('https://preview.goldfields.com/{slug}?preview=true');
-  const [previewSecret, setPreviewSecret] = useState('prev_sec_goldfields_draft_2026');
+  // Nothing here is pre-filled: an empty field means "not configured", and a secret is only ever one the user saved or generated.
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [previewUrlPattern, setPreviewUrlPattern] = useState('');
+  const [previewSecret, setPreviewSecret] = useState('');
+  const [unsafeSecrets, setUnsafeSecrets] = useState<string[]>([]);
   const [recentDeliveries, setRecentDeliveries] = useState<any[]>([]);
 
   // Action states
   const [isSavingHeadless, setIsSavingHeadless] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [isPinging, setIsPinging] = useState(false);
   const [pingResult, setPingResult] = useState<{ success: boolean; status?: number; latencyMs?: number; error?: string } | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
@@ -63,11 +73,12 @@ export default function WorkspaceSettingsAndExportPage() {
           const data = await res.json();
           if (data.headless) {
             setApiKey(data.headless.apiKey || '');
-            setWebhookUrl(data.headless.webhookUrl || 'https://goldfields.com/api/webhooks/cms-update');
-            setWebhookSecret(data.headless.webhookSecret || 'whsec_bastion_goldfields_2026');
-            setPreviewUrlPattern(data.headless.previewUrlPattern || 'https://preview.goldfields.com/{slug}?preview=true');
-            setPreviewSecret(data.headless.previewSecret || 'prev_sec_goldfields_draft_2026');
+            setWebhookUrl(data.headless.webhookUrl || '');
+            setWebhookSecret(data.headless.webhookSecret || '');
+            setPreviewUrlPattern(data.headless.previewUrlPattern || '');
+            setPreviewSecret(data.headless.previewSecret || '');
           }
+          setUnsafeSecrets(data.unsafeSecrets || []);
           setRecentDeliveries(data.recentDeliveries || []);
         }
       } catch (err) {
@@ -100,10 +111,16 @@ export default function WorkspaceSettingsAndExportPage() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to save headless settings');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to save headless settings');
+      }
+      setSaveFailed(false);
+      setUnsafeSecrets([]);
       setSaveNotice('✓ Headless API & Webhook settings updated successfully!');
       setTimeout(() => setSaveNotice(null), 3000);
     } catch (err: any) {
+      setSaveFailed(true);
       setSaveNotice(`Error: ${err.message}`);
     } finally {
       setIsSavingHeadless(false);
@@ -380,22 +397,43 @@ export default function WorkspaceSettingsAndExportPage() {
                   type="text"
                   value={webhookUrl}
                   onChange={(e) => setWebhookUrl(e.target.value)}
-                  placeholder="https://goldfields.com/api/webhooks/cms-update"
+                  placeholder="https://your-site.example/api/webhooks/cms-update"
                   className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block font-semibold uppercase text-[11px] text-slate-400">
-                  HMAC SHA-256 Webhook Secret
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block font-semibold uppercase text-[11px] text-slate-400">
+                    HMAC SHA-256 Webhook Secret
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWebhookSecret(generateSecret('whsec_'));
+                      setUnsafeSecrets((prev) => prev.filter((field) => field !== 'webhookSecret'));
+                    }}
+                    className="text-[11px] font-semibold text-amber-400 hover:text-amber-300"
+                  >
+                    Generate
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={webhookSecret}
                   onChange={(e) => setWebhookSecret(e.target.value)}
-                  placeholder="whsec_bastion_goldfields_2026"
+                  placeholder="Not set: deliveries are paused until you add a secret"
                   className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono"
                 />
+                {unsafeSecrets.includes('webhookSecret') ? (
+                  <p className="text-[11px] text-rose-400">
+                    The secret saved for this site was a public demo value, so webhook deliveries are paused. Generate a new secret and save.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    Your receiving site checks each delivery against this secret, so paste the same value into its environment.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -413,28 +451,46 @@ export default function WorkspaceSettingsAndExportPage() {
                     type="text"
                     value={previewUrlPattern}
                     onChange={(e) => setPreviewUrlPattern(e.target.value)}
-                    placeholder="https://preview.goldfields.com/{slug}?preview=true"
+                    placeholder="https://preview.your-site.example/{slug}?preview=true"
                     className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block font-semibold uppercase text-[11px] text-slate-400">
-                    Draft Verification Token
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block font-semibold uppercase text-[11px] text-slate-400">
+                      Draft Verification Token
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewSecret(generateSecret('prev_'));
+                        setUnsafeSecrets((prev) => prev.filter((field) => field !== 'previewSecret'));
+                      }}
+                      className="text-[11px] font-semibold text-amber-400 hover:text-amber-300"
+                    >
+                      Generate
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={previewSecret}
                     onChange={(e) => setPreviewSecret(e.target.value)}
+                    placeholder="Not set"
                     className="w-full px-3 py-2 rounded-xl bg-[#141C2A] border border-[#232F42] text-white text-xs font-mono"
                   />
+                  {unsafeSecrets.includes('previewSecret') && (
+                    <p className="text-[11px] text-rose-400">
+                      The token saved for this site was a public demo value. Generate a new one and save.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Save Notice */}
             {saveNotice && (
-              <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs">
+              <div className={`p-3 rounded-xl border text-xs ${saveFailed ? 'bg-rose-950/60 border-rose-500/40 text-rose-300' : 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'}`}>
                 {saveNotice}
               </div>
             )}

@@ -9,11 +9,16 @@ const BANNED_SECRETS = new Set([
   'bastion_sre_quick_approval_secret_2026',
 ]);
 
+/** True for the demo secrets that appear in the source, now or in earlier versions, so anyone can read them. */
+export function isPublicDemoSecret(value: string | null | undefined): boolean {
+  return !!value && BANNED_SECRETS.has(value.trim());
+}
+
 /** Returns a configured secret, or null when it is missing, short, or a known demo value. */
 export function readSecret(envName: string, minLength = 16): string | null {
   const value = process.env[envName]?.trim();
   if (!value || value.length < minLength) return null;
-  if (BANNED_SECRETS.has(value)) return null;
+  if (isPublicDemoSecret(value)) return null;
   return value;
 }
 

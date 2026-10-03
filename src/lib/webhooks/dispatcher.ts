@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { getDb } from '@/lib/db/client';
+import { isPublicDemoSecret } from '@/lib/auth/apiToken';
 
 export interface WebhookEventPayload {
   event: 'content.published' | 'content.archived' | 'page.published';
@@ -56,7 +57,9 @@ export async function dispatchContentWebhook(
 
     const siteSettings = readSiteWebhookSettings(siteRes.rows[0]);
     const webhookUrl = siteSettings.url || process.env.BASTION_WEBHOOK_URL || '';
-    const webhookSecret = siteSettings.secret || process.env.BASTION_WEBHOOK_SECRET || '';
+    // A demo value from the source code counts as no secret at all, wherever it came from.
+    const usable = (secret: string | undefined) => (secret && !isPublicDemoSecret(secret) ? secret : '');
+    const webhookSecret = usable(siteSettings.secret) || usable(process.env.BASTION_WEBHOOK_SECRET);
 
     if (!webhookUrl) {
       console.log(`[Webhook] No outbound webhook URL configured for site: ${siteId}. Delivery skipped.`);
@@ -73,7 +76,9 @@ export async function dispatchContentWebhook(
       return {
         success: false,
         latencyMs: 0,
-        error: 'Webhook signing secret is not configured for this site. Delivery was not sent.',
+        error: isPublicDemoSecret(siteSettings.secret)
+          ? 'The webhook signing secret saved for this site is a public demo value. Set a new one in Settings. Delivery was not sent.'
+          : 'Webhook signing secret is not configured for this site. Delivery was not sent.',
         deliveryId,
       };
     }
