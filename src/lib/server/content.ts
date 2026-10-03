@@ -1,5 +1,6 @@
 import 'server-only';
 import { getDb } from '@/lib/db/client';
+import { flagshipDraftsAllowed } from '@/lib/auth/draftPreview';
 import { ContentRepository } from '@/lib/adapters/ContentRepository';
 import type {
   Operation,
@@ -35,6 +36,7 @@ export interface PageContent {
 export async function getPublishedPage(slug: string, isDraft = false): Promise<PageContent | null> {
   try {
     const db = getDb();
+    const drafts = isDraft && (await flagshipDraftsAllowed());
     const recResult = await db.execute({
       sql: `SELECT * FROM content_records WHERE collection = 'pages' AND slug = ? AND (client_id IS NULL OR client_id = 'client_goldfields') LIMIT 1`,
       args: [slug]
@@ -43,7 +45,7 @@ export async function getPublishedPage(slug: string, isDraft = false): Promise<P
     if (recResult.rows.length === 0) return null;
     const rec = recResult.rows[0];
 
-    const revId = isDraft
+    const revId = drafts
       ? (rec.current_draft_revision_id || rec.current_published_revision_id)
       : rec.current_published_revision_id;
 
@@ -76,6 +78,7 @@ export async function getPublishedPage(slug: string, isDraft = false): Promise<P
 export async function getPublishedCollection<T>(collection: string, isDraft = false): Promise<T[]> {
   try {
     const db = getDb();
+    const drafts = isDraft && (await flagshipDraftsAllowed());
     const res = await db.execute({
       sql: `SELECT r.id, r.slug, r.title, r.status, rev.data_json
             FROM content_records r
@@ -87,7 +90,7 @@ export async function getPublishedCollection<T>(collection: string, isDraft = fa
               AND (r.client_id IS NULL OR r.client_id = 'client_goldfields')
               AND (r.status = 'published' OR ? = 1)
             ORDER BY r.updated_at DESC`,
-      args: [isDraft ? 1 : 0, collection, collection, isDraft ? 1 : 0]
+      args: [drafts ? 1 : 0, collection, collection, drafts ? 1 : 0]
     });
 
     if (res.rows.length === 0) return [];
@@ -113,6 +116,7 @@ export async function getPublishedCollection<T>(collection: string, isDraft = fa
 export async function getPublishedRecordBySlug<T>(collection: string, slug: string, isDraft = false): Promise<T | null> {
   try {
     const db = getDb();
+    const drafts = isDraft && (await flagshipDraftsAllowed());
     const res = await db.execute({
       sql: `SELECT r.id, r.slug, r.title, r.status, rev.data_json
             FROM content_records r
@@ -125,7 +129,7 @@ export async function getPublishedRecordBySlug<T>(collection: string, slug: stri
               AND (r.slug = ? OR r.id = ?)
               AND (r.status = 'published' OR ? = 1)
             LIMIT 1`,
-      args: [isDraft ? 1 : 0, collection, collection, slug, slug, isDraft ? 1 : 0]
+      args: [drafts ? 1 : 0, collection, collection, slug, slug, drafts ? 1 : 0]
     });
 
     if (res.rows.length === 0) return null;

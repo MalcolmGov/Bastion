@@ -15,6 +15,7 @@ async function createHarness() {
     role: 'read_only_stakeholder', client_id: 'tenant-a'
   };
   const draft = { enabled: false };
+  const jar = {};
   const cache = new Map();
   const mocks = {
     '@/lib/db/client': { getDb: () => db, ensureDbReady: async () => db },
@@ -35,8 +36,15 @@ async function createHarness() {
         get isEnabled() { return draft.enabled; },
         enable: () => { draft.enabled = true; },
         disable: () => { draft.enabled = false; }
+      }),
+      // A cookie jar tests can read and seed. Set options are kept so a test can check how a cookie was issued.
+      cookies: async () => ({
+        get: (name) => (name in jar ? { name, value: jar[name].value } : undefined),
+        set: (name, value, options) => { jar[name] = { value, options }; },
+        delete: (name) => { delete jar[name]; }
       })
     },
+    'server-only': {},
     'next/navigation': {
       ...nativeRequire('next/navigation'),
       redirect: (to) => { throw Object.assign(new Error('NEXT_REDIRECT'), { redirectTo: to }); }
@@ -55,7 +63,10 @@ async function createHarness() {
     }).outputText;
     const req = (id) => {
       if (mocks[id]) return mocks[id];
-      if (id.startsWith('@/')) return load(path.join(root, 'src', id.slice(2)) + '.ts');
+      if (id.startsWith('@/')) {
+        const target = path.join(root, 'src', id.slice(2));
+        return target.endsWith('.json') ? JSON.parse(fs.readFileSync(target, 'utf8')) : load(target + '.ts');
+      }
       if (id.startsWith('.')) return load(path.resolve(path.dirname(file), id) + '.ts');
       return nativeRequire(id);
     };
@@ -108,7 +119,7 @@ async function createHarness() {
  `);
 
   return {
-    db, draft, load: (name) => load(path.join(root, 'src', name)), route, request,
+    db, draft, jar, load: (name) => load(path.join(root, 'src', name)), route, request,
     user: (user) => { currentUser = user ? { ...currentUser, ...user } : null; },
     emailCalls: () => emailCalls,
     // Records a reviewer's approval of a seeded page's current version, as the editor's approve endpoint does.
