@@ -3,6 +3,29 @@ import { getDb } from '@/lib/db/client';
 import crypto from 'crypto';
 import { dispatchContentWebhook } from '@/lib/webhooks/dispatcher';
 import { requireAgencyUser } from '@/lib/auth/guard';
+import { isPublicDemoSecret } from '@/lib/auth/apiToken';
+
+const SECRET_FIELDS = ['webhookSecret', 'previewSecret'] as const;
+const SECRET_LABELS: Record<(typeof SECRET_FIELDS)[number], string> = {
+  webhookSecret: 'The webhook secret',
+  previewSecret: 'The draft verification token',
+};
+const MIN_SECRET_LENGTH = 16;
+
+/**
+ * Why a secret may not be saved, or null. A demo value from the source code is never accepted. A new secret has to be
+ * long enough; one that has not changed is left alone, so re-saving other fields never forces a rotation.
+ */
+function secretProblem(field: (typeof SECRET_FIELDS)[number], value: string, previous: unknown): string | null {
+  if (!value) return null;
+  if (isPublicDemoSecret(value)) {
+    return `${SECRET_LABELS[field]} is a public demo value that appears in the source code, so anyone could forge it. Use Generate to create a new one.`;
+  }
+  if (value !== previous && value.length < MIN_SECRET_LENGTH) {
+    return `${SECRET_LABELS[field]} must be at least ${MIN_SECRET_LENGTH} characters. Use Generate to create one.`;
+  }
+  return null;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,13 +47,17 @@ export async function GET(req: NextRequest) {
 
     const row = siteRes.rows[0];
     const settings = typeof row.settings_json === 'string' ? JSON.parse(row.settings_json) : (row.settings_json || {});
-    const headless = settings.headlessIntegration || {
+    const headless = {
       apiKey: '',
       webhookUrl: '',
       webhookSecret: '',
       previewUrlPattern: '',
       previewSecret: '',
+      ...settings.headlessIntegration,
     };
+    // A demo secret saved by an earlier version of this page is not a real setting: report it, never hand it back as a value.
+    const unsafeSecrets = SECRET_FIELDS.filter((field) => isPublicDemoSecret(headless[field]));
+    for (const field of unsafeSecrets) headless[field] = '';
 
     // 2. Fetch recent webhook deliveries
     let deliveries: any[] = [];
@@ -57,6 +84,7 @@ export async function GET(req: NextRequest) {
       siteName: String(row.name),
       siteSlug: String(row.slug),
       headless,
+      unsafeSecrets,
       recentDeliveries: deliveries,
     });
   } catch (err: any) {
@@ -109,14 +137,21 @@ export async function POST(req: NextRequest) {
     }
 
     // Action B: Save Settings
-    settings.headlessIntegration = {
+    const previous = settings.headlessIntegration || {};
+    const next = {
       apiKey: headless?.apiKey || '',
       webhookUrl: headless?.webhookUrl || '',
       webhookSecret: headless?.webhookSecret || '',
       previewUrlPattern: headless?.previewUrlPattern || '',
       previewSecret: headless?.previewSecret || '',
-      updatedAt: now,
     };
+    for (const field of SECRET_FIELDS) {
+      const problem = secretProblem(field, String(next[field]), previous[field]);
+      if (problem) return NextResponse.json({ error: problem }, { status: 400 });
+    }
+    // Which settings changed, by name only: the audit trail must never hold a secret.
+    const changed = Object.keys(next).filter((key) => next[key as keyof typeof next] !== (previous[key] || ''));
+    settings.headlessIntegration = { ...next, updatedAt: now };
 
     await db.execute({
       sql: `UPDATE websites SET settings_json = ?, updated_at = ? WHERE id = ?`,
@@ -125,16 +160,17 @@ export async function POST(req: NextRequest) {
 
     // Record audit log
     await db.execute({
-      sql: `INSERT INTO audit_log (id, actor_id, actor_name, action, collection, record_id, result, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO audit_log (id, actor_id, actor_name, action, collection, record_id, result, details_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
-        `audit_${Date.now()}`,
-        'usr_admin',
-        'Bastion Administrator',
+        `audit_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+        gate.user.id,
+        gate.user.name,
         'headless_settings_update',
         'websites',
         currentSiteId,
         'success',
+        JSON.stringify({ changed }),
         now,
       ],
     });
