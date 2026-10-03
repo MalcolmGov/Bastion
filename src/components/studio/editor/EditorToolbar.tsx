@@ -181,6 +181,18 @@ export function EditorToolbar({
               Publish…
             </button>
           )}
+          {canEdit && (
+            <button
+              type="button"
+              disabled={busy || loading}
+              onClick={() => onMore('ingest')}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-gradient-to-r from-amber-500/10 to-amber-600/15 hover:from-amber-500/20 hover:to-amber-600/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5 transition shadow-xs"
+              title="AI Document & Annual Report Ingestion"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
+              <span className="hidden sm:inline">Ingest Report</span>
+            </button>
+          )}
           <details className="relative">
             <summary
               aria-label="More editor tools"
@@ -190,6 +202,7 @@ export function EditorToolbar({
             </summary>
             <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
               {[
+                { id: 'ingest', label: '📄 Ingest Annual Report / PDF' },
                 { id: 'history', label: 'Version history' },
                 { id: 'release', label: 'Add to a release' },
                 { id: 'ai', label: 'AI writing assistant' },

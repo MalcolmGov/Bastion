@@ -80,6 +80,7 @@ import { InEditorContentAgent } from '@/components/studio/InEditorContentAgent';
 import { ApiKeysTab } from '@/components/studio/ApiKeysTab';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, getLocaleMeta } from '@/lib/i18n/locales';
+import { DocumentIngestionModal } from '@/components/studio/editor/DocumentIngestionModal';
 import type { SectionInstance, DesignCollectionId, BackgroundPatternType } from '@/lib/studio/types';
 
 const SOLID_SWATCHES = [
@@ -297,6 +298,8 @@ function VisualWebsiteEditorContent() {
   const [pageLayout, setPageLayout] = useState<DesignCollectionId>('contemporary');
   const [isPreview, setIsPreview] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
+  const [ingestSuccessMessage, setIngestSuccessMessage] = useState<string | null>(null);
   const documentKey = `${siteSlug}:${activePageSlug}`;
   const currentKey = useRef(documentKey);
   currentKey.current = documentKey;
@@ -1260,6 +1263,7 @@ function VisualWebsiteEditorContent() {
     <div className="h-dvh flex flex-col bg-slate-50 dark:bg-slate-950">
       <EditorDialog open={publishOpen} title="Publish this page?" onClose={() => setPublishOpen(false)}><p className="mt-3 text-sm leading-relaxed text-slate-500">Your current changes to <strong className="text-slate-900 dark:text-white">{pageTitle}</strong> will become visible on <strong className="text-slate-900 dark:text-white">{siteData?.name}</strong>.</p><p className="mt-2 text-xs text-slate-400">{sections.filter(section => section.visible).length} visible sections · Version {currentVersionNumber + 1}</p><div className="mt-6 flex justify-end gap-3"><button type="button" autoFocus disabled={isDeploying} onClick={() => setPublishOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm">Keep editing</button><button type="button" disabled={isDeploying} onClick={async () => { await saveDocument('published'); setPublishOpen(false); }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">{isDeploying ? 'Publishing…' : 'Publish page'}</button></div></EditorDialog>
       <EditorToolbar siteName={siteData?.name || 'Choose a website'} siteId={siteData?.id || siteSlug} sites={activeClient?.websites || []} page={activePageSlug} pages={pageSlugs} busy={isSaving || isDeploying || isRollingBack || isAddingToRelease || isAssistantApplying} dirty={hasUnsavedChanges} savedTime={savedTime} loading={isLoadingPage} isNew={currentVersionNumber === 0} advancedTools={isAgencyUser(user)} canEdit={hasPerm('content:edit')} canPublish={hasPerm('content:publish')} viewport={viewport} preview={isPreview} leftOpen={isLeftPanelOpen} rightOpen={isRightPanelOpen} canUndo={historyIndex > 0} canRedo={historyIndex < history.length - 1} onSite={id => switchDocument(id,'home')} onPage={slug => switchDocument(siteSlug,slug)} onSave={() => void handleSaveDraft()} onPublish={handleDeployPublish} onViewport={setViewport} onPreview={() => setIsPreview(value => !value)} onLeft={() => { if (compactEditor) setIsRightPanelOpen(false); setIsLeftPanelOpen(value => !value); }} onRight={() => { if (compactEditor) setIsLeftPanelOpen(false); setIsRightPanelOpen(value => !value); }} onUndo={handleUndo} onRedo={handleRedo} onMore={action => {
+        if (action === 'ingest') setIsIngestModalOpen(true);
         if (action === 'history') void handleOpenVersionModal();
         if (action === 'release') void handleOpenReleaseModal();
         if (action === 'ai' || action === 'keys') { if (compactEditor) setIsLeftPanelOpen(false); setInspectorTab(action); setIsRightPanelOpen(true); setIsPreview(false); }
@@ -1267,6 +1271,15 @@ function VisualWebsiteEditorContent() {
         if (action === 'qr') { if (hasUnsavedChanges) setEditorError('Save your draft before sharing a preview link.'); else setIsQrModalOpen(true); }
         if (action === 'theme') setCanvasTheme(isCanvasDark ? 'light' : 'dark');
       }} />
+      {ingestSuccessMessage && (
+        <div role="status" className="flex items-center justify-between border-b border-amber-500/30 bg-amber-500/10 px-5 py-2.5 text-xs text-amber-300 animate-in fade-in">
+          <span className="font-semibold flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            {ingestSuccessMessage}
+          </span>
+          <button type="button" onClick={() => setIngestSuccessMessage(null)} className="text-amber-400 hover:text-white font-bold ml-4">✕</button>
+        </div>
+      )}
       {deploySuccess && !hasUnsavedChanges && <div role="status" className="flex items-center justify-between border-b border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-800"><span>Your page has been published.</span><a href={`/sites/${siteData?.slug}${activePageSlug === 'home' ? '' : `/${activePageSlug}`}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold underline">View published page</a></div>}
       {editorError && <div role="alert" className="flex items-center justify-between gap-4 border-b border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-700"><p>{editorError}</p><button type="button" onClick={() => { if (!hasUnsavedChanges || window.confirm('Reload the saved page and discard your unsaved changes?')) setReload(value => value + 1); }} className="shrink-0 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold">Reload page</button></div>}
 
@@ -2919,6 +2932,24 @@ function VisualWebsiteEditorContent() {
           </div>
         </div>
       )}
+
+      {/* AI Document & Annual Report Ingestion Modal */}
+      <DocumentIngestionModal
+        isOpen={isIngestModalOpen}
+        onClose={() => setIsIngestModalOpen(false)}
+        siteId={siteData?.id || siteSlug}
+        brandKit={brandKit}
+        onApplySections={(newSections, mode) => {
+          if (mode === 'replace') {
+            updateSections(newSections);
+            setIngestSuccessMessage(`Successfully synthesized ${newSections.length} sections from corporate report.`);
+          } else {
+            updateSections([...sections, ...newSections]);
+            setIngestSuccessMessage(`Appended ${newSections.length} report sections to canvas.`);
+          }
+          setTimeout(() => setIngestSuccessMessage(null), 6000);
+        }}
+      />
     </div>
   );
 }
