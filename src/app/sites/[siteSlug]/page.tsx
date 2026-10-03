@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { draftMode } from 'next/headers';
+import { draftPreviewActive } from '@/lib/auth/draftPreview';
 import { getPublishedComposition } from '@/lib/studio/editor/publishedComposition';
 import { getDb } from '@/lib/db/client';
 import type { Website, BrandKit, PageComposition } from '@/lib/studio/types';
@@ -49,9 +49,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function DynamicSitePage({ params }: PageProps) {
   const { siteSlug } = await params;
-  const draft = await draftMode();
-  const isDraftPreview = draft.isEnabled;
-
   const db = getDb();
 
   // 1. Fetch website by slug
@@ -65,6 +62,8 @@ export default async function DynamicSitePage({ params }: PageProps) {
   }
 
   const siteRow = siteRes.rows[0];
+  // Draft mode is only a cookie: show drafts only to someone who may see this client's unpublished work.
+  const isDraftPreview = await draftPreviewActive(String(siteRow.client_id));
   const settings = typeof siteRow.settings_json === 'string' ? JSON.parse(siteRow.settings_json) : (siteRow.settings_json || {});
 
   // 2. Fetch Brand Kit
