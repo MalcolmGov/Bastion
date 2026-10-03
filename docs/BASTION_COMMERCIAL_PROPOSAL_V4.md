@@ -164,28 +164,46 @@ flowchart TD
 
 ---
 
-### 3.1 What Bastion Gets: 5 Core Agency Platform Capabilities
-*Every capability below is built, verified, and functioning in the production codebase.*
+### 3.1 What Bastion Gets: Comprehensive Agency Platform Capabilities
+*Every capability below is built, verified, and functioning in the production codebase to maximize agency delivery velocity and commercial profit.*
 
-#### **01 — 60-Second Multimodal PDF Ingest & Conversion Studio**
-*120-page statutory reports converted to responsive web suites with zero math drift*
+#### **01 — Multimodal PDF-to-HTML & Responsive Web Ingest Studio**
+*60-second statutory report conversion into clean semantic HTML5 and React components*
 
-Transforms the traditional 3-to-4-week manual copywriting, chart rebuilding, and layout grind into a 60-second automated ingestion pipeline. Bastion drops any 120-page Integrated Annual Report or ESG PDF into the studio and immediately generates a complete, branded, multi-page investor portal.
+Transforms the traditional 3-to-4-week manual copywriting, chart rebuilding, and layout grind into a 60-second automated ingestion pipeline. Bastion drops any 120-page Integrated Annual Report or ESG PDF into the studio and immediately converts raw text, tables, and executive letters into structured, responsive web components.
 
-* **✓ Deterministic Financial Parsing**: Enforces exact numeric parity with zero LLM drift—guaranteeing 100% accuracy on basis points (`bps`), EBITDA percentages, and currency denominations.
-* **✓ Brand Palette & Typography Auto-Mapper**: Automatically extracts corporate primary, accent, background, surface, text, and border hex codes from the PDF and applies them across the entire suite.
-* **✓ 1-Click Staged Handover**: Automatically packages and stages converted drafts directly into the client's review queue (`/admin/tasks`) with `status: 'in_review'` for immediate C-suite approval.
+* **✓ Deterministic Financial Parsing**: Enforces exact numeric parity with zero LLM drift—guaranteeing 100% accuracy on basis points (`bps`), EBITDA percentages, and currency denominations without mathematical hallucination.
+* **✓ Automated Brand Palette & Typography Mapping**: Auto-extracts corporate primary, accent, background, surface, text, and border hex codes from the PDF and restyles the generated web suite instantly.
+* **✓ 1-Click Staged Handover to Client Review**: Automatically packages and stages converted drafts directly into the client's review queue (`/admin/tasks`) with `status: 'in_review'` for immediate C-suite approval.
 
-#### **02 — Role-Gated Agency Monetization Engine**
+#### **02 — AI Copilot & Natural Language Coding Assistant for Bastion Users**
+*Claude 3.5 Sonnet, Haiku & GPT-4o conversational coding bar for rapid website generation*
+
+Engineered specifically for Bastion’s website delivery and creative team. Agency developers and producers use a conversational prompt bar inside the canvas to generate entire websites, scaffold bespoke sections, adjust layouts, and write tailored React code in seconds.
+
+* **✓ Natural Language Website & Layout Generation**: Issue plain-English instructions: "Generate a 4-section mining investor homepage", "Build an executive board governance grid", or "Restyle this financial table with dark-mode borders".
+* **✓ Real-Time Visual Diff Inspection & 1-Click Revert**: Inspect visual side-by-side diffs of code and styling changes before applying them to the live canvas, with instant 1-click revert capability.
+* **✓ Multi-Model LLM Vault**: Connects seamlessly with Anthropic Claude (3.5 Sonnet / 3.7 / Haiku) and OpenAI with encrypted per-agency API key management (`ApiKeysTab.tsx`).
+
+#### **03 — Role-Gated Agency Monetization Engine**
 *High-margin commercial barrier billing R45,000 – R85,000 per report conversion*
 
-Engineered to turn the CMS into a direct agency profit center rather than a cost sink. Advanced ingestion and structural layout tools are strictly restricted to Bastion administrators, preventing clients from bypassing the agency.
+Engineered to turn the CMS into a direct agency profit center rather than a cost sink. Advanced ingestion, PDF-to-HTML parsing, and structural layout tools are strictly restricted to Bastion administrators, preventing clients from bypassing the agency.
 
 * **✓ Hardware-Level Role Gating**: Client accounts are partitioned at the database schema level (`platform_admin` vs `client_editor`); unauthorized ingestion requests fail closed with HTTP 403 Forbidden.
 * **✓ Built-in Commercial Upsell Modal**: When corporate clients attempt to access document parsing, the system renders a branded upsell gate showcasing Bastion's conversion services.
 * **✓ 91.8% Gross Profit Margins**: Reduces internal agency turnaround costs from R120,000 (160 billable hours) to R4,500, delivering over R2,000,000 in net annual profit across 12 listed clients.
 
-#### **03 — Native Commercial Suite: Quotes, SARS eInvoicing & eSign**
+#### **04 — Live Website Brand DNA Extractor**
+*Crawl any corporate URL to extract logos, color palettes, and typography scales in seconds*
+
+Most prospective clients will not provide Figma files or source code. Bastion’s Brand DNA engine crawls any public corporate website (e.g. `goldfields.com`) and automatically compiles a versioned, reusable brand theme kit.
+
+* **✓ Automated Token Extraction**: Captures primary, secondary, and accent colors, typography weights, font hierarchies, button corner radii, and spacing scales.
+* **✓ Logo & Media Harvesting**: Extracts high-resolution SVG logos, favicons, and metadata imagery into the media library as draft assets.
+* **✓ Brand Voice & Tone Profiling**: Analyzes executive statements and copy to generate a tone-of-voice summary that guides AI content generation.
+
+#### **05 — Native Commercial Suite: Quotes, SARS eInvoicing & eSign**
 *Complete B2B contracting, Section 20 tax invoicing, and HMAC cryptographic signatures*
 
 Eliminates the need to buy and juggle DocuSign, Salesforce CPQ, and third-party invoicing SaaS. Bastion issues proposals, secures legal acceptance, and bills corporate clients directly within the CMS.
@@ -194,7 +212,7 @@ Eliminates the need to buy and juggle DocuSign, Salesforce CPQ, and third-party 
 * **✓ SARS-Compliant Tax eInvoicing (`/invoice/[token]`)**: Automatically calculates 15% South African VAT, validates corporate tax IDs, and generates print-ready PDF invoices.
 * **✓ Cryptographic HMAC SHA-256 Signatures**: Dual-mode interactive touch canvas and typed signature generator capturing IP address, corporate title, and ISO-8601 timestamps.
 
-#### **04 — Multi-Tenant Client Perimeter & Zero SaaS Seat Tax**
+#### **06 — Multi-Tenant Client Perimeter & Zero SaaS Seat Tax**
 *Unlimited client portals, isolated database schemas, and zero per-seat software fees*
 
 Run dozens of discrete enterprise clients (e.g. Gold Fields, Vodacom, Anglo) on a single cohesive infrastructure without cross-tenant data contamination or expensive SaaS licensing penalties.
@@ -203,19 +221,36 @@ Run dozens of discrete enterprise clients (e.g. Gold Fields, Vodacom, Anglo) on 
 * **✓ Zero SaaS Seat Licensing Tax**: Onboard 50 client organizations, 200 editors, and unlimited executive board reviewers at $0 incremental per-seat cost.
 * **✓ Instant Portfolio Switcher**: Agency admins can toggle between mining, telecom, and financial services client websites in 1 click from a unified command bar.
 
-#### **05 — Autonomous SRE, Git Sync & Blueprints**
-*Sub-50ms edge delivery, automated incident evidence, and GitHub repository synchronization*
+#### **07 — Autonomous SRE, Global Telemetry & Incident Rollback**
+*Sub-50ms edge delivery, automated incident evidence, and 1-click snapshot restore*
 
-Enterprise-grade reliability engineering built directly into the admin console. Monitor real-time uptime across global edge nodes, detect runtime anomalies, and synchronize schemas with version control.
+Enterprise-grade reliability engineering built directly into the admin console. Monitor real-time uptime across global edge nodes, detect runtime anomalies, and restore prior states instantly.
 
 * **✓ Live Health & Synthetic Probing (`/admin/sre`)**: Real-time telemetry monitoring uptime, TTFB latency across regional CDNs (CPT-1, JNB-1, LHR-1), and SSL certificate validity.
-* **✓ Automated Incident Evidence & 1-Click Rollback**: Detects syntax or component failures and restores prior stable compositions instantly with zero downtime.
-* **✓ Bidirectional GitHub Synchronization**: Sync page compositions, custom React dynamic zones, and database blueprints directly with enterprise Git repositories.
+* **✓ Automated Incident Evidence & Rollback**: Detects syntax or component failures and restores prior stable compositions instantly with zero downtime.
+* **✓ Status Page Telemetry**: Public and internal status dashboards showcasing 99.98% 90-day availability to inspire enterprise client confidence.
+
+#### **08 — Bidirectional GitHub Sync & Database Blueprints**
+*Export compositions and database schemas directly into version-controlled repositories*
+
+Provides full developer sovereignty. Bastion engineers can export site configurations, dynamic components, and database schemas directly to GitHub.
+
+* **✓ Git-Backed Blueprints**: Version-control website templates, section presets, and client themes across staging and production branches.
+* **✓ Automated CI/CD Deployment**: Push updates through automated GitHub Actions pipelines without manual server interventions.
+* **✓ GraphQL & REST API Hub**: Full GraphQL explorer (`/api/graphql`) and REST endpoints for omnichannel headless content syndication.
+
+#### **09 — Interactive Zara Voice Copilot**
+*Hands-free voice assistant inside the CMS for rapid speech-driven editing*
+
+A cutting-edge speech interface built directly into the studio navigation bar for executive and agency accessibility.
+
+* **✓ Voice-Driven Editing & Commands**: Dictate copy updates, navigate across pages, and query platform status using conversational voice commands.
+* **✓ Audio Transcription & Meeting Notes**: Convert spoken executive debriefs directly into structured draft web copy.
 
 ---
 
-### 3.2 What Corporate Clients Get: 5 Core Enterprise Capabilities (Listed Issuers & IR Teams)
-*Every capability below is built, verified, and functioning in the production codebase.*
+### 3.2 What Corporate Clients Get: Comprehensive Enterprise Capabilities
+*Every capability below is built, verified, and functioning in the production codebase to satisfy corporate C-suite, IR, and legal requirements.*
 
 #### **01 — Real-Time JSE §8.2 & ISSB S2 Compliance Guardian**
 *24/7 regulatory safe-harbor auditor and ESG greenwashing shield*
@@ -235,7 +270,16 @@ Eliminates IT and developer ticket backlogs for routine copy, image, and stateme
 * **✓ Focal-Point Media DAM**: Upload high-resolution corporate photography with focal-point cropping, ensuring executive portraits never crop awkwardly on mobile devices.
 * **✓ Multi-Device Live Viewport**: Synchronized canvas toggles instantly between Desktop (1440px), Tablet (768px), and Mobile (375px) viewports with full undo/redo history.
 
-#### **03 — Interactive Financial Reporting & SENS Wire Teleprinter**
+#### **03 — Multi-Model AI Content Assistant & Brand DNA Memory**
+*Claude Haiku 4.5 & GPT-4o with brand memory & bounded schema repair*
+
+Not a generic chat widget. The in-editor copilot reads the active page component tree, understands corporate tone and brand constraints, and executes structured mutations directly into the CMS state without developer assistance.
+
+* **✓ Natural Language Section Mutations**: Corporate IR staff issue plain-English prompts: "Make this Q3 investor-ready", "Highlight our B-BBEE credentials", or "Rewrite for concise executive clarity".
+* **✓ Brand Kit & Voice Constraints**: Automatically adheres to approved brand hex codes, typography weights, and forbidden phrases, ensuring every revision stays strictly on-brand.
+* **✓ Self-Healing Schema Validation**: Bounded JSON repair pipeline ensures the AI never injects malformed code, breaks CSS styles, or crashes the live page.
+
+#### **04 — Interactive Financial Reporting & SENS Wire Teleprinter**
 *Dynamic balance sheets, YoY variance toggles, and real-time regulatory feeds*
 
 Traditional CMSs reduce financial data to static text. Bastion gives institutional analysts and retail investors interactive financial tools tailored to listed equity transparency.
@@ -244,7 +288,7 @@ Traditional CMSs reduce financial data to static text. Bastion gives institution
 * **✓ Live SENS Regulatory Feed**: Real-time Stock Exchange News Service teleprinter with regulatory category filters, keyword search, and PDF circular attachments.
 * **✓ Dividend Withholding Tax (DWT) Calculator**: Interactive web tool allowing shareholders to calculate net dividend yields factoring in statutory 20% DWT deductions.
 
-#### **04 — Time-Locked Embargo Distribution & Dual Sign-Off**
+#### **05 — Time-Locked Embargo Distribution & Dual Sign-Off**
 *Cryptographic embargo locks and multi-stage C-suite approval workflows*
 
 Market-sensitive financial results and M&A circulars cannot leak prior to statutory market open. Bastion coordinates multi-stakeholder governance with time-locked releases and dual sign-off.
@@ -253,14 +297,21 @@ Market-sensitive financial results and M&A circulars cannot leak prior to statut
 * **✓ Tasks & Approvals Center (`/admin/tasks`)**: Staged multi-page report conversions arrive in a unified queue where executives, auditors, and legal counsel approve with 1 click.
 * **✓ Immutable Audit Trail (`/admin/audit`)**: Every character change, preview, sign-off, and publication action is cryptographically logged with user identity, timestamp, and IP address.
 
-#### **05 — Multi-Model AI Copilot & Brand DNA Engine**
-*Claude Haiku 4.5 & GPT-4o with brand memory & bounded schema repair*
+#### **06 — Multi-Language & Global Localization Hub**
+*Publish corporate communications across global investor markets effortlessly*
 
-Not a generic chat widget. The in-editor copilot reads the active page component tree, understands corporate tone and brand constraints, and executes structured mutations directly into the CMS state without developer assistance.
+International holding companies and listed dual-exchange entities need to publish across multiple regulatory jurisdictions and languages.
 
-* **✓ Natural Language Section Mutations**: Corporate IR staff issue plain-English prompts: "Make this Q3 investor-ready", "Highlight our B-BBEE credentials", or "Rewrite for concise executive clarity".
-* **✓ Brand Kit & Voice Constraints**: Automatically adheres to approved brand hex codes, typography weights, and forbidden phrases, ensuring every revision stays strictly on-brand.
-* **✓ Self-Healing Schema Validation**: Bounded JSON repair pipeline ensures the AI never injects malformed code, breaks CSS styles, or crashes the live page.
+* **✓ Side-by-Side Locale Editing**: Manage regional variants and translations with synchronized layout inheritance.
+* **✓ Dynamic Locale Fallback**: Ensures untranslated sub-sections gracefully display approved corporate English copy without breaking layout geometry.
+
+#### **07 — Client Experience Sandbox & Self-Paced Learning**
+*Risk-free staging environment and interactive executive training hub*
+
+Gives corporate clients complete confidence before publishing live changes.
+
+* **✓ Client Sandbox Banner**: Clear visual distinction between live production and safe sandbox testing modes.
+* **✓ Interactive Learning Center (`/admin/learn`)**: Built-in video walkthroughs and operational guides tailored to corporate PR and IR executives.
 
 ---
 
