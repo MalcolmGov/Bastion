@@ -1153,7 +1153,7 @@ def create_deck():
     bp1.font.color.rgb = TURQUOISE
     
     bp2 = btf.add_paragraph()
-    bp2.text = "Public Flagship: https://goldfields-bay.vercel.app\nStudio OS CMS: https://goldfields-bay.vercel.app/admin/login\nLogin Email: admin@goldfields.com\nTemporary Access Key: GoldFields2026!"
+    bp2.text = "Public Flagship: https://goldfields-bay.vercel.app\nStudio OS CMS: https://goldfields-bay.vercel.app/admin/login\nLogin Email: admin@goldfields.com\nAccess: credentials are issued separately by your account manager"
     bp2.font.name = "Courier New"
     bp2.font.size = Pt(8.5)
     bp2.font.color.rgb = TEXT_WHITE

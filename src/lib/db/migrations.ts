@@ -1,4 +1,5 @@
 import type { Client } from '@libsql/client';
+import { revokePublishedCredentials } from '@/lib/auth/bootstrapAdmin';
 
 export interface Migration {
   version: number;
@@ -815,6 +816,16 @@ export const migrations: Migration[] = [
         ], 'write');
       }
       await db.execute(`CREATE INDEX IF NOT EXISTS idx_jobs_status_publish ON scheduled_jobs(status, publish_at_utc)`);
+    }
+  },
+  {
+    version: 17,
+    name: '017_revoke_published_credentials',
+    up: async (db: Client) => {
+      // Earlier versions created a platform admin with a password that was written into the source and into dev scripts, on every
+      // database they started against. Any account that still accepts such a password is revoked and signed out; a new password is
+      // set through BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD (see bootstrapPlatformAdmin) or an invitation.
+      await revokePublishedCredentials(db);
     }
   }
 ];
