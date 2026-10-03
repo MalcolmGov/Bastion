@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/client';
 import { getCurrentUser, hasPermission } from '@/lib/auth/auth';
 import { clientOwns } from '@/lib/auth/guard';
+import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
 import { sendReviewNotification } from '@/lib/notifications/notifier';
 import crypto from 'crypto';
 
@@ -120,19 +121,14 @@ export async function POST(
           return NextResponse.json({ error: 'Forbidden: Only publishers can publish content live' }, { status: 403 });
         }
 
-        // Verify two-person rule for sensitive releases if needed
-        const isSensitive = collection === 'reports';
-        if (isSensitive) {
-          const approvalsCount = await db.execute({
-            sql: `SELECT COUNT(*) as c FROM approvals WHERE revision_id = ? AND decision = 'approved'`,
-            args: [draftRevId]
-          });
-          const count = Number(approvalsCount.rows[0]?.c || 0);
-          if (count < 1 && user.role !== 'platform_admin') {
-            return NextResponse.json({
-              error: 'Cannot publish financial report: Formal compliance review approval required before publishing.'
-            }, { status: 400 });
-          }
+        // The same two-person rule as every other publish path: reports and news need an approval from someone
+        // other than the revision's author, recorded against its current content. No role skips it.
+        try {
+          await assertDisclosureApproval(db, collection, draftRevId);
+        } catch (approvalError) {
+          return NextResponse.json({
+            error: `Cannot publish ${collection}: ${(approvalError as Error).message}.`
+          }, { status: 400 });
         }
 
         newStatus = 'published';

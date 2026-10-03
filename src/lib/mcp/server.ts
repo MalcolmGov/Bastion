@@ -326,7 +326,8 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>,
       await assertApiSiteAccess(db, access, siteId);
       if (status === 'published') {
         assertApiScope(access, 'content:publish');
-        if (!access.isAgencyAdmin && ['reports', 'news'].includes(collection)) {
+        // A new revision cannot have an independent approval, so no caller, agency included, may create one live.
+        if (['reports', 'news'].includes(collection)) {
           throw new Error('Sensitive disclosures must be created as drafts and independently approved');
         }
       }
@@ -391,9 +392,8 @@ export async function handleMcpToolCall(name: string, args: Record<string, any>,
 
       const entry = entryRes.rows[0];
       const draftRevId = entry.current_draft_revision_id || entry.current_published_revision_id;
-      if (!access.isAgencyAdmin) {
-        await assertDisclosureApproval(db, String(entry.collection), String(draftRevId || ''));
-      }
+      // Agency tokens and sessions bypass tenant scoping, not the two-person rule.
+      await assertDisclosureApproval(db, String(entry.collection), String(draftRevId || ''));
       const now = new Date().toISOString();
 
       await db.execute({

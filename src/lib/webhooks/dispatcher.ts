@@ -19,6 +19,22 @@ export interface WebhookDeliveryResult {
   deliveryId: string;
 }
 
+/** Per-site webhook URL and secret from the site's settings; either may be absent. A parse failure is logged and ignored. */
+function readSiteWebhookSettings(row: Record<string, unknown> | undefined): { url?: string; secret?: string } {
+  if (!row) return {};
+  try {
+    const raw = row.settings_json;
+    const settings = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return {
+      url: settings?.headlessIntegration?.webhookUrl,
+      secret: settings?.headlessIntegration?.webhookSecret,
+    };
+  } catch (e) {
+    console.warn('[Webhook] Error parsing site settings:', e);
+    return {};
+  }
+}
+
 /**
  * Dispatches an authenticated webhook to Bastion's frontend platform.
  * Non-blocking, signed with HMAC-SHA256, and recorded for audit logging.
@@ -38,29 +54,26 @@ export async function dispatchContentWebhook(
       args: [siteId, siteId],
     });
 
-    let webhookUrl = process.env.BASTION_WEBHOOK_URL || '';
-    let webhookSecret = process.env.BASTION_WEBHOOK_SECRET || 'whsec_bastion_goldfields_2026';
-
-    if (siteRes.rows.length > 0) {
-      try {
-        const rawSettings = siteRes.rows[0].settings_json;
-        const settings = typeof rawSettings === 'string' ? JSON.parse(rawSettings) : rawSettings;
-        if (settings?.headlessIntegration?.webhookUrl) {
-          webhookUrl = settings.headlessIntegration.webhookUrl;
-        }
-        if (settings?.headlessIntegration?.webhookSecret) {
-          webhookSecret = settings.headlessIntegration.webhookSecret;
-        }
-      } catch (e) {
-        console.warn('[Webhook] Error parsing site settings:', e);
-      }
-    }
+    const siteSettings = readSiteWebhookSettings(siteRes.rows[0]);
+    const webhookUrl = siteSettings.url || process.env.BASTION_WEBHOOK_URL || '';
+    const webhookSecret = siteSettings.secret || process.env.BASTION_WEBHOOK_SECRET || '';
 
     if (!webhookUrl) {
       console.log(`[Webhook] No outbound webhook URL configured for site: ${siteId}. Delivery skipped.`);
       return {
         success: true,
         latencyMs: 0,
+        deliveryId,
+      };
+    }
+
+    // Never sign with a built-in default: that value is public in the source, so anyone could forge it.
+    if (!webhookSecret) {
+      console.warn(`[Webhook] No signing secret configured for site: ${siteId}. Delivery refused; set one in Settings or BASTION_WEBHOOK_SECRET.`);
+      return {
+        success: false,
+        latencyMs: 0,
+        error: 'Webhook signing secret is not configured for this site. Delivery was not sent.',
         deliveryId,
       };
     }

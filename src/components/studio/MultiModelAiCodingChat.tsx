@@ -147,22 +147,6 @@ const MODEL_OPTIONS = [
     badge: 'Anthropic',
     color: 'text-purple-400 border-purple-500/30 bg-purple-500/10'
   },
-  {
-    id: 'claude-3-5-sonnet-20241022',
-    provider: 'anthropic' as const,
-    name: 'Claude 3.5 Sonnet v2',
-    tag: 'Elite UI/UX & Creative Polish',
-    badge: 'Anthropic',
-    color: 'text-purple-400 border-purple-500/30 bg-purple-500/10'
-  },
-  {
-    id: 'claude-3-5-haiku-20241022',
-    provider: 'anthropic' as const,
-    name: 'Claude 3.5 Haiku',
-    tag: 'Ultra-Fast Responsive Polish',
-    badge: 'Anthropic',
-    color: 'text-purple-400 border-purple-500/30 bg-purple-500/10'
-  },
   // OpenAI (GPT-6 Generational Series & Reasoning)
   {
     id: 'gpt-6-astra',

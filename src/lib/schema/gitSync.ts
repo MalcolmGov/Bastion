@@ -10,7 +10,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 import { getDb } from '@/lib/db/client';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import { BLUEPRINTS } from '@/lib/studio/blueprints';
@@ -446,6 +446,15 @@ export function getSchemaSyncStatus(): SchemaSyncStatus {
 }
 
 /**
+ * Prefer a fixed system location for git over a PATH search, so a writable directory early in PATH
+ * cannot substitute the binary. Falls back to the PATH lookup only when none of them exists.
+ */
+function resolveGitBinary(): string {
+  const fixedLocations = ['/usr/bin/git', '/usr/local/bin/git', '/opt/homebrew/bin/git'];
+  return fixedLocations.find((candidate) => fs.existsSync(candidate)) || 'git';
+}
+
+/**
  * Push generated schema files directly to Git repository
  */
 export async function pushSchemaToGit(commitMessage?: string): Promise<{ success: boolean; commitSha: string; filesUpdated: string[] }> {
@@ -467,7 +476,8 @@ export async function pushSchemaToGit(commitMessage?: string): Promise<{ success
   try {
     execSync('git add bastion-schema.json types/bastion-cms.d.ts bastion.config.ts');
     const msg = commitMessage || `chore(schema): sync Bastion CMS schema definitions v3.0.0 [auto-sync]`;
-    execSync(`git commit -m "${msg.replace(/"/g, '\\"')}" --allow-empty`);
+    // Argument array, not a shell string: the message is caller-controlled and must never be shell-parsed.
+    execFileSync(resolveGitBinary(), ['commit', '-m', msg, '--allow-empty']);
     commitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
   } catch (err: any) {
     console.warn('Git commit fallback:', err.message);
