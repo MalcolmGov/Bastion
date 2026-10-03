@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { WebsiteAssembler } from '@/lib/studio/assembler';
 import { requireAgencyUser, requireUser } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';

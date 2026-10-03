@@ -132,7 +132,7 @@ export default function AdminReleasesPage() {
     setTimeout(() => setNotification(null), 5000);
   };
 
-  const fetchReleases = async () => {
+  const fetchReleases = React.useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -149,11 +149,11 @@ export default function AdminReleasesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeClient?.id, activeSite?.id]);
 
   useEffect(() => {
     fetchReleases();
-  }, [activeClient?.id, activeSite?.id]);
+  }, [fetchReleases]);
 
   const loadReleaseDetails = async (release: ContentRelease) => {
     setSelectedRelease(release);
@@ -208,7 +208,7 @@ export default function AdminReleasesPage() {
   };
 
   const handlePublishNow = async (releaseId: string, releaseName: string) => {
-    if (!confirm(`Are you sure you want to trigger atomic publishing for "${releaseName}"? All bundled pages and assets will go live globally.`)) {
+    if (!confirm(`Publishing "${releaseName}" will immediately update your live website with all bundled pages and assets. Would you like to proceed?`)) {
       return;
     }
 
@@ -225,7 +225,7 @@ export default function AdminReleasesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Publishing failed');
 
-      showNotification('success', `Atomic drop successful: ${data.message}`);
+      showNotification('success', `Release published successfully: ${data.message}`);
       await fetchReleases();
       if (selectedRelease?.id === releaseId) {
         await loadReleaseDetails({ ...selectedRelease, status: 'published', publishedAt: new Date().toISOString() });
@@ -323,13 +323,13 @@ export default function AdminReleasesPage() {
         <div className="space-y-1.5">
           <div className="flex items-center space-x-2 text-xs font-bold tracking-wider uppercase" style={{ color: primaryColor }}>
             <Rocket className="w-4 h-4" />
-            <span>Bastion Enterprise Governance &bull; Parity with Strapi &amp; Sanity</span>
+            <span>{activeClient?.name || 'Workspace'} &bull; Publishing Governance</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Content Releases &amp; Scheduled Drops
+            Content Releases &amp; Scheduled Publishing
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
-            Orchestrate multi-document release campaigns, embargoed financial SENS announcements, and coordinated marketing drops. Bundled revisions deploy atomically with zero cache skew across global edge CDN nodes.
+            Coordinate multi-page updates, embargoed regulatory announcements, and time-sensitive marketing campaigns. Bundled updates publish together synchronously across all public domains.
           </p>
         </div>
 
@@ -380,7 +380,7 @@ export default function AdminReleasesPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Scheduled Drops</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Scheduled Releases</span>
             <Clock className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
@@ -388,20 +388,20 @@ export default function AdminReleasesPage() {
           </div>
           <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1 flex items-center gap-1">
             <Timer className="w-3 h-3" />
-            <span>Time-locked embargoes</span>
+            <span>Automated publish dates</span>
           </div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#111726] border border-slate-200 dark:border-slate-800 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Draft Bundles</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Draft Releases</span>
             <Layers className="w-4 h-4 text-sky-500" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
             {draftCount}
           </div>
           <div className="text-[11px] text-sky-600 dark:text-sky-400 font-medium mt-1">
-            In active authoring &amp; review
+            In active preparation &amp; review
           </div>
         </div>
 
@@ -414,7 +414,7 @@ export default function AdminReleasesPage() {
             {publishedCount}
           </div>
           <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-            Atomically deployed to edge
+            Live on public domains
           </div>
         </div>
 
@@ -427,7 +427,7 @@ export default function AdminReleasesPage() {
             {totalBundledItems}
           </div>
           <div className="text-[11px] text-purple-600 dark:text-purple-400 font-medium mt-1">
-            Pages, zones &amp; disclosures
+            Pages, layouts &amp; content
           </div>
         </div>
       </div>
@@ -470,14 +470,14 @@ export default function AdminReleasesPage() {
               <Layers className="w-10 h-10 mx-auto text-slate-400 opacity-60" />
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">No releases in this view</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Create a scheduled drop to bundle multi-page updates, or add pages directly from the Visual Editor.
+                Create a scheduled release to bundle multi-page updates, or add pages directly from the Visual Editor.
               </p>
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(true)}
                 className="mt-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 dark:bg-slate-800 hover:opacity-90 cursor-pointer"
               >
-                + New Release Bundle
+                + Create New Release
               </button>
             </div>
           ) : (
@@ -505,7 +505,7 @@ export default function AdminReleasesPage() {
                           {isScheduled && (
                             <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300/40 flex items-center gap-1">
                               <Timer className="w-3 h-3 animate-spin text-amber-500" />
-                              Scheduled Drop
+                              Scheduled Release
                             </span>
                           )}
                           {isDraft && (
@@ -590,7 +590,7 @@ export default function AdminReleasesPage() {
                           {release.scheduledAt && (
                             <div className="flex items-center space-x-1 text-amber-600 dark:text-amber-400 font-medium">
                               <Calendar className="w-3.5 h-3.5" />
-                              <span>Drop: {new Date(release.scheduledAt).toLocaleString()}</span>
+                              <span>Scheduled: {new Date(release.scheduledAt).toLocaleString()}</span>
                             </div>
                           )}
                           {release.publishedAt && (
@@ -697,13 +697,13 @@ export default function AdminReleasesPage() {
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-sans">Scheduled For</span>
                     <span className="text-slate-800 dark:text-slate-200 font-bold">
-                      {selectedRelease.scheduledAt ? new Date(selectedRelease.scheduledAt).toLocaleString() : 'Manual Drop'}
+                      {selectedRelease.scheduledAt ? new Date(selectedRelease.scheduledAt).toLocaleString() : 'Manual Publish'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[10px] uppercase font-sans">Edge Deployment</span>
+                    <span className="text-slate-400 block text-[10px] uppercase font-sans">Deployment Scope</span>
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                      Atomic Transaction
+                      Live Public Domains
                     </span>
                   </div>
                 </div>
@@ -849,7 +849,7 @@ export default function AdminReleasesPage() {
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Scheduled Drop Date &amp; Time (Optional)
+                  Scheduled Publish Date &amp; Time (Optional)
                 </label>
                 <input
                   type="datetime-local"

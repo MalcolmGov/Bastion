@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-core';
 import path from 'path';
+import { loginViaForm } from './lib/devLogin';
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const BASE_URL = 'http://localhost:3010';
@@ -18,10 +19,7 @@ async function main() {
 
   // 1. Login to admin
   console.log('Logging in to Admin Console...');
-  await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
-  await page.type('input[type="email"]', 'malcolm@movedigital.africa', { delay: 10 });
-  await page.type('input[type="password"]', 'Bastion2026!', { delay: 10 });
-  await page.click('button[type="submit"]');
+  await loginViaForm(page, BASE_URL, 'agency', { delay: 10, waitForNavigation: false });
   await new Promise(r => setTimeout(r, 2000));
 
   // 2. Navigate to /admin/billing

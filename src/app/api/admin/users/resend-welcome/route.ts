@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db/client';
 import { requireAgencyUser } from '@/lib/auth/guard';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
 import { sendTransactionalEmail } from '@/lib/email/delivery';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function POST(req: NextRequest) {
   try {

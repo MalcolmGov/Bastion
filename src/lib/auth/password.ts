@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 /**
  * Per-user scrypt hash. Format: scrypt$<salt hex>$<hash hex>

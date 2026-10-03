@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-core';
 import path from 'path';
+import { loginViaApi } from './lib/devLogin';
 
 async function main() {
   const browser = await puppeteer.launch({
@@ -12,14 +13,7 @@ async function main() {
   await page.setViewport({ width: 1600, height: 1200, deviceScaleFactor: 2 });
 
   console.log('1. Authenticating as Platform Administrator...');
-  const loginRes = await fetch('http://localhost:3010/api/admin/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: 'malcolm@movedigital.africa',
-      password: 'Bastion2026!'
-    })
-  });
+  const loginRes = await loginViaApi('http://localhost:3010', 'agency');
   const setCookieHeader = loginRes.headers.get('set-cookie');
   console.log('Login response status:', loginRes.status);
 

@@ -139,3 +139,12 @@ export function getGlowEffectStyles(glow?: SectionStyles['glowEffect']): React.C
       return {};
   }
 }
+
+export function getFrostedGlassStyle(styles?: SectionStyles): React.CSSProperties {
+  if (!styles?.frostedGlass && !styles?.glassBlurPx) return {};
+  const blurPx = styles.glassBlurPx ?? 16;
+  return {
+    backdropFilter: `blur(${blurPx}px)`,
+    WebkitBackdropFilter: `blur(${blurPx}px)`,
+  };
+}

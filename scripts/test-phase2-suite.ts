@@ -6,7 +6,7 @@
  * 3. Enterprise DAM Hotspot / Focal Point & Media Folders persistence
  */
 
-export {};
+import { loginViaApi } from './lib/devLogin';
 
 const BASE_URL = 'http://localhost:3010';
 
@@ -52,11 +52,7 @@ async function main() {
   console.log('📦 SUITE 1: Authentication & Session');
 
   await runTest('Auth', 'Login as Admin and obtain session cookie', async () => {
-    const res = await fetch(`${BASE_URL}/api/admin/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@goldfields.com', password: 'GoldFields2026!' })
-    });
+    const res = await loginViaApi(BASE_URL, 'client');
     assert(res.ok, `HTTP status ${res.status}`);
     const setCookie = res.headers.get('set-cookie');
     assert(!!setCookie && setCookie.includes('gf_studio_session'), 'Missing session cookie');

@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-core';
 import path from 'path';
+import { loginViaForm } from './lib/devLogin';
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const BASE_URL = 'http://localhost:3010';
@@ -38,11 +39,7 @@ async function runE2ETests() {
     // STEP 0: LOGIN & SESSION AUTHENTICATION
     // -------------------------------------------------------------------------
     console.log('\x1b[36m▶ [E2E STEP 0] Authentication & User Session\x1b[0m');
-    await page.goto(`${BASE_URL}/admin/login`, { waitUntil: 'networkidle2' });
-    await page.type('input[type="email"]', 'malcolm@movedigital.africa');
-    await page.type('input[type="password"]', 'Bastion2026!');
-    await page.click('button[type="submit"]');
-    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    await loginViaForm(page, BASE_URL, 'agency');
 
     const currentUrl = page.url();
     assert(currentUrl.includes('/admin'), 'User successfully authenticated and redirected to /admin', `URL: ${currentUrl}`);

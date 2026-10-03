@@ -25,7 +25,8 @@ import {
   LogOut,
   User,
   ShieldCheck,
-  Eye
+  Eye,
+  CheckCircle2
 } from 'lucide-react';
 
 import { useDashboardCustomizer } from './DashboardCustomizerProvider';
@@ -56,6 +57,30 @@ export function AdminHeader() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [switcherSearch, setSwitcherSearch] = useState('');
+  const [attentionItems, setAttentionItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadAttention = async () => {
+      try {
+        const query = new URLSearchParams({
+          ...(activeClient?.id ? { clientId: activeClient.id } : {}),
+          ...(activeSite?.id ? { siteId: activeSite.id } : {}),
+        }).toString();
+        const res = await fetch(`/api/admin/workspace/attention?${query}`);
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setAttentionItems(data.items || []);
+        }
+      } catch {
+        // Ignore network errors on background check
+      }
+    };
+    loadAttention();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeClient?.id, activeSite?.id]);
   
   const siteDropdownRef = useRef<HTMLDivElement>(null);
   const perspectiveDropdownRef = useRef<HTMLDivElement>(null);
@@ -362,29 +387,47 @@ export function AdminHeader() {
             <button
               type="button"
               onClick={() => setNotificationsOpen(!notificationsOpen)}
-              className="h-8 w-8 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all relative cursor-pointer"
-              title="Publishing Notifications & Alerts"
+              className="h-8 w-8 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all relative cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+              title="Workspace Notifications & Activity"
               aria-label="Open notifications"
+              aria-expanded={notificationsOpen}
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#0B0F19]" />
+              {attentionItems.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white dark:ring-[#0B0F19]" />
+              )}
             </button>
 
             {notificationsOpen && (
               <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#0F141C] border border-slate-200 dark:border-slate-800/90 rounded-2xl shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-200 text-slate-800 dark:text-slate-200 backdrop-blur-xl">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800/80 mb-2">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Publishing Alerts</span>
-                  <span className="text-[10px] font-semibold text-blue-600">2 pending</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Workspace Activity</span>
+                  <span className="text-[10px] font-semibold text-slate-500">
+                    {attentionItems.length > 0 ? `${attentionItems.length} pending` : 'Up to date'}
+                  </span>
                 </div>
-                <div className="space-y-2 text-xs">
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80">
-                    <div className="font-semibold text-slate-900 dark:text-white">SENS Announcement Drafted</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Gold Fields Q3 Production Update is awaiting executive sign-off.</div>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80">
-                    <div className="font-semibold text-slate-900 dark:text-white">Edge Purge Complete</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">CDN cache invalidated in 38ms across 28 global nodes.</div>
-                  </div>
+                <div className="space-y-2 text-xs max-h-60 overflow-y-auto">
+                  {attentionItems.length > 0 ? (
+                    attentionItems.slice(0, 5).map((item: any) => (
+                      <Link
+                        key={`${item.kind}:${item.id}`}
+                        href={item.href || '/admin'}
+                        onClick={() => setNotificationsOpen(false)}
+                        className="block p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800/80 transition"
+                      >
+                        <div className="font-semibold text-slate-900 dark:text-white truncate">{item.title}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 capitalize">
+                          {item.kind?.replaceAll('_', ' ')} · {item.status?.replaceAll('_', ' ')}
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-slate-500 dark:text-slate-400">
+                      <CheckCircle2 className="w-5 h-5 mx-auto text-emerald-500 mb-1.5" />
+                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300">All clear</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">No pending items requiring attention in this workspace.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

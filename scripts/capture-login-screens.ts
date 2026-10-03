@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-core';
 import path from 'path';
+import { typeCredentials } from './lib/devLogin';
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const BASE_URL = 'http://localhost:3010';
@@ -27,8 +28,7 @@ async function capture() {
 
   // 2. Type credentials and toggle show password
   console.log('Typing admin credentials: malcolm@movedigital.africa...');
-  await page.type('input[type="email"]', 'malcolm@movedigital.africa', { delay: 10 });
-  await page.type('input[type="password"]', 'Bastion2026!', { delay: 10 });
+  await typeCredentials(page, 'agency', 10);
   await new Promise(r => setTimeout(r, 600));
 
   const filledLoginPath = path.join(ARTIFACT_DIR, 'bastion_production_signin_filled.png');

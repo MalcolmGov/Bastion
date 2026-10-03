@@ -142,6 +142,14 @@ ${compositions.map(c => `- **/${c.pageSlug}** (${c.title}): ${c.sections.length}
     const clientId = `client_${siteSlug.replace(/[^a-z0-9]/gi, '_')}`;
     const siteId = `site_${siteSlug.replace(/[^a-z0-9]/gi, '_')}`;
 
+    // Package replacement must not reset a reviewed composition to an approved
+    // version number while changing its content underneath the approval.
+    const reviewsTable=(await db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='composition_reviews'")).rows[0];
+    if(reviewsTable){
+      const managed=(await db.execute({sql:'SELECT r.version FROM composition_reviews r JOIN page_compositions c ON c.id=r.composition_id WHERE c.site_id=? LIMIT 1',args:[siteId]})).rows[0];
+      if(managed) throw new Error('Use the versioned visual editor to update a website with page review history.');
+    }
+
     // Insert or update Client
     await db.execute({
       sql: `INSERT OR REPLACE INTO clients (id, name, slug, industry, logo_url, created_at, updated_at)

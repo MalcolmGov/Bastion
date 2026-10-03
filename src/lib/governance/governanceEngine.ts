@@ -1,5 +1,5 @@
 import { ensureDbReady } from '@/lib/db/client';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type {
   GovernanceAudit,
   GovernanceCheck,

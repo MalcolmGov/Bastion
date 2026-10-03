@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer-core';
+import { loginViaForm } from './lib/devLogin';
 
 async function main() {
   const browser = await puppeteer.launch({
@@ -11,10 +12,7 @@ async function main() {
   await page.setViewport({ width: 1600, height: 1400, deviceScaleFactor: 2 });
 
   console.log('Navigating to login...');
-  await page.goto('http://localhost:3010/admin/login', { waitUntil: 'networkidle2' });
-  await page.type('input[type="email"]', 'admin@goldfields.com');
-  await page.type('input[type="password"]', 'GoldFields2026!');
-  await page.click('button[type="submit"]');
+  await loginViaForm(page, 'http://localhost:3010', 'client', { waitForNavigation: false });
 
   console.log('Waiting for admin redirect...');
   await page.waitForNavigation({ waitUntil: 'networkidle2' });

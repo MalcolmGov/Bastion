@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { getDb } from '@/lib/db/client';
 import { isPublicDemoSecret } from '@/lib/auth/apiToken';
 

@@ -17,6 +17,16 @@ export async function POST(req: NextRequest) {
   if (!gate.ok) return gate.response;
   const user = gate.user;
 
+  if (!isAgencyUser(user)) {
+    return NextResponse.json(
+      {
+        error:
+          'The PDF to HTML conversion engine is an exclusive Bastion Agency monetization service. Please contact your Bastion account director to convert and stage your reports.',
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     const contentType = req.headers.get('content-type') || '';
     let document;

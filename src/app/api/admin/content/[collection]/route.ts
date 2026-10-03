@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db/client';
 import { getCurrentUser, hasPermission } from '@/lib/auth/auth';
 import { clientOwns, tenantClause, resolveTargetClientId } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function GET(
   req: NextRequest,

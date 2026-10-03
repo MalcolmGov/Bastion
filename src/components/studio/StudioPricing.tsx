@@ -4,6 +4,16 @@ import React, { useState } from 'react';
 import type { DesignCollectionId, SectionStyles } from '@/lib/studio/types';
 import { Check, Sparkles, ArrowRight } from 'lucide-react';
 import { StudioBackgroundFx } from './StudioBackgroundFx';
+import {
+  getFontFamilyClass,
+  getHeadingScaleClass,
+  getTrackingClass,
+  getAlignmentClasses,
+  getContainerWidthClass,
+  getBorderRadiusClass,
+  getGlowEffectStyles,
+  getFrostedGlassStyle,
+} from '@/lib/studio/styleResolver';
 
 interface PricingPlan {
   name: string;
@@ -47,9 +57,26 @@ export const StudioPricing: React.FC<StudioPricingProps> = ({
   const annualSavingsNote = props.annualSavingsNote || 'Save 20% on annual commitments';
   const plans = props.plans || [];
 
+  const defaultFont = collection === 'editorial' ? 'font-serif' : 'font-sans';
+  const fontFamilyClass = getFontFamilyClass(styles?.fontFamily, defaultFont);
+  const headingScaleClass = getHeadingScaleClass(styles?.headingScale, 'text-3xl sm:text-4xl lg:text-5xl');
+  const trackingClass = getTrackingClass(styles?.letterSpacing, 'tracking-tight');
+  const alignClass = getAlignmentClasses(styles?.alignment, 'center');
+  const containerWidthClass = getContainerWidthClass(styles?.containerWidth, 'max-w-7xl');
+  const cardRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-2xl');
+  const buttonRadiusClass = getBorderRadiusClass(styles?.borderRadius, 'rounded-xl');
+  const glowStyle = getGlowEffectStyles(styles?.glowEffect);
+  const frostedGlassStyle = getFrostedGlassStyle(styles);
+
   // Compute section style wrapper
   const paddingClass = styles?.paddingY || 'py-24';
-  const inlineStyle: React.CSSProperties = {};
+  const inlineStyle: React.CSSProperties = {
+    ...glowStyle,
+    ...frostedGlassStyle,
+    ...(styles?.borderColor ? { borderColor: styles.borderColor } : {}),
+    ...(styles?.borderTop ? { borderTopWidth: '1px', borderTopStyle: 'solid' } : {}),
+    ...(styles?.borderBottom ? { borderBottomWidth: '1px', borderBottomStyle: 'solid' } : {}),
+  };
 
   if (styles?.backgroundType === 'solid' && styles.backgroundColor) {
     inlineStyle.backgroundColor = styles.backgroundColor;
@@ -70,9 +97,9 @@ export const StudioPricing: React.FC<StudioPricingProps> = ({
         opacity={styles?.patternOpacity}
         accentColor={accentColor}
       />
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
+      <div className={`${containerWidthClass} mx-auto px-6 sm:px-8 lg:px-12 relative z-10`}>
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4 mb-12">
+        <div className={`max-w-3xl space-y-4 mb-12 ${alignClass.container}`}>
           {eyebrow && (
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-sky-400/30 bg-sky-500/10 text-xs font-semibold tracking-wide uppercase" style={{ color: accentColor }}>
               <Sparkles className="w-3.5 h-3.5" />
@@ -80,13 +107,13 @@ export const StudioPricing: React.FC<StudioPricingProps> = ({
             </div>
           )}
           <h2
-            className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white"
+            className={`${fontFamilyClass} ${headingScaleClass} font-extrabold ${trackingClass} text-white ${alignClass.text}`}
             style={headingStyle}
           >
             {title}
           </h2>
           {subtitle && (
-            <p className="text-base sm:text-lg text-slate-300 leading-relaxed font-light" style={textStyle}>
+            <p className={`text-base sm:text-lg text-slate-300 leading-relaxed font-light ${alignClass.text}`} style={textStyle}>
               {subtitle}
             </p>
           )}
@@ -128,19 +155,20 @@ export const StudioPricing: React.FC<StudioPricingProps> = ({
             return (
               <div
                 key={idx}
-                className={`relative rounded-2xl flex flex-col justify-between transition-all duration-300 p-8 ${
+                className={`relative ${cardRadiusClass} flex flex-col justify-between transition-all duration-300 p-8 ${
                   isPopular
                     ? 'bg-slate-900/90 border-2 shadow-2xl scale-105 z-20'
                     : 'bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80'
                 }`}
-                style={
-                  isPopular
+                style={{
+                  ...(isPopular
                     ? {
                         borderColor: accentColor,
                         boxShadow: `0 20px 40px -15px ${accentColor}25`
                       }
-                    : {}
-                }
+                    : (styles?.borderColor ? { borderColor: styles.borderColor } : {})),
+                  ...frostedGlassStyle,
+                }}
               >
                 {/* Popular Ribbon */}
                 {isPopular && (
@@ -156,7 +184,7 @@ export const StudioPricing: React.FC<StudioPricingProps> = ({
                 <div>
                   {/* Plan Header */}
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                    <h3 className={`text-xl font-bold text-white ${fontFamilyClass}`}>{plan.name}</h3>
                     {!isPopular && plan.badge && (
                       <span className="text-[11px] font-medium text-slate-400 px-2 py-0.5 rounded bg-slate-800 border border-slate-700">
                         {plan.badge}
@@ -197,7 +225,7 @@ export const StudioPricing: React.FC<StudioPricingProps> = ({
                 {/* CTA Button */}
                 <a
                   href={plan.ctaHref || '/contact'}
-                  className={`w-full py-3 px-4 rounded-xl font-semibold text-xs tracking-wide transition flex items-center justify-center space-x-2 shadow-sm ${
+                  className={`w-full py-3 px-4 ${buttonRadiusClass} font-semibold text-xs tracking-wide transition flex items-center justify-center space-x-2 shadow-sm ${
                     isPopular
                       ? 'text-slate-950 hover:brightness-110 font-bold'
                       : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'

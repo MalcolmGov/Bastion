@@ -5,7 +5,7 @@ import { getCurrentUser, hasPermission } from '@/lib/auth/auth';
 import { clientOwns } from '@/lib/auth/guard';
 import { assertDisclosureApproval } from '@/lib/auth/contentApproval';
 import { sendReviewNotification } from '@/lib/notifications/notifier';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 export async function POST(
   req: NextRequest,

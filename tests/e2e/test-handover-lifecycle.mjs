@@ -2,6 +2,9 @@ import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
 
+const CORP_PASSWORD = process.env.E2E_CORP_PASSWORD;
+if (!CORP_PASSWORD) throw new Error('Set E2E_CORP_PASSWORD to the password of the test accounts on the instance you are testing (see .env.example).');
+
 const BASE_URL = 'http://localhost:3010';
 const SCREENSHOT_DIR = path.resolve(process.cwd(), 'tests/screenshots');
 const ARTIFACT_DIR = '/Users/malcolmgovender/.gemini/antigravity/brain/8d5736b7-122d-4e9c-95b8-96b414fb7dfa';
@@ -45,7 +48,7 @@ async function saveScreenshot(page, filename) {
     await agencyPage.goto(`${BASE_URL}/admin/login`);
     await agencyPage.waitForSelector('input[name="email"], input[type="email"]');
     await agencyPage.fill('input[name="email"], input[type="email"]', 'admin@bastion.local');
-    await agencyPage.fill('input[name="password"], input[type="password"]', 'Bastion2026!Corp#');
+    await agencyPage.fill('input[name="password"], input[type="password"]', CORP_PASSWORD);
     await agencyPage.click('button[type="submit"]');
 
     await agencyPage.waitForURL(url => url.pathname.startsWith('/admin') && !url.pathname.includes('/login'), { timeout: 15000 });
@@ -105,7 +108,7 @@ async function saveScreenshot(page, filename) {
     await clientPage.goto(`${BASE_URL}/admin/login`);
     await clientPage.waitForSelector('input[name="email"], input[type="email"]');
     await clientPage.fill('input[name="email"], input[type="email"]', 'editor@client.local');
-    await clientPage.fill('input[name="password"], input[type="password"]', 'Bastion2026!Corp#');
+    await clientPage.fill('input[name="password"], input[type="password"]', CORP_PASSWORD);
     await clientPage.click('button[type="submit"]');
 
     await clientPage.waitForURL(url => url.pathname.startsWith('/admin') && !url.pathname.includes('/login'), { timeout: 15000 });
