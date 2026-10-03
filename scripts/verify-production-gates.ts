@@ -1214,7 +1214,6 @@ async function runAll() {
     // 2. Submit a valid bid
     const bid = await submitTenderBid({
       tenderId: gfTender.id,
-      clientId: 'client_goldfields',
       vendorName: 'Mamelodi Core Drilling (Pty) Ltd',
       cipcRegistrationNumber: '2020/654321/07',
       sarsTaxPin: 'SARS889900',
@@ -1230,7 +1229,7 @@ async function runAll() {
     assert(bid.status === 'submitted', 'Initial bid status must be submitted');
 
     // 3. Update evaluation status
-    await updateTenderSubmissionStatus(bid.id, 'compliant', 'CIPC verified, B-BBEE Level 1 verified.');
+    await updateTenderSubmissionStatus(bid.id, 'compliant', 'CIPC verified, B-BBEE Level 1 verified.', 'client_goldfields');
 
     // 4. Multi-tenant checks
     const gfSubmissions = await listTenderSubmissions(gfTender.id, 'client_goldfields');
