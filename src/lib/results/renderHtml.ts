@@ -58,7 +58,7 @@ function rowHtml(row: ResultsRow): string {
   if (row.kind === 'section') {
     return `<tr class="section"><td colspan="99">${esc(row.label)}</td></tr>`;
   }
-  const cells = row.cells.map((cell) => `<td>${esc(cell || '—')}</td>`).join('');
+  const cells = row.cells.map((cell) => `<td>${esc(cell ?? '')}</td>`).join('');
   return `<tr class="${row.kind}"><th scope="row">${esc(row.label)}</th>${cells}</tr>`;
 }
 

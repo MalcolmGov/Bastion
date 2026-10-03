@@ -19,3 +19,9 @@ Both user-provided documents were converted locally: Standard Bank's six-page Se
 ## Review boundaries
 
 Source previews are faithful raster reproductions, not editable HTML charts. They do not prove that the transcription is complete or correct. Complex financial tables, restatements, periods, units and footnotes still require source comparison before publication. Existing extraction warnings remain visible. Fonts absent from the browser use fallback fonts; extracted proprietary font names do not imply permission to redistribute font files. The extractor reads public HTML and linked CSS; it does not claim pixel-perfect reconstruction of dynamically rendered corporate sites.
+
+## Restatement extraction follow-up
+
+Merafe's six missing-figure warnings were traced to intentional source blanks in previously/currently stated disclosures. Word hyphens are now distinguished from financial dashes; wrapped labels stay together; grouped year/state headings expand to their numeric and percentage columns. Source blanks are recorded separately from unrecognised missing values, and ordinary incomplete-table warnings remain active. Regression checks cover both parser statements and publication tables.
+
+A separate source review item remains: on PDF page 18, the previously stated chrome revenue total is printed as 2 262 211 (R’000), while its two reported regional amounts, 506 580 and 1 755 641, add to 2 262 221. The converter preserves the printed amounts and total. This requires issuer/source review, not an automatic arithmetic correction.

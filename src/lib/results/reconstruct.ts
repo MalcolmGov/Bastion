@@ -1,3 +1,4 @@
+import { isWordHyphen, restatementHeaders, mergeWrappedLabels } from './tableLayout';
 import { isFinancialNumber, isYearToken } from './numbers';
 import type { PdfGlyph } from './extractPdf';
 import type { ResultsColumn, ResultsHighlight, ResultsRow, ResultsStatement, RowKind } from './types';
@@ -29,7 +30,7 @@ function isBold(fontName: string): boolean {
 }
 
 function clean(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
+  return value.replace(/(\p{L})\s*[-‐‑]\s*(?=\p{L})/gu, '$1-').replace(/\s+/g, ' ').trim();
 }
 
 function clusterLines(glyphs: PdfGlyph[]): Line[] {
@@ -50,8 +51,8 @@ function clusterLines(glyphs: PdfGlyph[]): Line[] {
   return groups.map((group) => {
     const ordered = [...group].sort((a, b) => a.x - b.x);
     const phrases: Phrase[] = [];
-    for (const glyph of ordered) {
-      const financial = isFinancialNumber(glyph.text);
+    for (const [glyphIndex, glyph] of ordered.entries()) {
+      const financial = isFinancialNumber(glyph.text) && !isWordHyphen(glyph, glyphIndex, ordered);
       const previous = phrases[phrases.length - 1];
       const gap = previous ? glyph.x - previous.right : Number.POSITIVE_INFINITY;
       if (previous && !previous.financial && !financial && gap >= 0 && gap < 8) {
@@ -100,12 +101,15 @@ function isPeriodCaption(line: Line): boolean {
 
 function looksLikeHeader(line: Line): boolean {
   if (line.financials.length > 0) return false;
+  if (/^(?:group|previously|currently|stated)(?:\s+(?:group|previously|currently|stated))*$/i.test(line.text)) return true;
   if (isPeriodCaption(line)) return false;
   if (line.text.length > 110) return false;
+  if (/^(?:revenue|ferrochrome|chrome|ore|total|in|relation|to)(?:\s+(?:revenue|ferrochrome|chrome|ore|total|in|relation|to))*$/i.test(line.text)) return true;
+  if (/% of revenue|in relation to/i.test(line.text)) return true;
   if (/^(notes?|restated|r['’]?000)$/i.test(line.text.replace(/\s+/g, ' '))) return true;
   if (/(?:^|\s)(H[12]|FY|Q[1-4]|Change|R['’]?000|Notes|Restated|31 December|US\$|\$m)(?:\s|$)/i.test(line.text)) return true;
   const years = line.text.match(/\b(19|20)\d{2}\b/g) || [];
-  return years.length >= 1 && years.length === line.phrases.filter((phrase) => isYearToken(phrase.text) || /20\d{2}/.test(phrase.text)).length;
+  return years.length >= 1 && line.phrases.every((phrase) => isYearToken(phrase.text) || /^(?:group|restated|previously|currently|stated)$/i.test(phrase.text));
 }
 
 function clusterColumns(lines: Line[]): number[] {
@@ -176,6 +180,7 @@ function rowKind(line: Line, label: string): RowKind {
 
 function columnRole(label: string, rows: ResultsRow[], index: number): 'note' | 'figure' {
   if (/note/i.test(label)) return 'note';
+  if (/%|revenue|R['’]?000|20\d{2}/i.test(label)) return 'figure';
   const values = rows
     .map((row) => row.cells[index])
     .filter((cell): cell is string => Boolean(cell && cell.trim()));
@@ -226,6 +231,7 @@ export function reconstructStatements(glyphs: PdfGlyph[]): {
     let lookback = index - 1;
     while (lookback >= 0) {
       const previous = lines[lookback];
+      if (previous.page !== line.page) break;
       if (previous.financials.length >= 2 || isFooter(previous)) break;
       if (isNote(previous) || previous.financials.length === 1) {
         lookback -= 1;
@@ -310,8 +316,11 @@ export function reconstructStatements(glyphs: PdfGlyph[]): {
       });
     }
 
+    const resolvedLabels = restatementHeaders(headerLines, columns, columnLabels);
+    columnLabels.splice(0, columnLabels.length, ...resolvedLabels);
+    const restatement = columnLabels.some((label) => /previously stated/i.test(label)) && columnLabels.some((label) => /currently stated/i.test(label));
     const firstFigureX = Math.min(...figureLines.flatMap((row) => row.financials.map((phrase) => phrase.x)));
-    const draftRows = body.map((row) => {
+    const draftRows = mergeWrappedLabels(body).map((row) => {
       const label = row.financials.length === 0 ? row.text : lineLabel(row, firstFigureX);
       return { row, label, kind: rowKind(row, label) };
     });
@@ -338,7 +347,7 @@ export function reconstructStatements(glyphs: PdfGlyph[]): {
       const label = columnLabels[columnIndex] || '';
       const values = rows.map((row) => row.cells[columnIndex]).filter((cell) => cell && cell.trim());
       const dataRows = rows.filter((row) => row.kind !== 'section').length || 1;
-      const proseLabel = label.length > 40 && !/R['’]?000|\bnotes?\b/i.test(label);
+      const proseLabel = label.length > 40 && !/R['’]?000|\bnotes?\b/i.test(label) && !(restatement && /%/.test(label));
       const sparse = values.length / dataRows < 0.3 && !/note|20\d{2}|R['’]?000/i.test(label);
       return proseLabel || sparse;
     });
@@ -349,7 +358,8 @@ export function reconstructStatements(glyphs: PdfGlyph[]): {
     rows.forEach((row) => {
       row.cells = kept.map((columnIndex) => row.cells[columnIndex] ?? null);
       if (row.kind === 'section') return;
-      row.confidence = confidenceFor(row.cells, keptRoles);
+      row.sourceBlankCells = restatement ? row.cells.flatMap((cell, index) => cell === null ? [index] : []) : undefined;
+      row.confidence = confidenceFor(row.cells.map((cell, index) => row.sourceBlankCells?.includes(index) ? 'source blank' : cell), keptRoles);
     });
 
     const title = polishTitle(clean(titleLines.join(' ')) || 'Financial table', rows);

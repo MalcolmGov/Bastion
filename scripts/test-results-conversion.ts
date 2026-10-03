@@ -7,6 +7,7 @@ import { BrandDnaExtractor } from '../src/lib/studio/brandExtractor';
 import { applyFigureEdit } from '../src/lib/results/applyFigureEdit';
 import { parseBrandHtml, chooseBrandColors } from '../src/lib/results/brand';
 import { convertPdfBytes, convertSampleBooklet } from '../src/lib/results/convert';
+import { reconstructStatements } from '../src/lib/results/reconstruct';
 import { isFinancialNumber } from '../src/lib/results/numbers';
 import { renderResultsHtml } from '../src/lib/results/renderHtml';
 import type { ResultsDocument, ResultsStatement } from '../src/lib/results/types';
@@ -216,7 +217,26 @@ async function testStandardBankDna() {
   assert.match(kit.fontAnalysis.heading.alternative || '', /Source Sans 3/);
 }
 
+function testMissingFiguresRemainVisible() {
+  const glyphs: Array<{ text: string; x: number; y: number; width: number; height: number; page: number; fontName: string }> = [];
+  const paint = (text: string, x: number, y: number, width = 20) => glyphs.push({ text, x, y, width, height: 10, page: 1, fontName: 'Helvetica' });
+  paint('Group income statement', 40, 700, 130);
+  ['2026', '2025', 'Change'].forEach((text, index) => paint(text, 330 + index * 100, 680));
+  const rows = [ ['Revenue', ['100', '90', '10%']], ['Cost of sales', ['60', null, '10%']], ['Operating profit', ['40', '30', '33%']] ] as const;
+  rows.forEach(([label, cells], rowIndex) => {
+    paint(label, 40, 660 - rowIndex * 20, 130);
+    cells.forEach((cell, index) => { if (cell) paint(cell, 330 + index * 100, 660 - rowIndex * 20); });
+  });
+  const result = reconstructStatements(glyphs);
+  const row = result.statements.flatMap((statement) => statement.rows).find((candidate) => candidate.label === 'Cost of sales');
+  assert.ok(row);
+  assert.deepEqual(row.cells, ['60', null, '10%']);
+  assert.equal(row.sourceBlankCells, undefined);
+  assert.ok(result.warnings.some((warning) => /Cost of sales.*missing a figure/.test(warning)));
+}
+
 async function main() {
+  testMissingFiguresRemainVisible();
   if (process.env.RESULTS_LIVE_BRAND_TEST === '1') await testStandardBankDna();
   testBrandLogo();
   const palette = chooseBrandColors(['#cf4708', '#cf4708', '#cf4708', '#ce470a', '#ce470a', '#ce470a', '#eb8e00', '#7c868d']);
@@ -305,6 +325,27 @@ async function main() {
     assert.match(merafeHtml, /scope="col"/);
     const regionIds = [...merafeHtml.matchAll(/id="(results-(?:narrative|notes|statements|highlights))"/g)].map((match) => match[1]);
     assert.equal(new Set(regionIds).size, regionIds.length, 'publication region IDs must be unique');
+    assert.equal(merafe.warnings.length, 0, merafe.warnings.join('\n'));
+    const restatement = merafe.statements.find((statement) => statement.sourcePage === 17 && /financial position/i.test(statement.title));
+    assert.ok(restatement);
+    assert.deepEqual(restatement.columns.map((column) => column.label), ['2024 Previously stated', '2024 Currently stated', '2023 Previously stated', '2023 Currently stated']);
+    const shortTerm = restatement.rows.find((row) => row.label === 'Other short-term financial asset');
+    assert.deepEqual(shortTerm?.cells, [null, '360 756', null, '327 648']);
+    assert.deepEqual(shortTerm?.sourceBlankCells, [0, 2]);
+    const treasury = restatement.rows.find((row) => row.label === 'Cash and cash equivalents and balances held with Central Treasury');
+    assert.deepEqual(treasury?.cells, [null, '1 434 155', null, '1 328 158']);
+    assert.equal(restatement.rows.filter((row) => row.label === 'Total current assets').length, 1, 'only the actual subtotal may have an inferred total label');
+    const chrome = merafe.statements.find((statement) => statement.sourcePage === 18 && statement.rows.some((row) => row.label === 'South Africa'));
+    assert.ok(chrome);
+    assert.equal(chrome.columns.length, 4, 'restatement percentage columns must survive');
+    assert.ok(chrome.columns.every((column) => column.role === 'figure'));
+    assert.deepEqual(chrome.rows.find((row) => row.label === 'South Africa')?.cells, ['506 580', '22', null, null]);
+    assert.deepEqual(chrome.rows.find((row) => row.label === 'Europe****')?.cells, [null, null, '101 007', '5']);
+    const sourceTable = merafe.publication?.find((block) => block.sourcePage === 17 && block.table?.rows.some((row) => row.label === 'Other short-term financial asset'))?.table;
+    assert.deepEqual(sourceTable?.current, [false, true, false, true]);
+    assert.deepEqual(sourceTable?.rows.find((row) => row.label === 'Other short-term financial asset')?.cells, shortTerm?.cells);
+    // The source prints these distinct totals: reproduce them without arithmetic repair.
+    assert.deepEqual(chrome.rows[chrome.rows.length - 1].cells, ['2 262 211', '100', '2 262 221', '100']);
     const position = merafe.statements.find((statement) => /financial position/i.test(statement.title));
     const income = merafe.statements.find((statement) => /profit or loss/i.test(statement.title));
     const cash = merafe.statements.find((statement) => /cash flows/i.test(statement.title));

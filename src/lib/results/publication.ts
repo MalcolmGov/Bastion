@@ -1,3 +1,4 @@
+import { isWordHyphen, restatementHeaders, mergeWrappedLabels } from './tableLayout';
 import type { PdfGlyph, PdfShade } from './extractPdf';
 import { isFinancialNumber, isYearToken } from './numbers';
 import type { PublicationBlock, PublicationMetric, PublicationTable } from './types';
@@ -31,7 +32,7 @@ interface FoundTable {
 }
 
 function clean(value: string): string {
-  return value.replace(/[\uE000-\uF8FF]/g, '').replace(/\s+/g, ' ').trim();
+  return value.replace(/[\uE000-\uF8FF]/g, '').replace(/(\p{L})\s*[-‐‑]\s*(?=\p{L})/gu, '$1-').replace(/\s+/g, ' ').trim();
 }
 
 function words(value: string): number {
@@ -56,8 +57,8 @@ function clusterLines(glyphs: PdfGlyph[]): Line[] {
   return groups.map((group) => {
     const ordered = [...group].sort((a, b) => a.x - b.x);
     const phrases: Phrase[] = [];
-    for (const glyph of ordered) {
-      const financial = isFinancialNumber(glyph.text);
+    for (const [glyphIndex, glyph] of ordered.entries()) {
+      const financial = isFinancialNumber(glyph.text) && !isWordHyphen(glyph, glyphIndex, ordered);
       const previous = phrases[phrases.length - 1];
       const gap = previous ? glyph.x - previous.right : Number.POSITIVE_INFINITY;
       if (previous && !previous.financial && !financial && gap >= -1 && gap < 7) {
@@ -95,6 +96,8 @@ function isFurniture(line: Line): boolean {
 }
 
 function isHeaderish(line: Line): boolean {
+  if (/^(?:group|previously|currently|stated)(?:\s+(?:group|previously|currently|stated))*$/i.test(line.text)) return true;
+  if (/^(?:revenue|ferrochrome|chrome|ore|total|in|relation|to)(?:\s+(?:revenue|ferrochrome|chrome|ore|total|in|relation|to))*$/i.test(line.text)) return true;
   if (line.fontSize >= 15 || words(line.text) > 8) return false;
   if (/^(as at|for the year ended)\b/i.test(line.text)) return false;
   if (/r['’]?000|\bnotes?\b|restated|31 december|audited|% of revenue|in relation|to total|net of taxation/i.test(line.text)) return true;
@@ -164,6 +167,7 @@ function headerText(lines: Line[], columns: number[]): string[] {
 }
 
 function currentFlags(labels: string[], columns: number[], shades: PdfShade[]): boolean[] {
+  if (labels.some((label) => /previously stated/i.test(label)) && labels.some((label) => /currently stated/i.test(label))) return labels.map((label) => /currently stated/i.test(label));
     const shaded = columns.map((right) => shades.some((shade) => right >= shade.x + 4 && right <= shade.right + 4));
   if (shaded.some(Boolean)) return shaded;
   const years = labels.map((label) => Number(label.match(/20\d{2}/)?.[0] || 0));
@@ -211,10 +215,11 @@ function extractNumericTables(lines: Line[], shades: PdfShade[]): FoundTable[] {
       continue;
     }
     const headerLines = slice.filter((line) => isHeaderish(line));
-    const labels = headerText(headerLines, columns);
+    const labels = restatementHeaders(headerLines, columns, headerText(headerLines, columns));
     const firstFigure = Math.min(...figureLines.flatMap((line) => line.financials.map((phrase) => phrase.x)));
     const footnotes: string[] = [];
-    const rows = slice.filter((line) => !isHeaderish(line)).flatMap((line) => {
+    if (labels.some((label) => /previously stated/i.test(label)) && labels.some((label) => /currently stated/i.test(label))) footnotes.push('Blank cells reproduce the source PDF. Dashes are shown only where present in the source.');
+    const rows = mergeWrappedLabels(slice.filter((line) => !isHeaderish(line))).flatMap((line) => {
       if (isFootnote(line)) {
         footnotes.push(line.text);
         return [];

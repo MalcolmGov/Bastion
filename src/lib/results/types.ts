@@ -11,6 +11,7 @@ export interface ResultsRow {
   label: string;
   kind: RowKind;
   cells: Array<string | null>;
+  sourceBlankCells?: number[];
   confidence: number;
 }
 
