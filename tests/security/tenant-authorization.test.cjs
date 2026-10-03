@@ -129,10 +129,12 @@ test('authorized MCP writes stamp ownership and require independent approval for
 
 test('GraphQL GET and POST constrain pages including explicit site overrides', async (t) => {
   const h = await fixture(t);
+  // GraphQL serves published pages only, so publish the seeded pages of every tenant. Isolation is then what hides them.
+  await h.db.execute("UPDATE page_compositions SET status = 'published'");
   const clientToken = await h.token(['graphql:read']);
   const siteToken = await h.token(['graphql:read'], 'site-a');
   for (const method of ['GET', 'POST']) {
-    assert.deepEqual((await graph(h, clientToken, '{ pages(status:"draft") { id } }', method)).data.pages.map(x => x.id).sort(), ['page-a', 'page-a2']);
+    assert.deepEqual((await graph(h, clientToken, '{ pages(status:"published") { id } }', method)).data.pages.map(x => x.id).sort(), ['page-a', 'page-a2']);
     assert.deepEqual((await graph(h, siteToken, '{ pages { id } }', method)).data.pages.map(x => x.id), ['page-a']);
     assert.deepEqual((await graph(h, clientToken, '{ pages(siteId:"site-b") { id } }', method)).data.pages, []);
     assert.equal((await graph(h, siteToken, '{ page(slug:"home", siteId:"site-a2") { id } }', method)).data.page, null);
@@ -141,15 +143,20 @@ test('GraphQL GET and POST constrain pages including explicit site overrides', a
 
 test('GraphQL collections, media and releases enforce tenant/site filters', async (t) => {
   const h = await fixture(t);
+  // GraphQL serves live content only: published releases, and records that have a published revision.
   for (const [id, site, tenant] of [['rel-a', 'site-a', 'tenant-a'], ['rel-b', 'site-b', 'tenant-b'], ['rel-a2', 'site-a2', 'tenant-a']]) {
-    await h.db.execute({ sql: 'INSERT INTO content_releases(id,site_id,client_id,name,status) VALUES(?,?,?,?,?)', args: [id, site, tenant, id, 'draft'] });
+    await h.db.execute({ sql: 'INSERT INTO content_releases(id,site_id,client_id,name,status) VALUES(?,?,?,?,?)', args: [id, site, tenant, id, 'published'] });
   }
   await h.db.executeMultiple(`
-    INSERT INTO content_records(id,collection,slug,title,status,site_id,client_id) VALUES
-      ('op-a','operations','own-op','Own operation','published','site-a','tenant-a'),
-      ('op-b','operations','other-op','Other operation','published','site-b','tenant-b'),
-      ('news-a','news','own-news','Own news','published','site-a','tenant-a'),
-      ('news-b','news','other-news','Other news','published','site-b','tenant-b');
+    INSERT INTO content_records(id,collection,slug,title,status,site_id,client_id,current_published_revision_id) VALUES
+      ('op-a','operations','own-op','Own operation','published','site-a','tenant-a','rev-op-a'),
+      ('op-b','operations','other-op','Other operation','published','site-b','tenant-b','rev-op-b'),
+      ('news-a','news','own-news','Own news','published','site-a','tenant-a','rev-news-a'),
+      ('news-b','news','other-news','Other news','published','site-b','tenant-b','rev-news-b');
+    INSERT INTO revisions(id,record_id,revision_number,data_json,status) VALUES
+      ('rev-op-a','op-a',1,'{}','published'), ('rev-op-b','op-b',1,'{}','published'),
+      ('rev-news-a','news-a',1,'{}','published'), ('rev-news-b','news-b',1,'{}','published');
+    UPDATE content_records SET status = 'published', current_published_revision_id = current_draft_revision_id WHERE collection = 'reports';
   `);
   const token = await h.token(['graphql:read'], 'site-a');
   const result = await graph(h, token, '{ reports { id } operations { id } news { id } releases { id } mediaAssets { id } mediaAsset(id:"media-b") { id } release(id:"rel-b") { id } }');
@@ -170,8 +177,8 @@ test('GraphQL collections, media and releases enforce tenant/site filters', asyn
 
 test('GraphQL nested media and same-slug releases cannot cross tenant boundaries', async (t) => {
   const h = await fixture(t);
-  await h.db.execute(`UPDATE page_compositions SET meta_json='{"ogImage":"/b.png"}',sections_json='[{"id":"hero","data":{"imageUrl":"/b.png"}}]' WHERE id='page-a'`);
-  await h.db.execute("INSERT INTO content_releases(id,site_id,client_id,name,status) VALUES('rel-b','site-b','tenant-b','B','draft')");
+  await h.db.execute(`UPDATE page_compositions SET status='published',meta_json='{"ogImage":"/b.png"}',sections_json='[{"id":"hero","data":{"imageUrl":"/b.png"}}]' WHERE id='page-a'`);
+  await h.db.execute("INSERT INTO content_releases(id,site_id,client_id,name,status) VALUES('rel-b','site-b','tenant-b','B','published')");
   await h.db.execute("INSERT INTO content_release_items(id,release_id,item_type,item_id,title) VALUES('item-b','rel-b','page','home','Secret B')");
   const token = await h.token(['graphql:read'], 'site-a');
   const result = await graph(h, token, '{ page(slug:"home") { featuredMedia { id } dynamicZones { featuredMedia { id } } bundledRelease { id } } }');
@@ -183,7 +190,7 @@ test('GraphQL nested media and same-slug releases cannot cross tenant boundaries
 
 test('REST page lists and individual pages reject site overrides and preserve valid reads', async (t) => {
   const h = await fixture(t);
-  const token = await h.token(['content:read']);
+  const token = await h.token(['content:read', 'content:edit']); // previewing drafts needs a token that can write content
   const list = h.route('api/content/[collection]');
   const single = h.route('api/content/[collection]/[slug]');
   const listResult = await (await list.GET(h.request('/api/content/pages?siteId=site-b&preview=true', null, token, 'GET'), { params: Promise.resolve({ collection: 'pages' }) })).json();
@@ -191,7 +198,7 @@ test('REST page lists and individual pages reject site overrides and preserve va
   assert.equal((await single.GET(h.request('/api/content/pages/home?siteId=site-b&preview=true', null, token, 'GET'), { params: Promise.resolve({ collection: 'pages', slug: 'home' }) })).status, 404);
   const own = await (await single.GET(h.request('/api/content/pages/home?siteId=site-a&preview=true', null, token, 'GET'), { params: Promise.resolve({ collection: 'pages', slug: 'home' }) })).json();
   assert.equal(own.id, 'page-a');
-  const siteToken = await h.token(['content:read'], 'site-a');
+  const siteToken = await h.token(['content:read', 'content:edit'], 'site-a');
   const reports = await (await list.GET(h.request('/api/content/reports?preview=true', null, siteToken, 'GET'), { params: Promise.resolve({ collection: 'reports' }) })).json();
   assert.deepEqual(reports.items.map(x => x.id), ['record-a']);
 });

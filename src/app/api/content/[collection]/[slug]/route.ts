@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { verifyApiToken } from '@/lib/auth/apiToken';
 import { apiTenantFilter } from '@/lib/auth/apiAccess';
+import { previewRefusal, selectApiPages } from '@/lib/studio/publishedPages';
 
 export async function GET(
   req: NextRequest,
@@ -16,6 +17,8 @@ export async function GET(
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
     const isPreview = searchParams.get('preview') === 'true';
+    const refused = previewRefusal(auth, isPreview);
+    if (refused) return refused;
 
     const effectiveClientId: string = auth.isAgencyAdmin
       ? (searchParams.get('clientId') || 'client_goldfields')
@@ -25,17 +28,14 @@ export async function GET(
     const recordFilter = apiTenantFilter(auth, 'record', 'r');
 
     if (collection === 'pages') {
-      const filter = apiTenantFilter(auth.isAgencyAdmin ? { ...auth, isAgencyAdmin: false, clientId: effectiveClientId } : auth, 'page');
-      const pageRes = await db.execute({
-        sql: `SELECT * FROM page_compositions WHERE page_slug = ?${filter.sql}${siteId ? ' AND site_id = ?' : ''} ${isPreview ? '' : "AND status = 'published'"} LIMIT 1`,
-        args: [slug, ...filter.args, ...(siteId ? [siteId] : [])],
-      });
+      const tenant = auth.isAgencyAdmin ? { ...auth, isAgencyAdmin: false, clientId: effectiveClientId } : auth;
+      const pageRows = await selectApiPages(db, { access: tenant, siteId, slug, limit: 1, drafts: isPreview });
 
-      if (pageRes.rows.length === 0) {
+      if (pageRows.length === 0) {
         return NextResponse.json({ error: `Page '${slug}' not found` }, { status: 404 });
       }
 
-      const row: any = pageRes.rows[0];
+      const row: any = pageRows[0];
       return NextResponse.json({
         id: String(row.id),
         siteId: String(row.site_id),

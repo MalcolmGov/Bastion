@@ -4,6 +4,7 @@ import { getDb, ensureDbReady } from '@/lib/db/client';
 import { BLUEPRINTS } from '@/lib/studio/blueprints';
 import { verifyApiToken } from '@/lib/auth/apiToken';
 import { apiTenantFilter, type ApiAccess } from '@/lib/auth/apiAccess';
+import { selectApiPages } from '@/lib/studio/publishedPages';
 
 // GraphQL Schema Definition (SDL)
 const typeDefs = `
@@ -195,60 +196,55 @@ async function resolveMediaAsset(db: any, access: ApiAccess, assetIdOrUrl: strin
   return null;
 }
 
+// GraphQL serves what the public site serves and nothing else. Pages come from selectApiPages (live row, or the
+// last published version while a new draft is being written). Releases are served once published.
+const PUBLISHED_ONLY = 'published';
+
+/**
+ * The live records of a collection: those with a published revision that have not been archived, read from that
+ * revision and never from a draft one. Their status is therefore 'published' whatever state a newer draft is in.
+ */
+function liveRecords(collection: string, filter: { sql: string; args: string[] }) {
+  return {
+    sql: `SELECT r.id, r.slug, r.title, 'published' AS status, r.updated_at, rev.data_json
+          FROM content_records r JOIN revisions rev ON r.current_published_revision_id = rev.id
+          WHERE r.collection = ? AND r.status <> 'archived'${filter.sql}`,
+    args: [collection, ...filter.args] as any[],
+  };
+}
+
+function revisionData(row: any): any {
+  try {
+    return row.data_json ? JSON.parse(String(row.data_json)) : {};
+  } catch {
+    return {};
+  }
+}
+
 // Resolver Root
 function createRootResolvers(db: any, access: ApiAccess) {
-  const pagesFilter = apiTenantFilter(access, 'page');
   const recordsFilter = apiTenantFilter(access, 'record', 'r');
   const releasesFilter = apiTenantFilter(access, 'release');
   const mediaFilter = apiTenantFilter(access, 'media');
   return {
     // 1. Pages Query with deep relations population
-    pages: async ({ locale, status, siteId, limit = 50 }: any) => {
-      let sql = `SELECT * FROM page_compositions WHERE 1=1${pagesFilter.sql}`;
-      const args: any[] = [...pagesFilter.args];
-
-      if (siteId) {
-        sql += ` AND site_id = ?`;
-        args.push(siteId);
-      }
-      if (status) {
-        sql += ` AND status = ?`;
-        args.push(status);
-      }
-
-      sql += ` ORDER BY page_slug ASC LIMIT ?`;
-      args.push(limit);
-
-      const res = await db.execute({ sql, args });
-
-      return res.rows.map((row: any) => formatPageRow(db, access, row));
+    pages: async ({ status, siteId, limit = 50 }: any) => {
+      // Only published pages are served, so asking for any other status finds nothing.
+      if (status && status !== PUBLISHED_ONLY) return [];
+      const rows = await selectApiPages(db, { access, siteId, limit });
+      return rows.map((row: any) => formatPageRow(db, access, row));
     },
 
     page: async ({ slug, siteId }: any) => {
-      let sql = `SELECT * FROM page_compositions WHERE page_slug = ?${pagesFilter.sql}`;
-      const args: any[] = [slug, ...pagesFilter.args];
-
-      if (siteId) {
-        sql += ` AND site_id = ?`;
-        args.push(siteId);
-      }
-
-      sql += ` LIMIT 1`;
-      const res = await db.execute({ sql, args });
-      if (res.rows.length === 0) return null;
-
-      return formatPageRow(db, access, res.rows[0]);
+      const rows = await selectApiPages(db, { access, siteId, slug, limit: 1 });
+      return rows.length === 0 ? null : formatPageRow(db, access, rows[0]);
     },
 
     // 2. Operations Query
     operations: async ({ country, limit = 20 }: any) => {
-      let sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'operations'${recordsFilter.sql}
-      `;
-      const args: any[] = [...recordsFilter.args];
+      const live = liveRecords('operations', recordsFilter);
+      let sql = live.sql;
+      const args = live.args;
 
       if (country) {
         sql += ` AND rev.data_json LIKE ?`;
@@ -260,13 +256,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
       const res = await db.execute({ sql, args });
       return res.rows.map((row: any) => {
-        let data: any = {};
-        try {
-          data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-        } catch {
-          // ignore
-        }
-
+        const data = revisionData(row);
         return {
           id: String(row.id),
           slug: String(row.slug),
@@ -282,23 +272,12 @@ function createRootResolvers(db: any, access: ApiAccess) {
     },
 
     operation: async ({ slug }: any) => {
-      const sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'operations' AND r.slug = ?${recordsFilter.sql}
-        LIMIT 1
-      `;
-      const res = await db.execute({ sql, args: [slug, ...recordsFilter.args] });
+      const live = liveRecords('operations', recordsFilter);
+      const res = await db.execute({ sql: `${live.sql} AND r.slug = ? LIMIT 1`, args: [...live.args, slug] });
       if (res.rows.length === 0) return null;
 
       const row = res.rows[0];
-      let data: any = {};
-      try {
-        data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-      } catch {
-        // ignore
-      }
+      const data = revisionData(row);
 
       return {
         id: String(row.id),
@@ -315,13 +294,9 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
     // 3. Reports Query
     reports: async ({ year, category, limit = 50 }: any) => {
-      let sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'reports'${recordsFilter.sql}
-      `;
-      const args: any[] = [...recordsFilter.args];
+      const live = liveRecords('reports', recordsFilter);
+      let sql = live.sql;
+      const args = live.args;
 
       if (year) {
         sql += ` AND rev.data_json LIKE ?`;
@@ -337,12 +312,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
       const res = await db.execute({ sql, args });
       return res.rows.map((row: any) => {
-        let data: any = {};
-        try {
-          data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-        } catch {
-          // ignore
-        }
+        const data = revisionData(row);
         return {
           id: String(row.id),
           slug: String(row.slug),
@@ -359,13 +329,9 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
     // 4. News Query
     news: async ({ category, limit = 20 }: any) => {
-      let sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'news'${recordsFilter.sql}
-      `;
-      const args: any[] = [...recordsFilter.args];
+      const live = liveRecords('news', recordsFilter);
+      let sql = live.sql;
+      const args = live.args;
       if (category) {
         sql += ` AND rev.data_json LIKE ?`;
         args.push(`%"category":"${category}"%`);
@@ -376,12 +342,7 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
       const res = await db.execute({ sql, args });
       return res.rows.map((row: any) => {
-        let data: any = {};
-        try {
-          data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-        } catch {
-          // ignore
-        }
+        const data = revisionData(row);
         return {
           id: String(row.id),
           slug: String(row.slug),
@@ -396,22 +357,11 @@ function createRootResolvers(db: any, access: ApiAccess) {
     },
 
     newsArticle: async ({ slug }: any) => {
-      const sql = `
-        SELECT r.id, r.slug, r.title, r.status, r.updated_at, rev.data_json
-        FROM content_records r
-        LEFT JOIN revisions rev ON r.current_published_revision_id = rev.id
-        WHERE r.collection = 'news' AND r.slug = ?${recordsFilter.sql}
-        LIMIT 1
-      `;
-      const res = await db.execute({ sql, args: [slug, ...recordsFilter.args] });
+      const live = liveRecords('news', recordsFilter);
+      const res = await db.execute({ sql: `${live.sql} AND r.slug = ? LIMIT 1`, args: [...live.args, slug] });
       if (res.rows.length === 0) return null;
       const row = res.rows[0];
-      let data: any = {};
-      try {
-        data = row.data_json ? JSON.parse(String(row.data_json)) : {};
-      } catch {
-        // ignore
-      }
+      const data = revisionData(row);
       return {
         id: String(row.id),
         slug: String(row.slug),
@@ -426,13 +376,10 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
     // 5. Content Releases
     releases: async ({ status }: any) => {
-      let sql = `SELECT * FROM content_releases WHERE 1=1${releasesFilter.sql}`;
-      const args: any[] = [...releasesFilter.args];
-      if (status) {
-        sql += ` AND status = ?`;
-        args.push(status);
-      }
-      sql += ` ORDER BY created_at DESC`;
+      // Draft and scheduled releases are unpublished work, so only published ones are served.
+      if (status && status !== PUBLISHED_ONLY) return [];
+      const sql = `SELECT * FROM content_releases WHERE status = ?${releasesFilter.sql} ORDER BY created_at DESC`;
+      const args: any[] = [PUBLISHED_ONLY, ...releasesFilter.args];
 
       const res = await db.execute({ sql, args });
       return res.rows.map((row: any) => formatReleaseRow(db, row));
@@ -440,8 +387,8 @@ function createRootResolvers(db: any, access: ApiAccess) {
 
     release: async ({ id }: any) => {
       const res = await db.execute({
-        sql: `SELECT * FROM content_releases WHERE id = ?${releasesFilter.sql} LIMIT 1`,
-        args: [id, ...releasesFilter.args]
+        sql: `SELECT * FROM content_releases WHERE id = ? AND status = ?${releasesFilter.sql} LIMIT 1`,
+        args: [id, PUBLISHED_ONLY, ...releasesFilter.args]
       });
       if (res.rows.length === 0) return null;
       return formatReleaseRow(db, res.rows[0]);
@@ -553,8 +500,8 @@ function formatPageRow(db: any, access: ApiAccess, row: any) {
       try {
         const filter = apiTenantFilter(access, 'release', 'r');
         const relItemRes = await db.execute({
-          sql: `SELECT i.release_id FROM content_release_items i JOIN content_releases r ON r.id = i.release_id WHERE (i.item_id = ? OR i.item_id = ?) AND r.site_id = ?${filter.sql} LIMIT 1`,
-          args: [String(row.id), String(row.page_slug), String(row.site_id), ...filter.args]
+          sql: `SELECT i.release_id FROM content_release_items i JOIN content_releases r ON r.id = i.release_id WHERE (i.item_id = ? OR i.item_id = ?) AND r.site_id = ? AND r.status = ?${filter.sql} LIMIT 1`,
+          args: [String(row.id), String(row.page_slug), String(row.site_id), PUBLISHED_ONLY, ...filter.args]
         });
         if (relItemRes.rows.length > 0) {
           const relId = relItemRes.rows[0].release_id;
