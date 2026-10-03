@@ -28,7 +28,7 @@ export interface StudioUser {
 export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   platform_admin: ['*'],
   content_editor: ['content:read', 'content:create', 'content:edit', 'media:upload', 'media:edit'],
-  reviewer: ['content:read', 'content:review', 'content:approve', 'content:request_changes', 'ethics:read', 'ethics:manage'],
+  reviewer: ['content:read', 'content:review', 'content:approve', 'content:request_changes', 'ethics:read', 'ethics:manage', 'tenders:read', 'tenders:manage'],
   publisher: ['content:read', 'content:publish', 'content:schedule', 'content:archive'],
   analyst: ['analytics:read', 'analytics:export'],
   website_operator: ['health:read', 'health:check', 'incidents:manage'],

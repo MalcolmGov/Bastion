@@ -13,6 +13,15 @@ import { getDb, ensureDbReady } from '@/lib/db/client';
 export type TenderStatus = 'active' | 'closed' | 'under_evaluation' | 'awarded' | 'cancelled';
 export type TenderSubmissionStatus = 'submitted' | 'compliant' | 'shortlisted' | 'rejected' | 'awarded';
 
+export const TENDER_SUBMISSION_STATUSES: readonly TenderSubmissionStatus[] = ['submitted', 'compliant', 'shortlisted', 'rejected', 'awarded'];
+
+/** A failure the API reports as is: 400 for input that is not allowed, 404 for a bid the caller cannot see. */
+export class TenderError extends Error {
+  constructor(message: string, public readonly status: number = 400) {
+    super(message);
+  }
+}
+
 export interface TenderRecord {
   id: string;
   clientId: string;
@@ -71,7 +80,6 @@ export interface TenderInput {
 
 export interface TenderSubmissionInput {
   tenderId: string;
-  clientId: string;
   vendorName: string;
   cipcRegistrationNumber: string;
   sarsTaxPin: string;
@@ -323,7 +331,7 @@ export async function submitTenderBid(
   // Evaluate initial compliance flag
   const isBbbeeCompliant = input.bbbeeLevel <= (tenderRow.min_bbbee_level || 4);
   const complianceNotes = isBbbeeCompliant
-    ? 'Automated statutory check: Valid CIPC format, SARS TCS PIN verified, B-BBEE level compliant.'
+    ? 'Automated check: CIPC and SARS PIN formats are valid and the B-BBEE level meets the target. The registration and PIN have not been verified with CIPC or SARS.'
     : `Notice: B-BBEE Level ${input.bbbeeLevel} exceeds requested target (Level ${tenderRow.min_bbbee_level}). Subject to procurement committee waiver.`;
 
   await db.execute({
@@ -337,7 +345,7 @@ export async function submitTenderBid(
     args: [
       id,
       input.tenderId,
-      input.clientId || tenderRow.client_id,
+      tenderRow.client_id,
       referenceCode,
       input.vendorName.trim(),
       input.cipcRegistrationNumber.trim(),
@@ -358,7 +366,7 @@ export async function submitTenderBid(
   return {
     id,
     tenderId: input.tenderId,
-    clientId: input.clientId || tenderRow.client_id,
+    clientId: String(tenderRow.client_id),
     referenceCode,
     vendorName: input.vendorName.trim(),
     cipcRegistrationNumber: input.cipcRegistrationNumber.trim(),
@@ -400,7 +408,8 @@ export async function listTenderSubmissions(
     args.push(tenderId);
   }
   if (clientId) {
-    conditions.push(`s.client_id = ?`);
+    // A bid belongs to whoever owns the tender it was made on, whatever client id it was filed with.
+    conditions.push(`t.client_id = ?`);
     args.push(clientId);
   }
 
@@ -437,21 +446,44 @@ export async function listTenderSubmissions(
 }
 
 /**
- * Updates submission evaluation status
+ * Updates a bid's evaluation status. `ownerClientId` is the tenant the caller works for: only bids on that tenant's
+ * tenders can be changed, and any other bid is reported as not found. Agency staff pass null to evaluate any tenant's bids.
+ * Returns what was replaced so the change can be audited.
  */
 export async function updateTenderSubmissionStatus(
   submissionId: string,
   status: TenderSubmissionStatus,
-  notes?: string
-): Promise<void> {
+  notes: string | undefined,
+  ownerClientId: string | null
+): Promise<{ clientId: string; previousStatus: string; previousNotes: string | null }> {
+  if (!TENDER_SUBMISSION_STATUSES.includes(status)) {
+    throw new TenderError(`Status must be one of: ${TENDER_SUBMISSION_STATUSES.join(', ')}.`);
+  }
   await ensureDbReady();
   const db = getDb();
-  const now = new Date().toISOString();
 
-  await db.execute({
-    sql: `UPDATE tender_submissions 
-          SET status = ?, compliance_notes = COALESCE(?, compliance_notes), updated_at = ?
-          WHERE id = ?`,
-    args: [status, notes || null, now, submissionId],
+  const found = await db.execute({
+    sql: `SELECT s.status, s.compliance_notes, t.client_id AS owner
+          FROM tender_submissions s JOIN tenders t ON t.id = s.tender_id
+          WHERE s.id = ?`,
+    args: [submissionId],
   });
+  const current = found.rows[0] as any;
+  if (!current || (ownerClientId && current.owner !== ownerClientId)) {
+    throw new TenderError('Tender submission not found.', 404);
+  }
+
+  const res = await db.execute({
+    sql: `UPDATE tender_submissions
+          SET status = ?, compliance_notes = COALESCE(?, compliance_notes), updated_at = ?
+          WHERE id = ? AND tender_id IN (SELECT id FROM tenders WHERE client_id = ?)`,
+    args: [status, notes || null, new Date().toISOString(), submissionId, String(current.owner)],
+  });
+  if (!res.rowsAffected) throw new TenderError('The submission changed while it was being updated.', 409);
+
+  return {
+    clientId: String(current.owner),
+    previousStatus: String(current.status),
+    previousNotes: current.compliance_notes ? String(current.compliance_notes) : null,
+  };
 }

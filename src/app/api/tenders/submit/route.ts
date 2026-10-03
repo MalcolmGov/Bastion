@@ -11,7 +11,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       tenderId,
-      clientId,
       vendorName,
       cipcRegistrationNumber,
       sarsTaxPin,
@@ -33,7 +32,6 @@ export async function POST(req: NextRequest) {
 
     const submission = await submitTenderBid({
       tenderId: String(tenderId),
-      clientId: clientId ? String(clientId) : 'client_goldfields',
       vendorName: String(vendorName),
       cipcRegistrationNumber: String(cipcRegistrationNumber),
       sarsTaxPin: String(sarsTaxPin),
