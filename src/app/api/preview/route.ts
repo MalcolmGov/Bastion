@@ -43,15 +43,19 @@ async function recordPreviewAudit(
   }
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const secret = searchParams.get('secret');
-  const slug = searchParams.get('slug') || '';
-  const collection = searchParams.get('collection') || 'pages';
+interface PreviewRequest {
+  secret: string | null;
+  collection: string;
+  slug: string;
+}
 
+type Admission = { response: Response } | { via: 'secret' | 'session'; actor: StudioUser | null };
+
+/** Decides who may switch draft mode on, and records what happened. Either a refusal to send back, or how they got in. */
+async function admit(req: NextRequest, { secret, collection, slug }: PreviewRequest): Promise<Admission> {
   if (secret !== null) {
     const limited = rateLimitResponse(req, 'preview-secret', SECRET_ATTEMPTS, SECRET_WINDOW_MS);
-    if (limited) return limited;
+    if (limited) return { response: limited };
   }
 
   const user = await getCurrentUser();
@@ -59,53 +63,63 @@ export async function GET(req: NextRequest) {
   if (!user && !secretOk) {
     // Only an attempt with a secret is worth a record; every scanner that hits this URL is not.
     if (secret !== null) await recordPreviewAudit(req, 'PREVIEW_DENIED', null, { reason: 'bad_secret', collection, slug });
-    return new Response('Invalid preview token', { status: 401 });
+    return { response: new Response('Invalid preview token', { status: 401 }) };
   }
   // This switches on draft mode for the root site, which is the flagship client's. A signed-in person needs to be allowed
   // to see that client's unpublished work; the preview secret is its own credential.
   if (!secretOk && !mayViewDraftsOf(user, FLAGSHIP_CLIENT_ID)) {
     await recordPreviewAudit(req, 'PREVIEW_DENIED', user, { reason: 'not_entitled', collection, slug });
-    return new Response('You cannot preview unpublished content for this site.', { status: 403 });
+    return { response: new Response('You cannot preview unpublished content for this site.', { status: 403 }) };
   }
   if (slug && !SLUG.test(slug)) {
-    return new Response('Invalid preview slug', { status: 400 });
+    return { response: new Response('Invalid preview slug', { status: 400 }) };
   }
 
-  await recordPreviewAudit(req, 'PREVIEW_ENABLED', secretOk ? null : user, { via: secretOk ? 'secret' : 'session', collection, slug });
+  const via = secretOk ? 'secret' : 'session';
+  const actor = secretOk ? null : user;
+  await recordPreviewAudit(req, 'PREVIEW_ENABLED', actor, { via, collection, slug });
+  return { via, actor };
+}
+
+/** Draft mode is only a request for drafts. Someone who got in with the secret carries a signed grant that the root site
+ *  checks before showing them; a signed-in person is checked against their session instead. */
+async function issueGrant() {
+  const grant = signPreviewGrant();
+  if (!grant) return;
+  (await cookies()).set(PREVIEW_GRANT_COOKIE, grant.value, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: grant.maxAgeSeconds,
+  });
+}
+
+// Where each kind of content is shown on the root site. Anything else lands on the home page.
+const PAGE_FOR: ReadonlyMap<string, (slug: string) => string> = new Map([
+  ['pages', (slug) => (slug === 'home' ? '/' : `/${slug}`)],
+  ['operations', (slug) => `/operations/${slug}`],
+  ['reports', () => '/reports'],
+  ['news', (slug) => `/media/${slug}`],
+  ['sustainability', () => '/sustainability'],
+  ['jobs', () => '/careers'],
+  ['suppliers', () => '/suppliers'],
+]);
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const request: PreviewRequest = {
+    secret: searchParams.get('secret'),
+    collection: searchParams.get('collection') || 'pages',
+    slug: searchParams.get('slug') || '',
+  };
+
+  const admission = await admit(req, request);
+  if ('response' in admission) return admission.response;
 
   // Enable Draft Mode by setting the draft_mode cookie
-  const draft = await draftMode();
-  draft.enable();
-  // Draft mode is only a request for drafts. Someone who got in with the secret carries a signed grant that the root site
-  // checks before showing them; a signed-in person is checked against their session instead.
-  const grant = secretOk ? signPreviewGrant() : null;
-  if (grant) {
-    (await cookies()).set(PREVIEW_GRANT_COOKIE, grant.value, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: grant.maxAgeSeconds,
-    });
-  }
+  (await draftMode()).enable();
+  if (admission.via === 'secret') await issueGrant();
 
-  // Determine redirection path
-  let redirectPath = '/';
-  if (collection === 'pages') {
-    redirectPath = slug === 'home' ? '/' : `/${slug}`;
-  } else if (collection === 'operations') {
-    redirectPath = `/operations/${slug}`;
-  } else if (collection === 'reports') {
-    redirectPath = '/reports';
-  } else if (collection === 'news') {
-    redirectPath = `/media/${slug}`;
-  } else if (collection === 'sustainability') {
-    redirectPath = '/sustainability';
-  } else if (collection === 'jobs') {
-    redirectPath = '/careers';
-  } else if (collection === 'suppliers') {
-    redirectPath = '/suppliers';
-  }
-
-  redirect(redirectPath);
+  redirect(PAGE_FOR.get(request.collection)?.(request.slug) ?? '/');
 }

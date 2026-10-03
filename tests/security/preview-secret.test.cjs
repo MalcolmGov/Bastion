@@ -224,3 +224,14 @@ test('an altered, expired or revoked grant shows nothing, and drafts are never s
   const content = h.load('lib/server/content.ts');
   assert.equal((await content.getPublishedPage('home', false)).hero.title, 'LIVE HERO', 'drafts were shown to a request that did not ask for them');
 });
+
+test('each kind of content redirects to its page, and an unknown or object-prototype name lands on the home page', async t => {
+  const h = await fixture(t);
+  for (const [collection, slug, expected] of [
+    ['pages', 'home', '/'], ['pages', 'about', '/about'], ['operations', 'tarkwa', '/operations/tarkwa'], ['reports', 'x', '/reports'],
+    ['news', 'update', '/media/update'], ['sustainability', 'x', '/sustainability'], ['jobs', 'x', '/careers'], ['suppliers', 'x', '/suppliers'],
+    ['unknown', 'x', '/'], ['constructor', 'x', '/'], ['__proto__', 'x', '/'], ['toString', 'x', '/'],
+  ]) {
+    assert.deepEqual(await preview(h, 'agency', `?collection=${collection}&slug=${slug}`), { redirectTo: expected }, `${collection}/${slug}`);
+  }
+});
