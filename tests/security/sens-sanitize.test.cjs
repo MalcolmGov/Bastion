@@ -6,7 +6,8 @@ const { createHarness } = require('./harness.cjs');
 const SENS_TABLE = `CREATE TABLE sens_announcements(
   id TEXT PRIMARY KEY, client_id TEXT, site_id TEXT, headline TEXT, announcement_type TEXT, jse_code TEXT,
   isin_code TEXT, released_at TEXT, body_html TEXT, summary TEXT, pdf_url TEXT, is_price_sensitive INTEGER,
-  status TEXT, sponsor TEXT, embargo_until TEXT, created_at TEXT, updated_at TEXT)`;
+  status TEXT, sponsor TEXT, embargo_until TEXT, created_at TEXT, updated_at TEXT,
+  created_by TEXT, approved_by TEXT, approved_at TEXT, approved_content_hash TEXT)`;
 
 const ATTACKS = [
   '<img src=x onerror=alert(1)>',
@@ -98,7 +99,8 @@ test('SENS service sanitises on write and on read of rows stored before the fix'
   assert.match(String(stored.body_html), /Safe text/);
 
   await h.db.execute({
-    sql: `INSERT INTO sens_announcements VALUES('legacy-1','tenant-a','site-a','Legacy','general','JSE: X',NULL,'2026-10-01',?,NULL,NULL,1,'published','Sponsor',NULL,'2026-10-01','2026-10-01')`,
+    sql: `INSERT INTO sens_announcements (id, client_id, site_id, headline, announcement_type, jse_code, isin_code, released_at, body_html, summary, pdf_url, is_price_sensitive, status, sponsor, embargo_until, created_at, updated_at)
+          VALUES('legacy-1','tenant-a','site-a','Legacy','general','JSE: X',NULL,'2026-10-01',?,NULL,NULL,1,'published','Sponsor',NULL,'2026-10-01','2026-10-01')`,
     args: ['<p>Legacy</p><a href="java&#9;script:alert(1)" onclick="alert(1)">x</a><iframe srcdoc="<script>alert(1)</script>"></iframe>'],
   });
   const listed = await service.listSensAnnouncements('tenant-a');

@@ -739,6 +739,21 @@ export const migrations: Migration[] = [
         }
       }
     }
+  },
+  {
+    version: 14,
+    name: '014_sens_approval_workflow',
+    up: async (db: Client) => {
+      // Who wrote an announcement and who signed it off, so the two-person rule can be enforced.
+      // All nullable: announcements that already exist (seeded or synced from the wire) are left as they are.
+      const info = await db.execute(`PRAGMA table_info(sens_announcements)`);
+      const existing = new Set(info.rows.map(r => String(r.name)));
+      for (const column of ['created_by', 'approved_by', 'approved_at', 'approved_content_hash']) {
+        if (!existing.has(column)) {
+          await db.execute(`ALTER TABLE sens_announcements ADD COLUMN ${column} TEXT`);
+        }
+      }
+    }
   }
 ];
 
