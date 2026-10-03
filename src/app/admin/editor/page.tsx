@@ -298,8 +298,15 @@ function VisualWebsiteEditorContent() {
   const [pageLayout, setPageLayout] = useState<DesignCollectionId>('contemporary');
   const [isPreview, setIsPreview] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
-  const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
+  const [isIngestModalOpen, setIsIngestModalOpen] = useState(() => searchParams.get('openIngest') === 'true' || searchParams.get('ingest') === 'true');
   const [ingestSuccessMessage, setIngestSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('openIngest') === 'true' || searchParams.get('ingest') === 'true') {
+      setIsIngestModalOpen(true);
+    }
+  }, [searchParams]);
+
   const documentKey = `${siteSlug}:${activePageSlug}`;
   const currentKey = useRef(documentKey);
   currentKey.current = documentKey;

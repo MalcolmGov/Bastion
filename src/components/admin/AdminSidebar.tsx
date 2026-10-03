@@ -233,11 +233,18 @@ export function AdminSidebar() {
   const resultsSection = (
     <div>
       {!isCollapsed && (
-        <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/90">
-          Results
+        <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/90 flex items-center justify-between">
+          <span>AI & Results</span>
+          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">New</span>
         </div>
       )}
       <div className="space-y-1">
+        {renderItem(
+          '/admin/editor?openIngest=true',
+          'AI Ingest Report',
+          Sparkles,
+          false
+        )}
         {renderItem(
           '/admin/results',
           'PDF to HTML',

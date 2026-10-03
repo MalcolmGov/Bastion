@@ -307,6 +307,16 @@ export default function MoveStudioOverviewPage() {
                         <span>{isListening ? 'Listening…' : 'Voice'}</span>
                       </button>
 
+                      {/* AI Ingest Report Action Button */}
+                      <Link
+                        href={`/admin/editor?siteId=${encodeURIComponent(activeSite?.id || 'site_goldfields')}&openIngest=true`}
+                        className="h-10 px-3.5 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-amber-600/20 hover:from-amber-500/20 hover:to-amber-600/30 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-2 transition-all shrink-0 cursor-pointer shadow-xs"
+                        title="Upload or sample Annual Report PDF to automatically synthesize an instant web page"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
+                        <span>AI Ingest Report</span>
+                      </Link>
+
                       {/* Primary Search CTA */}
                       <button
                         type="submit"
