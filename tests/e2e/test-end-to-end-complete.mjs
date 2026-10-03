@@ -20,12 +20,13 @@ async function json(response,status=200) {const body=await response.json();asser
 try {
   const agency=await account('AGENCY'),reviewer=await account('REVIEWER'),publisher=await account('PUBLISHER');
   const slug=`e2e-review-${Date.now()}`;
+  const title=`Synthetic review fixture ${slug}`;
   const sections=[{id:'synthetic-hero',componentId:'hero',visible:true,variant:'contemporary_bold',props:{title:'Synthetic approval fixture',subtitle:'Not a customer disclosure.'}}];
-  const saved=await json(await agency.request.post('/api/admin/editor/assistant/apply',{data:{siteId,pages:[{pageSlug:slug,title:'Synthetic review fixture',sections,expectedVersion:0}],options:{allowCreate:true,status:'in_review'}}}));
+  const saved=await json(await agency.request.post('/api/admin/editor/assistant/apply',{data:{siteId,pages:[{pageSlug:slug,title,sections,expectedVersion:0}],options:{allowCreate:true,status:'in_review'}}}));
   const pageSave=saved.pages[0];
   const page=await reviewer.newPage(); await page.goto('/admin/tasks');
   await page.getByRole('heading',{name:'Website pages for review'}).waitFor();
-  await page.getByRole('heading',{name:'Synthetic review fixture',exact:true}).waitFor();
+  await page.getByRole('heading',{name:title,exact:true}).waitFor();
   await page.getByRole('link',{name:'Financial publications',exact:true}).waitFor();
   assert.equal(await page.getByRole('link',{name:'AI Ingest Report',exact:true}).count(),0);
   const queue=await json(await reviewer.request.get('/api/admin/editor/reviews'));
@@ -37,7 +38,7 @@ try {
   const updated=await json(await agency.request.post('/api/admin/editor',{data:{siteId,pageSlug:slug,sections:[{...sections[0],props:{title:'Synthetic second draft'}}],expectedVersion:pageSave.version,status:'draft'}}));
   assert.equal(updated.version,pageSave.version+1);
   await json(await agency.request.post('/api/admin/editor',{data:{siteId,pageSlug:slug,sections,expectedVersion:updated.version,status:'published'}}),409);
-  await json(await agency.request.post('/api/admin/editor',{data:{siteId,pageSlug:slug,title:'Synthetic review fixture',sections,expectedVersion:updated.version,status:'in_review'}}));
+  await json(await agency.request.post('/api/admin/editor',{data:{siteId,pageSlug:slug,title,sections,expectedVersion:updated.version,status:'in_review'}}));
   await page.goto('/admin/results');
   await page.getByRole('heading',{name:'Financial publications',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Merafe 2025 example',exact:true}).count(),0);

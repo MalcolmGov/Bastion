@@ -204,13 +204,24 @@ export async function publishSensAnnouncement(id: string, clientId?: string): Pr
   return (await getSensAnnouncement(id))!;
 }
 
-export async function deleteSensAnnouncement(id: string, clientId: string): Promise<boolean> {
+/**
+ * Discards a draft. A published or embargoed announcement is a market record and is never deleted: anything
+ * that was wrong is corrected with a further announcement. The status is part of the DELETE itself, so an
+ * announcement that is published while the delete is in flight is not removed.
+ */
+export async function deleteSensAnnouncement(id: string, clientId: string): Promise<SensAnnouncement> {
   const db = await ensureDbReady();
+  const current = await getSensAnnouncement(id, clientId);
+  if (!current) throw new SensApprovalError('SENS announcement not found', 404);
+  if (current.status !== 'draft') {
+    throw new SensApprovalError('A published SENS announcement is a market record and cannot be deleted. Publish a correcting announcement instead.', 409);
+  }
   const res = await db.execute({
-    sql: `DELETE FROM sens_announcements WHERE id = ? AND client_id = ?`,
+    sql: `DELETE FROM sens_announcements WHERE id = ? AND client_id = ? AND status = 'draft'`,
     args: [id, clientId],
   });
-  return (res.rowsAffected || 0) > 0;
+  if (!res.rowsAffected) throw new SensApprovalError('The announcement changed while it was being deleted', 409);
+  return current;
 }
 
 function mapSensRow(row: any): SensAnnouncement {

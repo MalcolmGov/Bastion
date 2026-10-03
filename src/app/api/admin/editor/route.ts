@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof EditorSaveError)
       return NextResponse.json(
-        { error: error.message },
+        { error: error.message, ...(error.code ? { code: error.code } : {}) },
         { status: error.status },
       );
     if (error instanceof SyntaxError)

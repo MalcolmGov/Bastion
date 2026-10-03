@@ -1,3 +1,4 @@
+import { approvePageVersion, assertPageApproved, PageApprovalError } from './pageApproval';
 import { ensureDbReady } from '@/lib/db/client';
 import { clientOwns, resolveTargetClientId } from '@/lib/auth/guard';
 import { hasPermission, type StudioUser } from '@/lib/auth/auth';
@@ -57,6 +58,8 @@ export async function decideCompositionReview(user: StudioUser, id: string, inpu
       if (row.status !== 'in_review' || row.decision !== 'pending') throw new EditorSaveError('This version is no longer awaiting review.',409);
       if (row.requested_by === user.id) throw new EditorSaveError('A different person must review this version.',403);
     }
+    if(input.action==='approve') await approvePageVersion(user,{siteId:String(row.site_id),pageSlug:String(row.page_slug),version:input.expectedVersion},{transaction:tx});
+    if(input.action==='publish') await assertPageApproved(tx,id);
     const now = new Date().toISOString();
     const status = input.action === 'publish' ? 'published' : input.action === 'approve' ? 'approved' : 'changes_requested';
     await tx.execute({sql:'UPDATE page_compositions SET status=?,updated_at=? WHERE id=? AND version=?',args:[status,now,id,input.expectedVersion]});
@@ -65,5 +68,5 @@ export async function decideCompositionReview(user: StudioUser, id: string, inpu
     else await tx.execute({sql:'UPDATE composition_reviews SET decision=?,reviewer_id=?,reviewer_name=?,reviewed_at=?,comment=? WHERE composition_id=? AND version=?',args:[status,user.id,user.name,now,String(input.comment || '').slice(0,4000),id,input.expectedVersion]});
     await tx.execute({sql:`INSERT INTO audit_log(id,actor_id,actor_name,action,collection,record_id,result,created_at) VALUES (?,?,?,?,?,?,'success',?)`,args:[`audit_${crypto.randomUUID()}`,user.id,user.name,`page_review_${input.action}_v${input.expectedVersion}`,'page_compositions',id,now]});
     await tx.commit(); return {success:true,status,version:input.expectedVersion};
-  } catch(error) { await tx.rollback(); throw error; } finally { tx.close(); }
+  } catch(error) { await tx.rollback(); if(error instanceof PageApprovalError)throw new EditorSaveError(error.message,error.status); throw error; } finally { tx.close(); }
 }

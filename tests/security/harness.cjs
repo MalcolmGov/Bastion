@@ -65,6 +65,7 @@ async function createHarness() {
  CREATE TABLE page_compositions(id TEXT PRIMARY KEY,site_id TEXT,page_slug TEXT,title TEXT,layout_collection TEXT,sections_json TEXT,meta_json TEXT,version INTEGER,status TEXT,created_at TEXT,updated_at TEXT);
  CREATE TABLE content_records(id TEXT PRIMARY KEY,collection TEXT,slug TEXT,title TEXT,status TEXT,current_published_revision_id TEXT,current_draft_revision_id TEXT,site_id TEXT,client_id TEXT,created_at TEXT,updated_at TEXT);
  CREATE TABLE revisions(id TEXT PRIMARY KEY,record_id TEXT REFERENCES content_records(id),revision_number INTEGER,data_json TEXT,content_hash TEXT,author_id TEXT REFERENCES users(id),created_at TEXT,status TEXT,review_comments TEXT);
+ CREATE TABLE page_versions(id TEXT PRIMARY KEY,composition_id TEXT,site_id TEXT,page_slug TEXT,version INTEGER,title TEXT,layout_collection TEXT,sections_json TEXT,meta_json TEXT,status TEXT,created_by TEXT,created_by_name TEXT,change_summary TEXT,created_at TEXT,approved_by TEXT,approved_by_name TEXT,approved_at TEXT,approved_content_hash TEXT);
  CREATE TABLE content_releases(id TEXT PRIMARY KEY,client_id TEXT,site_id TEXT,name TEXT,description TEXT,status TEXT,scheduled_at TEXT,published_at TEXT,published_by TEXT,item_count INTEGER,created_at TEXT,updated_at TEXT);
  CREATE TABLE content_release_items(id TEXT PRIMARY KEY,release_id TEXT,item_type TEXT,item_id TEXT,title TEXT,action TEXT,changes_summary TEXT,snapshot_json TEXT,created_at TEXT);
  CREATE TABLE audit_log(id TEXT PRIMARY KEY,actor_id TEXT,actor_name TEXT,action TEXT,collection TEXT,record_id TEXT,result TEXT,details_json TEXT,created_at TEXT);
@@ -94,6 +95,15 @@ async function createHarness() {
     db, load: (name) => load(path.join(root, 'src', name)), route, request,
     user: (user) => { currentUser = user ? { ...currentUser, ...user } : null; },
     emailCalls: () => emailCalls,
+    // Records a reviewer's approval of a seeded page's current version, as the editor's approve endpoint does.
+    approvePage: async (pageSlug = 'home', version = 1) => {
+      const before = currentUser;
+      currentUser = { id: 'reviewer-a', name: 'Reviewer A', email: 'reviewer-a@test.local', role: 'reviewer', client_id: 'tenant-a' };
+      try {
+        const res = await route('api/admin/editor/approve').POST(request('/api/admin/editor/approve', { siteId: 'site-a', pageSlug, version }));
+        if (res.status !== 200) throw new Error('page approval failed: ' + JSON.stringify(await res.json()));
+      } finally { currentUser = before; }
+    },
     token: async (scopes = ['mcp:access', 'content:read', 'graphql:read'], siteId = null) =>
       (await load(path.join(root, 'src/lib/auth/apiToken.ts')).createApiToken({
         name: 'Test', clientId: 'tenant-a', siteId: siteId || undefined, scopes

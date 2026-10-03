@@ -4,6 +4,7 @@ import { getDb } from '@/lib/db/client';
 import { readSecret, secretsMatch, tokenFromRequest } from '@/lib/auth/apiToken';
 import { publishRelease } from '@/lib/releases/service';
 import { assertRecordApproval } from '@/lib/auth/contentApproval';
+import { assertPageApproved } from '@/lib/studio/editor/pageApproval';
 import crypto from 'crypto';
 
 const DEV_DEFAULT_CRON_SECRET = 'bastion_cron_worker_production_key_2026';
@@ -11,7 +12,7 @@ const DEV_DEFAULT_CRON_SECRET = 'bastion_cron_worker_production_key_2026';
 /**
  * Scheduling must not be a way around the two-person rule for disclosures, so the branches below
  * re-check approval at the moment of publishing, the same rule publishRelease applies.
- * Why a legacy release must not publish yet: the first record item without an independent approval.
+ * Why a legacy release must not publish yet: the first page or record item without an independent approval.
  */
 async function legacyReleaseRefusal(db: ReturnType<typeof getDb>, items: readonly Record<string, unknown>[]): Promise<string | null> {
   for (const item of items) {
@@ -19,10 +20,10 @@ async function legacyReleaseRefusal(db: ReturnType<typeof getDb>, items: readonl
     if (itemType === 'page' || itemType === 'page_composition') {
       const managed=(await db.execute({sql:'SELECT version FROM composition_reviews WHERE composition_id=? LIMIT 1',args:[String(item.item_id)]})).rows[0];
       if(managed) return 'Handed-over pages require publication from Approvals & Sign-Off.';
-      continue;
     }
     try {
-      await assertRecordApproval(db, String(item.item_id));
+      if (itemType === 'page' || itemType === 'page_composition') await assertPageApproved(db, String(item.item_id));
+      else await assertRecordApproval(db, String(item.item_id));
     } catch (error) {
       return (error as Error).message;
     }

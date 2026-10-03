@@ -4,11 +4,13 @@ import { clientOwns } from '@/lib/auth/guard';
 import { hasPermission, type StudioUser } from '@/lib/auth/auth';
 import crypto from 'node:crypto';
 import type { Transaction, Row } from '@libsql/client';
+import { assertPublishApproval, PageApprovalError } from '@/lib/studio/editor/pageApproval';
 
 export class EditorSaveError extends Error {
   constructor(
     message: string,
     public status: number,
+    public code?: string,
   ) {
     super(message);
   }
@@ -139,6 +141,22 @@ export async function saveComposition(
       input.meta !== undefined
         ? JSON.stringify(input.meta)
         : (existing?.meta_json ?? null);
+    // Going live needs an independent approval of exactly this content; the approval then travels with the published version.
+    let approval: Row | null = null;
+    if (status === 'published') {
+      try {
+        approval = await assertPublishApproval(tx, existing, {
+          title,
+          layout,
+          sectionsJson: json,
+          metaJson: meta == null ? null : String(meta),
+        });
+      } catch (error) {
+        if (error instanceof PageApprovalError)
+          throw new EditorSaveError(error.message, error.status, 'approval_required');
+        throw error;
+      }
+    }
     // Retain a published baseline even for older pages created before version history existed.
     if (existing?.status === 'published')
       await tx.execute({
@@ -173,7 +191,7 @@ export async function saveComposition(
       ],
     });
     await tx.execute({
-      sql: `INSERT INTO page_versions (id,composition_id,site_id,page_slug,version,title,layout_collection,sections_json,meta_json,status,created_by,created_by_name,change_summary,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      sql: `INSERT INTO page_versions (id,composition_id,site_id,page_slug,version,title,layout_collection,sections_json,meta_json,status,created_by,created_by_name,change_summary,created_at,approved_by,approved_by_name,approved_at,approved_content_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       args: [
         `pver_${site.id}_${input.pageSlug}_v${version}`,
         id,
@@ -190,6 +208,10 @@ export async function saveComposition(
         input.changeSummary ||
           `${status === 'published' ? 'Published' : 'Saved draft'} v${version}`,
         now,
+        approval?.approved_by ?? null,
+        approval?.approved_by_name ?? null,
+        approval?.approved_at ?? null,
+        approval?.approved_content_hash ?? null,
       ],
     });
     if (status === 'in_review') await tx.execute({

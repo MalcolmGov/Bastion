@@ -350,12 +350,15 @@ export default function SensAndIrHubPage() {
 
   // Delete SENS
   const handleDeleteSens = async (id: string) => {
-    if (!confirm('Are you sure you want to retract and delete this SENS announcement?')) return;
+    if (!confirm('Delete this draft announcement? It has not been published, and a deleted draft cannot be recovered.')) return;
     try {
       const res = await fetch(`/api/admin/ir/sens/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setAnnouncements((prev) => prev.filter((a) => a.id !== id));
         if (selectedSens?.id === id) setSelectedSens(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Could not delete this announcement.');
       }
     } catch (err) {
       console.error('Error deleting SENS:', err);
@@ -829,13 +832,15 @@ export default function SensAndIrHubPage() {
                             </button>
                           )}
 
-                          <button
-                            onClick={() => handleDeleteSens(item.id)}
-                            className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-800 transition"
-                            title="Delete Announcement"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {!isLiveFeed && item.status === 'draft' && (
+                            <button
+                              onClick={() => handleDeleteSens(item.id)}
+                              className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-800 transition"
+                              title="Delete this draft"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
