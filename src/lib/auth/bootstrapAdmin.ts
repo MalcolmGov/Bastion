@@ -17,7 +17,7 @@ export const REVOKED_HASH = 'revoked$published-default-credential';
 
 export const MIN_BOOTSTRAP_PASSWORD_LENGTH = 12;
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 let warnedNoAdmin = false;
 
 async function audit(db: Client, actor: string, action: string, recordId: string, details: Record<string, unknown>) {
@@ -63,7 +63,7 @@ export async function revokePublishedCredentials(db: Client): Promise<number> {
 }
 
 function usableHash(hash: unknown): boolean {
-  const value = String(hash || '');
+  const value = typeof hash === 'string' ? hash : '';
   return value !== '' && !value.startsWith('revoked$');
 }
 

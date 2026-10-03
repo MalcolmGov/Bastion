@@ -7,7 +7,6 @@ import type { Client as DbClient } from '@libsql/client';
 import fs from 'fs';
 import path from 'path';
 import type { Client, Website, BrandKit, PageComposition } from './types';
-import { hashPassword } from '@/lib/auth/password';
 
 export async function runMoveStudioMigrations(db: DbClient): Promise<void> {
   // 1. Run schema DDL for Move Studio tables
