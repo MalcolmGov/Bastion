@@ -89,6 +89,7 @@ export async function GET(req: NextRequest) {
       version: Number(c.version),
       meta: c.meta_json ? JSON.parse(String(c.meta_json)) : null,
       status: String(c.status),
+      updatedAt: String(c.updated_at || c.created_at || ''),
     }));
 
     return NextResponse.json({

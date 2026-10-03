@@ -80,6 +80,7 @@ import { InEditorContentAgent } from '@/components/studio/InEditorContentAgent';
 import { ApiKeysTab } from '@/components/studio/ApiKeysTab';
 import { COMPONENT_REGISTRY } from '@/lib/studio/componentRegistry';
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, getLocaleMeta } from '@/lib/i18n/locales';
+import { DocumentIngestionModal } from '@/components/studio/editor/DocumentIngestionModal';
 import type { SectionInstance, DesignCollectionId, BackgroundPatternType } from '@/lib/studio/types';
 
 const SOLID_SWATCHES = [
@@ -297,6 +298,15 @@ function VisualWebsiteEditorContent() {
   const [pageLayout, setPageLayout] = useState<DesignCollectionId>('contemporary');
   const [isPreview, setIsPreview] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [isIngestModalOpen, setIsIngestModalOpen] = useState(() => searchParams.get('openIngest') === 'true' || searchParams.get('ingest') === 'true');
+  const [ingestSuccessMessage, setIngestSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('openIngest') === 'true' || searchParams.get('ingest') === 'true') {
+      setIsIngestModalOpen(true);
+    }
+  }, [searchParams]);
+
   const documentKey = `${siteSlug}:${activePageSlug}`;
   const currentKey = useRef(documentKey);
   currentKey.current = documentKey;
@@ -1260,6 +1270,7 @@ function VisualWebsiteEditorContent() {
     <div className="h-dvh flex flex-col bg-slate-50 dark:bg-slate-950">
       <EditorDialog open={publishOpen} title="Publish this page?" onClose={() => setPublishOpen(false)}><p className="mt-3 text-sm leading-relaxed text-slate-500">Your current changes to <strong className="text-slate-900 dark:text-white">{pageTitle}</strong> will become visible on <strong className="text-slate-900 dark:text-white">{siteData?.name}</strong>.</p><p className="mt-2 text-xs text-slate-400">{sections.filter(section => section.visible).length} visible sections · Version {currentVersionNumber + 1}</p><div className="mt-6 flex justify-end gap-3"><button type="button" autoFocus disabled={isDeploying} onClick={() => setPublishOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm">Keep editing</button><button type="button" disabled={isDeploying} onClick={async () => { await saveDocument('published'); setPublishOpen(false); }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">{isDeploying ? 'Publishing…' : 'Publish page'}</button></div></EditorDialog>
       <EditorToolbar siteName={siteData?.name || 'Choose a website'} siteId={siteData?.id || siteSlug} sites={activeClient?.websites || []} page={activePageSlug} pages={pageSlugs} busy={isSaving || isDeploying || isRollingBack || isAddingToRelease || isAssistantApplying} dirty={hasUnsavedChanges} savedTime={savedTime} loading={isLoadingPage} isNew={currentVersionNumber === 0} advancedTools={isAgencyUser(user)} canEdit={hasPerm('content:edit')} canPublish={hasPerm('content:publish')} viewport={viewport} preview={isPreview} leftOpen={isLeftPanelOpen} rightOpen={isRightPanelOpen} canUndo={historyIndex > 0} canRedo={historyIndex < history.length - 1} onSite={id => switchDocument(id,'home')} onPage={slug => switchDocument(siteSlug,slug)} onSave={() => void handleSaveDraft()} onPublish={handleDeployPublish} onViewport={setViewport} onPreview={() => setIsPreview(value => !value)} onLeft={() => { if (compactEditor) setIsRightPanelOpen(false); setIsLeftPanelOpen(value => !value); }} onRight={() => { if (compactEditor) setIsLeftPanelOpen(false); setIsRightPanelOpen(value => !value); }} onUndo={handleUndo} onRedo={handleRedo} onMore={action => {
+        if (action === 'ingest') setIsIngestModalOpen(true);
         if (action === 'history') void handleOpenVersionModal();
         if (action === 'release') void handleOpenReleaseModal();
         if (action === 'ai' || action === 'keys') { if (compactEditor) setIsLeftPanelOpen(false); setInspectorTab(action); setIsRightPanelOpen(true); setIsPreview(false); }
@@ -1267,6 +1278,15 @@ function VisualWebsiteEditorContent() {
         if (action === 'qr') { if (hasUnsavedChanges) setEditorError('Save your draft before sharing a preview link.'); else setIsQrModalOpen(true); }
         if (action === 'theme') setCanvasTheme(isCanvasDark ? 'light' : 'dark');
       }} />
+      {ingestSuccessMessage && (
+        <div role="status" className="flex items-center justify-between border-b border-amber-500/30 bg-amber-500/10 px-5 py-2.5 text-xs text-amber-300 animate-in fade-in">
+          <span className="font-semibold flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            {ingestSuccessMessage}
+          </span>
+          <button type="button" onClick={() => setIngestSuccessMessage(null)} className="text-amber-400 hover:text-white font-bold ml-4">✕</button>
+        </div>
+      )}
       {deploySuccess && !hasUnsavedChanges && <div role="status" className="flex items-center justify-between border-b border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-800"><span>Your page has been published.</span><a href={`/sites/${siteData?.slug}${activePageSlug === 'home' ? '' : `/${activePageSlug}`}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold underline">View published page</a></div>}
       {editorError && <div role="alert" className="flex items-center justify-between gap-4 border-b border-rose-200 bg-rose-50 px-5 py-3 text-sm text-rose-700"><p>{editorError}</p><button type="button" onClick={() => { if (!hasUnsavedChanges || window.confirm('Reload the saved page and discard your unsaved changes?')) setReload(value => value + 1); }} className="shrink-0 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold">Reload page</button></div>}
 
@@ -2147,265 +2167,289 @@ function VisualWebsiteEditorContent() {
                   </div>
 
                   {/* SUITE 1: INTERACTIVE BOX MODEL & LAYOUT SPACING */}
-                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Box className="w-3.5 h-3.5 text-sky-400" />
-                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
-                          Box Model & Layout Spacing
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                        {selectedSection.styles?.paddingY || 'py-20 md:py-28'}
-                      </span>
-                    </div>
+                  {(() => {
+                    const activeContainerWidth = CONTAINER_WIDTH_OPTIONS.find(c => c.id === (selectedSection.styles?.containerWidth || 'wide')) || CONTAINER_WIDTH_OPTIONS[2];
+                    const activePadding = PADDING_OPTIONS.find(p => p.id === (selectedSection.styles?.paddingY || 'py-20')) || PADDING_OPTIONS[3];
+                    const activeFont = FONT_OPTIONS.find(f => f.id === (selectedSection.styles?.fontFamily || 'sans')) || FONT_OPTIONS[0];
+                    const activeHeadingScale = HEADING_SCALE_OPTIONS.find(h => h.id === (selectedSection.styles?.headingScale || 'normal')) || HEADING_SCALE_OPTIONS[1];
+                    const activeLetterSpacing = LETTER_SPACING_OPTIONS.find(l => l.id === (selectedSection.styles?.letterSpacing || 'normal')) || LETTER_SPACING_OPTIONS[2];
+                    const activeAlignment = selectedSection.styles?.alignment || 'left';
+                    const activeBorderRadius = BORDER_RADIUS_OPTIONS.find(b => b.id === (selectedSection.styles?.borderRadius || 'xl')) || BORDER_RADIUS_OPTIONS[4];
 
-                    {/* Interactive 2D Box Model Diagram */}
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#0A0D14] border border-[#1E293B] text-center text-xs relative select-none">
-                      {/* Outer: Margin / Container Bounds */}
-                      <div className="border border-dashed border-sky-500/40 rounded-lg p-2.5 bg-sky-950/20 relative">
-                        <div className="flex items-center justify-between text-[9px] uppercase font-mono font-bold text-sky-400/80 mb-1.5 px-1">
-                          <span>CONTAINER: {selectedSection.styles?.containerWidth || 'wide (max-w-7xl)'}</span>
-                          <span>MARGIN: AUTO</span>
-                        </div>
-
-                        {/* Inner: Padding Top & Bottom */}
-                        <div className="border border-indigo-500/40 rounded-md p-3 bg-indigo-950/30 space-y-1.5">
-                          <div className="text-[10px] font-mono text-indigo-300 font-bold flex items-center justify-center space-x-1">
-                            <span>PADDING-Y:</span>
-                            <span className="bg-indigo-900/60 px-1.5 py-0.5 rounded border border-indigo-400/30 text-white">
-                              {selectedSection.styles?.paddingY ? selectedSection.styles.paddingY.replace('py-', '') + ' (rem unit)' : 'Default (py-20)'}
+                    return (
+                      <>
+                        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Box className="w-3.5 h-3.5 text-sky-400" />
+                              <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                                Box Model & Layout Spacing
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-semibold">
+                              {activePadding.label} · {activePadding.name}
                             </span>
                           </div>
 
-                          {/* Center Content Block */}
-                          <div className="bg-slate-50 dark:bg-[#141C2A] border border-slate-700/60 rounded py-2 px-3 text-[10px] font-semibold text-slate-200 flex items-center justify-between">
-                            <span className="truncate">Block: {selectedSection.componentId.replace('_', ' ')}</span>
-                            <span className="text-[9px] text-slate-400 font-mono capitalize">{selectedSection.styles?.alignment || 'left'} align</span>
+                          {/* Interactive 2D Box Model Diagram */}
+                          <div className="p-2.5 rounded-xl bg-[#070B14] border border-[#1E293B] text-center text-xs relative select-none shadow-inner">
+                            {/* Outer: Container Bounds */}
+                            <div className="border border-dashed border-sky-500/40 rounded-lg p-2.5 bg-sky-950/20 relative">
+                              <div className="flex items-center justify-between text-[10px] uppercase font-mono font-bold text-sky-400/90 mb-1.5 px-1">
+                                <span className="flex items-center space-x-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block animate-pulse" />
+                                  <span>Container: {activeContainerWidth.label} ({activeContainerWidth.detail.split(' ')[0]})</span>
+                                </span>
+                                <span className="text-slate-400 font-normal">Margin: Auto</span>
+                              </div>
+
+                              {/* Inner: Vertical Spacing Bounds */}
+                              <div className="border border-indigo-500/40 rounded-md p-3 bg-indigo-950/30 space-y-1.5">
+                                <div className="text-[10px] font-mono text-indigo-300 font-bold flex items-center justify-between px-1">
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="text-indigo-400">↕ Vertical Spacing:</span>
+                                    <span className="bg-indigo-900/80 px-2 py-0.5 rounded border border-indigo-400/40 text-white font-semibold">
+                                      {activePadding.label} ({activePadding.name})
+                                    </span>
+                                  </div>
+                                  <span className="text-[9px] text-indigo-400/70 font-mono">Tailwind: {selectedSection.styles?.paddingY || 'py-20'}</span>
+                                </div>
+
+                                {/* Center Content Block */}
+                                <div className="bg-slate-800/90 border border-slate-700/80 rounded py-2 px-3 text-[10px] font-semibold text-slate-200 flex items-center justify-between shadow-xs">
+                                  <span className="truncate flex items-center space-x-1">
+                                    <span className="text-sky-400 font-mono">&lt;</span>
+                                    <span className="capitalize">{selectedSection.componentId.replace(/_/g, ' ')} Block</span>
+                                    <span className="text-sky-400 font-mono">/&gt;</span>
+                                  </span>
+                                  <span className="text-[9px] text-emerald-400 font-mono capitalize flex items-center space-x-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                    <span>{activeAlignment} align</span>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Container Width Bounds */}
+                          <div className="space-y-1.5 pt-1">
+                            <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                              Container Max Width Constraint
+                            </label>
+                            <div className="grid grid-cols-4 gap-1 text-[10px]">
+                              {CONTAINER_WIDTH_OPTIONS.map((cw) => {
+                                const isCurrent = (!selectedSection.styles?.containerWidth && cw.id === 'wide') ||
+                                  selectedSection.styles?.containerWidth === cw.id;
+                                return (
+                                  <button
+                                    key={cw.id}
+                                    type="button"
+                                    onClick={() => handleStyleChange('containerWidth', cw.id)}
+                                    title={cw.detail}
+                                    className={`py-1.5 rounded-lg border text-center font-medium transition ${
+                                      isCurrent
+                                        ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                        : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
+                                    }`}
+                                  >
+                                    <div>{cw.label}</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Vertical Padding Steppers */}
+                          <div className="space-y-1.5 pt-1">
+                            <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                              Block Vertical Padding
+                            </label>
+                            <div className="grid grid-cols-4 gap-1 text-[10px]">
+                              {PADDING_OPTIONS.map((pad) => {
+                                const isCurrent = (!selectedSection.styles?.paddingY && pad.id === 'py-20') ||
+                                  selectedSection.styles?.paddingY === pad.id;
+                                return (
+                                  <button
+                                    key={pad.id}
+                                    type="button"
+                                    onClick={() => handleStyleChange('paddingY', pad.id)}
+                                    title={`${pad.name} (${pad.label})`}
+                                    className={`py-1 rounded-lg border text-center font-medium transition ${
+                                      isCurrent
+                                        ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                        : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
+                                    }`}
+                                  >
+                                    <div className="font-mono text-[9px]">{pad.label}</div>
+                                    <div className="text-[8px] opacity-75">{pad.name}</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Container Width Bounds */}
-                    <div className="space-y-1.5 pt-1">
-                      <label className="block text-[10px] font-semibold uppercase text-slate-400">
-                        Container Max Width Constraint
-                      </label>
-                      <div className="grid grid-cols-4 gap-1 text-[10px]">
-                        {CONTAINER_WIDTH_OPTIONS.map((cw) => {
-                          const isCurrent = (!selectedSection.styles?.containerWidth && cw.id === 'wide') ||
-                            selectedSection.styles?.containerWidth === cw.id;
-                          return (
-                            <button
-                              key={cw.id}
-                              type="button"
-                              onClick={() => handleStyleChange('containerWidth', cw.id)}
-                              title={cw.detail}
-                              className={`py-1.5 rounded-lg border text-center font-medium transition ${
-                                isCurrent
-                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
-                              }`}
-                            >
-                              <div>{cw.label}</div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Vertical Padding Steppers */}
-                    <div className="space-y-1.5 pt-1">
-                      <label className="block text-[10px] font-semibold uppercase text-slate-400">
-                        Block Vertical Padding
-                      </label>
-                      <div className="grid grid-cols-4 gap-1 text-[10px]">
-                        {PADDING_OPTIONS.map((pad) => {
-                          const isCurrent = (!selectedSection.styles?.paddingY && pad.id === 'py-20') ||
-                            selectedSection.styles?.paddingY === pad.id;
-                          return (
-                            <button
-                              key={pad.id}
-                              type="button"
-                              onClick={() => handleStyleChange('paddingY', pad.id)}
-                              title={`${pad.name} (${pad.label})`}
-                              className={`py-1 rounded-lg border text-center font-medium transition ${
-                                isCurrent
-                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
-                              }`}
-                            >
-                              <div className="font-mono text-[9px]">{pad.label}</div>
-                              <div className="text-[8px] opacity-75">{pad.name}</div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SUITE 2: TYPOGRAPHY ENGINE & PAIRINGS */}
-                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Type className="w-3.5 h-3.5 text-sky-400" />
-                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
-                          Typography Engine
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 capitalize">
-                        {selectedSection.styles?.fontFamily || 'Sans'}
-                      </span>
-                    </div>
-
-                    {/* Font Family Selector Cards */}
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-semibold uppercase text-slate-400">
-                        Font Family & Pairing
-                      </label>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {FONT_OPTIONS.map((font) => {
-                          const isCurrent = (!selectedSection.styles?.fontFamily && font.id === 'sans') ||
-                            selectedSection.styles?.fontFamily === font.id;
-                          return (
-                            <button
-                              key={font.id}
-                              type="button"
-                              onClick={() => handleStyleChange('fontFamily', font.id)}
-                              className={`p-2 rounded-xl border text-center transition flex flex-col items-center justify-between ${
-                                isCurrent
-                                  ? 'bg-sky-950/70 border-sky-400 ring-1 ring-sky-400 text-white shadow-sm'
-                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
-                              }`}
-                            >
-                              <span className={`text-xl font-bold mb-0.5 ${font.fontClass}`}>
-                                {font.preview}
+                        {/* SUITE 2: TYPOGRAPHY ENGINE & PAIRINGS */}
+                        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Type className="w-3.5 h-3.5 text-sky-400" />
+                              <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                                Typography Engine
                               </span>
-                              <span className="text-[10px] font-semibold truncate w-full">
-                                {font.label}
+                            </div>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-semibold">
+                              {activeFont.label}
+                            </span>
+                          </div>
+
+                          {/* Font Family Selector Cards */}
+                          <div className="space-y-1.5">
+                            <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                              Font Family & Pairing
+                            </label>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {FONT_OPTIONS.map((font) => {
+                                const isCurrent = (!selectedSection.styles?.fontFamily && font.id === 'sans') ||
+                                  selectedSection.styles?.fontFamily === font.id;
+                                return (
+                                  <button
+                                    key={font.id}
+                                    type="button"
+                                    onClick={() => handleStyleChange('fontFamily', font.id)}
+                                    className={`p-2 rounded-xl border text-center transition flex flex-col items-center justify-between ${
+                                      isCurrent
+                                        ? 'bg-sky-950/70 border-sky-400 ring-1 ring-sky-400 text-white shadow-sm'
+                                        : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
+                                    }`}
+                                  >
+                                    <span className={`text-xl font-bold mb-0.5 ${font.fontClass}`}>
+                                      {font.preview}
+                                    </span>
+                                    <span className="text-[10px] font-semibold truncate w-full">
+                                      {font.label}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Heading Scale Multiplier */}
+                          <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                            <div className="flex items-center justify-between text-xs">
+                              <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                                Heading Scale Multiplier
+                              </label>
+                              <span className="text-[10px] text-sky-400 font-mono font-semibold">
+                                {activeHeadingScale.label} · {activeHeadingScale.desc}
                               </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                            </div>
+                            <div className="grid grid-cols-4 gap-1 text-[10px]">
+                              {HEADING_SCALE_OPTIONS.map((hs) => {
+                                const isCurrent = (!selectedSection.styles?.headingScale && hs.id === 'normal') ||
+                                  selectedSection.styles?.headingScale === hs.id;
+                                return (
+                                  <button
+                                    key={hs.id}
+                                    type="button"
+                                    onClick={() => handleStyleChange('headingScale', hs.id)}
+                                    title={hs.desc}
+                                    className={`py-1 rounded border text-center font-medium transition ${
+                                      isCurrent
+                                        ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                        : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
+                                    }`}
+                                  >
+                                    <div>{hs.label}</div>
+                                    <div className="text-[8px] opacity-75 font-mono">{hs.desc}</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
 
-                    {/* Heading Scale Multiplier */}
-                    <div className="space-y-1.5 pt-1 border-t border-slate-800">
-                      <div className="flex items-center justify-between text-xs">
-                        <label className="block text-[10px] font-semibold uppercase text-slate-400">
-                          Heading Scale Multiplier
-                        </label>
-                        <span className="text-[10px] text-sky-400 font-mono capitalize">
-                          {selectedSection.styles?.headingScale || 'Balanced'}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-1 text-[10px]">
-                        {HEADING_SCALE_OPTIONS.map((hs) => {
-                          const isCurrent = (!selectedSection.styles?.headingScale && hs.id === 'normal') ||
-                            selectedSection.styles?.headingScale === hs.id;
-                          return (
-                            <button
-                              key={hs.id}
-                              type="button"
-                              onClick={() => handleStyleChange('headingScale', hs.id)}
-                              title={hs.desc}
-                              className={`py-1 rounded border text-center font-medium transition ${
-                                isCurrent
-                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
-                              }`}
-                            >
-                              <div>{hs.label}</div>
-                              <div className="text-[8px] opacity-75 font-mono">{hs.desc}</div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                          {/* Letter Spacing / Tracking */}
+                          <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                            <div className="flex items-center justify-between text-xs">
+                              <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                                Tracking / Letter Spacing
+                              </label>
+                              <span className="text-[10px] text-sky-400 font-mono font-semibold">
+                                {activeLetterSpacing.name} ({activeLetterSpacing.label})
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-5 gap-1 text-[10px]">
+                              {LETTER_SPACING_OPTIONS.map((ls) => {
+                                const isCurrent = (!selectedSection.styles?.letterSpacing && ls.id === 'normal') ||
+                                  selectedSection.styles?.letterSpacing === ls.id;
+                                return (
+                                  <button
+                                    key={ls.id}
+                                    type="button"
+                                    onClick={() => handleStyleChange('letterSpacing', ls.id)}
+                                    title={ls.name}
+                                    className={`py-1 rounded border text-center font-medium transition ${
+                                      isCurrent
+                                        ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                        : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
+                                    }`}
+                                  >
+                                    <div className="text-[9px] font-mono">{ls.label}</div>
+                                    <div className="text-[8px] opacity-75">{ls.name}</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
 
-                    {/* Letter Spacing / Tracking */}
-                    <div className="space-y-1.5 pt-1 border-t border-slate-800">
-                      <div className="flex items-center justify-between text-xs">
-                        <label className="block text-[10px] font-semibold uppercase text-slate-400">
-                          Tracking / Letter Spacing
-                        </label>
-                        <span className="text-[10px] text-sky-400 font-mono">
-                          {selectedSection.styles?.letterSpacing || 'normal (0)'}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-5 gap-1 text-[10px]">
-                        {LETTER_SPACING_OPTIONS.map((ls) => {
-                          const isCurrent = (!selectedSection.styles?.letterSpacing && ls.id === 'normal') ||
-                            selectedSection.styles?.letterSpacing === ls.id;
-                          return (
-                            <button
-                              key={ls.id}
-                              type="button"
-                              onClick={() => handleStyleChange('letterSpacing', ls.id)}
-                              title={ls.name}
-                              className={`py-1 rounded border text-center font-medium transition ${
-                                isCurrent
-                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
-                              }`}
-                            >
-                              <div className="text-[9px] font-mono">{ls.label}</div>
-                              <div className="text-[8px] opacity-75">{ls.name}</div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                          {/* Text Alignment */}
+                          <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                            <label className="block text-[10px] font-semibold uppercase text-slate-400">
+                              Content & Heading Alignment
+                            </label>
+                            <div className="grid grid-cols-3 gap-1.5 text-xs">
+                              {[
+                                { id: 'left', label: 'Left', icon: AlignLeft },
+                                { id: 'center', label: 'Center', icon: AlignCenter },
+                                { id: 'split', label: 'Split', icon: Square }
+                              ].map((al) => {
+                                const Icon = al.icon;
+                                const isCurrent = (!selectedSection.styles?.alignment && al.id === 'left') ||
+                                  selectedSection.styles?.alignment === al.id;
+                                return (
+                                  <button
+                                    key={al.id}
+                                    type="button"
+                                    onClick={() => handleStyleChange('alignment', al.id)}
+                                    className={`py-1.5 px-2 rounded-lg border flex items-center justify-center space-x-1.5 transition ${
+                                      isCurrent
+                                        ? 'bg-sky-600 border-sky-400 text-white font-bold'
+                                        : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
+                                    }`}
+                                  >
+                                    <Icon className="w-3.5 h-3.5" />
+                                    <span className="text-[11px]">{al.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
 
-                    {/* Text Alignment */}
-                    <div className="space-y-1.5 pt-1 border-t border-slate-800">
-                      <label className="block text-[10px] font-semibold uppercase text-slate-400">
-                        Content & Heading Alignment
-                      </label>
-                      <div className="grid grid-cols-3 gap-1.5 text-xs">
-                        {[
-                          { id: 'left', label: 'Left', icon: AlignLeft },
-                          { id: 'center', label: 'Center', icon: AlignCenter },
-                          { id: 'split', label: 'Split', icon: Square }
-                        ].map((al) => {
-                          const Icon = al.icon;
-                          const isCurrent = (!selectedSection.styles?.alignment && al.id === 'left') ||
-                            selectedSection.styles?.alignment === al.id;
-                          return (
-                            <button
-                              key={al.id}
-                              type="button"
-                              onClick={() => handleStyleChange('alignment', al.id)}
-                              className={`py-1.5 px-2 rounded-lg border flex items-center justify-center space-x-1.5 transition ${
-                                isCurrent
-                                  ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                                  : 'bg-white dark:bg-[#0E1522] border-slate-200 dark:border-[#222E42] text-slate-400 hover:text-white'
-                              }`}
-                            >
-                              <Icon className="w-3.5 h-3.5" />
-                              <span className="text-[11px]">{al.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SUITE 3: GEOMETRY, GLASSMORPHISM & AMBIENT GLOW */}
-                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Sparkle className="w-3.5 h-3.5 text-sky-400" />
-                        <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
-                          Geometry & Ambient Glow
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 capitalize">
-                        {selectedSection.styles?.borderRadius || 'Default'}
-                      </span>
-                    </div>
+                        {/* SUITE 3: GEOMETRY, GLASSMORPHISM & AMBIENT GLOW */}
+                        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#141C2A] border border-slate-200 dark:border-[#232F42] space-y-3.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Sparkle className="w-3.5 h-3.5 text-sky-400" />
+                              <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
+                                Geometry & Ambient Glow
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-semibold">
+                              {activeBorderRadius.name} ({activeBorderRadius.label})
+                            </span>
+                          </div>
 
                     {/* Corner Radius Controls */}
                     <div className="space-y-1.5">
@@ -2552,6 +2596,9 @@ function VisualWebsiteEditorContent() {
                       </div>
                     </div>
                   </div>
+                </>
+              );
+            })()}
                 </fieldset>
               ) : (
                 <div className="p-8 text-center text-xs text-slate-500">
@@ -2892,6 +2939,65 @@ function VisualWebsiteEditorContent() {
           </div>
         </div>
       )}
+
+      {/* AI Document & Annual Report Ingestion Modal */}
+      <DocumentIngestionModal
+        isOpen={isIngestModalOpen}
+        onClose={() => setIsIngestModalOpen(false)}
+        siteId={siteData?.id || siteSlug}
+        brandKit={brandKit}
+        onApplySections={(newSections, mode) => {
+          if (mode === 'replace') {
+            updateSections(newSections);
+            setIngestSuccessMessage(`Successfully synthesized ${newSections.length} sections from corporate report.`);
+          } else {
+            updateSections([...sections, ...newSections]);
+            setIngestSuccessMessage(`Appended ${newSections.length} report sections to canvas.`);
+          }
+          setTimeout(() => setIngestSuccessMessage(null), 6000);
+        }}
+        onApplyPages={async (pages) => {
+          setIsAssistantApplying(true);
+          try {
+            const res = await fetch('/api/admin/editor/assistant/apply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                siteId: siteData?.id || siteSlug,
+                pages: pages.map((p) => ({
+                  pageSlug: p.slug,
+                  title: p.title,
+                  sections: p.sections,
+                  changeSummary: `AI Report Ingestion (${p.title})`,
+                })),
+                options: { allowCreate: true },
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || 'Failed to save multi-page portal');
+            }
+            const updatedSlugs = Array.from(new Set([...pageSlugs, ...pages.map((p) => p.slug)]));
+            setPageSlugs(updatedSlugs);
+
+            const homePage = pages.find((p) => p.slug === 'home') || pages[0];
+            if (activePageSlug === homePage.slug) {
+              updateSections(homePage.sections);
+              setSavedSections(JSON.stringify(homePage.sections));
+            } else {
+              switchDocument(siteData?.id || siteSlug, homePage.slug);
+            }
+            setIngestSuccessMessage(
+              `🎉 Live Investor Portal Assembled! 4 responsive pages created (${pages.map((p) => '/' + p.slug).join(', ')}). Switch pages in the top toolbar to inspect!`
+            );
+            setTimeout(() => setIngestSuccessMessage(null), 10000);
+          } catch (err: any) {
+            setEditorError(err.message || 'Failed to assemble multi-page portal');
+          } finally {
+            setIsAssistantApplying(false);
+          }
+        }}
+      />
     </div>
   );
 }

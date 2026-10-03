@@ -233,11 +233,18 @@ export function AdminSidebar() {
   const resultsSection = (
     <div>
       {!isCollapsed && (
-        <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/90">
-          Results
+        <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/90 flex items-center justify-between">
+          <span>AI & Results</span>
+          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">New</span>
         </div>
       )}
       <div className="space-y-1">
+        {renderItem(
+          '/admin/editor?openIngest=true',
+          'AI Ingest Report',
+          Sparkles,
+          false
+        )}
         {renderItem(
           '/admin/results',
           'PDF to HTML',
@@ -424,12 +431,12 @@ export function AdminSidebar() {
               <div>
                 {!isCollapsed && (
                   <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400/90">
-                    {activeClient?.name ? `${activeClient.name.toUpperCase()} CONTENT` : 'AURUM ENERGY & RESOURCES CONTENT'}
+                    {activeClient?.name ? `${activeClient.name.toUpperCase()} CONTENT` : 'WORKSPACE CONTENT'}
                   </div>
                 )}
                 <div className="space-y-1">
                   {renderItem('/admin', 'Executive Overview', Home, pathname === '/admin')}
-                  {renderItem('/admin/pages', 'Pages & Navigation', FileText, pathname === '/admin/pages', '24')}
+                  {renderItem('/admin/pages', 'Pages & Navigation', FileText, pathname === '/admin/pages')}
                   {isGoldFields ? (
                     <>
                       {renderItem('/admin/operations', 'Mining Operations', Compass, pathname.startsWith('/admin/operations'))}
@@ -476,9 +483,9 @@ export function AdminSidebar() {
                   </div>
                 )}
                 <div className="space-y-1">
-                  {renderItem('/admin/releases', 'Content Releases', Send, pathname.startsWith('/admin/releases'), 'Oct 06')}
+                  {renderItem('/admin/releases', 'Content Releases', Send, pathname.startsWith('/admin/releases'))}
                   {renderItem('/admin/governance', 'King IV & POPIA Audit', ShieldCheck, pathname.startsWith('/admin/governance'))}
-                  {renderItem('/admin/tasks', 'Approvals & Sign-Off', CheckCircle, pathname.startsWith('/admin/tasks'), '3')}
+                  {renderItem('/admin/tasks', 'Approvals & Sign-Off', CheckCircle, pathname.startsWith('/admin/tasks'))}
                   {renderItem('/admin/users', 'Authorized Editors', Users, pathname.startsWith('/admin/users'))}
                 </div>
               </div>
