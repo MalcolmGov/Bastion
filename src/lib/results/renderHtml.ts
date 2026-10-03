@@ -59,12 +59,12 @@ function rowHtml(row: ResultsRow): string {
     return `<tr class="section"><td colspan="99">${esc(row.label)}</td></tr>`;
   }
   const cells = row.cells.map((cell) => `<td>${esc(cell || '—')}</td>`).join('');
-  return `<tr class="${row.kind}"><th>${esc(row.label)}</th>${cells}</tr>`;
+  return `<tr class="${row.kind}"><th scope="row">${esc(row.label)}</th>${cells}</tr>`;
 }
 
 function tableHtml(table: PublicationTable): string {
   const head = table.columns.map((label, index) => (
-    `<th class="${table.current[index] ? 'current' : ''}">${esc(label).replace(/\n/g, '<br>')}</th>`
+    `<th scope="col" class="${table.current[index] ? 'current' : ''}">${esc(label).replace(/\n/g, '<br>')}</th>`
   )).join('');
   const span = table.columns.length + 1;
   const rows = table.rows.map((row) => {
@@ -74,7 +74,7 @@ function tableHtml(table: PublicationTable): string {
     const cells = row.cells.map((cell, index) => (
       `<td class="${table.current[index] ? 'current' : ''}">${esc(cell || '')}</td>`
     )).join('');
-    return `<tr class="${row.kind}"><th>${esc(row.label)}</th>${cells}</tr>`;
+    return `<tr class="${row.kind}"><th scope="row">${esc(row.label)}</th>${cells}</tr>`;
   }).join('');
   const notes = table.footnotes.map((note) => `<p class="footnote">${esc(note)}</p>`).join('');
   return `<div class="table-wrap"><table><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table></div>${notes}`;
@@ -84,6 +84,8 @@ function publicationHtml(blocks: PublicationBlock[]): string {
   let region = 'results-narrative';
   const chunks: string[] = [];
   let open = '';
+  let sourcePage = 0;
+  const regions = new Set<string>();
   const close = () => {
     if (!open) return;
     chunks.push(`</div>`);
@@ -93,7 +95,8 @@ function publicationHtml(blocks: PublicationBlock[]): string {
     if (open === next) return;
     close();
     open = next;
-    chunks.push(`<div id="${next}">`);
+    chunks.push(`<div ${regions.has(next) ? `class="${next}"` : `id="${next}"`}>`);
+    regions.add(next);
   };
   for (const block of blocks) {
     if (block.kind === 'heading' && block.level === 2 && block.text) {
@@ -103,6 +106,10 @@ function publicationHtml(blocks: PublicationBlock[]): string {
       else if (/year in review/i.test(block.text)) region = 'results-highlights';
     }
     ensure(region);
+    if (block.sourcePage && block.sourcePage !== sourcePage) {
+      sourcePage = block.sourcePage;
+      chunks.push(`<a class="source-reference" href="#source-page-${sourcePage}">Source page ${sourcePage}</a>`);
+    }
     if (block.kind === 'heading') {
       const tag = block.level === 3 ? 'h3' : 'h2';
       chunks.push(`<${tag}>${esc(block.text)}</${tag}>`);
@@ -137,7 +144,7 @@ function publicationHtml(blocks: PublicationBlock[]): string {
 
 function googleFontLink(fonts: Array<string | undefined>): string {
   const names = [...new Set(fonts.flatMap((font) => (font || '').split(',').map((part) => part.replace(/["']/g, '').trim())))]
-    .filter((name) => name && !/inherit|serif|sans-serif|monospace|system-ui|segoe|helvetica|arial|georgia|palatino|iowan|cursive|fantasy/i.test(name));
+    .filter((name) => /^(Inter|Lato|Libre Franklin|Roboto|Open Sans|Source Sans 3|Manrope|Montserrat|Nunito Sans|Playfair Display|DM Sans|Plus Jakarta Sans)$/i.test(name));
   if (!names.length) return '';
   const query = names.map((name) => `family=${name.replace(/\s+/g, '+')}:wght@300;400;500;600;700`).join('&');
   return `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${query}&amp;display=swap" />`;
@@ -204,6 +211,35 @@ export function renderResultsHtml(document: ResultsDocument): string {
       </div>
     </section>`).join('');
 
+  // Cover lettering and the printed contents page remain in the source gallery;
+  // avoid repeating that front matter as oversized transcription headings.
+  const publication = document.publication || [];
+  const omittedFrontMatter = new Set<number>();
+  if (document.statements.length && document.sourcePages?.length) {
+    for (const page of [1, 2]) {
+      const blocks = publication.filter((block) => block.sourcePage === page);
+      const text = blocks.map((block) => block.text || '').join(' ');
+      if (!blocks.some((block) => block.kind === 'table' || block.kind === 'metrics')
+          && ((page === 1 && text.toLowerCase().includes(document.issuer.toLowerCase()))
+            || /\bcontents\b/i.test(text))) omittedFrontMatter.add(page);
+    }
+  }
+  const publicationBody = publication.filter((block) => !omittedFrontMatter.has(block.sourcePage || 0));
+
+  const sourceVisuals = document.sourcePages?.length ? `
+    <section id="results-source-visuals" class="source-visuals" aria-labelledby="source-title">
+      <div class="section-label">Original document · ${document.pageCount} pages</div>
+      <h2 id="source-title">The source, in view</h2>
+      <p>Original artwork and charts from the PDF. The HTML transcription follows below.</p>
+      <details ${document.statements.length ? '' : 'open'}>
+        <summary>View original pages and charts</summary>
+        <div class="source-grid">${document.sourcePages.map((page) => `
+          <figure id="source-page-${page.page}"><figcaption>Source page ${page.page}</figcaption>
+              <img src="${esc(page.image)}" alt="Original PDF page ${page.page}; see the HTML transcription below for readable text." width="${page.width}" height="${page.height}" loading="lazy" />
+          </figure>`).join('')}</div>
+      </details>
+    </section>` : '';
+
   const notes = document.notes.length
     ? `<section id="results-notes"><h2>Notes</h2><ol>${document.notes.map((note) => `<li>${esc(note)}</li>`).join('')}</ol></section>`
     : '';
@@ -214,7 +250,7 @@ export function renderResultsHtml(document: ResultsDocument): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${esc(document.issuer)} — ${esc(document.periodLabel)}</title>
-  ${googleFontLink([brand?.headingFont, brand?.bodyFont])}
+  ${googleFontLink([/benton/i.test(brand?.headingFont || '') ? 'Source Sans 3' : brand?.headingFont, /benton/i.test(brand?.bodyFont || '') ? 'Source Sans 3' : brand?.bodyFont || 'Source Sans 3'])}
   <style id="results-theme">
     :root {
       --ink: ${ink};
@@ -252,14 +288,14 @@ export function renderResultsHtml(document: ResultsDocument): string {
     #results-contents a { color: var(--ink); font-size: 13px; text-decoration: none; border-bottom: 1px solid var(--accent); padding-bottom: 2px; }
     #results-narrative { margin: 28px auto 8px; }
     #results-layout h2, #results-layout h3, #results-layout p, #results-layout .contents-list, #results-layout .footnote {
-      text-align: center;
+      text-align: left;
       margin-left: auto;
       margin-right: auto;
     }
     #results-narrative h2, .statement h2, #results-notes h2, #results-layout h2, #results-layout h3 { font-family: var(--heading-font); letter-spacing: 0; }
     #results-layout h2 { margin: 28px auto 16px; font-size: 28px; font-weight: 400; line-height: 1.21; color: var(--accent); }
     #results-layout h3 { font-weight: 500; color: var(--ink); }
-    #results-narrative p, #results-layout p { margin: 0 auto 14px; font-size: 16px; font-weight: 400; line-height: 1.4; }
+    #results-narrative p, #results-layout p { margin: 0 auto 14px; font-size: 16px; font-weight: 400; line-height: 1.75; }
     #results-narrative .lead-copy { font-size: 18px; line-height: 1.4; }
     .statement { background: var(--card); border: 1px solid var(--line); margin: 28px 0; }
     .statement header { display: flex; justify-content: space-between; gap: 16px; align-items: end; padding: 22px 24px 8px; }
@@ -283,10 +319,35 @@ export function renderResultsHtml(document: ResultsDocument): string {
     #results-layout .metric-group h3 { margin: 22px 0 0; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; text-align: center; }
     #results-layout .contents-list { margin: 8px auto 24px; padding-left: 1.25em; list-style-position: outside; text-align: left; line-height: 1.7; width: max-content; max-width: 36rem; }
     #results-narrative p, #results-notes p, #results-statements p, #results-highlights p, #results-layout .footnote { max-width: 68ch; }
+    #results-layout > div > p { max-width: 68ch; }
     #results-layout .footnote { font-size: 12px; line-height: 1.5; }
     #results-notes { margin-top: 36px; }
     #results-notes ol { margin: 0 auto; padding-left: 0; max-width: 68ch; color: var(--ink); line-height: 1.4; list-style-position: inside; text-align: center; }
     footer { border-top: 1px solid var(--line); padding: 28px 7vw 48px; color: var(--muted); font-size: 12px; letter-spacing: 0.02em; }
+    html { scroll-behavior: smooth; }
+    main { max-width: 1200px; }
+    .masthead { position: relative; }
+    h1 { letter-spacing: -0.035em; }
+    .source-visuals { margin: 40px 0 52px; padding: 28px; background: white; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 12px 32px rgb(0 0 0 / 3%); }
+    .section-label { color: var(--muted); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+    #results-layout .source-visuals h2 { color: var(--ink); margin: 10px 0; font-size: 32px; font-weight: 600; }
+    #results-layout .source-visuals p { margin: 0 0 20px; max-width: none; color: var(--muted); }
+    summary { cursor: pointer; font-weight: 600; padding: 14px 0; }
+    summary:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+    .source-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+    .source-grid figure { margin: 0; scroll-margin-top: 24px; }
+    .source-grid figcaption { margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+    .source-grid img { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 8px; }
+    .source-reference { display: block; margin: 40px 0 12px; color: var(--muted); font-size: 12px; text-decoration: underline; text-underline-offset: 4px; border-top: 1px solid var(--line); padding-top: 18px; }
+    .statement { border-radius: 14px; overflow: hidden; }
+    td { white-space: nowrap; }
+    tbody th { font-weight: 400; }
+    thead th { vertical-align: bottom; }
+    .table-wrap { overscroll-behavior-x: contain; }
+    .metric-group { margin: 32px 0; }
+    .metric-group .metrics { border-radius: 12px; overflow: hidden; }
+    #results-layout h2 { color: var(--ink); font-weight: 600; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
     @media (max-width: 900px) {
       .metrics { grid-template-columns: 1fr 1fr; }
       h1 { max-width: none; }
@@ -294,6 +355,9 @@ export function renderResultsHtml(document: ResultsDocument): string {
     @media (max-width: 640px) {
       header.masthead { padding: 24px 20px 40px; }
       .metrics { grid-template-columns: 1fr; margin-top: 16px; }
+      .source-grid { grid-template-columns: 1fr; }
+      .source-visuals { padding: 18px; }
+      main { width: calc(100% - 32px); }
       .statement header { display: block; }
       .brand-row { align-items: flex-start; }
     }
@@ -309,17 +373,19 @@ export function renderResultsHtml(document: ResultsDocument): string {
       <div class="lockup">${logo}${wordmark}</div>
       <span class="unit">${esc(document.unit)}</span>
     </div>
-    <p class="kicker">Summarised results</p>
+    <p class="kicker">${document.statements.length ? 'Financial results' : 'Investor overview'}</p>
     <h1>${esc(document.issuer)}</h1>
     <p class="lede">${esc(document.periodLabel)}</p>
   </header>
   <main id="results-layout">
-    ${document.publication?.length ? publicationHtml(document.publication) : `
+    ${document.statements.length ? '<nav id="results-contents" aria-label="Source comparison"><a href="#source-title">Compare with original PDF pages</a></nav>' : sourceVisuals}
+    ${document.publication?.length ? publicationHtml(publicationBody) : `
     ${highlights ? `<section class="metrics" id="results-highlights">${highlights}</section>` : ''}
     ${contents ? `<nav id="results-contents" aria-label="Statements">${contents}</nav>` : ''}
     ${narrative ? `<section id="results-narrative"><h2>Commentary</h2>${narrative}</section>` : ''}
     <div id="results-statements">${statements}</div>
     ${notes}`}
+    ${document.statements.length ? sourceVisuals : ''}
   </main>
   <footer id="results-footer">Prepared by Bastion from ${esc(document.sourceFilename || 'the source PDF')}.</footer>
 </body>

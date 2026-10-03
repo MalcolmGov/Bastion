@@ -62,12 +62,17 @@ export function chooseBrandColors(found: string[]): Pick<ResultsBrand, 'colors' 
   const frequentColor = colorful.filter((hex) => (counts.get(hex) || 0) >= 3);
   const deep = frequentColor.filter((hex) => luminance(hex) < 0.25);
   const primary = deep[0] || frequentNeutral || frequentColor[0] || '#1c1c1c';
-  const accent = frequentColor.find((hex) => hex !== primary) || colorful.find((hex) => hex !== primary) || '#c8a064';
+  const distinct = (hex: string) => {
+    const first = Number.parseInt(primary.slice(1), 16);
+    const second = Number.parseInt(hex.slice(1), 16);
+    return [0, 8, 16].reduce((sum, shift) => sum + Math.abs(((first >> shift) & 255) - ((second >> shift) & 255)), 0) > 80;
+  };
+  const accent = frequentColor.find(distinct) || colorful.find(distinct) || '#c8a064';
   return {
     colors: ranked.slice(0, 6),
     primary,
     accent,
-    ink: neutralDark[0] || '#1c1c1c',
+    ink: neutralDark.find((hex) => luminance(hex) < 0.18) || '#1c1c1c',
     paper: light[0] || '#f4f1ea',
   };
 }
@@ -151,7 +156,7 @@ export function parseBrandHtml(html: string, pageUrl: string, stylesheet = ''): 
   const siteName = named || titleParts[0] || 'Client';
 
   const logoImage = $('img').toArray().map((node) => {
-    const src = $(node).attr('src') || '';
+    const src = $(node).attr('data-src') || $(node).attr('src') || '';
     const hint = `${src} ${$(node).attr('class') || ''} ${$(node).attr('alt') || ''} ${$(node).attr('id') || ''}`;
     return { src, hint };
   }).find((image) => /logo/i.test(image.hint) && !isDecorativeAsset(image.hint));
@@ -163,7 +168,6 @@ export function parseBrandHtml(html: string, pageUrl: string, stylesheet = ''): 
     absoluteUrl(logoImage?.src, pageUrl),
     absoluteUrl(touchIcon, pageUrl),
     absoluteUrl($('link[rel="icon"][type="image/svg+xml"], link[rel="icon"]').first().attr('href'), pageUrl),
-    absoluteUrl($('meta[property="og:image"]').attr('content'), pageUrl),
   ];
   const logoUrl = logoCandidates.find((value) => value && !isDecorativeAsset(value)) || null;
 

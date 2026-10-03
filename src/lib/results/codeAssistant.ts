@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import crypto from 'crypto';
 
 export type CodeProvider = 'anthropic' | 'openai' | 'gemini' | 'deepseek' | 'qwen';
 
@@ -44,8 +45,25 @@ function isUnsafeUrl(value: string): boolean {
   return false;
 }
 
+/** Keep binary artwork out of model context while restoring it after a styling pass. */
+export function maskPublicationAssets(html: string): { html: string; restore: (value: string) => string } {
+  const assets = new Map<string, string>();
+  const prefix = `https://bastion-assets.invalid/${crypto.randomUUID()}/`;
+  const masked = html.replace(/data:image\/(?:png|jpe?g|gif|webp|avif);base64,[A-Za-z0-9+/=]+/gi, (asset) => {
+    const token = `${prefix}${assets.size}`;
+    assets.set(token, asset);
+    return token;
+  });
+  return { html: masked, restore: (value) => {
+    for (const [token, asset] of assets) value = value.split(token).join(asset);
+    return value;
+  } };
+}
+
 export function sanitizePublicationHtml(html: string): string {
-  const $ = cheerio.load(html);
+  if (html.length > 12_000_000) throw new Error('This publication exceeds the 12 MB artwork limit.');
+  const assets = maskPublicationAssets(html);
+  const $ = cheerio.load(assets.html);
   $('script, iframe, frame, frameset, object, embed, applet, base, link, form, input, button, textarea, select, meta[http-equiv]').remove();
   $('*').each((_, element) => {
     const node = $(element);
@@ -61,7 +79,8 @@ export function sanitizePublicationHtml(html: string): string {
   });
   const rendered = $.html() || '';
   const withDoctype = /<!doctype html>/i.test(rendered) ? rendered : `<!DOCTYPE html>\n${rendered}`;
-  return withDoctype.slice(0, 500_000);
+  if (withDoctype.length > 500_000) throw new Error('The HTML transcription exceeds the 500 KB editing limit. Split the publication before editing.');
+  return assets.restore(withDoctype);
 }
 
 function replaceStyle(html: string, css: string): string {
@@ -352,7 +371,8 @@ function systemPrompt(html: string): string {
   const large = html.length > 14000;
   return `You are a staff frontend engineer editing a self-contained corporate results publication.
 You write production HTML and CSS. You may change layout, typography, colour, spacing, sections, and wording.
-Keep the financial tables present unless the user explicitly tells you to remove one.
+Preserve all financial figures, periods, units and footnotes unless the instruction explicitly requests changing them. Never invent financial data. Keep the financial tables present unless the user explicitly tells you to remove one.
+Keep section#results-source-visuals and its image URLs unchanged. These URLs are placeholders for original PDF artwork restored locally after your edit.
 ${large
     ? `The document is long. Return only a json fence:
 \`\`\`json
@@ -371,11 +391,12 @@ export async function codeResultsPublication(input: {
   apiKey?: string;
   history?: CodeTurn[];
 }): Promise<CodeAssistantResult> {
-  const current = sanitizePublicationHtml(input.html);
+  const assets = maskPublicationAssets(sanitizePublicationHtml(input.html));
+  const current = assets.html;
   const local = () => {
     const coded = codePublicationLocally(current, input.prompt);
     return {
-      html: coded.html,
+      html: assets.restore(coded.html),
       replyText: coded.replyText,
       summary: coded.summary,
       provider: 'local',
@@ -405,7 +426,7 @@ export async function codeResultsPublication(input: {
     const summary = replyText.split('\n').find((line) => line.trim() && !line.trim().startsWith('```'))?.trim()
       || extracted.summary;
     return {
-      html: extracted.html,
+      html: assets.restore(extracted.html),
       replyText,
       summary,
       provider: input.provider,

@@ -9,7 +9,7 @@ import { applyFigureEdit } from '@/lib/results/applyFigureEdit';
 import { renderResultsHtml } from '@/lib/results/renderHtml';
 import type { ResultsBrand, ResultsDocument, StoredResultsDocument } from '@/lib/results/types';
 
-const STEPS = ['Converter', 'Brand', 'PDF', 'Code and publish'];
+const STEPS = ['Converter', 'Brand', 'PDF', 'Review and publish'];
 
 export default function ResultsStudioPage() {
   const { activeClient } = useStudioWorkspace();
@@ -17,11 +17,12 @@ export default function ResultsStudioPage() {
   const [current, setCurrent] = useState<StoredResultsDocument | null>(null);
   const [step, setStep] = useState(0);
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [showAssistant, setShowAssistant] = useState(false);
   const [brand, setBrand] = useState<ResultsBrand | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [htmlStale, setHtmlStale] = useState(false);
-  const [previewMode, setPreviewMode] = useState<'analytics' | 'document'>('analytics');
+  const [previewMode, setPreviewMode] = useState<'analytics' | 'document'>('document');
 
   async function refresh() {
     const url = '/api/admin/results' + (activeClient?.id ? `?clientId=${encodeURIComponent(activeClient.id)}` : '');
@@ -203,7 +204,7 @@ export default function ResultsStudioPage() {
         <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
           <h2 className="text-xl font-semibold">Client website</h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
-            The converter reads the public homepage for the logo, colours, and type. Those tokens are written into the HTML.
+            Extract a starting point from the client’s website, then confirm the colours and typography before converting. Website extraction is a suggestion, not an approved brand guide.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <input
@@ -216,6 +217,7 @@ export default function ResultsStudioPage() {
               {busy === 'brand' ? 'Reading site…' : 'Extract brand'}
             </button>
           </div>
+          {!brand && <button type="button" onClick={() => setBrand({ sourceUrl: websiteUrl, siteName: activeClient?.name || 'Client', logoUrl: null, colors: [], primary: '#142033', accent: '#b59156', ink: '#142033', paper: '#f6f5f1', headingFont: 'Georgia', bodyFont: 'Source Sans 3' })} className="mt-4 text-sm font-semibold text-violet-700">Set brand manually</button>}
           {brand && (
             <div className="mt-5 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
               {brand.logoUrl && <img src={brand.logoUrl} alt="" className="h-12 w-auto rounded bg-white p-1" />}
@@ -223,10 +225,21 @@ export default function ResultsStudioPage() {
                 <p className="font-semibold">{brand.siteName}</p>
                 <p className="text-xs text-slate-500">{brand.sourceUrl}</p>
               </div>
-              <div className="flex gap-2">
-                {[brand.primary, brand.accent, brand.ink, brand.paper].map((color) => (
-                  <span key={color} title={color} className="h-8 w-8 rounded-full border border-black/10" style={{ background: color }} />
+              <div className="grid w-full gap-4 sm:grid-cols-4">
+                {(['primary', 'accent', 'ink', 'paper'] as const).map((key) => (
+                  <label key={key} className="text-xs font-medium capitalize">{key === 'ink' ? 'Text' : key === 'paper' ? 'Background' : key}
+                    <input type="color" aria-label={`${key} colour`} value={brand[key]} onChange={(event) => setBrand({ ...brand, [key]: event.target.value })} className="mt-2 block h-10 w-full cursor-pointer rounded border border-slate-200" />
+                    <span className="mt-1 block font-mono text-slate-500">{brand[key]}</span>
+                  </label>
                 ))}
+                {(['headingFont', 'bodyFont'] as const).map((key) => (
+                  <label key={key} className="text-xs font-medium sm:col-span-2">{key === 'headingFont' ? 'Heading font' : 'Body font'}
+                    <input value={brand[key]} onChange={(event) => setBrand({ ...brand, [key]: event.target.value })} className="mt-2 block w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
+                  </label>
+                ))}
+                <label className="text-xs font-medium sm:col-span-4">Logo URL (HTTPS)
+                  <input value={brand.logoUrl?.startsWith('data:') ? '' : brand.logoUrl || ''} placeholder={brand.logoUrl?.startsWith('data:') ? 'Embedded website logo; enter a URL to replace' : 'https://client.com/logo.svg'} onChange={(event) => setBrand({ ...brand, logoUrl: event.target.value || null })} className="mt-2 block w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
+                </label>
               </div>
             </div>
           )}
@@ -273,7 +286,7 @@ export default function ResultsStudioPage() {
       )}
 
       {step === 3 && current && (
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className={`grid items-start gap-4 ${showAssistant ? 'xl:grid-cols-[minmax(0,1fr)_380px]' : ''}`}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -302,9 +315,10 @@ export default function ResultsStudioPage() {
                         : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                     }`}
                   >
-                    Document HTML
+                    Publication HTML
                   </button>
                 </div>
+                <button type="button" onClick={() => setShowAssistant(!showAssistant)} aria-expanded={showAssistant} className="rounded-lg border border-violet-200 px-3 py-2 text-xs font-semibold text-violet-700">{showAssistant ? 'Close assistant' : 'Polish with AI'}</button>
                 <button type="button" onClick={() => save('draft')} disabled={busy !== null} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold">
                   Save draft
                 </button>
@@ -318,6 +332,11 @@ export default function ResultsStudioPage() {
                 )}
               </div>
             </div>
+            <details open={current.document.warnings.length > 0} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <summary className="cursor-pointer font-semibold">Source review · {current.document.warnings.length ? `${current.document.warnings.length} extraction warnings` : 'Compare figures before publishing'}</summary>
+              <p className="mt-2">Check periods, units, totals, restatements, footnotes and charts against the original PDF. Source visuals preserve the artwork; they are not editable charts.</p>
+              {current.document.warnings.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-5">{current.document.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
+            </details>
             {htmlStale && (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
                 <p>Figure edits are not in the HTML yet.</p>
@@ -325,11 +344,6 @@ export default function ResultsStudioPage() {
                   Rebuild HTML from figures
                 </button>
               </div>
-            )}
-            {current.document.warnings.length > 0 && (
-              <ul className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-                {current.document.warnings.map((warning) => <li key={warning}>{warning}</li>)}
-              </ul>
             )}
             {previewMode === 'analytics' ? (
               <div className="max-h-[850px] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
@@ -378,11 +392,11 @@ export default function ResultsStudioPage() {
               </div>
             </details>
           </div>
-          <ResultsCodingChat
+          {showAssistant && <ResultsCodingChat
             html={previewHtml}
             documentId={current.id}
             onApplyHtml={applyHtml}
-          />
+          />}
         </div>
       )}
 

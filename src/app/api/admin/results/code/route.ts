@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const html = String(body.html || '');
     if (!prompt) return NextResponse.json({ error: 'Tell the assistant what to change in the page.' }, { status: 400 });
     if (!html.includes('<html')) return NextResponse.json({ error: 'The publication HTML is not ready yet.' }, { status: 400 });
-    if (html.length > 400_000) return NextResponse.json({ error: 'This publication is too large to edit in one pass.' }, { status: 400 });
+    if (html.length > 12_000_000) return NextResponse.json({ error: 'This publication is too large to edit in one pass.' }, { status: 400 });
 
     const userKey = typeof body.userApiKey === 'string' ? body.userApiKey.trim() : '';
     const history = Array.isArray(body.history)
