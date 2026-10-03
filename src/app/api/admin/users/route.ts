@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { hashPassword } from '@/lib/auth/auth';
+import { passwordRefusal } from '@/lib/auth/passwordPolicy';
 import { requireAgencyUser, requireUser, resolveTargetClientId } from '@/lib/auth/guard';
 import { isAgencyUser } from '@/lib/auth/roles';
 import { generateWelcomeEmailHtml } from '@/lib/email/welcomeTemplate';
@@ -67,8 +68,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name and email are required.' }, { status: 400 });
     }
 
-    if (!initialPassword || String(initialPassword).length < 12) {
-      return NextResponse.json({ error: 'A temporary password of at least 12 characters is required.' }, { status: 400 });
+    const refusal = passwordRefusal(initialPassword, 'A temporary password of at least 12 characters is required.');
+    if (refusal) {
+      return NextResponse.json({ error: refusal }, { status: 400 });
     }
 
     if (role === 'platform_admin' && clientId) {
@@ -78,8 +80,6 @@ export async function POST(req: NextRequest) {
     if (role !== 'platform_admin' && !clientId) {
       return NextResponse.json({ error: 'Client users must be assigned to a client workspace.' }, { status: 400 });
     }
-
-    const computedPassword = String(initialPassword);
 
     const db = getDb();
 
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
     const userId = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const passHash = hashPassword(computedPassword);
+    const passHash = hashPassword(initialPassword);
 
     if (existing.rows.length > 0) {
       // Update existing user role and scope

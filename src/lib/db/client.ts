@@ -266,11 +266,18 @@ async function runInitSchema(db: Client): Promise<void> {
   } catch (_) {}
 }
 
-async function seedEssentialUsers(db: Client): Promise<void> {
+export async function seedEssentialUsers(db: Client): Promise<void> {
   if (process.env.SEED_DEMO_USERS !== 'true') return;
 
   const password = process.env.SEED_DEMO_PASSWORD?.trim() || '';
-  if (password.length < 12) {
+  // Loaded here, not at the top: the policy reads the demo secrets from apiToken, which imports this file.
+  const { passwordProblem } = await import('@/lib/auth/passwordPolicy');
+  const problem = passwordProblem(password);
+  if (problem === 'published') {
+    console.warn('[DB] SEED_DEMO_PASSWORD is a password published in this repository. Skipping demo user seed.');
+    return;
+  }
+  if (problem) {
     console.warn('[DB] SEED_DEMO_USERS is set but SEED_DEMO_PASSWORD must be at least 12 characters. Skipping demo user seed.');
     return;
   }

@@ -1,13 +1,9 @@
 import crypto from 'node:crypto';
 import type { Client } from '@libsql/client';
 import { hashPassword, verifyPassword } from '@/lib/auth/password';
-import { isPublicDemoSecret } from '@/lib/auth/apiToken';
+import { MIN_PASSWORD_LENGTH, PUBLISHED_PASSWORDS, passwordProblem } from '@/lib/auth/passwordPolicy';
 
-/**
- * Passwords that were written into this repository's seed and scripts. Anyone who has read the source knows them, so no
- * account may keep one and none may be chosen again.
- */
-export const PUBLISHED_PASSWORDS: readonly string[] = ['Bastion2026!', 'GoldFields2026!'];
+export { PUBLISHED_PASSWORDS };
 
 /** Accounts those passwords were created for. Checked in any role, on top of every platform admin. */
 const PUBLISHED_ACCOUNTS: readonly string[] = ['malcolm@movedigital.africa', 'admin@goldfields.com'];
@@ -15,7 +11,7 @@ const PUBLISHED_ACCOUNTS: readonly string[] = ['malcolm@movedigital.africa', 'ad
 /** Not a valid hash, so verifyPassword never accepts it. Marks an account whose password has been taken away. */
 export const REVOKED_HASH = 'revoked$published-default-credential';
 
-export const MIN_BOOTSTRAP_PASSWORD_LENGTH = 12;
+export const MIN_BOOTSTRAP_PASSWORD_LENGTH = MIN_PASSWORD_LENGTH;
 
 const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 let warnedNoAdmin = false;
@@ -92,8 +88,9 @@ export async function bootstrapPlatformAdmin(db: Client): Promise<'created' | 'r
     return 'skipped';
   }
   if (!EMAIL.test(email)) return refusal('BOOTSTRAP_ADMIN_EMAIL is not a valid email address.');
-  if (password.length < MIN_BOOTSTRAP_PASSWORD_LENGTH) return refusal(`BOOTSTRAP_ADMIN_PASSWORD must be at least ${MIN_BOOTSTRAP_PASSWORD_LENGTH} characters.`);
-  if (PUBLISHED_PASSWORDS.includes(password) || isPublicDemoSecret(password)) return refusal('BOOTSTRAP_ADMIN_PASSWORD is a value published in this repository.');
+  const problem = passwordProblem(password);
+  if (problem === 'published') return refusal('BOOTSTRAP_ADMIN_PASSWORD is a value published in this repository.');
+  if (problem) return refusal(`BOOTSTRAP_ADMIN_PASSWORD must be at least ${MIN_BOOTSTRAP_PASSWORD_LENGTH} characters.`);
 
   const existing = (await db.execute({ sql: `SELECT id, role FROM users WHERE LOWER(email) = ? LIMIT 1`, args: [email] })).rows[0];
   if (existing && String(existing.role) !== 'platform_admin') return refusal('that email belongs to an account that is not a platform admin.');
