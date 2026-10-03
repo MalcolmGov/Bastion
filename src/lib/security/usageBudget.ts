@@ -43,7 +43,7 @@ function msUntilFits(spends: Spend[], cost: number, { limit, windowMs }: BudgetW
 function sweep(now: number) {
   if (ledgers.size <= SWEEP_ABOVE) return;
   for (const [key, ledger] of ledgers) {
-    const newest = ledger.spends[ledger.spends.length - 1];
+    const newest = ledger.spends.at(-1);
     if (!newest || now - newest.at >= ledger.keepMs) ledgers.delete(key);
   }
 }
