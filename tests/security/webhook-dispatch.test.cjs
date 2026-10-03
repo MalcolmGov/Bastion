@@ -22,7 +22,7 @@ async function fixture(t, { settings = null, env = {} } = {}) {
   });
   await h.db.execute('ALTER TABLE websites ADD COLUMN settings_json TEXT');
   await h.db.execute(`CREATE TABLE webhook_deliveries(id TEXT PRIMARY KEY, site_id TEXT, event TEXT, target_url TEXT, payload_json TEXT, response_status INTEGER, response_body TEXT, latency_ms INTEGER, status TEXT, created_at TEXT)`);
-  if (settings) await h.db.execute({ sql: "UPDATE websites SET settings_json = ? WHERE id = 'site-a'", args: [JSON.stringify(settings)] });
+  if (settings) await h.db.execute({ sql: "UPDATE websites SET settings_json = ? WHERE id = 'site-a'", args: [typeof settings === 'string' ? settings : JSON.stringify(settings)] });
   const calls = [];
   globalThis.fetch = async (url, init) => { calls.push({ url, init }); return { ok: true, status: 200, text: async () => 'ok' }; };
   const { dispatchContentWebhook } = h.load('lib/webhooks/dispatcher.ts');
@@ -64,6 +64,34 @@ test('webhook delivery still works with env-configured URL and secret', async t 
   const result = await send();
   assert.equal(result.success, true);
   assert.equal(calls.length, 1);
+  const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(calls[0].init.body).digest('hex');
+  assert.equal(calls[0].init.headers['x-bastion-signature'], expected);
+});
+
+test('webhook delivery uses site settings in preference to env configuration', async t => {
+  const siteSecret = 'site-secret-' + crypto.randomBytes(8).toString('hex');
+  const { calls, send } = await fixture(t, {
+    settings: { headlessIntegration: { webhookUrl: 'https://client.example/site-hook', webhookSecret: siteSecret } },
+    env: { BASTION_WEBHOOK_URL: 'https://client.example/env-hook', BASTION_WEBHOOK_SECRET: 'env-secret-should-not-be-used' },
+  });
+  const result = await send();
+  assert.equal(result.success, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://client.example/site-hook');
+  const expected = 'sha256=' + crypto.createHmac('sha256', siteSecret).update(calls[0].init.body).digest('hex');
+  assert.equal(calls[0].init.headers['x-bastion-signature'], expected);
+});
+
+test('webhook delivery ignores malformed site settings and falls back to env configuration', async t => {
+  const realWarn = console.warn;
+  console.warn = () => {};
+  t.after(() => { console.warn = realWarn; });
+  const secret = 'env-secret-' + crypto.randomBytes(8).toString('hex');
+  const { calls, send } = await fixture(t, { settings: '{not valid json', env: { BASTION_WEBHOOK_URL: 'https://client.example/env-hook', BASTION_WEBHOOK_SECRET: secret } });
+  const result = await send();
+  assert.equal(result.success, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://client.example/env-hook');
   const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(calls[0].init.body).digest('hex');
   assert.equal(calls[0].init.headers['x-bastion-signature'], expected);
 });
