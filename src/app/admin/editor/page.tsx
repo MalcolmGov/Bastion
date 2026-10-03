@@ -309,7 +309,8 @@ function VisualWebsiteEditorContent() {
   const [aiNotice, setAiNotice] = useState<string | null>(null);
 
   // Inspector Active Tab: 'content' | 'design' | 'ai' | 'keys'
-  const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai' | 'keys'>('content');
+  const openAssistant = searchParams.get('panel') === 'ai';
+  const [inspectorTab, setInspectorTab] = useState<'content' | 'design' | 'ai' | 'keys'>(() => openAssistant ? 'ai' : 'content');
   const [isLocaleMenuOpen, setIsLocaleMenuOpen] = useState(false);
 
   // Dynamic Zones Builder Left Panel Mode: 'dynamic_zones' | 'outline' | 'brand_vault'
@@ -324,10 +325,10 @@ function VisualWebsiteEditorContent() {
   const [compactEditor, setCompactEditor] = useState(false);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1023px)');
-    const update = () => { setCompactEditor(media.matches); setIsLeftPanelOpen(!media.matches); setIsRightPanelOpen(!media.matches); };
+    const update = () => { setCompactEditor(media.matches); setIsLeftPanelOpen(!media.matches); setIsRightPanelOpen(!media.matches || openAssistant); };
     update(); media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
-  }, []);
+  }, [openAssistant]);
 
   const [isZenMode, setIsZenMode] = useState(false);
 
