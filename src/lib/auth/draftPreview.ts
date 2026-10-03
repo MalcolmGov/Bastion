@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { cookies, draftMode } from 'next/headers';
 import { getCurrentUser, hasPermission, type StudioUser } from '@/lib/auth/auth';
-import { readSecret, secretsMatch } from '@/lib/auth/apiToken';
+import { isPublicDemoSecret, readSecret, secretsMatch } from '@/lib/auth/apiToken';
 import { isAgencyUser } from '@/lib/auth/roles';
 
 /** The client that owns the root site (/, /reports, /operations ...); its pages and records are not tied to a /sites/<slug> website. */
@@ -14,14 +14,27 @@ export function mayViewDraftsOf(user: StudioUser | null, ownerClientId: string |
   return !!ownerClientId && user.client_id === ownerClientId;
 }
 
+/** A website row. The preview checks read its id, client_id and settings_json. */
+export type PreviewSite = Record<string, unknown>;
+
+/** Id columns are text; a value that is neither text nor a number is not an id. */
+function idText(value: unknown): string | null {
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
+}
+
 /**
  * Draft mode is a cookie: it says a browser asked for drafts, not that it may have them. A site shows its drafts only
- * when the cookie is set and the person signed in may see that client's work, so one client's staff cannot read
- * another client's unpublished pages by browsing to its /sites/<slug> address with the cookie on.
+ * when the cookie is set and either the person signed in may see that client's work, or the browser holds a valid grant
+ * for this site (issued to someone who proved they hold the site's own preview secret). So one client's staff cannot read
+ * another client's unpublished pages by browsing to its /sites/<slug> address with the cookie on, and a grant for one site
+ * opens no other.
  */
-export async function draftPreviewActive(ownerClientId: string | null | undefined): Promise<boolean> {
+export async function draftPreviewActive(site: PreviewSite): Promise<boolean> {
   if (!(await draftMode()).isEnabled) return false;
-  return mayViewDraftsOf(await getCurrentUser(), ownerClientId);
+  if (mayViewDraftsOf(await getCurrentUser(), idText(site.client_id))) return true;
+  const name = siteGrantCookieName(site.id);
+  if (!name) return false;
+  return verifySiteGrant(site, (await cookies()).get(name)?.value);
 }
 
 /** Issued by /api/preview to someone who proved they hold the preview secret, rather than signing in. */
@@ -64,4 +77,60 @@ export async function flagshipDraftsAllowed(): Promise<boolean> {
   const jar = await cookies();
   if (verifyPreviewGrant(jar.get(PREVIEW_GRANT_COOKIE)?.value)) return true;
   return mayViewDraftsOf(await getCurrentUser(), FLAGSHIP_CLIENT_ID);
+}
+
+// ---- a site's own preview secret ----
+
+export const SITE_GRANT_COOKIE_PREFIX = 'bastion_preview_site_';
+const SITE_ID = /^[A-Za-z0-9_-]{1,80}$/;
+const MIN_SITE_SECRET_LENGTH = 16;
+
+/**
+ * The preview secret an agency set for this site in Settings ("Draft Verification Token"), or null when there is none or it
+ * is not one that counts: too short, or a public demo value from the source code, which anyone could use.
+ */
+export function sitePreviewSecret(site: PreviewSite): string | null {
+  let settings: any = site.settings_json;
+  if (typeof settings === 'string') {
+    try {
+      settings = JSON.parse(settings);
+    } catch {
+      return null;
+    }
+  }
+  const secret = settings?.headlessIntegration?.previewSecret;
+  if (typeof secret !== 'string' || secret.length < MIN_SITE_SECRET_LENGTH || isPublicDemoSecret(secret)) return null;
+  return secret;
+}
+
+/** One cookie per site, named after it, so a browser can hold passes for several sites at once. Null for an id that is not a safe cookie name. */
+export function siteGrantCookieName(siteId: unknown): string | null {
+  const id = idText(siteId);
+  return id !== null && SITE_ID.test(id) ? `${SITE_GRANT_COOKIE_PREFIX}${id}` : null;
+}
+
+function siteGrantMac(siteId: string, expires: string, key: string): string {
+  return crypto.createHmac('sha256', key).update(`site.${siteId}.${expires}`).digest('hex');
+}
+
+/**
+ * Like the root grant, but bound to one site and signed with that site's own secret: it opens that site's drafts and
+ * nothing else, and stops working the moment the secret is changed or cleared in Settings.
+ */
+export function signSiteGrant(site: PreviewSite, now = Date.now()): { name: string; value: string; maxAgeSeconds: number } | null {
+  const key = sitePreviewSecret(site);
+  const name = siteGrantCookieName(site.id);
+  if (!key || !name) return null;
+  const expires = String(now + GRANT_TTL_MS);
+  return { name, value: `${expires}.${siteGrantMac(String(site.id), expires, key)}`, maxAgeSeconds: GRANT_TTL_MS / 1000 };
+}
+
+export function verifySiteGrant(site: PreviewSite, value: string | null | undefined, now = Date.now()): boolean {
+  const key = sitePreviewSecret(site);
+  if (!key || !siteGrantCookieName(site.id) || typeof value !== 'string') return false;
+  const parts = value.split('.');
+  if (parts.length !== 2 || !/^\d{1,15}$/.test(parts[0])) return false;
+  const remaining = Number(parts[0]) - now;
+  if (remaining <= 0 || remaining > GRANT_TTL_MS) return false;
+  return secretsMatch(parts[1], siteGrantMac(String(site.id), parts[0], key));
 }

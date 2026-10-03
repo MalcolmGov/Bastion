@@ -121,7 +121,7 @@ test('a site shows drafts only when draft mode is on and the signed-in person ma
   const active = async (user, owner, enabled = true) => {
     h.draft.enabled = enabled;
     h.user(user ? USERS[user] : null);
-    return draftPreviewActive(owner);
+    return draftPreviewActive({ id: 'site-x', client_id: owner });
   };
   assert.equal(await active('agency', 'client_vodacom_group', false), false, 'drafts were shown with draft mode off');
   assert.equal(await active('agency', 'client_vodacom_group'), true);
