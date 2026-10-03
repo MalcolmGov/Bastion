@@ -7,7 +7,10 @@ import type { ResultsDocument } from './types';
 
 export async function convertPdfBytes(data: Uint8Array, sourceFilename: string): Promise<ResultsDocument> {
   const extracted = await extractPdfGlyphs(data);
-  return composeResultsDocument(extracted.glyphs, extracted.pageCount, sourceFilename, extracted.shades);
+  const document = composeResultsDocument(extracted.glyphs, extracted.pageCount, sourceFilename, extracted.shades);
+  document.sourcePages = extracted.sourcePages;
+  document.warnings.push(...extracted.visualWarnings);
+  return document;
 }
 
 export async function convertSampleBooklet(): Promise<ResultsDocument> {

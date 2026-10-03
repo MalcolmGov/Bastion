@@ -650,5 +650,5 @@ export function buildPublication(glyphs: PdfGlyph[], shades: PdfShade[] = []): P
   return pages.flatMap((page) => layoutPage(
     lines.filter((line) => line.page === page),
     shades.filter((shade) => shade.page === page),
-  ));
+  ).map((block) => ({ ...block, sourcePage: page })));
 }

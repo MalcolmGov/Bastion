@@ -15,6 +15,7 @@ export interface ResultsRow {
 }
 
 export interface ResultsStatement {
+  sourcePage?: number;
   id: string;
   title: string;
   period: string;
@@ -59,6 +60,7 @@ export interface PublicationMetric {
 
 export interface PublicationBlock {
   kind: 'heading' | 'paragraph' | 'metrics' | 'table' | 'list';
+  sourcePage?: number;
   level?: 2 | 3;
   text?: string;
   items?: string[];
@@ -81,6 +83,7 @@ export interface ResultsDocument {
   brand?: ResultsBrand | null;
   presentationHtml?: string | null;
   publication?: PublicationBlock[];
+  sourcePages?: Array<{ page: number; width: number; height: number; image: string }>;
 }
 
 export interface StoredResultsDocument {

@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as cheerio from 'cheerio';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { sanitizePublicationHtml, maskPublicationAssets, codeResultsPublication } from '../src/lib/results/codeAssistant';
 import { BrandDnaExtractor } from '../src/lib/studio/brandExtractor';
 import { applyFigureEdit } from '../src/lib/results/applyFigureEdit';
-import { parseBrandHtml } from '../src/lib/results/brand';
+import { parseBrandHtml, chooseBrandColors } from '../src/lib/results/brand';
 import { convertPdfBytes, convertSampleBooklet } from '../src/lib/results/convert';
 import { isFinancialNumber } from '../src/lib/results/numbers';
 import { renderResultsHtml } from '../src/lib/results/renderHtml';
@@ -216,12 +217,22 @@ async function testStandardBankDna() {
 }
 
 async function main() {
-  await testStandardBankDna();
+  if (process.env.RESULTS_LIVE_BRAND_TEST === '1') await testStandardBankDna();
   testBrandLogo();
+  const palette = chooseBrandColors(['#cf4708', '#cf4708', '#cf4708', '#ce470a', '#ce470a', '#ce470a', '#eb8e00', '#7c868d']);
+  assert.equal(palette.accent, '#eb8e00', 'near-identical CSS colours must not become primary and accent');
+  assert.equal(palette.ink, '#1c1c1c', 'mid-grey website decoration must not become body text');
   testFigureEdit();
   const slides = await convertPdfBytes(await slideDeckPdf(), 'standard-bank-overview.pdf');
   assert.equal(slides.issuer, 'Standard Bank Group');
   assert.equal(slides.periodLabel, 'September 2026');
+  assert.equal(slides.sourcePages?.length, 2);
+  assert.ok(slides.sourcePages?.every((page) => page.image.startsWith('data:image/jpeg;base64,') && page.width > page.height));
+  assert.ok(slides.publication?.every((block) => block.sourcePage && block.sourcePage <= 2));
+  const slidesHtml = renderResultsHtml(slides);
+  assert.match(slidesHtml, /Original artwork and charts/);
+  assert.match(slidesHtml, /source-page-2/);
+  assert.equal(parseBrandHtml('<title>Example</title><meta property="og:image" content="https://example.com/social-banner.jpg">', 'https://example.com').logoUrl, null);
   const joined = (slides.publication || []).map((block) => `${block.text || ''} ${(block.metrics || []).map((metric) => `${metric.value} ${metric.label}`).join(' ')}`).join(' ');
   assert.match(joined, /1H26 FINANCIAL PERFORMANCE/);
   assert.match(joined, /differentiated gateway to growth/);
@@ -278,6 +289,22 @@ async function main() {
     const merafe = await convertPdfBytes(new Uint8Array(fs.readFileSync(merafePath)), 'merafe_financial_results_4200.pdf');
     assert.match(merafe.issuer, /MERAFE RESOURCES LIMITED/);
     assert.equal(merafe.periodLabel, 'Year ended 31 December 2025');
+    assert.equal(merafe.sourcePages?.length, merafe.pageCount);
+    assert.ok(merafe.publication?.every((block) => block.sourcePage && block.sourcePage <= merafe.pageCount));
+    const merafeHtml = renderResultsHtml(merafe);
+    const sanitized = sanitizePublicationHtml(merafeHtml);
+    assert.match(sanitized, /results-footer/);
+    assert.match(sanitized, /source-page-22/);
+    const masked = maskPublicationAssets(sanitized);
+    assert.ok(!masked.html.includes('data:image/jpeg;base64,'));
+    assert.equal(masked.restore(masked.html), sanitized);
+    const polished = await codeResultsPublication({ provider: 'openai', modelId: '', prompt: 'polish the spacing', html: merafeHtml });
+    assert.match(polished.html, /source-page-22/);
+    assert.match(polished.html, /data:image\/jpeg;base64,/);
+    assert.match(merafeHtml, /scope="row"/);
+    assert.match(merafeHtml, /scope="col"/);
+    const regionIds = [...merafeHtml.matchAll(/id="(results-(?:narrative|notes|statements|highlights))"/g)].map((match) => match[1]);
+    assert.equal(new Set(regionIds).size, regionIds.length, 'publication region IDs must be unique');
     const position = merafe.statements.find((statement) => /financial position/i.test(statement.title));
     const income = merafe.statements.find((statement) => /profit or loss/i.test(statement.title));
     const cash = merafe.statements.find((statement) => /cash flows/i.test(statement.title));

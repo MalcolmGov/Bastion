@@ -358,10 +358,11 @@ export function reconstructStatements(glyphs: PdfGlyph[]): {
       continue;
     }
     rows.forEach((row) => {
-      if (row.kind !== 'section' && row.confidence < 1) warnings.push(`“${row.label || 'A total row'}” is missing a figure.`);
+      if (row.kind !== 'section' && row.confidence < 1) warnings.push(`Page ${line.page}: “${row.label || 'A total row'}” is missing a figure.`);
     });
     const confidence = rows.length ? rows.reduce((sum, row) => sum + row.confidence, 0) / rows.length : 0;
     statements.push({
+      sourcePage: line.page,
       id: `stmt_${statements.length}`,
       title,
       period,
