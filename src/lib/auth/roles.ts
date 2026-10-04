@@ -13,6 +13,7 @@ export const AGENCY_PATH_PREFIXES = [
   '/admin/design-system',
   '/admin/incidents',
   '/admin/sre',
+  '/admin/repositories',
   '/admin/api-keys',
   '/admin/sandbox',
   '/admin/settings',
