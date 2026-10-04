@@ -555,6 +555,7 @@ export function AdminSidebar() {
                   </div>
                 )}
                 <div className="space-y-1">
+                  {renderItem('/admin/repositories', 'GitHub & Operations', Terminal, pathname.startsWith('/admin/repositories'))}
                   {renderItem('/admin/incidents', 'Incidents & SRE Audit', ShieldAlert, pathname.startsWith('/admin/incidents'))}
                   {renderItem('/admin/health', 'Website Health', Activity, pathname.startsWith('/admin/health'))}
                   {renderItem('/admin/api-keys', 'AI API Keys', Key, pathname.startsWith('/admin/api-keys'))}

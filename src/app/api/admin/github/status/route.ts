@@ -10,7 +10,7 @@ export async function GET() {
     const user = await getCurrentUser();
 
     const integration = await getActiveGitHubIntegration();
-    return NextResponse.json(integration);
+    return NextResponse.json({ isConnected: integration.isConnected, user: integration.user, connectedAt: integration.connectedAt }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (err: any) {
     console.error('GitHub status check failed:', err);
     return NextResponse.json({ isConnected: false, user: null }, { status: 200 });
